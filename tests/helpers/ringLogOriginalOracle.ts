@@ -1,0 +1,20 @@
+/** Independent literal p/q/r/s replay for the three analytic Log fixtures.
+ * The radial curve has rho=1+a log(b+sin(phi)), b>=2,a<=.05.
+ * rho>=1, |rhoPrime|<=a, |rhoSecond|<=2a, so the polar curvature
+ * numerator rho²+2rhoPrime²-rho*rhoSecond remains strictly positive.
+ * Ray exit is an independent scalar radial equation on a convex curve.
+ */
+export function originalLogRingOracle(p:any){
+ const source=p.vectorFunctionDefinitions?.[0]??p.outerVectorTemplate[0],m=/1\+([.0-9]+) Log\[([0-9]+)\+Sin\[/.exec(source);if(!m)throw Error('oracle limited to literal rho=1+a Log[b+Sin]');const amp=Number(m[1]),base=Number(m[2]);if(!(base>=2&&amp>0&&amp<=.05))throw Error('oracle convex source domain');
+ const n=p.rings,count=p.sides,alpha=p.angle*Math.PI/180,offset=p.offsetAngle*Math.PI/180,V:number[][]=[],flat:number[][]=[];
+ const add=(a:number[],b:number[])=>[a[0]+b[0],a[1]+b[1]],sub=(a:number[],b:number[])=>[a[0]-b[0],a[1]-b[1]],times=(a:number[],k:number)=>a.map(x=>x*k),cross=(a:number[],b:number[])=>a[0]*b[1]-a[1]*b[0];
+ const rotate=(a:number[],t:number)=>[a[0]*Math.cos(t)-a[1]*Math.sin(t),a[0]*Math.sin(t)+a[1]*Math.cos(t)],unit=(a:number[])=>times(a,1/Math.hypot(...a));
+ const point=(r:number,t:number)=>times([Math.cos(t),Math.sin(t)],r*(1+amp*Math.log(base+Math.sin(t)))),idx=(j:number)=>(j+count)%count;
+ const ray=(r:number,x:number[],d:number[])=>{const residual=(t:number)=>{const q=add(x,times(d,t)),angle=Math.atan2(q[1],q[0]);return Math.hypot(...q)-r*(1+amp*Math.log(base+Math.sin(angle)));};if(!(residual(0)<0))throw Error('anchor must be inside target');let lo=0,hi=r*2;while(residual(hi)<=0)hi*=2;for(let k=0;k<90;k++){const mid=(lo+hi)/2;if(residual(mid)>0)hi=mid;else lo=mid;}return add(x,times(d,(lo+hi)/2));};
+ const intersection=(x:number[],dx:number[],y:number[],dy:number[])=>add(x,times(dx,cross(sub(y,x),dy)/cross(dx,dy))),store=(q:number[])=>{V.push(q);return V.length-1;};
+ const P:number[][][]=[],Q:number[][][]=[],R:number[][][]=[],S:number[][][]=[],pi:number[][]=[],qi:number[][]=[],ri:number[][]=[],si:number[][]=[];P[0]=Array.from({length:count},(_,j)=>point(p.outerRadii[0],offset+2*Math.PI*j/count));Q[0]=P[0];pi[0]=P[0].map(store);qi[0]=pi[0];let dr=P[0].map((q,j)=>rotate(unit(sub(Q[0][idx(j-1)],q)),Math.PI-alpha)),ds=P[0].map((q,j)=>rotate(unit(sub(P[0][idx(j+1)],q)),-alpha));
+ for(let i=1;i<=n;i++){R[i-1]=P[i-1].map((q,j)=>ray(p.creaseRadii[i-1],q,dr[j]));ri[i-1]=R[i-1].map(store);S[i-1]=R[i-1].map((q,j)=>intersection(R[i-1][idx(j+1)],rotate(dr[idx(j+1)],alpha),Q[i-1][j],ds[j]));si[i-1]=S[i-1].map(store);const dp=R[i-1].map((q,j)=>rotate(unit(sub(q,S[i-1][j])),alpha));P[i]=R[i-1].map((q,j)=>ray(p.outerRadii[i],q,dp[j]));pi[i]=P[i].map(store);Q[i]=P[i].map((q,j)=>intersection(S[i-1][j],dp[j],q,rotate(sub(R[i-1][j],q),-alpha)));qi[i]=Q[i].map(store);dr=P[i].map((q,j)=>rotate(unit(sub(Q[i][idx(j-1)],q)),Math.PI-alpha));ds=P[i].map((q,j)=>rotate(unit(sub(P[i][idx(j+1)],Q[i][j])),-alpha));}
+ const edges:number[][]=[],types:string[]=[];const edge=(a:number,b:number,k:string)=>{edges.push([a,b]);types.push(k);};for(let i=0;i<n;i++)for(let j=0;j<count;j++){edge(pi[i][j],ri[i][j],'M');edge(ri[i][j],pi[i+1][j],'M');}for(let i=0;i<n;i++)for(let j=0;j<count;j++){edge(qi[i][j],si[i][j],'V');edge(si[i][j],qi[i+1][j],'V');}for(let j=0;j<count;j++)edge(pi[0][j],pi[0][idx(j+1)],'M');for(let i=0;i<n;i++){for(let j=0;j<count;j++){edge(ri[i][j],si[i][j],'M');edge(si[i][j],ri[i][idx(j+1)],'V');}for(let j=0;j<count;j++){edge(pi[i+1][j],qi[i+1][j],i===n-1?'B':'V');edge(qi[i+1][j],pi[i+1][idx(j+1)],i===n-1?'B':'M');}}
+ V.forEach(q=>flat.push([...q]));for(let j=0;j<count;j++)for(let i=0;i<n;i++){flat[ri[i][j]]=add(flat[pi[i][j]],rotate(sub(R[i][j],P[i][j]),2*alpha));flat[si[i][j]]=add(flat[qi[i][j]],rotate(sub(S[i][j],Q[i][j]),2*alpha));flat[pi[i+1][j]]=add(flat[ri[i][j]],sub(P[i+1][j],R[i][j]));flat[qi[i+1][j]]=add(flat[si[i][j]],sub(Q[i+1][j],S[i][j]));}
+ return {vertices:V,edges,assignments:types,foldedForm:flat};
+}

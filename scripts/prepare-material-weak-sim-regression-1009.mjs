@@ -1,0 +1,10 @@
+import fs from 'node:fs';
+const replacements=[['prepare-simulation-holes-1008.ts','prepare-material-weak-sim-holes-regression-1009.ts'],['verify-simulation-holes-1008.browser.js','verify-material-weak-sim-holes-regression-1009.browser.js'],['verify-simulation-holes-download-1008.ts','verify-material-weak-sim-holes-regression-download-1009.ts']];
+for(const [from,to]of replacements)fs.writeFileSync(`scripts/${to}`,fs.readFileSync(`scripts/${from}`,'utf8').replaceAll('simulation-holes-','material-weak-sim-holes-regression-').replaceAll('-1008.','-1009.'));
+fs.writeFileSync('scripts/verify-material-weak-sim-workspace-regression-1009.browser.js',fs.readFileSync('scripts/verify-simulation-workspace.browser.js','utf8').replaceAll('simulation-workspace','material-weak-sim-workspace-regression-1009'));
+const flatPrefix='material-weak-sim-flat-regression-';
+fs.copyFileSync('output/audits/material-weak-flat-recipes-1009.json','output/audits/'+flatPrefix+'recipes-1009.json');
+for(const name of ['interior','boundary','cross','hole','free-F','original-F','corner-M'])fs.copyFileSync(`output/playwright/material-weak-flat-${name}-initial-1009.zhezhi.json`,`output/playwright/${flatPrefix}${name}-initial-1009.zhezhi.json`);
+fs.writeFileSync('scripts/verify-material-weak-sim-flat-regression-1009.browser.js',fs.readFileSync('output/playwright/material-weak-flat-run-1009.browser.js','utf8').replaceAll('output/playwright/material-weak-flat-','output/playwright/'+flatPrefix).replace("await page.waitForFunction(()=>document.body.textContent.includes('动态三维尚未支持'));check(true,'可平折弱切口仍明确报告动态三维范围');","await page.waitForFunction(()=>['loaded','running','paused'].includes(document.querySelector('iframe[title=\"三维折叠模拟画布\"]')?.contentDocument?.querySelector('#simulation')?.dataset.status));check(true,'可平折弱切口实际进入三维模拟');"));
+fs.writeFileSync('scripts/verify-material-weak-sim-flat-regression-download-1009.ts',fs.readFileSync('scripts/verify-material-weak-flat-download-1009.ts','utf8').replaceAll('material-weak-flat-','material-weak-sim-flat-regression-'));
+console.log('Prepared ordinary-hole UI/export regression copies without overwriting prior evidence.');

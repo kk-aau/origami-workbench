@@ -1,0 +1,18 @@
+.flagstone-tilted-star-layout{display:grid;grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr);gap:16px;margin-top:10px}
+.flagstone-tilted-star-controls,.flagstone-tilted-star-output{min-width:0}
+.flagstone-tilted-star-actions{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:9px}
+.flagstone-tilted-star-actions button{padding:3px 7px;font-size:11px}
+.flagstone-tilted-star-vertices{display:block;font-size:12px}
+.flagstone-tilted-star-vertices textarea{display:block;width:100%;height:126px;resize:vertical;margin-top:5px;padding:7px;border:1px solid var(--line,#d5d9d2);border-radius:4px;background:var(--surface,#fff);color:var(--ink,#202124);font:11px/1.5 Consolas,monospace}
+.flagstone-tilted-star-direction{display:flex;align-items:center;justify-content:space-between;margin-top:9px;gap:8px;font-size:12px}
+.flagstone-tilted-star-direction select{min-width:130px}
+.flagstone-tilted-star-controls .note{margin:10px 0 0;font-size:11px}
+.flagstone-tilted-star-preview,.flagstone-tilted-star-empty{display:block;width:100%;height:min(42vh,320px);min-height:230px;border:1px solid var(--line,#d5d9d2);border-radius:5px;background:#fffefb}
+.flagstone-tilted-star-preview text{font-family:system-ui,sans-serif;paint-order:stroke;stroke:#fffefb;stroke-width:.07px;stroke-linejoin:round}
+.flagstone-tilted-star-empty{display:grid;place-items:center;color:var(--muted,#718078);font-size:12px}
+.flagstone-tilted-star-result{display:flex;flex-direction:column;gap:3px;margin-top:7px;font-size:11px}
+.flagstone-tilted-star-result strong{font-weight:600;line-height:1.5}
+.flagstone-tilted-star-result span{color:var(--muted,#718078)}
+.flagstone-tilted-star-output .tess-editor-error{margin:8px 0 0}
+.tess-dialog:has(.flagstone-tilted-star-layout)>footer span{font-size:11px;line-height:1.35}
+@media(max-width:700px){.flagstone-tilted-star-layout{grid-template-columns:1fr}.flagstone-tilted-star-preview,.flagstone-tilted-star-empty{height:220px;min-height:0}}

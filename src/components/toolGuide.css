@@ -1,0 +1,95 @@
+.tool-guide {
+  flex: 0 0 auto;
+  min-width: 0;
+  padding: 9px 20px 10px;
+  border-bottom: 1px solid var(--line, #d3ded2);
+  background: var(--surface, #fafbf7);
+  color: var(--ink, #263b31);
+  font-size: 11px;
+  line-height: 1.65;
+  overflow-wrap: anywhere;
+}
+
+.tool-guide-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 3px 12px;
+  min-width: 0;
+}
+
+.tool-guide-name {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.tool-guide-reference {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: #7653a0;
+}
+
+.tool-guide-reference i {
+  width: 15px;
+  height: 0;
+  border-top: 2px dashed currentColor;
+  flex-shrink: 0;
+}
+
+.tool-guide-cancel {
+  margin: 4px 0 0;
+  color: var(--muted, #637366);
+}
+
+.tool-guide-cancel kbd {
+  padding: 0 4px;
+  border: 1px solid var(--line, #d3ded2);
+  border-radius: 3px;
+  background: #f2f5ee;
+  font: 10px/1.6 Consolas, monospace;
+}
+
+.tool-guide-usage {
+  margin: 3px 0 4px;
+  color: var(--muted, #637366);
+}
+.tool-guide-purpose {
+  margin: 0 0 7px;
+  color: var(--ink, #263b31);
+  font-size: 12px;
+  line-height: 1.75;
+}
+.tool-guide-purpose strong { color: var(--accent, #1e6550); font-weight: 600; }
+
+.tool-guide-step {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  color: var(--accent, #1e6550);
+}
+
+.tool-guide-step > span:last-child {
+  min-width: 0;
+}
+
+.tool-guide-step-number {
+  flex: 0 0 auto;
+  min-width: 30px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.tool-guide-step.has-error {
+  color: var(--danger, #a53e39);
+}
+
+.text-parameters { align-items: center; }
+.text-parameters label { display: flex; flex-direction: column; gap: 3px; }
+.text-parameters textarea { width: min(320px, 48vw); resize: vertical; min-height: 52px; max-height: 160px; padding: 5px 7px; font: inherit; border: 1px solid var(--line, #cbd4c8); border-radius: 3px; }
+.text-parameters input[type="number"] { max-width: 90px; }
+.text-parameters input[type="color"] { width: 44px; height: 27px; padding: 2px; }
+
+@media (max-width: 1190px) {
+  .tool-guide { padding-left: 15px; padding-right: 15px; }
+}

@@ -1,0 +1,58 @@
+.crease-library{--library-muted:#596e5a;scrollbar-color:#a7b7a0 #f4f6ef;caret-color:var(--library-accent)}
+.crease-library ::selection{background:#cee0c4;color:#243b2d}
+.crease-library input::placeholder{color:var(--library-muted);opacity:1}
+.crease-library .diagram-library-resume>div>small,.crease-library .diagram-library-preview-empty,.crease-library .diagram-library-document>footer>button,.crease-library .diagram-library-document>footer>label,.crease-library .diagram-library-document select,.crease-library .diagram-library-empty h3{color:var(--library-muted)}
+.crease-library .diagram-library-status{color:#42613a}
+.crease-library .diagram-library-status.is-draft{color:#71603a}
+.crease-library .crease-library-preview-placeholder{position:relative;width:100%;height:100%;min-height:174px;color:var(--library-muted)}
+.crease-library .crease-library-preview-placeholder>svg{display:block;width:100%;height:100%;padding:9px;fill:#fff;stroke:#87918b;stroke-width:1.15}
+.crease-library .crease-library-preview-placeholder>span{position:absolute;bottom:17px;left:50%;transform:translateX(-50%);padding:3px 7px;background:var(--library-paper);font-size:10px;white-space:nowrap}
+.crease-library .diagram-library-error{display:flex;align-items:center;justify-content:space-between;gap:16px}
+.crease-library .diagram-library-error>span{overflow-wrap:anywhere}
+.crease-library .crease-library-loading{min-height:245px;display:flex;align-items:center;justify-content:center;color:var(--library-muted)}
+.crease-library .crease-library-empty-actions{display:flex;justify-content:center;flex-wrap:wrap;gap:8px}
+.crease-library .crease-library-examples{position:relative}
+.crease-library .crease-library-examples>summary{padding:8px 4px;color:var(--library-muted);cursor:pointer;white-space:nowrap}
+.crease-library .crease-library-examples>summary:focus-visible{outline:2px solid #558669;outline-offset:3px}
+.crease-library .crease-library-examples>div{position:absolute;z-index:3;right:0;top:calc(100% + 5px);display:flex;flex-direction:column;gap:3px;min-width:136px;padding:6px;background:var(--library-paper);border:1px solid var(--library-line);border-radius:5px}
+.crease-library .crease-library-examples>div>button{border:0;text-align:left;background:transparent}
+.crease-library .diagram-library-document-open>div:last-child>span{line-height:1.6;overflow-wrap:anywhere}
+.crease-library .diagram-library-main,.crease-library .diagram-library-sidebar>nav{scrollbar-color:#a7b7a0 transparent}
+@media(max-width:1024px){
+  .crease-library .diagram-library-heading{flex-wrap:wrap;align-items:flex-start}
+  .crease-library .diagram-library-actions{max-width:none;justify-content:flex-start}
+}
+@media(max-width:600px){
+  .crease-library{grid-template-columns:130px minmax(0,1fr)}
+  .crease-library .diagram-library-main{padding:20px 12px 30px}
+  .crease-library .diagram-library-sidebar>header{padding:24px 12px;font-size:12px;gap:6px;letter-spacing:0}
+  .crease-library .diagram-library-sidebar>footer{padding:12px}
+  .crease-library .diagram-library-files-heading{align-items:flex-start;flex-direction:column}
+  .crease-library .diagram-library-files-heading label,.crease-library .diagram-library-files-heading input{width:100%}
+  .crease-library .diagram-library-resume{grid-template-columns:minmax(0,1fr)}
+  .crease-library .diagram-library-resume-image{border-right:0;border-bottom:1px solid var(--library-line)}
+  .crease-library .diagram-library-preview.is-large{min-height:174px;height:174px}
+  .crease-library .diagram-library-resume>div{padding:20px}
+  .crease-library .diagram-library-document-grid,.crease-library .diagram-library-folder-grid{grid-template-columns:minmax(0,1fr)}
+}
+:root[data-theme="dark"] .crease-library{--library-ink:#e6eee8;--library-muted:#b4c5b7;--library-line:#465b4b;--library-accent:#436e55;--library-paper:#253229;background:#18231c;scrollbar-color:#637c67 #18231c}
+:root[data-theme="dark"] .crease-library ::selection{background:#41654d;color:#f0f7ee}
+:root[data-theme="dark"] .crease-library .diagram-library-sidebar{background:#202d23}
+:root[data-theme="dark"] .crease-library .diagram-library-sidebar>header .icon{color:#a3bca1}
+:root[data-theme="dark"] .crease-library .diagram-library-sidebar>nav>button[aria-current=page]{background:#344b37;border-color:#59735a}
+:root[data-theme="dark"] .crease-library button:hover:not(:disabled){background:#344c39;border-color:#7a977b}
+:root[data-theme="dark"] .crease-library .diagram-library-primary:hover:not(:disabled){background:#527e63}
+:root[data-theme="dark"] .crease-library .diagram-library-resume{border-color:var(--library-line)}
+:root[data-theme="dark"] .crease-library .diagram-library-preview{background-color:#202d23;background-image:linear-gradient(#63765c22 1px,transparent 1px),linear-gradient(90deg,#63765c22 1px,transparent 1px)}
+:root[data-theme="dark"] .crease-library .diagram-library-resume-image{background:#202d23}
+:root[data-theme="dark"] .crease-library .diagram-library-files-heading label,:root[data-theme="dark"] .crease-library .diagram-library-dialog input{background:#1b281f;border-color:var(--library-line)}
+:root[data-theme="dark"] .crease-library .diagram-library-folder-card{background:#2d3f2e;border-color:#4b6548}
+:root[data-theme="dark"] .crease-library .diagram-library-folder-card>.icon{color:#b4c6a3;fill:#3e5739}
+:root[data-theme="dark"] .crease-library .diagram-library-document-open>div:last-child,:root[data-theme="dark"] .crease-library .diagram-library-document>footer{border-color:var(--library-line)}
+:root[data-theme="dark"] .crease-library .diagram-library-document>footer{background:#202d23}
+:root[data-theme="dark"] .crease-library .diagram-library-document.is-current{border-color:#89aa80}
+:root[data-theme="dark"] .crease-library .diagram-library-empty{border-color:#597351}
+:root[data-theme="dark"] .crease-library .diagram-library-error{background:#423426;border-color:#8b6c4e;color:#f0d4b7}
+:root[data-theme="dark"] .crease-library .diagram-library-dialog-backdrop{background:#08120cab}
+:root[data-theme="dark"] .crease-library button:focus-visible,:root[data-theme="dark"] .crease-library input:focus-visible,:root[data-theme="dark"] .crease-library select:focus-visible{outline-color:#a0cba5}
+@media(prefers-reduced-motion:reduce){.crease-library *{scroll-behavior:auto!important;transition:none!important}}

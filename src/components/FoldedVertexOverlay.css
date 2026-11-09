@@ -1,0 +1,10 @@
+[data-model-edit-overlay] [data-folded-vertex]{-webkit-user-drag:none;user-select:none}
+[data-model-edit-overlay][data-model-dragging="true"],
+[data-model-edit-overlay][data-model-dragging="true"] [data-folded-vertex]{cursor:grabbing!important}
+[data-model-edit-overlay][data-model-hide-markers="true"] [data-folded-vertex]:focus{outline:none}
+
+.diagram-stretch-controls{position:absolute;left:12px;top:12px;right:12px;z-index:3;display:flex;align-items:center;flex-wrap:wrap;gap:6px;width:fit-content;max-width:calc(100% - 24px);padding:8px 10px;background:#fffefa;border:1px solid #d9e1d7;border-radius:6px;box-shadow:0 2px 6px #203c2c12;font-size:12px}
+.diagram-stretch-controls button{padding:5px 9px;border:1px solid #c6d6cb;border-radius:4px;background:#fffefa;color:#315943;cursor:pointer}
+.diagram-stretch-controls button[aria-pressed="true"]{background:#e1ede4;border-color:#537761}
+.diagram-stretch-controls button:disabled{opacity:.5;cursor:default}
+.diagram-stretch-controls span{color:#526859;max-width:460px}

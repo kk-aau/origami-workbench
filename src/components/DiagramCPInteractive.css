@@ -1,0 +1,32 @@
+.diagram-workspace svg.diagram-cp-image.diagram-cp-interactive{display:block;padding:0!important;margin:7px 8px;width:calc(100% - 16px);min-height:100px;background:#fffefb;touch-action:manipulation;user-select:none;overflow:hidden}
+.diagram-workspace.diagram-compact-workspace .diagram-cp-shelf{grid-template-rows:repeat(2,minmax(min-content,1fr));overflow-y:auto}
+.diagram-workspace.diagram-compact-workspace .diagram-cp-card{min-height:min-content}
+.diagram-workspace.diagram-compact-workspace .diagram-cp-card>svg.diagram-cp-image.diagram-cp-interactive{flex:1 0 116px;min-height:116px;height:116px}
+.diagram-cp-interactive .diagram-cp-face{cursor:pointer;outline:none}
+.diagram-cp-interactive .diagram-cp-face-region{fill:#fafbf7;stroke:transparent;stroke-width:var(--cp-face-stroke);pointer-events:fill;transition:fill .12s,stroke .12s}
+.diagram-cp-interactive .diagram-cp-face.is-hovered .diagram-cp-face-region,.diagram-cp-interactive .diagram-cp-face:focus-visible .diagram-cp-face-region{fill:#e0f1f6;stroke:#498ca3}
+.diagram-cp-interactive .diagram-cp-face.is-selected .diagram-cp-face-region{fill:#d8e8da;stroke:#436e56}
+.diagram-cp-interactive .diagram-cp-face.is-fixed .diagram-cp-face-region{fill:#f4ecd4;stroke:#b18a38}
+.diagram-cp-interactive .diagram-cp-face.is-fixed.is-hovered .diagram-cp-face-region{fill:#ede1be;stroke:#498ca3}
+.diagram-cp-interactive .diagram-cp-edges line{stroke-width:1;opacity:.85}
+.diagram-cp-interactive .diagram-cp-edge{cursor:pointer;outline:none}
+.diagram-cp-interactive .diagram-cp-edges .diagram-cp-edge-hit{stroke:transparent;stroke-width:var(--cp-edge-hit-width);fill:none;pointer-events:stroke;opacity:1}
+.diagram-cp-interactive .diagram-cp-edges .diagram-cp-edge-mark{stroke-width:var(--cp-edge-width);transition:stroke .12s,stroke-width .12s}
+.diagram-cp-interactive .diagram-cp-edge.is-linked-selected .diagram-cp-edge-linked-halo{stroke:#2b9dd0;stroke-width:var(--cp-edge-hit-width);stroke-linecap:round;opacity:.2}
+.diagram-cp-interactive .diagram-cp-edge.is-linked-selected .diagram-cp-edge-mark{stroke:#1688b6;stroke-width:calc(var(--cp-edge-width)*3);opacity:1}
+.diagram-cp-interactive .diagram-cp-edge.is-hovered .diagram-cp-edge-mark,.diagram-cp-interactive .diagram-cp-edge:focus-visible .diagram-cp-edge-mark{stroke:#498ca3;stroke-width:calc(var(--cp-edge-width)*2.5);opacity:1}
+.diagram-cp-interactive .diagram-cp-edge.is-selected .diagram-cp-edge-mark{stroke:#436e56;stroke-width:calc(var(--cp-edge-width)*2.7);opacity:1}
+.diagram-cp-interactive .diagram-cp-edge.is-selected.is-hovered .diagram-cp-edge-mark{stroke:#316b80}
+.diagram-cp-interactive .diagram-cp-labels text{fill:#617563;font-family:inherit;font-weight:500;paint-order:stroke;stroke:#fffefb;stroke-width:2;stroke-linejoin:round;pointer-events:none}
+.diagram-cp-interactive .diagram-cp-labels text.is-hovered{fill:#316b80;font-weight:700}
+.diagram-cp-interactive .diagram-cp-labels text.is-selected{fill:#315b45;font-weight:700}
+.diagram-cp-interactive .diagram-cp-labels text.is-fixed{fill:#936c22;font-weight:700}
+.diagram-cp-interactive .diagram-cp-vertex{cursor:pointer;outline:none}
+.diagram-cp-interactive .diagram-cp-vertex-hit{fill:transparent;stroke:none;pointer-events:fill}
+.diagram-cp-interactive .diagram-cp-vertex-mark{fill:#fffefb;stroke:#76907b;stroke-width:var(--cp-vertex-stroke);transition:fill .12s,stroke .12s}
+.diagram-cp-interactive .diagram-cp-vertex.is-hovered .diagram-cp-vertex-mark,.diagram-cp-interactive .diagram-cp-vertex:focus-visible .diagram-cp-vertex-mark{fill:#498ca3;stroke:#316b80;stroke-width:calc(var(--cp-vertex-stroke)*2)}
+.diagram-cp-interactive .diagram-cp-vertex.is-selected .diagram-cp-vertex-mark{fill:#436e56;stroke:#315b45;stroke-width:calc(var(--cp-vertex-stroke)*1.5)}
+.diagram-cp-interactive .diagram-cp-vertex.is-fixed .diagram-cp-vertex-mark{fill:#b28d3b;stroke:#805c1d;stroke-width:calc(var(--cp-vertex-stroke)*1.5)}
+.diagram-cp-interactive[data-cp-disabled=true] .diagram-cp-face,.diagram-cp-interactive[data-cp-disabled=true] .diagram-cp-vertex,.diagram-cp-interactive[data-cp-disabled=true] .diagram-cp-edge{cursor:default;pointer-events:none}
+.diagram-cp-interactive[data-cp-disabled=true] .diagram-cp-face-region,.diagram-cp-interactive[data-cp-disabled=true] .diagram-cp-edge-hit,.diagram-cp-interactive[data-cp-disabled=true] .diagram-cp-vertex-hit{pointer-events:none}
+.diagram-cp-interactive-error{font-size:10px;line-height:1.7;color:#8b927f;text-align:center}

@@ -1,0 +1,15 @@
+import fs from 'node:fs';
+import assert from 'node:assert/strict';
+import {importDocument,exportDocument} from '../src/core/formats';
+import {inspectMaterialTopology} from '../src/core/materialTopology';
+import {prepareTessResult,type TessParams} from '../src/app/tessellation';
+import {wovenCPDocument} from '../src/app/wovenCPDocument';
+import {exportDXF,DXF_LAYERS} from '../src/core/dxf';
+import type {Doc,Assignment} from '../src/core/types';
+const log=fs.readFileSync('output/audits/woven-cp-only-browser-1009.log','utf8');assert.ok(!log.includes('### Error'));const result=JSON.parse(log.split(/\r?\n/)[1]),cases:Record<string,unknown>={};
+const material=(d:Doc)=>{const m=inspectMaterialTopology(d);assert.ok(m.ok,m.ok?'':m.reason);return m;};
+const guards=JSON.parse(fs.readFileSync('output/audits/woven-cp-only-guards-1009.log','utf8').split(/\r?\n/)[1]);
+for(const {name,response}of [...result.responses,{name:'updated',response:guards.response}]){const read=(ext:string)=>fs.readFileSync(`output/playwright/woven-cp-only-${name}-1009.${ext}`,'utf8'),doc=importDocument(read('zhezhi.json'),'json').doc,params=(doc.metadata!.tessellation as {parameters:TessParams}).parameters,expected=wovenCPDocument(prepareTessResult(response,params),params),m=material(doc);expected.metadata!.generatedAt=doc.metadata!.generatedAt;assert.deepEqual(doc,importDocument(exportDocument(expected,'json').text,'json').doc);assert.equal(m.foldedVertices,undefined);const folded=JSON.parse(read('fold'));assert.ok(!(folded.file_frames??[]).some((f:any)=>(f.frame_classes??[]).includes('foldedForm')));const back=importDocument(read('fold'),'fold').doc,b=material(back);assert.deepEqual(b.graph,m.graph);assert.equal(b.foldedVertices,undefined);assert.deepEqual(back.metadata!.wovenCPAdoption,doc.metadata!.wovenCPAdoption);
+ const dxf=read('dxf');assert.equal(dxf,exportDXF(doc).text);assert.ok(dxf.includes('AC1009')&&!dxf.includes('LWPOLYLINE'));const lines=dxf.trim().split(/\r?\n/),entities:Map<number,string>[]=[];let e:Map<number,string>|null=null;for(let i=0;i<lines.length;i+=2){const c=Number(lines[i]),v=lines[i+1];if(c===0){if(e)entities.push(e);e=v==='LINE'?new Map():null;}else if(e)e.set(c,v);}assert.equal(entities.length,doc.segments.length);doc.segments.forEach((s,i)=>{assert.equal(entities[i].get(8),DXF_LAYERS[s.assignment as Assignment].name);for(const [code,v]of [[10,s.a[0]],[20,-s.a[1]],[11,s.b[0]],[21,-s.b[1]]] as const)assert.ok(Number(entities[i].get(code))===v);});cases[name]={vertices:m.graph.vertices_coords.length,edges:m.graph.edges_vertices.length,faces:m.graph.faces_vertices!.length,components:m.components.length,dxfLines:entities.length};
+}
+assert.equal(Object.keys(cases).length,4);fs.writeFileSync('output/audits/woven-cp-only-download-1009.json',JSON.stringify({verified:true,fourFreshPublicResponses:true,nativeMatchesIndependentCPAdoption:true,noActiveFoldedFrame:true,FOLDReopenNoStaleFF:true,ordinaryR12LINECoordinatesCountsAndUnits:true,cases},null,2));console.log('Verified four fresh public CP-only adoptions: original coordinates, indexed cut banks, native/FOLD without active FF and ordinary DXF LINE units/counts.');

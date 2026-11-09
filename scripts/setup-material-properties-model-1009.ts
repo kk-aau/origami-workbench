@@ -1,0 +1,14 @@
+import fs from 'node:fs';
+import type {Doc} from '../src/core/types';
+import {propertiesModelCase,propertiesRecipe} from '../tests/fixtures/materialPropertiesModel';
+import {weakToolSheet,weakToolSource,weakToolAnchor,weakToolMaterial as mat} from '../tests/fixtures/materialWeakTools';
+import {traceModelCase} from '../tests/fixtures/materialTraceModel';
+import {editMaterialFaces} from '../src/core/materialFaceEdit';
+import {editMaterialLineProperties} from '../src/core/materialLineProperties';
+import {cutMaterialSelection} from '../src/app/materialClipboard';
+import {exportDocument,importDocument} from '../src/core/formats';
+const save=(name:string,d:Doc)=>{d.name=`参数折痕属性-${name}`;fs.writeFileSync(`output/playwright/material-properties-model-${name}-initial-1009.zhezhi.json`,exportDocument(d,'json').text);};
+for(const n of ['source','mountain','angle'])save(n,propertiesModelCase(n));save('original',importDocument(fs.readFileSync('output/playwright/material-topology-model-original-saved-1009.zhezhi.json','utf8'),'json').doc);
+const source=propertiesModelCase('source'),cross=editMaterialFaces(source,{kind:'material-face-trace',component:0,from:weakToolAnchor(source,[50,0]),to:weakToolAnchor(source,[50,100]),assignment:'F',fixedSide:'left',parametric:true}),ids=cross.descendants.get(propertiesRecipe(source).segmentIds[0])!;save('split',editMaterialLineProperties(cross.doc,{...propertiesRecipe(cross.doc),segmentIds:ids,parametric:true}).doc);save('loop',cross.doc);
+const hole=editMaterialFaces(weakToolSheet(true),{kind:'material-face-trace',component:0,from:weakToolAnchor(weakToolSheet(true),[0,30]),to:weakToolAnchor(weakToolSheet(true),[100,30]),assignment:'F',fixedSide:'left'}).doc;save('hole',hole);const weak=weakToolSource('boundary');save('weak',editMaterialFaces(weak,{kind:'material-face-trace',component:0,from:weakToolAnchor(weak,[0,25]),to:weakToolAnchor(weak,[100,25]),assignment:'F',fixedSide:'left'}).doc);
+const mountain=propertiesModelCase('mountain');save('empty-after',cutMaterialSelection(mountain,{kind:'material-clipboard-cut',segmentIds:mat(mountain).edgeSegmentIds,lockBoundary:false,parametric:true}).doc);console.log('Prepared assignment/angle, source interval, impossible hinge loop, actual original, hole/weak and later empty-cut cases.');

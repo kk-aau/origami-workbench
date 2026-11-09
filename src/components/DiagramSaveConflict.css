@@ -1,0 +1,6 @@
+.diagram-save-conflict{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-shrink:0;padding:10px 12px;border:1px solid #c5a46b;background:#fff5df;color:#684107}
+.diagram-save-conflict strong{font-size:12px}
+.diagram-save-conflict p{margin:4px 0 0;font-size:11px;line-height:1.6}
+.diagram-save-conflict>div:last-child{display:flex;gap:6px;flex-wrap:wrap;flex-shrink:0}
+.diagram-save-conflict button{font-size:11px}
+@media(max-width:1100px){.diagram-save-conflict{align-items:flex-start;flex-wrap:wrap}}

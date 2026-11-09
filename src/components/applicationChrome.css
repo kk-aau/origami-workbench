@@ -1,0 +1,78 @@
+/* Approved canvas-first desktop chrome. Keep workspace contents and workflows intact. */
+.app.chrome-workbench{--workspace-rail-width:70px;min-height:560px}
+.chrome-workbench .app-header{height:54px;min-height:54px;flex-wrap:nowrap;gap:7px;padding:0 0 0 14px;position:relative;z-index:20;isolation:isolate;flex-shrink:0}
+.chrome-workbench .app-header .brand{min-width:108px;gap:8px;flex-shrink:0;user-select:none}
+.chrome-workbench .app-header .brand>span{font-size:15px;letter-spacing:0}
+.chrome-workbench .document-name{flex:0 1 260px;min-width:125px;grid-template-columns:minmax(0,1fr) 7px;padding-left:12px;margin-left:2px;gap:1px 5px}
+.chrome-workbench .document-name input{font-size:12px;min-width:0;text-overflow:ellipsis}
+.chrome-workbench .document-name small{font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chrome-workbench .header-actions{flex:0 0 auto;flex-wrap:nowrap;margin-left:0;gap:4px;padding-right:6px}
+.chrome-workbench .header-actions>button,.chrome-workbench .header-menu-trigger{font-size:12px;min-height:32px;padding:5px 8px}
+.header-drag-space{align-self:stretch;flex:1;min-width:24px}
+.chrome-icon{display:block;width:18px;height:18px;flex-shrink:0}
+.header-menu{position:relative;flex-shrink:0}
+.header-menu-trigger .chrome-icon:last-child{width:14px}
+.header-menu-trigger.icon-menu-trigger{width:34px;padding:6px}
+.header-menu-trigger.icon-menu-trigger .chrome-icon{width:18px}
+.header-menu-panel{position:absolute;top:calc(100% + 9px);right:0;width:max-content;min-width:200px;max-width:min(330px,calc(100vw - 28px));max-height:calc(100dvh - 82px);overflow:auto;background:var(--paper);color:var(--ink);border-radius:6px;box-shadow:0 6px 24px #152b2526;outline:1px solid var(--line);padding:6px;display:flex;flex-direction:column;gap:2px;z-index:100;overscroll-behavior:contain}
+.header-menu[data-align=left] .header-menu-panel{left:0;right:auto}
+.chrome-workbench .header-menu-panel button{width:100%;min-height:34px;padding:6px 10px;justify-content:flex-start;font-size:12px;white-space:normal;text-align:left}
+.header-menu-panel kbd{margin-left:auto;font:11px Consolas,monospace;color:var(--muted);padding-left:22px;white-space:nowrap}
+.header-menu-panel hr{border:0;border-top:1px solid var(--line);width:100%;margin:4px 0}
+.app-shell{display:flex;flex:1;min-height:0;min-width:0;overflow:hidden}
+.app-content{display:flex;flex-direction:column;flex:1;min-width:0;min-height:0;overflow:hidden}
+.chrome-workbench .app-shell>.workspaces{width:var(--workspace-rail-width);flex:0 0 var(--workspace-rail-width);height:auto;min-height:0;overflow-y:auto;overflow-x:hidden;display:flex;flex-direction:column;align-items:stretch;gap:7px;padding:12px 6px 9px;border-bottom:0;border-right:1px solid var(--line);background:var(--surface);scrollbar-width:thin}
+.chrome-workbench .workspaces .workspace-tab{flex:0 0 auto;display:flex;flex-direction:column;justify-content:center;gap:7px;min-height:64px;width:100%;padding:8px 1px;font-size:11px;white-space:nowrap}
+.chrome-workbench .workspace-tab>.chrome-icon{width:23px;height:23px}
+.chrome-workbench .workspace-tab[aria-pressed=true]{background:var(--paper);border-color:#a8c4af;color:var(--accent)}
+.chrome-workbench .workspaces .nav-spacer{flex:1;min-height:20px}
+.chrome-workbench .workspaces .workspace-view-control{border-top:1px solid var(--line);border-radius:0;padding-top:15px;min-height:78px}
+.chrome-workbench .workspaces .workspace-view-control[aria-pressed=true]{border-radius:5px;border-color:#a8c4af}
+.chrome-workbench .workspaces .local-badge{display:flex;flex:0 0 auto;font-size:11px;line-height:1.5;gap:4px;padding:8px 0 0;justify-content:center;white-space:normal;text-align:center}
+.chrome-workbench .workspaces .local-badge i{flex-shrink:0;width:5px;height:5px}
+.chrome-workbench .workspaces .local-badge[data-online=false]{color:var(--danger)}
+.chrome-workbench .local-badge[data-online=false] i{background:var(--danger)}
+.chrome-workbench .workbench-main{min-width:0}
+.chrome-workbench .workspace{position:relative}
+.chrome-workbench .workspace-document{position:relative;min-width:0}
+.workspace-context-help{position:absolute;z-index:8;left:14px;bottom:12px;font-size:11px;max-width:calc(100% - 28px)}
+.workspace-context-help summary{list-style:none;display:inline-flex;align-items:center;gap:5px;cursor:pointer;border:1px solid var(--line);background:var(--paper);padding:5px 8px;border-radius:5px}
+.workspace-context-help summary::-webkit-details-marker{display:none}
+.workspace-context-help p{position:absolute;bottom:30px;left:0;margin:0;width:360px;max-width:calc(100vw - 140px);max-height:220px;overflow:auto;padding:12px;background:var(--paper);box-shadow:0 5px 20px #233b2921;outline:1px solid var(--line);border-radius:5px;line-height:1.8}
+.chrome-workbench .inspector .chrome-paper-settings{padding:12px;border-bottom:1px solid var(--line)}
+.chrome-workbench .inspector .chrome-paper-settings h2{font-size:12px}
+.chrome-workbench .inspector .left-dock-controls{padding:10px 12px;border-bottom:1px solid var(--line)}
+.chrome-workbench .inspector .dock-grid-row{display:flex;flex-wrap:wrap;gap:5px}
+.chrome-workbench .inspector .dock-grid-row .number-field{flex:1;min-width:95px}
+.chrome-workbench .inspector .dock-grid-row .number-input{width:64px}
+.chrome-workbench .inspector .dock-grid-row .number-field>span{display:none}
+.chrome-workbench .inspector .dock-grid-options,.chrome-workbench .inspector .dock-toggle-row{flex-wrap:wrap;gap:6px}
+.chrome-workbench .inspector .left-dock-controls .checkbox{font-size:11px;line-height:1.6;white-space:normal}
+.chrome-workbench .compact-inspector{overflow-y:auto;overflow-x:hidden}
+.chrome-workbench .compact-inspector>*{flex-shrink:0}
+.chrome-workbench .compact-inspector>.construction-rail{flex:0 0 auto;max-height:55vh;overflow:auto}
+.chrome-workbench .statusbar{min-height:24px;flex-shrink:0;padding:2px 12px;gap:12px;font-size:11px}
+.chrome-workbench .statusbar>span{white-space:nowrap}
+.chrome-workbench .app-content>.recovery-bar,.chrome-workbench .app-content>.error-bar{flex-shrink:0;flex-wrap:wrap;max-height:160px;overflow:auto}
+.chrome-workbench .app-content>.fold-dock{flex-shrink:0}
+.chrome-workbench .header-actions .header-overview{max-width:135px;overflow:hidden;text-overflow:ellipsis}
+:root[data-theme=dark] .chrome-workbench .workspace-tab[aria-pressed=true]{border-color:#678e74}
+:root[data-theme=dark] .header-menu-panel{box-shadow:0 6px 24px #07110e70}
+@media(max-width:1250px){
+ .app.chrome-workbench{--workspace-rail-width:66px}
+ .chrome-workbench .app-header{gap:4px;padding-left:10px}
+ .chrome-workbench .app-header .brand{min-width:101px;gap:6px}
+ .chrome-workbench .document-name{flex-basis:180px;min-width:110px;padding-left:7px}
+ .chrome-workbench .header-actions{gap:2px}
+ .chrome-workbench .header-actions>button,.chrome-workbench .header-menu-trigger{font-size:11px;padding:5px 6px}
+ .chrome-workbench .header-drag-space{min-width:16px}
+}
+@media(max-width:1050px){
+ .chrome-workbench .app-header{flex-wrap:nowrap;height:54px;min-height:54px}
+ .chrome-workbench .document-name{flex:1;min-width:80px}
+ .chrome-workbench .header-actions{margin-left:0}
+ .chrome-workbench .header-actions>.header-open,.chrome-workbench .header-actions>.header-overview{display:none}
+ .chrome-workbench .header-actions button .icon{display:block}
+ .chrome-workbench .statusbar{gap:8px}
+}
+@media(max-height:690px){.chrome-workbench .workspaces .workspace-tab{min-height:56px;gap:5px}.chrome-workbench .workspaces .workspace-view-control{min-height:64px}.chrome-workbench .workspaces .nav-spacer{min-height:8px}}

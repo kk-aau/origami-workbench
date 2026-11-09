@@ -1,0 +1,4 @@
+.canvas-cursor-hint-toggle{display:inline-flex;align-items:center;gap:5px;min-height:28px;padding:3px 7px;color:var(--diagram-ink,var(--ink));font-size:11px;line-height:1.4;white-space:nowrap;cursor:pointer;user-select:none}
+.canvas-cursor-hint-toggle input[type=checkbox]{width:13px;height:13px;margin:0;accent-color:var(--diagram-accent,var(--accent));cursor:inherit}
+.canvas-cursor-hint-toggle:has(input:disabled){opacity:.5;cursor:default}
+.zoom-controls.canvas-view-controls{align-items:center;flex-wrap:wrap;justify-content:flex-end;max-width:calc(100% - 40px)}

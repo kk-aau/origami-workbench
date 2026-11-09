@@ -1,0 +1,16 @@
+.diagram-image-controls{padding:10px;border-bottom:1px solid var(--diagram-line);background:var(--diagram-surface,#fffef9);flex-shrink:0;min-width:0}
+.diagram-image-controls header{display:flex;align-items:center;justify-content:space-between;gap:6px;margin-bottom:8px}
+.diagram-image-controls h3{font-size:11px;font-weight:600;margin:0}
+.diagram-image-controls header small,.diagram-image-controls p{font-size:10px;color:#516953}
+.diagram-image-controls p{margin:8px 0 0;line-height:1.6}
+.diagram-image-paper{display:flex;gap:5px;align-items:center;font-size:10px;margin-bottom:8px}
+.diagram-image-list{display:grid;gap:4px;max-height:136px;overflow:auto;scrollbar-width:thin}
+.diagram-image-list button{display:flex;align-items:center;text-align:left;gap:7px;padding:5px;min-width:0}
+.diagram-image-list button[aria-pressed=true]{background:#e2eee3;border-color:#426f59}
+.diagram-image-list img{width:32px;height:28px;object-fit:contain;background:#eff3ed;flex-shrink:0}
+.diagram-image-list span{font-size:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.diagram-image-name{display:grid;gap:4px;font-size:10px;margin:9px 0 7px}
+.diagram-image-name input{width:100%;min-width:0;padding:5px 6px}
+.diagram-image-controls .number-field{margin-top:6px;min-width:0}
+.diagram-image-controls .number-input input{width:100%;min-width:0}
+.diagram-image-controls .diagram-full-button{margin-top:9px;width:100%}

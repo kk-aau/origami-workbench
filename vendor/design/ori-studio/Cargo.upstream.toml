@@ -1,0 +1,149 @@
+[workspace]
+members = [
+    "crates/oristudio-bp",
+    "crates/oristudio-bp-wasm",
+    "crates/oristudio-cp",
+    "crates/oristudio-cp-compiler",
+    "crates/oristudio-cp-detect",
+    "crates/oristudio-cp-detect-inspector",
+    "crates/oristudio-cp-eval",
+    "crates/oristudio-cp-detect-wasm",
+    "crates/oristudio-cp-wasm",
+    "crates/oristudio-precrease",
+    "crates/oristudio-precrease-wasm",
+    "crates/oristudio-geometry",
+    "crates/oristudio-layer-order",
+    "crates/oristudio-layer-spread",
+    "crates/oristudio-layer-spread-wasm",
+    "crates/oristudio-fold",
+    "crates/oristudio-fold-wasm",
+    "crates/oristudio-pdf",
+    "crates/oristudio-pdf-wasm",
+    "crates/treemaker-flatfold",
+    "crates/treemaker-fold",
+    "crates/treemaker-core",
+    "crates/treemaker-cli",
+    "crates/treemaker-wasm",
+    "crates/oracle-tests",
+    "apps/tauri/src-tauri",
+]
+resolver = "3"
+
+[workspace.package]
+version = "0.9.0"
+edition = "2024"
+license = "GPL-2.0-or-later"
+repository = "https://github.com/zacharyfmarion/ori-studio"
+homepage = "https://github.com/zacharyfmarion/ori-studio"
+# The engine crates are not published while the desktop release train runs; see
+# implementation-plans/desktop-ci-release.md. This is also what lets the path
+# dependencies above drop their version requirements, which is what stops the
+# first minor bump from failing every `^0.1.x` req in the workspace.
+publish = false
+
+[workspace.lints.clippy]
+# Three lints Rust 1.98 turned on. CI runs `dtolnay/rust-toolchain@stable`
+# unpinned with `-D warnings`, so the day the toolchain rolled they became hard
+# errors across code nobody had touched — `main` went latently red at the same
+# moment, it just had not been re-run. Enumerated with
+# `cargo +1.98.0 clippy --workspace --all-targets --keep-going`, so this is the
+# whole set rather than whichever crate clippy happened to abort on first.
+#
+# Each is allowed for its own reason, not as a blanket.
+
+# 25 call sites across six crates. The migration is a real improvement and not a
+# find-and-replace: `as_chunks::<N>()` yields `&[T; N]` rather than `&[T]`, which
+# is what would let `geometry_transport.rs` drop a `try_into().unwrap()` and
+# `checks.rs` a `copy_from_slice`. But the sites are in `oristudio-cp` and
+# `oristudio-cp-detect`, where PORTING.md wants oracle runs behind changes to
+# geometry and image code. Worth its own change and its own review.
+chunks_exact_to_as_chunks = "allow"
+
+# `oristudio-bp/src/math/kamiya.rs`. The suggested rewrite is semantics-
+# preserving, but this is ported Box Pleating Studio math sitting beside its
+# vendored original in `third_party/`, and the port's value is partly that it
+# still reads like what it was ported from. A style lint is not a good enough
+# reason to move it away from that.
+needless_late_init = "allow"
+
+# `oristudio-bp/src/tree.rs`. Here the suggestion is wrong for this call site:
+# `pending_remove` is a scratch buffer drained on every flush, and `drain(..)`
+# empties it while *keeping its capacity*. `std::mem::take` leaves a zero-
+# capacity `Vec` behind, so taking the advice trades one allocation per flush
+# for a reallocation on every subsequent push.
+drain_collect = "allow"
+
+[workspace.dependencies]
+anyhow = "1.0"
+clap = { version = "4.5", features = ["derive"] }
+console_error_panic_hook = "0.1"
+image = { version = "0.25", default-features = false, features = ["png"] }
+imageproc = { version = "0.25", default-features = false }
+levenberg-marquardt = "0.15.0"
+nalgebra = "0.34.2"
+proptest = "1.6"
+rayon = "1.10"
+serde = { version = "1.0", features = ["derive"] }
+# `float_roundtrip`: parse every float to the nearest f64, so what serde_json,
+# JavaScript's JSON.stringify or any shortest-round-trip writer wrote reads back
+# bit for bit. Without it about one value in ten reads back one ulp off
+# (`crates/oracle-tests/tests/json_floats.rs` has the measurement and pins the
+# feature). serde_json documents about twice the cost per float parsed.
+serde_json = { version = "1.0", features = ["float_roundtrip"] }
+serde-wasm-bindgen = "0.6"
+js-sys = "0.3"
+encoding_rs = "0.8"
+sha2 = "0.10"
+thiserror = "2.0"
+treemaker-fold = { path = "crates/treemaker-fold" }
+treemaker-flatfold = { path = "crates/treemaker-flatfold" }
+oristudio-cp = { path = "crates/oristudio-cp" }
+oristudio-bp = { path = "crates/oristudio-bp" }
+oristudio-cp-compiler = { path = "crates/oristudio-cp-compiler" }
+oristudio-cp-detect = { path = "crates/oristudio-cp-detect" }
+oristudio-cp-eval = { path = "crates/oristudio-cp-eval" }
+oristudio-precrease = { path = "crates/oristudio-precrease" }
+wasm-bindgen = "0.2"
+wasm-bindgen-test = "0.3"
+walkdir = "2.5"
+slsqp = "1.0.1"
+slsqp-rssl = "0.1.0"
+zip = { version = "6.0.0", default-features = false, features = ["deflate"] }
+
+# CP detection exact solve is dominated by nalgebra/LM numeric kernels. Keep
+# normal dev builds broad and debuggable, but optimize this narrow path so the
+# local inspector behaves closer to production/release WASM.
+[profile.dev.package.oristudio-cp-compiler]
+opt-level = 2
+
+[profile.dev.package.levenberg-marquardt]
+opt-level = 3
+
+[profile.dev.package.nalgebra]
+opt-level = 3
+
+# The flat-folder solver and the detector core (candidate generation, decode,
+# the O(n^2) crossing check in the benchmark) are hot in the CP-detect benchmark.
+# Optimize them in dev so non-release benchmark/inspector runs are not crippled.
+[profile.dev.package.treemaker-flatfold]
+opt-level = 2
+
+[profile.dev.package.oristudio-cp-detect]
+opt-level = 2
+
+# Fold estimation (condition generation, folding, geometry) is compute-heavy and
+# runs natively in the Tauri desktop build. Unoptimized it is ~20x slower
+# (iguana fold ~34s vs ~1.5s), so optimize it even in dev/`tauri dev`.
+[profile.dev.package.oristudio-cp]
+opt-level = 3
+
+# Exhaustive precrease fixture tests spent ~15 minutes in unoptimized geometry
+# search on CI. Optimize this test package while retaining test-profile debug
+# assertions and overflow checks; no fixtures or assertions are skipped. That
+# geometry (lines, indexes, the constructions) is `oristudio-geometry`'s, so it
+# gets the same level or the precrease tests run it unoptimised.
+[profile.test.package.oristudio-precrease]
+opt-level = 2
+
+[profile.test.package.oristudio-geometry]
+opt-level = 2

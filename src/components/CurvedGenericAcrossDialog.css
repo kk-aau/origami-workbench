@@ -1,0 +1,33 @@
+.tess-dialog[open]:has(>.generic-across-dialog){width:min(1040px,calc(100vw - 24px));height:min(680px,calc(100dvh - 24px));overflow:hidden}
+.generic-across-dialog{grid-template-columns:320px minmax(0,1fr);gap:10px;margin-top:8px}
+.generic-across-dialog .csp-controls{gap:4px;padding:9px;overflow:visible}.cga-modes{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.cga-expressions{display:grid;grid-template-columns:1fr;gap:6px}.cga-expressions.both{grid-template-columns:1fr 1fr}
+.cga-source-group{display:grid;gap:3px;align-content:start}.cga-source-group b{font:10px/16px sans-serif;color:#607466}
+.cga-expression{display:grid;grid-template-columns:30px minmax(0,1fr);align-items:center;gap:3px;font:10px Consolas,monospace;color:#647869}
+.cga-expression input{box-sizing:border-box;min-width:0;width:100%;height:24px;border:1px solid #cbd5c8;border-radius:4px;padding:3px 5px;background:#fffdf8;font:10px Consolas,monospace;color:#263d34}
+.cga-guide{margin:0!important;font-size:9px!important;line-height:1.35!important;color:#687a6c}.cga-ranges{display:grid;grid-template-columns:1fr 1fr;gap:5px 6px}
+.generic-across-dialog .csp-field,.generic-across-dialog .csp-select{font-size:10px;gap:2px;line-height:1.2}.generic-across-dialog .csp-field input,.generic-across-dialog .csp-select select{height:24px;padding:3px 4px;font-size:10px}
+.generic-across-dialog .csp-status{height:48px;min-height:48px;box-sizing:border-box;padding:5px 7px;font-size:10px;line-height:1.3;overflow-wrap:anywhere}
+.cga-diagnostics{height:41px;flex:none;box-sizing:border-box;display:flex;flex-wrap:wrap;align-content:center;gap:2px 7px;padding:3px 6px;font:10px/1.35 Consolas,monospace;background:#fffdf8;border:1px solid #d7ddd3;border-radius:4px;color:#537365}
+.generic-across-dialog .csp-position{padding:3px 0 0}.generic-across-dialog .csp-position input{margin-top:3px;height:14px}
+.cga-storage{display:flex;gap:5px}.cga-storage button,.cga-reset{flex:1;min-height:25px;min-width:0;padding:3px 4px;border:1px solid #cbd5c8;border-radius:4px;background:#fffdf8;color:#386b62;font-size:10px;white-space:nowrap}
+.cga-reset{width:100%}.generic-across-dialog .csp-panels.single{grid-template-columns:1fr}
+.cga-area.left{fill:#e8bd7288}.cga-area.right{fill:#72b4c177}.cga-boundary,.cga-crease,.cga-ruling,.cga-selected{fill:none}.cga-boundary.left{stroke:#a2763f;stroke-width:1.2}.cga-boundary.right{stroke:#478d99;stroke-width:1.2}
+.cga-crease{stroke:#3d5346;stroke-width:1.8}.cga-ruling{stroke-width:.6;opacity:.5}.cga-ruling.left,.cga-selected.left{stroke:#a2763f}.cga-ruling.right,.cga-selected.right{stroke:#27818e}.cga-selected{stroke-width:2}.cga-marker{fill:#fffdf8;stroke:#2d6254;stroke-width:1.4}
+:root[data-theme="dark"] .cga-expression input,:root[data-theme="dark"] .cga-storage button,:root[data-theme="dark"] .cga-reset,:root[data-theme="dark"] .cga-diagnostics{background:#1c2c25;border-color:#536857;color:#eef5ea}
+@media(max-width:760px){.tess-dialog[open]:has(>.generic-across-dialog){padding:10px;height:calc(100dvh - 18px);width:calc(100vw - 18px)}
+ .generic-across-dialog{display:grid;grid-template-columns:290px minmax(0,1fr);gap:8px;margin-top:5px;overflow:visible}.generic-across-dialog .csp-results{gap:6px;min-height:0}
+ .generic-across-dialog .csp-panels{min-height:0;grid-template-columns:1fr 1fr;gap:6px}.generic-across-dialog .csp-panel{min-height:0}.generic-across-dialog .csp-panel header{min-height:28px;flex-direction:column;align-items:flex-start;padding:5px 7px}
+ .generic-across-dialog .csp-topline strong{font-size:12px}.generic-across-dialog .csp-certification{padding:5px 7px;font-size:9px}.generic-across-dialog .csp-panel p,.generic-across-dialog .csp-azimuth{padding:4px 6px;font-size:9px}}
+@media(max-width:550px){.tess-dialog[open]:has(>.generic-across-dialog){padding:7px}.tess-dialog:has(>.generic-across-dialog)>header{padding-bottom:5px}
+ .generic-across-dialog{grid-template-columns:1fr;grid-template-rows:auto minmax(0,1fr);gap:5px;margin-top:4px}.generic-across-dialog .csp-controls{display:grid;grid-template-columns:1fr 1fr;padding:6px;gap:3px 6px}
+ .cga-modes{grid-row:1;grid-column:1/-1}.cga-expressions{grid-row:2;grid-column:1/-1}.cga-guide{grid-row:3;grid-column:1/-1}.cga-ranges{grid-row:4;grid-column:1/-1;grid-template-columns:repeat(6,minmax(0,1fr));gap:2px 4px}
+ .generic-across-dialog .csp-status{grid-row:5;grid-column:1;height:42px;min-height:42px;font-size:9px;line-height:1.2;padding:4px 5px}.cga-diagnostics{grid-row:5;grid-column:2;height:42px;font-size:9px;padding:3px 5px}
+ .generic-across-dialog .csp-position{grid-row:6;grid-column:1;align-self:center}.cga-storage{grid-row:6;grid-column:2}.cga-reset{grid-row:7;grid-column:1/-1}
+ .cga-source-group{gap:2px}.cga-source-group b{font-size:9px;line-height:12px}.cga-expression{font-size:9px}.cga-expression input{height:21px;font-size:9px}
+ .generic-across-dialog .csp-field,.generic-across-dialog .csp-select{font-size:9px;gap:1px}.generic-across-dialog .csp-field input,.generic-across-dialog .csp-select select{height:23px;font-size:9px}
+ .generic-across-dialog .csp-position label{font-size:9px}.cga-storage button,.cga-reset{min-height:23px;font-size:9px;padding:2px}
+ .generic-across-dialog .csp-results{gap:4px}.generic-across-dialog .csp-topline{min-height:24px}.generic-across-dialog .csp-panel header{min-height:26px;flex-direction:row;align-items:center;padding:4px 6px!important}
+ .generic-across-dialog .csp-panel header span{font-size:8px;letter-spacing:.06em}.generic-across-dialog .csp-panel header strong{font-size:9px}.generic-across-dialog .csp-panel p{font-size:8px!important;line-height:1.2!important;min-height:21px;padding:3px 5px}.generic-across-dialog .csp-azimuth{min-height:21px;padding:3px 5px}
+ .generic-across-dialog .csp-legend{min-height:15px;font-size:9px;gap:8px}.generic-across-dialog .csp-certification{font-size:8px;line-height:1.3;padding:4px 6px}.generic-across-dialog .csp-certification strong{font-size:9px}
+ .generic-across-dialog .csp-footer{min-height:25px;padding-top:3px;gap:4px}.generic-across-dialog .csp-footer span{font-size:8px}.generic-across-dialog .csp-footer button{font-size:9px;min-height:23px;padding:2px 9px}}

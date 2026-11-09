@@ -1,0 +1,45 @@
+import {useEffect,useMemo,useRef,useState} from 'react';
+import {openAppDialog} from './AppDialog';
+import {generateYoshimuraSixDocument,validateYoshimuraSixRecipe,yoshimuraSixPreset,yoshimuraSixSourceMatches,type YoshimuraSixRecipe} from '../app/yoshimuraSixCP2507';
+import type {Doc} from '../core/types';
+import {buildOriginalArrayStatic3D} from '../app/originalArrayStatic3D';
+import OriginalArrayStatic3DPlot,{INITIAL_ORIGINAL_ARRAY_CAMERA,type OriginalArrayCamera} from './OriginalArrayStatic3DPlot';
+import './YoshimuraSixCP2507Dialog.css';
+type Draft=Record<keyof YoshimuraSixRecipe,string>;
+const names={symmetric:'全对称保存例 · In[2508]',kite:'风筝面板保存例',helical:'双折角旋向例 · In[2512]'},draftFor=(r:YoshimuraSixRecipe)=>Object.fromEntries(Object.entries(r).map(([k,v])=>[k,String(v)])) as Draft;
+function parse(d:Draft){if(Object.values(d).some(v=>!v.trim()))throw Error('请填写完整六度原参数。');return validateYoshimuraSixRecipe({...Object.fromEntries(Object.entries(d).filter(([k])=>k!=='seed').map(([k,v])=>[k,Number(v)])),seed:d.seed});}
+function Plot({doc}:{doc:Doc}){const svg=useRef<SVGSVGElement>(null),[label,setLabel]=useState<number|null>(null),xs=doc.segments.flatMap(s=>[s.a[0],s.b[0]]),ys=doc.segments.flatMap(s=>[s.a[1],s.b[1]]),minX=Math.min(...xs),maxX=Math.max(...xs),minY=Math.min(...ys),maxY=Math.max(...ys),span=Math.max(maxX-minX,maxY-minY),pad=span*.2,size=label??span*.043,step=Math.pow(10,Math.floor(Math.log10(span/4))),tick=span/step>8?2*step:step,
+ xTicks=Array.from({length:Math.ceil((maxX-minX)/tick)+1},(_,i)=>Math.ceil(minX/tick)*tick+i*tick).filter(x=>x<=maxX),yTicks=Array.from({length:Math.ceil((maxY-minY)/tick)+1},(_,i)=>Math.ceil(minY/tick)*tick+i*tick).filter(y=>y<=maxY),axisX=minX-pad*.15,axisY=-minY+pad*.35,fmt=(x:number)=>Number(x.toPrecision(4)).toString();
+ useEffect(()=>{const el=svg.current;if(!el)return;const update=()=>{const m=el.getScreenCTM(),s=m?Math.hypot(m.a,m.b):0;if(s>0)setLabel(12.1/s);};const observer=new ResizeObserver(update);observer.observe(el);update();return()=>observer.disconnect();},[minX,maxX,minY,maxY]);
+ return <svg ref={svg} role="img" aria-label="原六度 Yoshimura 实际三角纸面、毫米坐标与标尺" data-testid="yoshimura-six-mm-plot" data-coordinate-unit="mm" viewBox={`${minX-pad} ${-maxY-pad} ${maxX-minX+2*pad} ${maxY-minY+2*pad}`}>
+  <g className="yscp-grid">{xTicks.map(x=><line key={'x'+x} x1={x} x2={x} y1={-minY} y2={-maxY}/>)}{yTicks.map(y=><line key={'y'+y} x1={minX} x2={maxX} y1={-y} y2={-y}/>)}</g>
+  {doc.segments.map(s=><line key={s.id} data-segment-id={s.id} data-assignment={s.assignment} x1={s.a[0]} y1={-s.a[1]} x2={s.b[0]} y2={-s.b[1]} className={s.assignment==='B'?'yscp-boundary':'yscp-result'}/>)}
+  <g className="yscp-ruler" fontSize={size}><path d={`M ${minX} ${axisY} H ${maxX} M ${axisX} ${-maxY} V ${-minY}`}/>{xTicks.map(x=><text key={x} x={x} y={axisY+size*1.2} textAnchor="middle">{fmt(x)}</text>)}{yTicks.map(y=><text key={y} x={axisX-size*.25} y={-y+size*.3} textAnchor="end">{fmt(y)}</text>)}<text x={maxX} y={-maxY-size*.7} textAnchor="end">x / mm · y / mm</text><path data-testid="yoshimura-six-mm-scale" data-mm={tick} d={`M ${minX} ${-maxY-size*.6} h ${tick}`}/><text x={minX+tick/2} y={-maxY-size*1.2} textAnchor="middle">{fmt(tick)} mm</text></g>
+ </svg>;
+}
+export default function YoshimuraSixCP2507Dialog({initial,onClose,onAdoptCP}:{initial?:YoshimuraSixRecipe;onClose:()=>void;onAdoptCP?:(doc:Doc)=>boolean}){
+ const dialog=useRef<HTMLDialogElement>(null),last=useRef<Doc|null>(null),[draft,setDraft]=useState(()=>draftFor(initial??yoshimuraSixPreset())),[current,setCurrent]=useState<Doc|null>(null),[state,setState]=useState<'checking'|'ready'|'error'>('checking'),[buildError,setBuildError]=useState(''),[adoptError,setAdoptError]=useState(''),[view,setView]=useState<'cp'|'static-3d'>('cp'),[camera,setCamera]=useState<OriginalArrayCamera>(()=>({...INITIAL_ORIGINAL_ARRAY_CAMERA}));
+ const input=useMemo(()=>{try{return {recipe:parse(draft),error:''};}catch(e){return {recipe:null,error:(e as Error).message};}},[draft]);
+ useEffect(()=>openAppDialog(dialog.current),[]);
+ useEffect(()=>{setCurrent(null);setBuildError('');setAdoptError('');if(!input.recipe){setState('error');return;}setState('checking');const frame=requestAnimationFrame(()=>{try{setCurrent(generateYoshimuraSixDocument(input.recipe));setState('ready');}catch(e){setBuildError((e as Error).message);setState('error');}});return ()=>cancelAnimationFrame(frame);},[input]);
+ if(current)last.current=current;const displayed=current??last.current,spatial=useMemo(()=>{if(!displayed)return {reference:null,error:''};try{return {reference:buildOriginalArrayStatic3D(displayed),error:''};}catch(e){return {reference:null,error:(e as Error).message};}},[displayed]),own=(displayed?.metadata?.originalYoshimuraSix2507 as any),g=(displayed?.metadata?.materialTopology as any)?.graph,
+  edit=(key:keyof Draft,value:string)=>{setCurrent(null);setDraft(d=>({...d,[key]:value}));setState('checking');},
+  field=(key:keyof Draft,label:string,min:number,max:number,step='any')=><label className="yscp-field" key={key}><span>{label}</span><input type="number" aria-label={label} min={min} max={max} step={step} value={draft[key]} onChange={e=>edit(key,e.target.value)}/></label>,
+  fold=(key:'fold2Deg'|'fold6Deg',label:string)=><div className="yscp-fold-field">{field(key,label,30,60)}<input type="range" aria-label={label+'滑条'} min={30} max={60} step={.1} value={draft[key]} onChange={e=>edit(key,e.target.value)}/></div>,
+  adopt=()=>{if(!current||state!=='ready'||!onAdoptCP)return;try{const doc=structuredClone(current);if(!yoshimuraSixSourceMatches(doc))throw Error('当前原参数与实际材料已变化，未采用。');if(onAdoptCP(doc))onClose();else setAdoptError('主工作区未采用；草稿保留。');}catch(e){setAdoptError((e as Error).message);}};
+ return <dialog ref={dialog} className="yscp-dialog ui-dialog" data-testid="yoshimura-six-dialog" aria-labelledby="yscp-title" onCancel={e=>{e.preventDefault();onClose();}}>
+  <header><span>ORIGINAL SIX-DEGREE YOSHIMURA / IN[2507]</span><button aria-label="关闭原六度折筒" onClick={onClose}>×</button></header>
+  <div className="yscp-workspace"><aside className="yscp-controls"><h2 id="yscp-title">六度 Yoshimura 折筒</h2><p>以原六度种子生成三角纸面，调整行列、长度与两个原控制折角。</p>
+   <label className="yscp-field"><span>原六度种子</span><select aria-label="原六度种子" value={draft.seed} onChange={e=>{setCurrent(null);setState('checking');setDraft(draftFor(yoshimuraSixPreset(e.target.value as YoshimuraSixRecipe['seed'])));}}>{Object.entries(names).map(([k,v])=><option key={k} value={k}>{v}</option>)}</select></label>
+   <div className="yscp-fields">{field('columns','水平重复数 / 列',1,12,'1')}{field('rows','垂直重复数 / 行',1,12,'1')}{field('firstLengthMm','第一折线长度 / mm',.1,200)}<button onClick={()=>{setCurrent(null);setState('checking');setDraft(draftFor(yoshimuraSixPreset(draft.seed as YoshimuraSixRecipe['seed'])));}}>恢复种子参数</button></div>
+   <div className="yscp-fields">{fold('fold2Deg','第二控制折角 / °')}{fold('fold6Deg','第六控制折角 / °')}</div>
+   <p className="yscp-note">保原正分支 30–60°。两折角更新原目标角及已核验静态 3D；每次检查全共享顶点、全邻面闭环与逐面等距，未认证连续运动或碰撞。</p>
+   <dl><div><dt>六个种子扇区 / °</dt><dd>{own?.seed.sectorsDeg.join(' / ')??'待检查'}</dd></div><div><dt>原目标折角 / °</dt><dd>{own?.seed.foldAnglesDeg.map((v:number)=>Number(v.toFixed(3))).join(' / ')??'待检查'}</dd></div></dl>
+  </aside><main className="yscp-results"><div className="yscp-heading"><strong>{current?view==='cp'?'实际有限 CP':'原静态 3D':displayed?'上次已核验参数':'实际有限 CP'}</strong><nav className="original-array-view-tabs" aria-label="六度折筒视图"><button type="button" aria-pressed={view==='cp'} onClick={()=>setView('cp')}>原 CP</button><button type="button" aria-pressed={view==='static-3d'} onClick={()=>setView('static-3d')}>原静态 3D</button></nav></div>
+   <div className="yscp-plot-slot" data-testid="yoshimura-six-plot-slot" data-current={!!current}>{view==='static-3d'?spatial.reference?<OriginalArrayStatic3DPlot reference={spatial.reference} current={!!current} camera={camera} onCameraChange={setCamera}/>:<div className="yscp-placeholder">{spatial.error||'正在检查原静态构形…'}{current?' 二维 CP 仍可采用。':''}</div>:displayed?<Plot doc={displayed}/>:<div className="yscp-placeholder">正在检查六度种子与有限纸面…</div>}</div>
+   <p className="yscp-status" role="status" data-testid="yoshimura-six-status" data-state={current?'ready':state}>{input.error||buildError||(current?`${g.vertices_coords.length} 顶点 / ${g.edges_vertices.length} 边 / ${g.faces_vertices.length} 三角面 · 原六度相容与纸面通过`:'正在求解原六度正分支…')}{!current&&displayed?' 当前仍显示上次图，当前参数不能采用。':''}</p>
+   <p className="yscp-scope">{view==='static-3d'&&spatial.reference?`静态等距 ${spatial.reference.proof.maximumFaceDistanceErrorMm.toExponential(1)} mm · 全邻面闭环 ${spatial.reference.proof.maximumFacePoseClosureErrorMm.toExponential(1)} mm。 `:''}长度直接为毫米，保原坐标与边序；原外边类型 0 转为材料 B。采用仍仅 CP；3D 不添加 FF、层序、运动或碰撞证书。</p>
+   {adoptError&&<p role="alert" className="yscp-error">{adoptError}</p>}
+  </main></div><footer><span>原种子、两折角与实际材料图随工程保存。</span><button onClick={onClose}>取消</button><button className="primary" disabled={!current||state!=='ready'||!onAdoptCP} onClick={adopt}>采用原六度折筒 CP →</button></footer>
+ </dialog>;
+}

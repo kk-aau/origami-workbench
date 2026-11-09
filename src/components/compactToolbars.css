@@ -1,0 +1,71 @@
+/* All tools stay visible. Column count and row density follow the dock size. */
+.soft-workbench.app{min-height:0}
+.soft-workbench .compact-tool-rail,.soft-workbench .compact-inspector{overflow:clip;display:flex;flex-direction:column;min-height:0}
+.compact-tool-rail>.dock-rail-header,.compact-tool-rail>.dock-line-presets,.compact-tool-rail>.left-dock-controls,.compact-tool-rail>.dock-rail-footer{flex-shrink:0}
+.compact-tool-rail .dock-rail-header{padding:4px 6px}
+.compact-tool-rail .dock-line-presets{padding:4px 6px}
+.compact-tool-rail{container-type:inline-size}
+.compact-tool-rail .dock-line-presets{display:grid;grid-template-columns:76px 1fr;gap:4px}
+.compact-tool-rail .dock-line-presets .button-pair{margin:0}
+.compact-tool-rail .dock-line-presets .button-pair button{font-size:0;gap:0}
+.compact-tool-rail .dock-line-presets .button-pair .icon{width:16px;height:16px}
+.compact-tool-rail .dock-line-presets .button-pair{margin:0 0 3px;gap:3px}
+.compact-tool-rail .dock-line-presets button,.compact-tool-rail .dock-line-presets .type-buttons.compact button{min-height:26px;height:26px;padding:2px 4px}
+.dock-empty{font-size:11px;color:var(--muted);margin:10px 0}
+.dense-tools{display:flex;flex-direction:column;flex:1;min-height:0;min-width:0;padding:4px 6px;overflow:clip}
+.dense-tools-viewport{flex:1;min-height:0;overflow:clip}
+.dense-tools .dock-tool-group,.soft-workbench .inspector .dense-tools .dock-tool-group{padding:0;border:0;margin:0 0 4px;--dock-columns:inherit}
+.dense-tools .dock-tool-group h2,.soft-workbench .inspector .dense-tools .dock-tool-group h2{font-size:11px;line-height:16px;height:16px;margin:0 0 2px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dense-tools .dock-tool-grid{grid-template-columns:repeat(var(--dock-columns),minmax(0,1fr));grid-auto-rows:var(--dock-row-height);gap:2px;max-width:none}
+.dense-tools .dock-tool-grid button,.construction-rail .dense-tools .dock-tool-group:first-child button{height:var(--dock-row-height);min-height:0;max-width:none;padding:1px;gap:0;border-radius:3px;overflow:hidden}
+.dense-tools .dock-tool-grid button .icon{width:var(--dock-icon-size);height:var(--dock-icon-size);flex-shrink:0}
+.dense-tools .dock-tool-grid button .icon-wide{width:27px;max-width:100%}
+.dense-tools .dock-tool-grid button span{font-size:10px;line-height:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dense-tools-viewport[data-labels=false] .dock-tool-grid button span{display:none}
+.dense-tools-viewport[data-headings=false] .dock-tool-group h2{display:none}
+.compact-tool-rail .left-dock-controls{padding:5px 6px;display:flex;flex-direction:column;gap:3px;border-top:1px solid var(--line)}
+@container (min-width:350px){
+ .compact-tool-rail .left-dock-controls{display:grid;grid-template-columns:1.1fr 1fr;gap:3px 6px}
+}
+@container (max-width:250px){
+ .compact-tool-rail .dock-line-presets{grid-template-columns:44px 1fr;gap:3px}
+}
+.compact-tool-rail .left-dock-controls .checkbox{margin:0;gap:4px;min-height:23px;font-size:11px;white-space:nowrap}
+.compact-tool-rail .left-dock-controls input[type=checkbox]{width:13px;height:13px;margin:0}
+.compact-tool-rail .left-dock-controls button{min-height:25px;height:25px;padding:1px 3px;font-size:11px;border:1px solid var(--line);background:var(--paper);border-radius:4px}
+.dock-grid-row{display:grid;grid-template-columns:minmax(39px,1fr) 44px repeat(3,27px);gap:3px;align-items:start}
+.compact-tool-rail .dock-grid-row .number-field{margin:0;gap:0;min-width:0}
+.compact-tool-rail .dock-grid-row .number-field>span:first-child{display:none}
+.compact-tool-rail .dock-grid-row .number-input{width:44px;height:25px;padding:1px 3px}
+.compact-tool-rail .dock-grid-row .number-input input{font-size:12px;line-height:21px}
+.compact-tool-rail .dock-grid-row .field-error{font-size:9px;line-height:12px}
+.dock-grid-options{display:flex;align-items:center;gap:5px;min-width:0}
+.dock-grid-options select{height:25px;min-width:0;width:85px;flex:1;background:var(--paper);border:1px solid var(--line);border-radius:4px;font-size:11px;padding:2px}
+.dock-grid-options>button{width:23px;flex-shrink:0}
+.dock-toggle-row{display:grid;grid-template-columns:1fr 1.4fr;gap:5px}
+.compact-tool-rail .dock-rail-footer{padding:3px 6px;gap:4px}
+.compact-tool-rail .dock-rail-footer button{flex:1;min-height:26px;font-size:11px;padding:2px 4px}
+.soft-workbench .compact-inspector>.inspector-heading{display:none}
+.soft-workbench .compact-inspector>.dock-checks{flex-shrink:0;padding:5px 6px 6px}
+.soft-workbench .compact-inspector .dock-checks h2{font-size:11px;font-weight:500;line-height:18px;margin:0 0 3px;color:var(--muted)}
+.dock-checks>div{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:3px}
+.dock-checks button{font-size:11px;height:26px;min-height:26px;padding:2px 3px;border:1px solid var(--line);border-radius:4px;background:var(--paper)}
+.dock-checks button .icon{width:13px;height:13px}
+.compact-inspector .construction-rail{flex:1;min-height:0;padding:0;border:0;display:flex;flex-direction:column;overflow:clip}
+.dock-settings-actions,.dock-mark-history{display:flex;flex-shrink:0;align-items:center;gap:3px;padding:3px 6px;border-top:1px solid var(--line)}
+.dock-settings-actions button,.dock-mark-history button{flex:1;min-width:0;font-size:11px;min-height:25px;height:25px;padding:2px 4px;overflow:hidden;text-overflow:ellipsis}
+.dock-settings-actions button{background:var(--paper);border:1px solid var(--line);border-radius:4px}
+.dock-mark-history{padding-top:0;border:0}
+.tool-settings-dialog{color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:0;width:min(920px,calc(100vw - 40px));max-height:calc(100dvh - 40px);box-shadow:0 16px 60px #18231d30}
+.tool-settings-dialog::backdrop{background:#18231d45}
+.tool-settings-dialog>header{display:flex;align-items:center;justify-content:space-between;padding:9px 16px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--surface);z-index:1}
+.tool-settings-dialog>header h2{font-size:14px;margin:0}
+.tool-settings-dialog>header button{min-height:28px;font-size:18px;padding:1px 8px}
+.tool-settings-content{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:16px;padding:16px}
+.tool-settings-content section{min-width:0}
+.tool-settings-content h2{font-size:13px;margin:0 0 8px}
+.tool-settings-content p{font-size:12px;line-height:1.8;color:var(--muted)}
+.tool-settings-content .note{font-size:11px;line-height:1.7}
+.tool-settings-content .two-fields{flex-wrap:wrap}
+.tool-settings-content .two-fields .number-field{flex:1;min-width:95px}
+.tool-settings-content .number-field{margin:7px 0}

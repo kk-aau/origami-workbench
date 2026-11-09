@@ -1,0 +1,10 @@
+import fs from 'node:fs';
+import assert from 'node:assert/strict';
+import {readThreeCycleResult} from '../src/app/threeCycleNative';
+const names=['false','true','edited','singular'];
+const results=names.map(name=>{const r=JSON.parse(fs.readFileSync(`output/original-function-browser-1010/halfplane-${name}.json`,'utf8'));assert.ok(readThreeCycleResult(r,r.query));return r;});
+assert.deepEqual(results[0].query.edges,results[1].query.edges);assert.deepEqual(results[1].data.anglesDeg,[90,270]);
+assert.equal(results[2].query.edges[0][0][0],-.25);assert.notEqual(results[2].query.edges[0][0][1],-1);assert.deepEqual(results[2].query.edges.slice(1),results[0].query.edges.slice(1));
+assert.equal(results[3].data.status,'numeric-evaluation-incomplete');assert.deepEqual(results[3].data.anglesDeg,[null,null]);
+const text=fs.readFileSync('output/original-function-browser-1010/original-halfplane-browser-1010-fixed2.log','utf8'),match=text.match(/^### Result\r?\n(\{[^\r\n]+\})/);assert.ok(match);const ui=JSON.parse(match[1]);assert.equal(ui.passed,ui.checks.length);assert.ok(ui.passed>=25);assert.deepEqual(ui.errors,[]);
+fs.writeFileSync('output/original-function-browser-1010/halfplane-download-audit.json',JSON.stringify({passed:true,actualFiles:4,uiPassed:ui.passed,errors:[],originalGeometryIndependentlyReplayed:true,paperCertification:false,desktopVerified:false},null,2));console.log(`Verified four actual original three-cycle files and ${ui.passed} main App interaction checks.`);

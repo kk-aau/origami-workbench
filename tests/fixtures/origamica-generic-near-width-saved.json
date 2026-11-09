@@ -1,0 +1,2209 @@
+{
+  "family": "origamica-generic-near-width",
+  "query": {
+    "family": "near-constant-width-generic",
+    "baseCurve": [
+      "s",
+      "0"
+    ],
+    "director": [
+      "sin(s)",
+      "cos(s)"
+    ],
+    "parameterStart": 0.0,
+    "parameterEnd": 1.0471975511965976,
+    "width": 0.5,
+    "segments": 64
+  },
+  "source": {
+    "definitionCell": "In[3871]",
+    "numericalDefinitionCell": "In[3874]",
+    "function": "NearConstantWidthScale/NNearConstantWidthScale",
+    "formula": "1/sqrt(1-(normalize(bprime).d)^2)",
+    "directorNormalized": false,
+    "wolframInterpolationReproduced": false,
+    "machineReadableWolframOut": false
+  },
+  "normalization": {
+    "origin": [
+      0.0,
+      0.0
+    ],
+    "scale": 1.0471975511965976
+  },
+  "certification": {
+    "fullDomainFormulaCertified": true,
+    "nearestFootDistanceChecked": false,
+    "paperRegularityChecked": false,
+    "globalInjectivityChecked": false,
+    "spatialDevelopabilityChecked": false,
+    "selfCollisionChecked": false,
+    "exactStraightCreaseFOLD": false,
+    "adoptableCreasePattern": false
+  },
+  "proof": {
+    "status": "verified",
+    "evaluations": 1,
+    "cells": [
+      {
+        "start": 0.0,
+        "end": 1.0471975511965976,
+        "normalizedSpeedLowerBound": 0.9549296585513714,
+        "radicandLowerBound": 0.24999999999999573,
+        "scaleUpperBound": 2.0000000000000195
+      }
+    ],
+    "unresolved": [],
+    "roundingModel": "binary64-outward-2ulp/libm-endpoints-2ulp-assumed",
+    "method": "safe-AST/Taylor/adaptive-interval-domain"
+  },
+  "sample": {
+    "rows": [
+      {
+        "s": 0.0,
+        "normalizedBase": [
+          0.0,
+          0.0
+        ],
+        "normalizedOuter": [
+          0.0,
+          0.47746482927568606
+        ],
+        "base": [
+          0.0,
+          0.0
+        ],
+        "outer": [
+          0.0,
+          0.5
+        ],
+        "baseDerivative": [
+          1.0,
+          0.0
+        ],
+        "director": [
+          0.0,
+          1.0
+        ],
+        "tangentProjection": 0.0,
+        "radicand": 1.0,
+        "scale": 1.0,
+        "scaleDerivative": 0.0,
+        "rulingLength": 0.5,
+        "localPerpendicularDistance": 0.5
+      },
+      {
+        "s": 0.016362461737446838,
+        "normalizedBase": [
+          0.015625,
+          0.0
+        ],
+        "normalizedOuter": [
+          0.023438197288617166,
+          0.47746482927568606
+        ],
+        "base": [
+          0.016362461737446838,
+          0.0
+        ],
+        "outer": [
+          0.02454442280510263,
+          0.5
+        ],
+        "baseDerivative": [
+          1.0,
+          0.0
+        ],
+        "director": [
+          0.01636173162648678,
+          0.9998661379095618
+        ],
+        "tangentProjection": 0.01636173162648678,
+        "radicand": 0.9997322937381828,
+        "scale": 1.0001338800118964,
+        "scaleDerivative": 0.016366112937401728,
+        "rulingLength": 0.5000669400059482,
+        "localPerpendicularDistance": 0.5
+      },
+      {
+        "s": 0.032724923474893676,
+        "normalizedBase": [
+          0.03125,
+          0.0
+        ],
+        "normalizedOuter": [
+          0.046880580101894595,
+          0.47746482927568606
+        ],
+        "base": [
+          0.032724923474893676,
+          0.0
+        ],
+        "outer": [
+          0.04909322868137996,
+          0.5
+        ],
+        "baseDerivative": [
+          1.0,
+          0.0
+        ],
+        "director": [
+          0.03271908282177614,
+          0.9994645874763657
+        ],
+        "tangentProjection": 0.03271908282177614,
+        "radicand": 0.9989294616193017,
+        "scale": 1.000535699343772,
+        "scaleDerivative": 0.03275414739368813,
+        "rulingLength": 0.500267849671886,
+        "localPerpendicularDistance": 0.5
+      },
+      {
+        "s": 0.04908738521234052,
+        "normalizedBase": [
+          0.04687500000000001,
+          0.0
+        ],
+        "normalizedOuter": [
+          0.07033134293803096,
+          0.47746482927568606
+        ],
+        "base": [
+          0.049087385212340524,
+          0.0
+        ],
+        "outer": [
+          0.07365081009707415,
+          0.5
+        ],
+        "baseDerivative": [
+          1.0,
+          0.0
+        ],
+        "director": [
+          0.049067674327418015,
+          0.9987954562051724
+        ],
+        "tangentProjection": 0.049067674327418015,
+        "radicand": 0.9975923633360985,
+        "scale": 1.0012059964703925,
+        "scaleDerivative": 0.049186096576890735,
+        "rulingLength": 0.5006029982351963,
+        "localPerpendicularDistance": 0.5
+      },
+      {
+        "s": 0.06544984694978735,
+        "normalizedBase": [
+          0.0625,
+          0.0
+        ],
+        "normalizedOuter": [
+          0.09379469828321499,
+          0.477464829275686
+        ],
+        "base": [
+          0.06544984694978735,
+          0.0
+        ],
+        "outer": [
+          0.09822157835740646,
+          0.49999999999999994
+        ],
+        "baseDerivative": [
+          1.0,
+          0.0
+        ],
+        "director": [
+          0.06540312923014306,
+          0.9978589232386035
+        ],
+        "tangentProjection": 0.06540312923014306,
+        "radicand": 0.9957224306869052,
+        "scale": 1.0021456708072995,
+        "scaleDerivative": 0.0656840975100102,
+        "rulingLength": 0.5010728354036498,
+        "localPerpendicularDistance": 0.49999999999999994
+      },
+      {
+        "s": 0.08181230868723419,
+        "normalizedBase": [
+          0.078125,
+          0.0
+        ],
+        "normalizedOuter": [
+          0.11727488570822453,
+          0.4774648292756861
+        ],
+        "base": [
+          0.08181230868723419,
+          0.0
+        ],
+        "outer": [
+          0.12280997313051359,
+          0.5000000000000001
+        ],
+        "baseDerivative": [
+          1.0,
+          0.0
+        ],
+        "director": [
+          0.0817210741336682,
+          0.9966552393091803
+        ],
+        "tangentProjection": 0.0817210741336682,
+        "radicand": 0.9933216660424395,
+        "scale": 1.0033559856597334,
+        "scaleDerivative": 0.08227050403446722,
+        "rulingLength": 0.5016779928298667,
+        "localPerpendicularDistance": 0.5
+      },
+      {
+        "s": 0.09817477042468103,
+        "normalizedBase": [
+          0.09375000000000001,
+          0.0
+        ],
+        "normalizedOuter": [
+          0.14077618108905118,
+          0.47746482927568606
+        ],
+        "base": [
+          0.09817477042468105,
+          0.0
+        ],
+        "outer": [
+          0.14742047210326317,
+          0.5
+        ],
+        "baseDerivative": [
+          1.0,
+          0.0
+        ],
+        "director": [
+          0.0980171403295606,
+          0.9951847266721969
+        ],
+        "tangentProjection": 0.0980171403295606,
+        "radicand": 0.9903926402016152,
+        "scale": 1.0048385723763114,
+        "scaleDerivative": 0.09896796114075236,
+        "rulingLength": 0.5024192861881557,
+        "localPerpendicularDistance": 0.5
+      },
+      {
+        "s": 0.11453723216212787,
+        "normalizedBase": [
+          0.109375,
+          0.0
+        ],
+        "normalizedOuter": [
+          0.16430290599440617,
+          0.4774648292756861
+        ],
+        "base": [
+          0.11453723216212787,
+          0.0
+        ],
+        "outer": [
+          0.17205760081182692,
+          0.5000000000000001
+        ],
+        "baseDerivative": [
+          1.0,
+          0.0
+        ],
+        "director": [
+          0.11428696496684639,
+          0.9934477790194444
+        ],
+        "tangentProjection": 0.11428696496684639,
+        "radicand": 0.9869384896386668,
+        "scale": 1.006595435732941,
+        "scaleDerivative": 0.11579948108892642,
+        "rulingLength": 0.5032977178664705,
+        "localPerpendicularDistance": 0.5
+      },
+      {
+        "s": 0.1308996938995747,
+        "normalizedBase": [
+          0.125,
+          0.0
+        ],
+        "normalizedOuter": [
+          0.18785943728428361,
+          0.4774648292756861
+        ],
+        "base": [
+          0.1308996938995747,
+          0.0
+        ],
+        "outer": [
+          0.19672594269327262,
+          0.5000000000000001
+        ],
+        "baseDerivative": [
+          1.0,
+          0.0
+        ],
+        "director": [
+          0.13052619222005157,
+          0.9914448613738104
+        ],
+        "tangentProjection": 0.13052619222005157,
+        "radicand": 0.9829629131445341,
+        "scale": 1.0086289605801528,
+        "scaleDerivative": 0.13278852179935616,
+        "rulingLength": 0.5043144802900764,
+        "localPerpendicularDistance": 0.5
+      },
+      {
+        "s": 0.14726215563702155,
+        "normalizedBase": [
+          0.140625,
+          0.0
+        ],
+        "normalizedOuter": [
+          0.21145021696543737,
+          0.47746482927568606
+        ],
+        "base": [
+          0.14726215563702155,
+          0.0
+        ],
+        "outer": [
+          0.22143014940619526,
+          0.5
+        ],
+        "baseDerivative": [
+          1.0,
+          0.0
+        ],
+        "director": [
+          0.14673047445536175,
+          0.989176509964781
+        ],
+        "tangentProjection": 0.14673047445536175,
+        "radicand": 0.9784701678661044,
+        "scale": 1.0109419197950873,
+        "scaleDerivative": 0.1499590680167171,
+        "rulingLength": 0.5054709598975436,
+        "localPerpendicularDistance": 0.5
+      },
+      {
+        "s": 0.16362461737446837,
+        "normalizedBase": [
+          0.15625,
+          0.0
+        ],
+        "normalizedOuter": [
+          0.23507976235168876,
+          0.477464829275686
+        ],
+        "base": [
+          0.16362461737446837,
+          0.0
+        ],
+        "outer": [
+          0.2461749514705666,
+          0.49999999999999994
+        ],
+        "baseDerivative": [
+          1.0,
+          0.0
+        ],
+        "director": [
+          0.1628954733945887,
+          0.986643332084879
+        ],
+        "tangentProjection": 0.1628954733945887,
+        "radicand": 0.9734650647475529,
+        "scale": 1.0135374835878097,
+        "scaleDerivative": 0.1673357157781847,
+        "rulingLength": 0.5067687417939049,
+        "localPerpendicularDistance": 0.5
+      },
+      {
+        "s": 0.17998707911191522,
+        "normalizedBase": [
+          0.171875,
+          0.0
+        ],
+        "normalizedOuter": [
+          0.25875267657945034,
+          0.477464829275686
+        ],
+        "base": [
+          0.17998707911191522,
+          0.0
+        ],
+        "outer": [
+          0.2709651692795656,
+          0.49999999999999994
+        ],
+        "baseDerivative": [
+          1.0,
+          0.0
+        ],
+        "director": [
+          0.17901686127663266,
+          0.9838460059270774
+        ],
+        "tangentProjection": 0.17901686127663266,
+        "radicand": 0.9679529633786629,
+        "scale": 1.0164192302205879,
+        "scaleDerivative": 0.18494376075028485,
+        "rulingLength": 0.5082096151102939,
+        "localPerpendicularDistance": 0.49999999999999994
+      },
+      {
+        "s": 0.19634954084936207,
+        "normalizedBase": [
+          0.18750000000000003,
+          0.0
+        ],
+        "normalizedOuter": [
+          0.28247365953175096,
+          0.47746482927568606
+        ],
+        "base": [
+          0.1963495408493621,
+          0.0
+        ],
+        "outer": [
+          0.2958057245391911,
+          0.5
+        ],
+        "baseDerivative": [
+          1.0,
+          0.0
+        ],
+        "director": [
+          0.19509032201612825,
+          0.9807852804032304
+        ],
+        "tangentProjection": 0.19509032201612825,
+        "radicand": 0.9619397662556434,
+        "scale": 1.0195911582083184,
+        "scaleDerivative": 0.202809291038584,
+        "rulingLength": 0.5097955791041592,
+        "localPerpendicularDistance": 0.5
+      },
+      {
+        "s": 0.2127120025868089,
+        "normalizedBase": [
+          0.203125,
+          0.0
+        ],
+        "normalizedOuter": [
+          0.3062475192274281,
+          0.47746482927568606
+        ],
+        "base": [
+          0.2127120025868089,
+          0.0
+        ],
+        "outer": [
+          0.32070165219499563,
+          0.5
+        ],
+        "baseDerivative": [
+          1.0,
+          0.0
+        ],
+        "director": [
+          0.21111155235896514,
+          0.9774619749435719
+        ],
+        "tangentProjection": 0.21111155235896514,
+        "radicand": 0.9554319124605879,
+        "scale": 1.023057700078542,
+        "scaleDerivative": 0.22095928512087837,
+        "rulingLength": 0.511528850039271,
+        "localPerpendicularDistance": 0.5
+      },
+      {
+        "s": 0.22907446432425574,
+        "normalizedBase": [
+          0.21875,
+          0.0
+        ],
+        "normalizedOuter": [
+          0.33007918373604195,
+          0.4774648292756861
+        ],
+        "base": [
+          0.22907446432425574,
+          0.0
+        ],
+        "outer": [
+          0.34565811290935494,
+          0.5000000000000001
+        ],
+        "baseDerivative": [
+          1.0,
+          0.0
+        ],
+        "director": [
+          0.2270762630343732,
+          0.9738769792773336
+        ],
+        "tangentProjection": 0.2270762630343732,
+        "radicand": 0.9484363707663441,
+        "scale": 1.0268237377805676,
+        "scaleDerivative": 0.23942171560849548,
+        "rulingLength": 0.5134118688902838,
+        "localPerpendicularDistance": 0.5
+      },
+      {
+        "s": 0.24543692606170256,
+        "normalizedBase": [
+          0.234375,
+          0.0
+        ],
+        "normalizedOuter": [
+          0.3539737136835272,
+          0.47746482927568606
+        ],
+        "base": [
+          0.24543692606170256,
+          0.0
+        ],
+        "outer": [
+          0.37068040615735526,
+          0.5
+        ],
+        "baseDerivative": [
+          1.0,
+          0.0
+        ],
+        "director": [
+          0.24298017990326384,
+          0.970031253194544
+        ],
+        "tangentProjection": 0.24298017990326384,
+        "radicand": 0.9409606321741776,
+        "scale": 1.030894619845249,
+        "scaleDerivative": 0.25822565960260785,
+        "rulingLength": 0.5154473099226246,
+        "localPerpendicularDistance": 0.5
+      },
+      {
+        "s": 0.2617993877991494,
+        "normalizedBase": [
+          0.25,
+          0.0
+        ],
+        "normalizedOuter": [
+          0.37793631541868394,
+          0.477464829275686
+        ],
+        "base": [
+          0.2617993877991494,
+          0.0
+        ],
+        "outer": [
+          0.39577398401471076,
+          0.49999999999999994
+        ],
+        "baseDerivative": [
+          1.0,
+          0.0
+        ],
+        "director": [
+          0.25881904510252074,
+          0.9659258262890683
+        ],
+        "tangentProjection": 0.25881904510252074,
+        "radicand": 0.9330127018922193,
+        "scale": 1.035276180410083,
+        "scaleDerivative": 0.27740141648405897,
+        "rulingLength": 0.5176380902050415,
+        "localPerpendicularDistance": 0.49999999999999994
+      },
+      {
+        "s": 0.27816184953659623,
+        "normalizedBase": [
+          0.265625,
+          0.0
+        ],
+        "normalizedOuter": [
+          0.4019723549163842,
+          0.47746482927568606
+        ],
+        "base": [
+          0.27816184953659623,
+          0.0
+        ],
+        "outer": [
+          0.4209444657171672,
+          0.5
+        ],
+        "baseDerivative": [
+          1.0,
+          0.0
+        ],
+        "director": [
+          0.2745886181849323,
+          0.9615617976829619
+        ],
+        "tangentProjection": 0.2745886181849323,
+        "radicand": 0.9246010907632894,
+        "scale": 1.039974760238667,
+        "scaleDerivative": 0.29698063405727776,
+        "rulingLength": 0.5199873801193335,
+        "localPerpendicularDistance": 0.5
+      },
+      {
+        "s": 0.2945243112740431,
+        "normalizedBase": [
+          0.28125,
+          0.0
+        ],
+        "normalizedOuter": [
+          0.42608737249992523,
+          0.47746482927568606
+        ],
+        "base": [
+          0.2945243112740431,
+          0.0
+        ],
+        "outer": [
+          0.4461976530777142,
+          0.5
+        ],
+        "baseDerivative": [
+          1.0,
+          0.0
+        ],
+        "director": [
+          0.29028467725446233,
+          0.9569403357322088
+        ],
+        "tangentProjection": 0.29028467725446233,
+        "radicand": 0.9157348061512727,
+        "scale": 1.0449972298793777,
+        "scaleDerivative": 0.3169964440627688,
+        "rulingLength": 0.5224986149396889,
+        "localPerpendicularDistance": 0.49999999999999994
+      },
+      {
+        "s": 0.3108867730114899,
+        "normalizedBase": [
+          0.296875,
+          0.0
+        ],
+        "normalizedOuter": [
+          0.4502870984723709,
+          0.47746482927568606
+        ],
+        "base": [
+          0.3108867730114899,
+          0.0
+        ],
+        "outer": [
+          0.47153954685568805,
+          0.5
+        ],
+        "baseDerivative": [
+          1.0,
+          0.0
+        ],
+        "director": [
+          0.30590302009655346,
+          0.9520626777139243
+        ],
+        "tangentProjection": 0.30590302009655346,
+        "radicand": 0.9064233422958076,
+        "scale": 1.0503510151255817,
+        "scaleDerivative": 0.3374836081799879,
+        "rulingLength": 0.5251755075627909,
+        "localPerpendicularDistance": 0.49999999999999994
+      },
+      {
+        "s": 0.32724923474893675,
+        "normalizedBase": [
+          0.3125,
+          0.0
+        ],
+        "normalizedOuter": [
+          0.4745774697551063,
+          0.4774648292756861
+        ],
+        "base": [
+          0.32724923474893675,
+          0.0
+        ],
+        "outer": [
+          0.4969763641806247,
+          0.5000000000000001
+        ],
+        "baseDerivative": [
+          1.0,
+          0.0
+        ],
+        "director": [
+          0.32143946530316153,
+          0.9469301294951057
+        ],
+        "tangentProjection": 0.32143946530316153,
+        "radicand": 0.8966766701456176,
+        "scale": 1.0560441249590302,
+        "scaleDerivative": 0.3584786757649898,
+        "rulingLength": 0.5280220624795151,
+        "localPerpendicularDistance": 0.5
+      },
+      {
+        "s": 0.3436116964863836,
+        "normalizedBase": [
+          0.328125,
+          0.0
+        ],
+        "normalizedOuter": [
+          0.49896464764130294,
+          0.477464829275686
+        ],
+        "base": [
+          0.3436116964863836,
+          0.0
+        ],
+        "outer": [
+          0.5225145571436456,
+          0.49999999999999994
+        ],
+        "baseDerivative": [
+          1.0,
+          0.0
+        ],
+        "director": [
+          0.33688985339222005,
+          0.9415440651830208
+        ],
+        "tangentProjection": 0.33688985339222005,
+        "radicand": 0.8865052266813684,
+        "scale": 1.0620851821795683,
+        "scaleDerivative": 0.38002015470722816,
+        "rulingLength": 0.5310425910897841,
+        "localPerpendicularDistance": 0.5
+      },
+      {
+        "s": 0.35997415822383044,
+        "normalizedBase": [
+          0.34375,
+          0.0
+        ],
+        "normalizedOuter": [
+          0.5234550367826913,
+          0.4774648292756862
+        ],
+        "base": [
+          0.35997415822383044,
+          0.0
+        ],
+        "outer": [
+          0.5481608326803593,
+          0.5000000000000001
+        ],
+        "baseDerivative": [
+          1.0,
+          0.0
+        ],
+        "director": [
+          0.3522500479212335,
+          0.9359059267573258
+        ],
+        "tangentProjection": 0.3522500479212335,
+        "radicand": 0.8759199037394887,
+        "scale": 1.0684834569482256,
+        "scaleDerivative": 0.40214869694980454,
+        "rulingLength": 0.5342417284741128,
+        "localPerpendicularDistance": 0.5
+      },
+      {
+        "s": 0.37633661996127726,
+        "normalizedBase": [
+          0.359375,
+          0.0
+        ],
+        "normalizedOuter": [
+          0.5480553055401313,
+          0.4774648292756861
+        ],
+        "base": [
+          0.37633661996127726,
+          0.0
+        ],
+        "outer": [
+          0.5739221738819286,
+          0.5000000000000001
+        ],
+        "baseDerivative": [
+          1.0,
+          0.0
+        ],
+        "director": [
+          0.3675159365947035,
+          0.9300172236840122
+        ],
+        "tangentProjection": 0.3675159365947035,
+        "radicand": 0.8649320363489179,
+        "scale": 1.075248903497475,
+        "scaleDerivative": 0.424907300400243,
+        "rulingLength": 0.5376244517487375,
+        "localPerpendicularDistance": 0.5
+      },
+      {
+        "s": 0.39269908169872414,
+        "normalizedBase": [
+          0.37500000000000006,
+          0.0
+        ],
+        "normalizedOuter": [
+          0.5727724078421437,
+          0.47746482927568606
+        ],
+        "base": [
+          0.3926990816987242,
+          0.0
+        ],
+        "outer": [
+          0.5998058628852717,
+          0.5
+        ],
+        "baseDerivative": [
+          1.0,
+          0.0
+        ],
+        "director": [
+          0.3826834323650898,
+          0.9238795325112867
+        ],
+        "tangentProjection": 0.3826834323650898,
+        "radicand": 0.8535533905932737,
+        "scale": 1.082392200292394,
+        "scaleDerivative": 0.44834152916796516,
+        "rulingLength": 0.541196100146197,
+        "localPerpendicularDistance": 0.5
+      },
+      {
+        "s": 0.40906154343617096,
+        "normalizedBase": [
+          0.390625,
+          0.0
+        ],
+        "normalizedOuter": [
+          0.5976136067110296,
+          0.4774648292756861
+        ],
+        "base": [
+          0.40906154343617096,
+          0.0
+        ],
+        "outer": [
+          0.6258195055095568,
+          0.5000000000000001
+        ],
+        "baseDerivative": [
+          1.0,
+          0.0
+        ],
+        "director": [
+          0.397748474527011,
+          0.9174944964474914
+        ],
+        "tangentProjection": 0.397748474527011,
+        "radicand": 0.8417961510114357,
+        "scale": 1.0899247939600372,
+        "scaleDerivative": 0.4724997543040651,
+        "rulingLength": 0.5449623969800186,
+        "localPerpendicularDistance": 0.5
+      },
+      {
+        "s": 0.4254240051736178,
+        "normalizedBase": [
+          0.40625,
+          0.0
+        ],
+        "normalizedOuter": [
+          0.6225864996337223,
+          0.477464829275686
+        ],
+        "base": [
+          0.4254240051736178,
+          0.0
+        ],
+        "outer": [
+          0.6519710578244954,
+          0.49999999999999994
+        ],
+        "baseDerivative": [
+          1.0,
+          0.0
+        ],
+        "director": [
+          0.41270702980439467,
+          0.9108638249211758
+        ],
+        "tangentProjection": 0.41270702980439467,
+        "radicand": 0.8296729075500345,
+        "scale": 1.0978589473421427,
+        "scaleDerivative": 0.4974334174935147,
+        "rulingLength": 0.5489294736710714,
+        "localPerpendicularDistance": 0.49999999999999994
+      },
+      {
+        "s": 0.4417864669110646,
+        "normalizedBase": [
+          0.421875,
+          0.0
+        ],
+        "normalizedOuter": [
+          0.6476990459743621,
+          0.4774648292756861
+        ],
+        "base": [
+          0.4417864669110646,
+          0.0
+        ],
+        "outer": [
+          0.6782688548567245,
+          0.5000000000000001
+        ],
+        "baseDerivative": [
+          1.0,
+          0.0
+        ],
+        "director": [
+          0.42755509343028203,
+          0.9039892931234433
+        ],
+        "tangentProjection": 0.42755509343028203,
+        "radicand": 0.8171966420818229,
+        "scale": 1.106207792068889,
+        "scaleDerivative": 0.5231973204650939,
+        "rulingLength": 0.5531038960344445,
+        "localPerpendicularDistance": 0.5
+      },
+      {
+        "s": 0.4581489286485115,
+        "normalizedBase": [
+          0.4375,
+          0.0
+        ],
+        "normalizedOuter": [
+          0.6729595966481221,
+          0.4774648292756861
+        ],
+        "base": [
+          0.4581489286485115,
+          0.0
+        ],
+        "outer": [
+          0.7047216416641635,
+          0.5000000000000001
+        ],
+        "baseDerivative": [
+          1.0,
+          0.0
+        ],
+        "director": [
+          0.44228869021900125,
+          0.8968727415326884
+        ],
+        "tangentProjection": 0.44228869021900125,
+        "radicand": 0.8043807145043603,
+        "scale": 1.1149853860995653,
+        "scaleDerivative": 0.5498499432467483,
+        "rulingLength": 0.5574926930497827,
+        "localPerpendicularDistance": 0.5
+      },
+      {
+        "s": 0.4745113903859583,
+        "normalizedBase": [
+          0.453125,
+          0.0
+        ],
+        "normalizedOuter": [
+          0.6983769263014072,
+          0.477464829275686
+        ],
+        "base": [
+          0.4745113903859583,
+          0.0
+        ],
+        "outer": [
+          0.7313386070350404,
+          0.49999999999999994
+        ],
+        "baseDerivative": [
+          1.0,
+          0.0
+        ],
+        "director": [
+          0.4569038756304206,
+          0.8895160754218561
+        ],
+        "tangentProjection": 0.4569038756304206,
+        "radicand": 0.7912388484339011,
+        "scale": 1.1242067767305346,
+        "scaleDerivative": 0.5774537948114785,
+        "rulingLength": 0.5621033883652673,
+        "localPerpendicularDistance": 0.49999999999999994
+      },
+      {
+        "s": 0.4908738521234051,
+        "normalizedBase": [
+          0.46875,
+          0.0
+        ],
+        "normalizedOuter": [
+          0.7239602682726978,
+          0.47746482927568606
+        ],
+        "base": [
+          0.4908738521234051,
+          0.0
+        ],
+        "outer": [
+          0.758129420098801,
+          0.5
+        ],
+        "baseDerivative": [
+          1.0,
+          0.0
+        ],
+        "director": [
+          0.4713967368259976,
+          0.881921264348355
+        ],
+        "tangentProjection": 0.4713967368259976,
+        "radicand": 0.7777851165098012,
+        "scale": 1.1338880696327154,
+        "scaleDerivative": 0.6060758001404329,
+        "rulingLength": 0.5669440348163577,
+        "localPerpendicularDistance": 0.5
+      },
+      {
+        "s": 0.507236313860852,
+        "normalizedBase": [
+          0.484375,
+          0.0
+        ],
+        "normalizedOuter": [
+          0.7497193526415118,
+          0.4774648292756861
+        ],
+        "base": [
+          0.507236313860852,
+          0.0
+        ],
+        "outer": [
+          0.7851042701708896,
+          0.5000000000000001
+        ],
+        "baseDerivative": [
+          1.0,
+          0.0
+        ],
+        "director": [
+          0.48576339371634003,
+          0.8740903416267589
+        ],
+        "tangentProjection": 0.48576339371634003,
+        "radicand": 0.764033925325184,
+        "scale": 1.144046504551134,
+        "scaleDerivative": 0.6357877282865316,
+        "rulingLength": 0.572023252275567,
+        "localPerpendicularDistance": 0.5
+      },
+      {
+        "s": 0.5235987755982988,
+        "normalizedBase": [
+          0.5,
+          0.0
+        ],
+        "normalizedOuter": [
+          0.775664447710896,
+          0.4774648292756862
+        ],
+        "base": [
+          0.5235987755982988,
+          0.0
+        ],
+        "outer": [
+          0.8122739101931117,
+          0.5000000000000001
+        ],
+        "baseDerivative": [
+          1.0,
+          0.0
+        ],
+        "director": [
+          0.49999999999999994,
+          0.8660254037844387
+        ],
+        "tangentProjection": 0.49999999999999994,
+        "radicand": 0.75,
+        "scale": 1.1547005383792517,
+        "scaleDerivative": 0.6666666666666669,
+        "rulingLength": 0.5773502691896258,
+        "localPerpendicularDistance": 0.5
+      },
+      {
+        "s": 0.5399612373357456,
+        "normalizedBase": [
+          0.515625,
+          0.0
+        ],
+        "normalizedOuter": [
+          0.8018064053122239,
+          0.4774648292756861
+        ],
+        "base": [
+          0.5399612373357456,
+          0.0
+        ],
+        "outer": [
+          0.8396497041767075,
+          0.5000000000000001
+        ],
+        "baseDerivative": [
+          1.0,
+          0.0
+        ],
+        "director": [
+          0.5141027441932217,
+          0.8577286100002721
+        ],
+        "tangentProjection": 0.5141027441932217,
+        "radicand": 0.735698368412999,
+        "scale": 1.1658699364122678,
+        "scaleDerivative": 0.6987955475587244,
+        "rulingLength": 0.5829349682061339,
+        "localPerpendicularDistance": 0.5
+      },
+      {
+        "s": 0.5563236990731925,
+        "normalizedBase": [
+          0.53125,
+          0.0
+        ],
+        "normalizedOuter": [
+          0.8281567103707916,
+          0.4774648292756861
+        ],
+        "base": [
+          0.5563236990731925,
+          0.0
+        ],
+        "outer": [
+          0.8672436791073229,
+          0.5000000000000001
+        ],
+        "baseDerivative": [
+          1.0,
+          0.0
+        ],
+        "director": [
+          0.5280678506503679,
+          0.849202181526579
+        ],
+        "tangentProjection": 0.5280678506503679,
+        "radicand": 0.7211443451095008,
+        "scale": 1.177575872688336,
+        "scaleDerivative": 0.7322637336498624,
+        "rulingLength": 0.588787936344168,
+        "localPerpendicularDistance": 0.5
+      },
+      {
+        "s": 0.5726861608106393,
+        "normalizedBase": [
+          0.546875,
+          0.0
+        ],
+        "normalizedOuter": [
+          0.8547275352277783,
+          0.477464829275686
+        ],
+        "base": [
+          0.5726861608106393,
+          0.0
+        ],
+        "outer": [
+          0.8950685818308332,
+          0.49999999999999994
+        ],
+        "baseDerivative": [
+          1.0,
+          0.0
+        ],
+        "director": [
+          0.5418915805747516,
+          0.8404484010944381
+        ],
+        "tangentProjection": 0.5418915805747516,
+        "radicand": 0.7063535149021976,
+        "scale": 1.1898410404467337,
+        "scaleDerivative": 0.7671676704968086,
+        "rulingLength": 0.5949205202233668,
+        "localPerpendicularDistance": 0.49999999999999994
+      },
+      {
+        "s": 0.5890486225480862,
+        "normalizedBase": [
+          0.5625,
+          0.0
+        ],
+        "normalizedOuter": [
+          0.8815317992797985,
+          0.47746482927568606
+        ],
+        "base": [
+          0.5890486225480862,
+          0.0
+        ],
+        "outer": [
+          0.9231379415077356,
+          0.5
+        ],
+        "baseDerivative": [
+          1.0,
+          0.0
+        ],
+        "director": [
+          0.5555702330196022,
+          0.8314696123025452
+        ],
+        "tangentProjection": 0.5555702330196022,
+        "radicand": 0.6913417161825449,
+        "scale": 1.2026897738700906,
+        "scaleDerivative": 0.8036116149439867,
+        "rulingLength": 0.6013448869350453,
+        "localPerpendicularDistance": 0.5
+      },
+      {
+        "s": 0.605411084285533,
+        "normalizedBase": [
+          0.578125,
+          0.0
+        ],
+        "normalizedOuter": [
+          0.9085832345729881,
+          0.47746482927568606
+        ],
+        "base": [
+          0.605411084285533,
+          0.0
+        ],
+        "outer": [
+          0.951466138303117,
+          0.5
+        ],
+        "baseDerivative": [
+          1.0,
+          0.0
+        ],
+        "director": [
+          0.5691001458788982,
+          0.8222682189897751
+        ],
+        "tangentProjection": 0.5691001458788982,
+        "radicand": 0.6761250239606167,
+        "scale": 1.2161481824368492,
+        "scaleDerivative": 0.8417084499331406,
+        "rulingLength": 0.6080740912184246,
+        "localPerpendicularDistance": 0.5
+      },
+      {
+        "s": 0.6217735460229799,
+        "normalizedBase": [
+          0.59375,
+          0.0
+        ],
+        "normalizedOuter": [
+          0.9358964580760484,
+          0.4774648292756861
+        ],
+        "base": [
+          0.6217735460229799,
+          0.0
+        ],
+        "outer": [
+          0.9800684790708071,
+          0.5000000000000001
+        ],
+        "baseDerivative": [
+          1.0,
+          0.0
+        ],
+        "director": [
+          0.5824776968678022,
+          0.8128466845916152
+        ],
+        "tangentProjection": 0.5824776968678022,
+        "radicand": 0.6607197326515808,
+        "scale": 1.2302442993938187,
+        "scaleDerivative": 0.8815805977675587,
+        "rulingLength": 0.6151221496969094,
+        "localPerpendicularDistance": 0.5
+      },
+      {
+        "s": 0.6381360077604267,
+        "normalizedBase": [
+          0.609375,
+          0.0
+        ],
+        "normalizedOuter": [
+          0.9634870514579965,
+          0.47746482927568606
+        ],
+        "base": [
+          0.6381360077604267,
+          0.0
+        ],
+        "outer": [
+          1.008961280896444,
+          0.5
+        ],
+        "baseDerivative": [
+          1.0,
+          0.0
+        ],
+        "director": [
+          0.5956993044924332,
+          0.8032075314806449
+        ],
+        "tangentProjection": 0.5956993044924332,
+        "radicand": 0.6451423386272312,
+        "scale": 1.2450082460713296,
+        "scaleDerivative": 0.9233610458119902,
+        "rulingLength": 0.6225041230356648,
+        "localPerpendicularDistance": 0.5
+      },
+      {
+        "s": 0.6544984694978735,
+        "normalizedBase": [
+          0.625,
+          0.0
+        ],
+        "normalizedOuter": [
+          0.9913716493140006,
+          0.4774648292756861
+        ],
+        "base": [
+          0.6544984694978735,
+          0.0
+        ],
+        "outer": [
+          1.0381619634873536,
+          0.5000000000000001
+        ],
+        "baseDerivative": [
+          1.0,
+          0.0
+        ],
+        "director": [
+          0.6087614290087205,
+          0.7933533402912353
+        ],
+        "tangentProjection": 0.6087614290087205,
+        "radicand": 0.6294095225512605,
+        "scale": 1.2604724140102643,
+        "scaleDerivative": 0.967194500873065,
+        "rulingLength": 0.6302362070051322,
+        "localPerpendicularDistance": 0.5
+      },
+      {
+        "s": 0.6708609312353203,
+        "normalizedBase": [
+          0.640625,
+          0.0
+        ],
+        "normalizedOuter": [
+          1.0195680369195785,
+          0.4774648292756861
+        ],
+        "base": [
+          0.6708609312353203,
+          0.0
+        ],
+        "outer": [
+          1.067689151540505,
+          0.5000000000000001
+        ],
+        "baseDerivative": [
+          1.0,
+          0.0
+        ],
+        "director": [
+          0.6216605733700773,
+          0.7832867492286505
+        ],
+        "tangentProjection": 0.6216605733700773,
+        "radicand": 0.6135381315171867,
+        "scale": 1.276671667157347,
+        "scaleDerivative": 1.0132386911842057,
+        "rulingLength": 0.6383358335786735,
+        "localPerpendicularDistance": 0.5
+      },
+      {
+        "s": 0.6872233929727672,
+        "normalizedBase": [
+          0.65625,
+          0.0
+        ],
+        "normalizedOuter": [
+          1.0480952587531827,
+          0.477464829275686
+        ],
+        "base": [
+          0.6872233929727672,
+          0.0
+        ],
+        "outer": [
+          1.0975627883870973,
+          0.49999999999999994
+        ],
+        "baseDerivative": [
+          1.0,
+          0.0
+        ],
+        "director": [
+          0.6343932841636455,
+          0.773010453362737
+        ],
+        "tangentProjection": 0.6343932841636455,
+        "radicand": 0.5975451610080642,
+        "scale": 1.2936435667199802,
+        "scaleDerivative": 1.0616658380990285,
+        "rulingLength": 0.6468217833599901,
+        "localPerpendicularDistance": 0.5
+      },
+      {
+        "s": 0.7035858547102141,
+        "normalizedBase": [
+          0.671875,
+          0.0
+        ],
+        "normalizedOuter": [
+          1.0769737392140732,
+          0.47746482927568606
+        ],
+        "base": [
+          0.7035858547102141,
+          0.0
+        ],
+        "outer": [
+          1.1278042624080207,
+          0.5
+        ],
+        "baseDerivative": [
+          1.0,
+          0.0
+        ],
+        "director": [
+          0.6469561525348573,
+          0.7625272039063882
+        ],
+        "tangentProjection": 0.6469561525348573,
+        "radicand": 0.5814477366972945,
+        "scale": 1.311428621663661,
+        "scaleDerivative": 1.112664323382975,
+        "rulingLength": 0.6557143108318305,
+        "localPerpendicularDistance": 0.5
+      },
+      {
+        "s": 0.7199483164476609,
+        "normalizedBase": [
+          0.6875,
+          0.0
+        ],
+        "normalizedOuter": [
+          1.1062254171816317,
+          0.47746482927568606
+        ],
+        "base": [
+          0.7199483164476609,
+          0.0
+        ],
+        "outer": [
+          1.1584365479440393,
+          0.5
+        ],
+        "baseDerivative": [
+          1.0,
+          0.0
+        ],
+        "director": [
+          0.6593458151000688,
+          0.7518398074789774
+        ],
+        "tangentProjection": 0.6593458151000688,
+        "radicand": 0.5652630961100258,
+        "scale": 1.330070568294512,
+        "scaleDerivative": 1.166440582513687,
+        "rulingLength": 0.665035284147256,
+        "localPerpendicularDistance": 0.49999999999999994
+      },
+      {
+        "s": 0.7363107781851077,
+        "normalizedBase": [
+          0.703125,
+          0.0
+        ],
+        "normalizedOuter": [
+          1.1358738963202284,
+          0.4774648292756861
+        ],
+        "base": [
+          0.7363107781851077,
+          0.0
+        ],
+        "outer": [
+          1.1894843626946812,
+          0.5000000000000001
+        ],
+        "baseDerivative": [
+          1.0,
+          0.0
+        ],
+        "director": [
+          0.6715589548470183,
+          0.7409511253549592
+        ],
+        "tangentProjection": 0.6715589548470183,
+        "radicand": 0.5490085701647804,
+        "scale": 1.3496166829100114,
+        "scaleDerivative": 1.2232212598165007,
+        "rulingLength": 0.6748083414550057,
+        "localPerpendicularDistance": 0.5
+      },
+      {
+        "s": 0.7526732399225545,
+        "normalizedBase": [
+          0.71875,
+          0.0
+        ],
+        "normalizedOuter": [
+          1.1659446133381601,
+          0.47746482927568606
+        ],
+        "base": [
+          0.7526732399225545,
+          0.0
+        ],
+        "outer": [
+          1.2209743439185852,
+          0.5
+        ],
+        "baseDerivative": [
+          1.0,
+          0.0
+        ],
+        "director": [
+          0.6835923020228711,
+          0.7298640726978357
+        ],
+        "tangentProjection": 0.6835923020228711,
+        "radicand": 0.5327015646150717,
+        "scale": 1.370118132138833,
+        "scaleDerivative": 1.2832556677711895,
+        "rulingLength": 0.6850590660694164,
+        "localPerpendicularDistance": 0.49999999999999994
+      },
+      {
+        "s": 0.7690357016600013,
+        "normalizedBase": [
+          0.734375,
+          0.0
+        ],
+        "normalizedOuter": [
+          1.1964650267695085,
+          0.4774648292756861
+        ],
+        "base": [
+          0.7690357016600013,
+          0.0
+        ],
+        "outer": [
+          1.2529352461254009,
+          0.5000000000000001
+        ],
+        "baseDerivative": [
+          1.0,
+          0.0
+        ],
+        "director": [
+          0.6954426350096116,
+          0.7185816177796982
+        ],
+        "tangentProjection": 0.6954426350096116,
+        "radicand": 0.5163595414108881,
+        "scale": 1.3916303663456346,
+        "scaleDerivative": 1.3468186006777398,
+        "rulingLength": 0.6958151831728173,
+        "localPerpendicularDistance": 0.5
+      },
+      {
+        "s": 0.7853981633974483,
+        "normalizedBase": [
+          0.7500000000000001,
+          0.0
+        ],
+        "normalizedOuter": [
+          1.2274648292756862,
+          0.4774648292756861
+        ],
+        "base": [
+          0.7853981633974484,
+          0.0
+        ],
+        "outer": [
+          1.2853981633974485,
+          0.5000000000000001
+        ],
+        "baseDerivative": [
+          1.0,
+          0.0
+        ],
+        "director": [
+          0.7071067811865476,
+          0.7071067811865476
+        ],
+        "tangentProjection": 0.7071067811865476,
+        "radicand": 0.4999999999999999,
+        "scale": 1.4142135623730951,
+        "scaleDerivative": 1.4142135623730958,
+        "rulingLength": 0.7071067811865476,
+        "localPerpendicularDistance": 0.5000000000000001
+      },
+      {
+        "s": 0.8017606251348951,
+        "normalizedBase": [
+          0.765625,
+          0.0
+        ],
+        "normalizedOuter": [
+          1.2589761869732976,
+          0.47746482927568595
+        ],
+        "base": [
+          0.8017606251348951,
+          0.0
+        ],
+        "outer": [
+          1.318396780013267,
+          0.4999999999999999
+        ],
+        "baseDerivative": [
+          1.0,
+          0.0
+        ],
+        "director": [
+          0.718581617779698,
+          0.6954426350096117
+        ],
+        "tangentProjection": 0.718581617779698,
+        "radicand": 0.4836404585891121,
+        "scale": 1.4379331229615782,
+        "scaleDerivative": 1.485776479238238,
+        "rulingLength": 0.7189665614807891,
+        "localPerpendicularDistance": 0.49999999999999994
+      },
+      {
+        "s": 0.8181230868723419,
+        "normalizedBase": [
+          0.78125,
+          0.0
+        ],
+        "normalizedOuter": [
+          1.2910340099045903,
+          0.4774648292756861
+        ],
+        "base": [
+          0.8181230868723419,
+          0.0
+        ],
+        "outer": [
+          1.351967653683611,
+          0.5000000000000001
+        ],
+        "baseDerivative": [
+          1.0,
+          0.0
+        ],
+        "director": [
+          0.7298640726978356,
+          0.6835923020228714
+        ],
+        "tangentProjection": 0.7298640726978356,
+        "radicand": 0.46729843538492855,
+        "scale": 1.4628602414638403,
+        "scaleDerivative": 1.5618799838193838,
+        "rulingLength": 0.7314301207319202,
+        "localPerpendicularDistance": 0.5
+      },
+      {
+        "s": 0.8344855486097887,
+        "normalizedBase": [
+          0.796875,
+          0.0
+        ],
+        "normalizedOuter": [
+          1.3236762584983306,
+          0.477464829275686
+        ],
+        "base": [
+          0.8344855486097887,
+          0.0
+        ],
+        "outer": [
+          1.3861505364765263,
+          0.49999999999999994
+        ],
+        "baseDerivative": [
+          1.0,
+          0.0
+        ],
+        "director": [
+          0.740951125354959,
+          0.6715589548470184
+        ],
+        "tangentProjection": 0.740951125354959,
+        "radicand": 0.4509914298352199,
+        "scale": 1.4890725420045965,
+        "scaleDerivative": 1.6429383716353156,
+        "rulingLength": 0.7445362710022982,
+        "localPerpendicularDistance": 0.49999999999999983
+      },
+      {
+        "s": 0.8508480103472356,
+        "normalizedBase": [
+          0.8125,
+          0.0
+        ],
+        "normalizedOuter": [
+          1.3569442917501986,
+          0.477464829275686
+        ],
+        "base": [
+          0.8508480103472356,
+          0.0
+        ],
+        "outer": [
+          1.4209887394310095,
+          0.49999999999999994
+        ],
+        "baseDerivative": [
+          1.0,
+          0.0
+        ],
+        "director": [
+          0.7518398074789773,
+          0.659345815100069
+        ],
+        "tangentProjection": 0.7518398074789773,
+        "radicand": 0.43473690388997444,
+        "scale": 1.5166548070806058,
+        "scaleDerivative": 1.7294133549546944,
+        "rulingLength": 0.7583274035403029,
+        "localPerpendicularDistance": 0.49999999999999994
+      },
+      {
+        "s": 0.8672104720846824,
+        "normalizedBase": [
+          0.828125,
+          0.0
+        ],
+        "normalizedOuter": [
+          1.3908832639174507,
+          0.4774648292756861
+        ],
+        "base": [
+          0.8672104720846824,
+          0.0
+        ],
+        "outer": [
+          1.4565295479746854,
+          0.5000000000000001
+        ],
+        "baseDerivative": [
+          1.0,
+          0.0
+        ],
+        "director": [
+          0.7625272039063881,
+          0.6469561525348575
+        ],
+        "tangentProjection": 0.7625272039063881,
+        "radicand": 0.4185522633027057,
+        "scale": 1.5456998068290586,
+        "scaleDerivative": 1.8218207635277146,
+        "rulingLength": 0.7728499034145293,
+        "localPerpendicularDistance": 0.5
+      },
+      {
+        "s": 0.8835729338221292,
+        "normalizedBase": [
+          0.84375,
+          0.0
+        ],
+        "normalizedOuter": [
+          1.4255425778166844,
+          0.477464829275686
+        ],
+        "base": [
+          0.8835729338221292,
+          0.0
+        ],
+        "outer": [
+          1.4928246966161172,
+          0.49999999999999994
+        ],
+        "baseDerivative": [
+          1.0,
+          0.0
+        ],
+        "director": [
+          0.7730104533627369,
+          0.6343932841636456
+        ],
+        "tangentProjection": 0.7730104533627369,
+        "radicand": 0.402454838991936,
+        "scale": 1.5763092469025002,
+        "scaleDerivative": 1.9207383747676237,
+        "rulingLength": 0.7881546234512501,
+        "localPerpendicularDistance": 0.5
+      },
+      {
+        "s": 0.8999353955595761,
+        "normalizedBase": [
+          0.859375,
+          0.0
+        ],
+        "normalizedOuter": [
+          1.4609764043916624,
+          0.47746482927568606
+        ],
+        "base": [
+          0.8999353955595761,
+          0.0
+        ],
+        "outer": [
+          1.529930913034959,
+          0.5
+        ],
+        "baseDerivative": [
+          1.0,
+          0.0
+        ],
+        "director": [
+          0.7832867492286504,
+          0.6216605733700774
+        ],
+        "tangentProjection": 0.7832867492286504,
+        "radicand": 0.3864618684828134,
+        "scale": 1.6085948551939055,
+        "scaleDerivative": 2.0268150964122467,
+        "rulingLength": 0.8042974275969528,
+        "localPerpendicularDistance": 0.5
+      },
+      {
+        "s": 0.916297857297023,
+        "normalizedBase": [
+          0.875,
+          0.0
+        ],
+        "normalizedOuter": [
+          1.4972442801513686,
+          0.47746482927568606
+        ],
+        "base": [
+          0.916297857297023,
+          0.0
+        ],
+        "outer": [
+          1.5679105437176257,
+          0.5
+        ],
+        "baseDerivative": [
+          1.0,
+          0.0
+        ],
+        "director": [
+          0.7933533402912352,
+          0.6087614290087207
+        ],
+        "tangentProjection": 0.7933533402912352,
+        "radicand": 0.37059047744873963,
+        "scale": 1.6426796317045815,
+        "scaleDerivative": 2.140781775486858,
+        "rulingLength": 0.8213398158522908,
+        "localPerpendicularDistance": 0.5
+      },
+      {
+        "s": 0.9326603190344698,
+        "normalizedBase": [
+          0.890625,
+          0.0
+        ],
+        "normalizedOuter": [
+          1.5344117964578472,
+          0.47746482927568606
+        ],
+        "base": [
+          0.9326603190344698,
+          0.0
+        ],
+        "outer": [
+          1.6068322757778297,
+          0.5
+        ],
+        "baseDerivative": [
+          1.0,
+          0.0
+        ],
+        "director": [
+          0.8032075314806448,
+          0.5956993044924335
+        ],
+        "tangentProjection": 0.8032075314806448,
+        "radicand": 0.354857661372769,
+        "scale": 1.6786992908310536,
+        "scaleDerivative": 2.263463971366524,
+        "rulingLength": 0.8393496454155268,
+        "localPerpendicularDistance": 0.49999999999999994
+      },
+      {
+        "s": 0.9490227807719166,
+        "normalizedBase": [
+          0.90625,
+          0.0
+        ],
+        "normalizedOuter": [
+          1.5725513975862606,
+          0.47746482927568606
+        ],
+        "base": [
+          0.9490227807719166,
+          0.0
+        ],
+        "outer": [
+          1.6467719726831194,
+          0.5
+        ],
+        "baseDerivative": [
+          1.0,
+          0.0
+        ],
+        "director": [
+          0.8128466845916151,
+          0.5824776968678023
+        ],
+        "tangentProjection": 0.8128466845916151,
+        "radicand": 0.3392802673484193,
+        "scale": 1.716803931510802,
+        "scaleDerivative": 2.395797111763276,
+        "rulingLength": 0.858401965755401,
+        "localPerpendicularDistance": 0.5
+      },
+      {
+        "s": 0.9653852425093634,
+        "normalizedBase": [
+          0.921875,
+          0.0
+        ],
+        "normalizedOuter": [
+          1.6117433081383703,
+          0.47746482927568606
+        ],
+        "base": [
+          0.9653852425093634,
+          0.0
+        ],
+        "outer": [
+          1.6878136454400046,
+          0.5
+        ],
+        "baseDerivative": [
+          1.0,
+          0.0
+        ],
+        "director": [
+          0.822268218989775,
+          0.5691001458788983
+        ],
+        "tangentProjection": 0.822268218989775,
+        "radicand": 0.3238749760393834,
+        "scale": 1.7571599783297103,
+        "scaleDerivative": 2.5388445536767454,
+        "rulingLength": 0.8785799891648551,
+        "localPerpendicularDistance": 0.5
+      },
+      {
+        "s": 0.9817477042468102,
+        "normalizedBase": [
+          0.9375,
+          0.0
+        ],
+        "normalizedOuter": [
+          1.6520766149640853,
+          0.47746482927568606
+        ],
+        "base": [
+          0.9817477042468102,
+          0.0
+        ],
+        "outer": [
+          1.7300505855795545,
+          0.5
+        ],
+        "baseDerivative": [
+          1.0,
+          0.0
+        ],
+        "director": [
+          0.8314696123025451,
+          0.5555702330196024
+        ],
+        "tangentProjection": 0.8314696123025451,
+        "radicand": 0.3086582838174553,
+        "scale": 1.799952446272831,
+        "scaleDerivative": 2.693819203615762,
+        "rulingLength": 0.8999762231364155,
+        "localPerpendicularDistance": 0.5
+      },
+      {
+        "s": 0.9981101659842572,
+        "normalizedBase": [
+          0.9531250000000001,
+          0.0
+        ],
+        "normalizedOuter": [
+          1.693650534495223,
+          0.47746482927568606
+        ],
+        "base": [
+          0.9981101659842573,
+          0.0
+        ],
+        "outer": [
+          1.7735866923062062,
+          0.5
+        ],
+        "baseDerivative": [
+          1.0,
+          0.0
+        ],
+        "director": [
+          0.840448401094438,
+          0.5418915805747517
+        ],
+        "tangentProjection": 0.840448401094438,
+        "radicand": 0.29364648509780267,
+        "scale": 1.8453875938418536,
+        "scaleDerivative": 2.8621095219802006,
+        "rulingLength": 0.9226937969209268,
+        "localPerpendicularDistance": 0.5
+      },
+      {
+        "s": 1.014472627721704,
+        "normalizedBase": [
+          0.96875,
+          0.0
+        ],
+        "normalizedOuter": [
+          1.7365759036670358,
+          0.4774648292756862
+        ],
+        "base": [
+          1.014472627721704,
+          0.0
+        ],
+        "outer": [
+          1.8185380337871386,
+          0.5000000000000001
+        ],
+        "baseDerivative": [
+          1.0,
+          0.0
+        ],
+        "director": [
+          0.8492021815265789,
+          0.5280678506503681
+        ],
+        "tangentProjection": 0.8492021815265789,
+        "radicand": 0.27885565489049935,
+        "scale": 1.8936960444920112,
+        "scaleDerivative": 3.0453109579579536,
+        "rulingLength": 0.9468480222460056,
+        "localPerpendicularDistance": 0.5
+      },
+      {
+        "s": 1.0308350894591507,
+        "normalizedBase": [
+          0.9843749999999999,
+          0.0
+        ],
+        "normalizedOuter": [
+          1.7809769418576191,
+          0.4774648292756861
+        ],
+        "base": [
+          1.0308350894591507,
+          0.0
+        ],
+        "outer": [
+          1.865034692250904,
+          0.5000000000000001
+        ],
+        "baseDerivative": [
+          1.0,
+          0.0
+        ],
+        "director": [
+          0.857728610000272,
+          0.5141027441932219
+        ],
+        "tangentProjection": 0.857728610000272,
+        "radicand": 0.26430163158700126,
+        "scale": 1.9451364757239211,
+        "scaleDerivative": 3.2452641508492928,
+        "rulingLength": 0.9725682378619606,
+        "localPerpendicularDistance": 0.5
+      },
+      {
+        "s": 1.0471975511965976,
+        "normalizedBase": [
+          1.0,
+          0.0
+        ],
+        "normalizedOuter": [
+          1.826993343132688,
+          0.47746482927568606
+        ],
+        "base": [
+          1.0471975511965976,
+          0.0
+        ],
+        "outer": [
+          1.913222954981036,
+          0.5
+        ],
+        "baseDerivative": [
+          1.0,
+          0.0
+        ],
+        "director": [
+          0.8660254037844386,
+          0.5000000000000001
+        ],
+        "tangentProjection": 0.8660254037844386,
+        "radicand": 0.2500000000000001,
+        "scale": 1.9999999999999996,
+        "scaleDerivative": 3.4641016151377526,
+        "rulingLength": 0.9999999999999998,
+        "localPerpendicularDistance": 0.5
+      }
+    ]
+  }
+}

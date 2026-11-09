@@ -1,0 +1,56 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import type {Doc} from '../../src/core/types';
+import {copyModelCase as fixture,copyModelRecipe as recipe} from '../fixtures/materialCopyModel';
+import {copyMaterialComponents,buildMaterialCopyComponents} from '../../src/core/materialCopy';
+import {inspectMaterialCurveModel,editMaterialCurveModel} from '../../src/core/materialCurveModel';
+import {editMaterialFaces} from '../../src/core/materialFaceEdit';
+import {weakToolMaterial as mat,weakToolSheet} from '../fixtures/materialWeakTools';
+import {topologyModelCase} from '../fixtures/materialTopologyModel';
+import {traceModelRecipe,traceModelBase} from '../fixtures/materialTraceModel';
+import {exportDocument,importDocument} from '../../src/core/formats';
+import {exportDXF} from '../../src/core/dxf';
+import {prepareEditorCommit} from '../../src/app/editorCommit';
+import {emptyEditorHistory,editorHistoryReducer} from '../../src/app/editorHistory';
+import {prepareSimulationDocument} from '../../src/engine/simmodel';
+import {createMaterialTopology} from '../../src/core/materialTopology';
+const model=(d:Doc)=>{const c=inspectMaterialCurveModel(d);assert.ok(c.ok,c.ok?'':c.reason);return c;},same=(a:Doc,b:Doc)=>{assert.deepEqual(mat(a).graph,mat(b).graph);assert.deepEqual(mat(a).foldedVertices,mat(b).foldedVertices);};
+for(const extra of [{},{rotation:25},{scale:.75},{mirror:'x' as const},{mirror:'y' as const}])test(`saved copy retains original CP/FF and matches ordinary placement ${JSON.stringify(extra)}`,()=>{
+ const source=fixture('source'),r=recipe(source,150,2,extra),saved=copyMaterialComponents(source,{...r,parametric:true}),plain=buildMaterialCopyComponents(source,r);same(saved.doc,plain.doc);assert.deepEqual(copyMaterialComponents(source,{...r,parametric:false}),plain);assert.equal(model(saved.doc).model.schema,'zhezhi-material-curve-model-v6');assert.deepEqual(mat(saved.doc).graph.vertices_coords.slice(0,mat(source).graph.vertices_coords.length),mat(source).graph.vertices_coords);assert.deepEqual(mat(saved.doc).foldedVertices!.slice(0,mat(source).foldedVertices!.length),mat(source).foldedVertices);assert.equal(saved.copies,2);assert.equal(mat(saved.doc).components.length,3);assert.deepEqual(prepareEditorCommit(source,saved.doc,{...r,parametric:true}).doc,saved.doc);
+});
+test('copy offset/count edits reconstruct rather than accumulate and preserve later copy-specific transforms',()=>{
+ const d=fixture('transformed'),c=model(d),changed=editMaterialCurveModel(d,{kind:'material-curve-group-edit',group:c.model.groups[1].id,recipe:recipe(c.stages[1],200,3)}).doc;assert.equal(mat(changed).components.length,4);assert.equal(model(changed).model.groups[2].selection![0].sourcePart,0);const original=mat(c.stages[1]),copy=mat(changed).components[1];assert.ok(copy.vertices.some(v=>mat(changed).graph.vertices_coords[v][0]===210));assert.deepEqual(mat(changed).graph.vertices_coords.slice(0,original.graph.vertices_coords.length),original.graph.vertices_coords);
+});
+test('earlier trace edit reconstructs both originals and copies without branching original source references',()=>{
+ let d=fixture('copied');const m=mat(d);d=editMaterialFaces(d,{kind:'material-face-ray',component:0,from:{edgeId:m.edgeSegmentIds[0],fraction:.5},through:[50,100],assignment:'F',fixedSide:'left',cpOnly:false,parametric:true}).doc;const c=model(d),changed=editMaterialCurveModel(d,{kind:'material-curve-group-edit',group:c.model.groups[0].id,recipe:traceModelRecipe(traceModelBase(),'material-face-trace',40)}).doc;assert.equal(model(changed).model.groups.length,3);assert.ok(mat(changed).graph.vertices_coords.some(p=>p[0]===150&&p[1]===40));
+});
+test('later ray follows its selected copy when count grows and deletion of depended-on copy rejects atomically',()=>{
+ const d=fixture('ray'),c=model(d);assert.equal(c.model.groups[2].anchors![0].sourcePart,0);const changed=editMaterialCurveModel(d,{kind:'material-curve-group-edit',group:c.model.groups[1].id,recipe:recipe(c.stages[1],160,2)}).doc;assert.equal(mat(changed).components.length,3);assert.equal(model(changed).model.groups.length,3);const before=JSON.stringify(d);assert.throws(()=>editMaterialCurveModel(d,{kind:'material-curve-group-remove',group:c.model.groups[1].id}),/删除/);assert.equal(JSON.stringify(d),before);
+});
+test('auxiliaries are replayed exactly once, support copying a copied auxiliary, and style edits persist',()=>{
+ const source=fixture('source');source.segments.push({id:'copy-aux',a:[5,7],b:[15,19],assignment:'A',angle:null,displayColor:'#112233'});const r={...recipe(source),segmentIds:[...recipe(source).segmentIds,'copy-aux'],parametric:true},first=copyMaterialComponents(source,r).doc,c=model(first);assert.equal(first.segments.filter(s=>s.assignment==='A').length,2);const copiedAux=first.segments.find(s=>s.assignment==='A'&&s.id!=='copy-aux')!;copiedAux.displayColor='#abcdef';const changed=editMaterialCurveModel(first,{kind:'material-curve-group-edit',group:c.model.groups[1].id,recipe:{...recipe(c.stages[1],200,2),segmentIds:r.segmentIds}}).doc;assert.equal(changed.segments.filter(s=>s.assignment==='A').length,3);assert.equal(changed.segments.find(s=>s.id===copiedAux.id)!.displayColor,'#abcdef');
+ const m=mat(first),second=copyMaterialComponents(first,{kind:'material-copy',segmentIds:[...m.components[1].edges.map(e=>m.edgeSegmentIds[e]),copiedAux.id],placements:[{dx:150,dy:20,rotation:5,scale:1,mirror:'none'}],parametric:true}).doc;assert.equal(second.segments.filter(s=>s.assignment==='A').length,3);assert.equal(model(second).model.groups.length,3);const edited=editMaterialCurveModel(second,{kind:'material-curve-group-edit',group:c.model.groups[1].id,recipe:{...recipe(c.stages[1],200,1),segmentIds:r.segmentIds}}).doc;assert.equal(edited.segments.filter(s=>s.assignment==='A').length,3);
+});
+test('independent placements and mirrored holes/cut banks retain valid material and mesh identity',()=>{
+ for(const source of [weakToolSheet(true),topologyModelCase('cut')]){const r=recipe(source);r.placements=[{dx:150,dy:20,rotation:12,scale:.8,mirror:'x'},{dx:320,dy:-40,rotation:-31,scale:1.2,mirror:'y'}];const d=copyMaterialComponents(source,{...r,parametric:true}).doc;same(d,buildMaterialCopyComponents(source,r).doc);assert.ok(model(d));prepareSimulationDocument(mat(d).graph);}
+});
+test('saved copy has exact JSON/FOLD reedit, ordinary DXF geometry and single history frame',()=>{
+ const source=fixture('source'),intent={...recipe(source),parametric:true},r=copyMaterialComponents(source,intent),id=model(r.doc).model.groups[1].id;for(const format of ['json','fold'] as const){const back=importDocument(exportDocument(r.doc,format).text,format).doc;assert.deepEqual(model(back).model,model(r.doc).model);const changed=editMaterialCurveModel(back,{kind:'material-curve-group-edit',group:id,recipe:recipe(model(back).stages[1],210,2)}).doc;assert.equal(exportDXF(changed).text,exportDXF(editMaterialCurveModel(r.doc,{kind:'material-curve-group-edit',group:id,recipe:recipe(source,210,2)}).doc).text);same(editMaterialCurveModel(back,{kind:'material-curve-group-remove',group:id}).doc,source);}
+ let h=editorHistoryReducer(emptyEditorHistory(source),{type:'commit',doc:r.doc});h=editorHistoryReducer(h,{type:'undo'});assert.deepEqual(h.present,source);h=editorHistoryReducer(h,{type:'redo'});assert.deepEqual(h.present,r.doc);const forged=structuredClone(r.doc);forged.name='伪造';assert.throws(()=>prepareEditorCommit(source,forged,intent),/独立重放/);
+});
+test('stale auxiliary/source changes archive rather than overwrite current work and capacity rejects without truncation',()=>{
+ const source=fixture('source');source.segments.push({id:'aux',a:[1,1],b:[3,4],assignment:'A',angle:null});let d=copyMaterialComponents(source,{...recipe(source),parametric:true}).doc;const old=d.metadata!.materialCurveModel;d.segments.find(s=>s.id==='aux')!.b=[8,9];assert.equal(inspectMaterialCurveModel(d).ok,false);const saved=copyMaterialComponents(d,{...recipe(d),parametric:true}).doc;assert.deepEqual((saved.metadata!.materialCurveArchives as unknown[])[0],old);assert.deepEqual(saved.segments.find(s=>s.id==='aux')!.b,[8,9]);assert.equal(model(saved).model.groups.length,1);
+ let full=fixture('source');for(let i=0;i<7;i++)full=copyMaterialComponents(full,{...recipe(full,150*(i+1)),parametric:true}).doc;const before=JSON.stringify(full);assert.throws(()=>copyMaterialComponents(full,{...recipe(full),parametric:true}),/最多8/);assert.equal(JSON.stringify(full),before);
+});
+test('invalid flags, partial sources, placements, schema, auxiliary snapshots and copy addresses reject',()=>{
+ const d=fixture('source'),before=JSON.stringify(d);for(const patch of [{segmentIds:[]},{segmentIds:[d.segments[0].id]},{placements:[]},{placements:[{dx:NaN,dy:0,rotation:0,scale:1,mirror:'none'}]},{parametric:'true'}])assert.throws(()=>copyMaterialComponents(d,{...recipe(d),...patch,parametric:(patch as any).parametric??true} as any));assert.equal(JSON.stringify(d),before);const good=fixture('transformed');for(const mutation of [(m:any)=>m.schema='zhezhi-material-curve-model-v5',(m:any)=>delete m.base.auxiliarySegments,(m:any)=>m.groups[1].auxiliaryIds=['missing'],(m:any)=>m.groups[2].selection[0].sourcePart=8,(m:any)=>m.groups[2].selection[0].sourcePart=undefined]){const bad=structuredClone(good);mutation(bad.metadata!.materialCurveModel);assert.equal(inspectMaterialCurveModel(bad).ok,false);}
+});
+test('reducing copy count cannot rebind a later transform to a different copy',()=>{
+ const source=fixture('source'),copied=copyMaterialComponents(source,{...recipe(source,150,2),parametric:true}).doc,d=editMaterialFaces(copied,{kind:'material-transform',components:[2],operation:{kind:'move',a:10,b:20},parametric:true}).doc,c=model(d);assert.equal(c.model.groups[2].selection![0].sourcePart,1);const before=JSON.stringify(d);assert.throws(()=>editMaterialCurveModel(d,{kind:'material-curve-group-edit',group:c.model.groups[1].id,recipe:recipe(source,150,1)}),/副本.*删除/);assert.equal(JSON.stringify(d),before);
+});
+test('cutting a copied crease retains that copy identity when more copies are added',()=>{
+ const d=fixture('copied'),c=model(d),copy=model(d).model.groups[1],crease=d.segments.find(s=>s.id.startsWith(copy.id+'::copy-0-')&&s.assignment==='F')!,cut=editMaterialFaces(d,{kind:'material-cut',segmentIds:[crease.id],parametric:true}).doc,cc=model(cut);assert.equal(cc.model.groups[2].edges![0].edge.sourcePart,0);const changed=editMaterialCurveModel(cut,{kind:'material-curve-group-edit',group:copy.id,recipe:recipe(c.stages[1],160,2)}).doc;assert.equal(mat(changed).components.length,4);assert.ok(model(changed));
+});
+test('copy replay preserves absence of FF and auxiliary edits remain explicit rather than silently overwritten',()=>{
+ const source=traceModelBase(),m=mat(source);source.metadata!.materialTopology=createMaterialTopology(source,m.graph,m.edgeSegmentIds,{startingFace:0});const copied=copyMaterialComponents(source,{...recipe(source),parametric:true}).doc;assert.equal(mat(copied).foldedVertices,undefined);const c=model(copied),changed=editMaterialCurveModel(copied,{kind:'material-curve-group-edit',group:c.model.groups[0].id,recipe:recipe(source,180,2)}).doc;assert.equal(mat(changed).foldedVertices,undefined);assert.equal(mat(changed).components.length,3);
+});

@@ -1,0 +1,9 @@
+.artwork-overview table{width:100%;border-collapse:collapse;font-size:13px;line-height:1.6}
+.artwork-overview th,.artwork-overview td{padding:9px 10px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
+.artwork-overview th{font-weight:600;white-space:nowrap}.artwork-overview thead{color:var(--muted)}
+.artwork-overview .note{font-size:12px;line-height:1.6}.artwork-recovery-status{font-size:13px;font-weight:600}
+.artwork-recovery-heading{display:flex;align-items:center;justify-content:space-between;gap:12px}.artwork-recovery-heading h3{font-size:15px}
+.artwork-recovery-list{padding:0;margin:0;list-style:none}.artwork-recovery-list li{display:flex;align-items:center;gap:8px;border-top:1px solid var(--line);padding:10px 0}
+.artwork-recovery-list li>div{flex:1;min-width:0}.artwork-recovery-list strong{display:block;overflow-wrap:anywhere;font-size:13px}.artwork-recovery-list small{display:block;margin-top:4px;color:var(--muted);font-size:12px}
+.artwork-recovery-list button{flex-shrink:0}
+.artwork-overview .warning{font-size:13px;line-height:1.6}

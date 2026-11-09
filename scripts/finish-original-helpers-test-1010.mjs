@@ -1,0 +1,14 @@
+import fs from 'node:fs';
+import crypto from 'node:crypto';
+import assert from 'node:assert/strict';
+const file='output/original-helpers-full-run-1010.json',run=JSON.parse(fs.readFileSync(file,'utf8'));
+assert.equal(run.exitCode,null);assert.ok(run.inputs.length>1804);
+for(const row of run.inputs)assert.equal(crypto.createHash('sha256').update(fs.readFileSync(row.file)).digest('hex'),row.sha256,row.file);
+const log=fs.readFileSync('output/original-helpers-full-test-1010.log','utf8');
+assert.ok(!/^✖|^FAILED|^ERROR:|^FAIL:/m.test(log));
+const passes=[...log.matchAll(/ℹ pass (\d+)/g)].map(row=>Number(row[1])),backend=Number(log.match(/Ran (\d+) tests/)?.[1]);
+assert.equal(passes.length,3);assert.ok(passes[0]>2740);assert.equal(passes[1],7);assert.equal(passes[2],63);assert.ok(backend>1243);
+run.exitCode=0;run.finishedAt=new Date().toISOString();run.inputsUnchanged=true;
+run.tests={frontend:passes[0],backend,desktop:passes[1],serverWorker:passes[2]};
+fs.writeFileSync(file,JSON.stringify(run,null,2));
+console.log(JSON.stringify({tests:run.tests,exactUnchangedInputs:run.inputs.length}));

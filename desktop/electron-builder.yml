@@ -1,0 +1,69 @@
+appId: dev.zhezhi.workbench
+productName: 折纸工坊
+asar: true
+electronLanguages: [zh-CN, en-US]
+directories:
+  output: release
+files:
+  - dist/**/*
+  - '!**/*.map'
+  - desktop/main.cjs
+  - desktop/preload.cjs
+  - desktop/startupWindow.cjs
+  - desktop/startupPreload.cjs
+  - desktop/startup.html
+  - desktop/startup.css
+  - desktop/startup.js
+  - desktop/smoke.cjs
+  - desktop/preferences.cjs
+  - desktop/storageLocations.cjs
+  - desktop/artworkRecovery.cjs
+  - desktop/storageSmoke.cjs
+  - desktop/confirmation.cjs
+  - desktop/messageWindow.cjs
+  - desktop/messagePreload.cjs
+  - desktop/message.html
+  - desktop/message.js
+  - src/ui/dialog.css
+  - desktop/projectFilePicker.cjs
+  - server.mjs
+  - tess-worker.mjs
+  - src/core/*.mjs
+  - package.json
+  - LICENSE
+  - THIRD_PARTY_NOTICES.md
+extraResources:
+  - from: build/icons/workbench.ico
+    to: workbench.ico
+  - from: build/tessellation/zhezhi-tess
+    to: tessellation
+  - from: build/source
+    to: source
+    filter:
+      - '**/*'
+      - '!zhezhi-corresponding-source.zip'
+  - from: desktop/使用说明.txt
+    to: 使用说明.txt
+win:
+  target:
+    - target: nsis
+      arch: [x64]
+    - target: portable
+      arch: [x64]
+  icon: build/icons/workbench.ico
+  signExecutable: false
+nsis:
+  differentialPackage: false
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  deleteAppDataOnUninstall: false
+  artifactName: Zhezhi-Workbench-${version}-Setup-${arch}.${ext}
+  installerLanguages: [zh_CN, en_US]
+portable:
+  splashImage: build/icons/startup.bmp
+  artifactName: Zhezhi-Workbench-${version}-Portable-${arch}.${ext}
+  requestExecutionLevel: user
+  unpackDirName: false

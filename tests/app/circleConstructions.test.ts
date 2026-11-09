@@ -1,0 +1,35 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import {circleCircleIntersections,circleLineIntersections,circleIntersectionPoints,commonTangents,pointTangents,externallyTangentPair,separateCircle,concentricCircle,type Tangent} from '../../src/app/circleConstructions';
+import {appendCircle,type CircleGeometry} from '../../src/app/circleTools';
+import {buildFold,distance} from '../../src/core/geometry';
+import type {Doc,Point} from '../../src/core/types';
+const c=(x:number,y:number,radius:number):CircleGeometry=>({center:[x,y],radius});
+const near=(a:number,b:number)=>assert.ok(Math.abs(a-b)<1e-6,`${a} != ${b}`);
+const round=(points:Point[])=>points.map(p=>p.map(x=>Number(x.toFixed(6)))).sort((a,b)=>a[0]-b[0]||a[1]-b[1]);
+function tangent(t:Tangent,circle:CircleGeometry,at:Point){near(distance(at,circle.center),circle.radius);near((at[0]-circle.center[0])*t.direction[0]+(at[1]-circle.center[1])*t.direction[1],0);}
+test('separate radius uses only last two points and allows center as radius start',()=>{assert.deepEqual(separateCircle([10,20],[0,0],[3,4]),c(10,20,5));assert.deepEqual(separateCircle([0,0],[0,0],[3,4]),c(0,0,5));assert.throws(()=>separateCircle([0,0],[1,1],[1,1]));});
+test('concentric circle adds positive measured length without changing source',()=>{const a=c(50,50,10),before=JSON.stringify(a);assert.deepEqual(concentricCircle(a,[0,0],[3,4]),c(50,50,15));assert.equal(JSON.stringify(a),before);assert.throws(()=>concentricCircle(a,[0,0],[0,0]));});
+test('concentric radius enforces document bounds',()=>assert.throws(()=>concentricCircle(c(0,0,1e6),[0,0],[1,0])));
+test('external pair expands separated circles equally',()=>{const pair=externallyTangentPair(c(0,0,10),c(100,0,20));assert.deepEqual(pair,[c(0,0,45),c(100,0,55)]);});
+test('external pair shrinks overlapping circles equally',()=>{const pair=externallyTangentPair(c(0,0,30),c(40,0,20));assert.deepEqual(pair,[c(0,0,25),c(40,0,15)]);});
+test('external pair rejects concentric, contained, already tangent and zero-result cases',()=>{for(const b of [c(0,0,20),c(5,0,1),c(20,0,10),c(5,0,5)])assert.throws(()=>externallyTangentPair(c(0,0,10),b));});
+test('point-circle tangents touch circle at right angles',()=>{const circle=c(50,70,20),p:Point=[110,100],ts=pointTangents(p,circle);assert.equal(ts.length,2);for(const t of ts){assert.deepEqual(t.a,p);tangent(t,circle,t.b);}});
+test('point on circumference returns one direction for finite cutoff resolution',()=>{const ts=pointTangents([10,0],c(0,0,10));assert.equal(ts.length,1);assert.deepEqual(ts[0].a,ts[0].b);tangent(ts[0],c(0,0,10),ts[0].a);});
+test('interior and nonfinite points reject tangents',()=>{for(const p of [[0,0],[9,0],[NaN,10],[Infinity,0]] as Point[])assert.throws(()=>pointTangents(p,c(0,0,10)));});
+test('separate circles have four common tangents, each touches both circles',()=>{const a=c(0,0,20),b=c(100,30,10),ts=commonTangents(a,b);assert.equal(ts.length,4);for(const t of ts){tangent(t,a,t.a);tangent(t,b,t.b);near((t.b[0]-t.a[0])*t.direction[1]-(t.b[1]-t.a[1])*t.direction[0],0);}});
+test('overlapping circles have two external common tangents',()=>{const ts=commonTangents(c(0,0,20),c(25,0,15));assert.equal(ts.length,2);assert.ok(ts.every(t=>t.label==='外公切线'));});
+test('externally touching circles have three distinct tangent directions',()=>{const ts=commonTangents(c(0,0,20),c(35,0,15));assert.equal(ts.length,3);assert.equal(ts.filter(t=>distance(t.a,t.b)<1e-6).length,1);});
+test('internally touching circles have a single degenerate contact tangent',()=>{const ts=commonTangents(c(0,0,20),c(5,0,15));assert.equal(ts.length,1);near(distance(ts[0].a,ts[0].b),0);});
+test('concentric or strictly nested circles reject common tangents',()=>{for(const b of [c(0,0,10),c(0,0,20),c(3,0,10)])assert.throws(()=>commonTangents(c(0,0,20),b));});
+test('common tangent computation works for vertical and unequal-radius arrangements',()=>{for(const b of [c(0,100,40),c(-100,30,5),c(-150,-200,100)]){const a=c(0,0,20);for(const t of commonTangents(a,b)){tangent(t,a,t.a);tangent(t,b,t.b);}}});
+test('circle-line uses finite segment not its infinite extension',()=>{const circle=c(0,0,5);assert.deepEqual(round(circleLineIntersections(circle,{a:[-10,0],b:[10,0]})),[[-5,0],[5,0]]);assert.deepEqual(circleLineIntersections(circle,{a:[6,0],b:[10,0]}),[]);});
+test('circle-line tangent deduplicates and endpoint intersections are retained',()=>{assert.deepEqual(round(circleLineIntersections(c(0,0,5),{a:[-10,5],b:[10,5]})),[[0,5]]);assert.deepEqual(round(circleLineIntersections(c(0,0,5),{a:[5,0],b:[10,0]})),[[5,0]]);});
+test('circle-line handles reversed oblique segments and zero length',()=>{const a=c(1,2,5),s={a:[-9,-8] as Point,b:[11,12] as Point};assert.deepEqual(round(circleLineIntersections(a,s)),round(circleLineIntersections(a,{a:s.b,b:s.a})));assert.deepEqual(circleLineIntersections(a,{a:[1,2],b:[1,2]}),[]);});
+test('circle-circle intersections are symmetric and lie on both circumferences',()=>{const a=c(0,0,5),b=c(6,0,5),points=circleCircleIntersections(a,b);assert.deepEqual(round(points),[[3,-4],[3,4]]);assert.deepEqual(round(points),round(circleCircleIntersections(b,a)));for(const p of points){near(distance(p,a.center),5);near(distance(p,b.center),5);}});
+test('circle-circle distinguishes separate nested concentric and tangent cases',()=>{const a=c(0,0,5);for(const b of [c(11,0,5),c(1,0,1),c(0,0,5)])assert.deepEqual(circleCircleIntersections(a,b),[]);assert.deepEqual(round(circleCircleIntersections(a,c(10,0,5))),[[5,0]]);assert.deepEqual(round(circleCircleIntersections(a,c(3,0,2))),[[5,0]]);});
+test('derived circle intersections have no crease IDs and do not alter folding topology',()=>{
+  const square:Doc={name:'circle intersections',paper:{width:100,height:100},segments:([[0,0,100,0],[100,0,100,100],[100,100,0,100],[0,100,0,0]]).map(([x,y,u,v],i)=>({id:'b'+i,a:[x,y],b:[u,v],assignment:'B',angle:0}))};
+  const d=appendCircle(square,c(50,50,60)),before=JSON.stringify(d),points=circleIntersectionPoints(d);assert.equal(points.length,8);assert.ok(points.every(p=>p.kind==='circle-intersection'&&p.segmentIds.length===0));assert.deepEqual(buildFold(d).graph,buildFold(square).graph);assert.equal(JSON.stringify(d),before);assert.equal(circleIntersectionPoints(d,3).length,3);
+});
+test('multiple circle/line junctions deduplicate and exclude non-circle objects',()=>{const d:Doc={name:'junction',paper:{width:100,height:100},segments:[{id:'s',a:[-20,5],b:[20,5],assignment:'A',angle:0}],objects:[{kind:'circle',id:'a',...c(0,0,5),color:'#000000'},{kind:'circle',id:'b',...c(0,10,5),color:'#000000'}]};assert.equal(circleIntersectionPoints(d).length,1);});

@@ -1,0 +1,38 @@
+.linked-common-dialog .huffman-controls{gap:7px;padding:10px}
+.linked-common-dialog .huffman-overline button{min-height:23px;line-height:1.3;white-space:nowrap}
+.linked-common-dialog .huffman-status{height:56px;min-height:56px;padding:6px;overflow:hidden}
+.linked-common-dialog .huffman-root{height:78px;min-height:78px;box-sizing:border-box;line-height:1.25}
+.linked-common-dialog .huffman-field{gap:2px;line-height:1.3}
+.linked-common-dialog .huffman-field input,.linked-common-dialog .huffman-field select{height:26px}
+.linked-common-fields{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.linked-common-storage{display:flex;gap:6px;margin-top:auto}
+.linked-common-storage button{flex:1;min-height:27px;padding:3px 6px;font-size:11px}
+.linked-common-import-error{font-size:10px;color:#a24935}
+@media(max-width:760px){
+ .tess-dialog[open]:has(>.linked-common-dialog){height:calc(100dvh - 18px);overflow:hidden}
+ .linked-common-dialog{display:grid;grid-template-columns:1fr;grid-template-rows:auto minmax(0,1fr);gap:6px;margin-top:4px;overflow:hidden}
+ .linked-common-dialog .huffman-controls{display:grid;grid-template-columns:1fr 1fr;gap:5px;padding:6px;overflow:hidden}
+ .linked-common-dialog .huffman-overline,.linked-common-dialog .huffman-status,.linked-common-dialog .linked-common-fields,.linked-common-dialog .linked-common-storage{grid-column:1/-1}
+ .linked-common-dialog .huffman-controls>p,.linked-common-dialog .huffman-position,.linked-common-dialog .huffman-range{display:none}
+ .linked-common-dialog .huffman-root{grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr;padding:4px}
+ .linked-common-dialog .huffman-status{height:40px;min-height:40px;padding:4px}
+ .linked-common-dialog .huffman-root{height:55px;min-height:55px}
+ .linked-common-dialog .huffman-root>span:first-child{grid-column:1/-1}
+ .linked-common-dialog .huffman-root span:last-child{display:none}
+ .linked-common-dialog .linked-common-fields{grid-template-columns:repeat(4,minmax(0,1fr))}
+ .linked-common-dialog .huffman-field{font-size:9px;gap:2px}
+ .linked-common-dialog .huffman-field input,.linked-common-dialog .huffman-field select{height:25px;font-size:10px;padding:3px}
+ .linked-common-dialog .huffman-results{min-height:0;gap:5px}
+ .linked-common-dialog .huffman-panels{grid-template-columns:1fr 1fr;min-height:0;gap:5px}
+ .linked-common-dialog .huffman-panel{min-height:0}
+ .linked-common-dialog .huffman-head{min-height:26px}
+ .linked-common-dialog .huffman-head strong{font-size:11px}
+ .linked-common-dialog .huffman-panel header{padding:4px!important;min-height:25px}
+ .linked-common-dialog .huffman-panel header span{display:none}
+ .linked-common-dialog .huffman-panel p{display:none}
+ .linked-common-dialog .huffman-cert{padding:5px;font-size:9px;display:flex}
+ .linked-common-dialog .huffman-cert strong{display:none}
+ .linked-common-dialog .huffman-footer{padding-top:3px;min-height:25px}
+ .linked-common-dialog .huffman-footer span{display:none}
+ .linked-common-dialog .huffman-footer button{flex:1;padding:3px;font-size:10px}
+}

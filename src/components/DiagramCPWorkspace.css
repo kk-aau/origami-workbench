@@ -1,0 +1,33 @@
+.diagram-cp-workspace{display:flex;flex:1;min-width:0;min-height:0;flex-direction:column;background:var(--diagram-sheet);outline:none}
+.diagram-cp-workspace>header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 12px;border-bottom:1px solid var(--diagram-line);flex-shrink:0}
+.diagram-cp-workspace>header>div{display:flex;align-items:center;gap:9px}
+.diagram-cp-workspace>header strong{font-size:14px}
+.diagram-cp-workspace>header span{font-size:11px;color:var(--diagram-muted)}
+.diagram-cp-workspace>header button{font-size:11px;white-space:nowrap}
+.diagram-cp-workspace-notice{display:flex;align-items:center;gap:10px;padding:7px 12px;border-bottom:1px solid var(--diagram-line);background:#f3f6ef;flex-shrink:0;flex-wrap:wrap}
+.diagram-cp-workspace-notice p{margin:0;flex:1 1 220px;min-width:0;font-size:11px;line-height:1.65;color:#526653}
+.diagram-cp-workspace-notice button{font-size:11px;padding:4px 7px;white-space:nowrap}
+.diagram-cp-workspace .diagram-cp-edit-toolbar{padding:6px 10px;gap:5px}
+.diagram-cp-workspace .diagram-cp-edit-toolbar select{max-width:110px;color:var(--diagram-ink)}
+.diagram-cp-workspace .diagram-cp-edit-toolbar label{color:var(--diagram-muted)}
+.diagram-cp-workspace .diagram-cp-edit-canvas{flex:1;min-height:0}
+.diagram-cp-angle-toolbar{display:flex;align-items:center;gap:8px 16px;flex-wrap:wrap;padding:6px 10px;border-bottom:1px solid var(--diagram-line);flex-shrink:0}
+.diagram-cp-angle-toolbar>small{font-size:10px;color:var(--diagram-muted)}
+.diagram-cp-name-options{display:inline-flex;align-items:center;gap:8px;flex-wrap:wrap;padding-left:8px;border-left:1px solid var(--diagram-line)}
+.diagram-cp-name-options label{white-space:nowrap}
+.diagram-cp-name-options small{font-size:10px;color:var(--diagram-muted)}
+.diagram-cp-main-labels text{fill:#526b58;font-family:inherit;font-weight:500;paint-order:stroke;stroke:var(--diagram-sheet,#fffefb);stroke-linejoin:round;pointer-events:none}
+.diagram-cp-main-labels text[data-cp-edge-label]{fill:#516479}
+.diagram-cp-main-labels text.is-selected{fill:#214e3d;font-weight:700}
+.diagram-cp-name-warning{margin:0;padding:5px 12px;font-size:11px;color:var(--diagram-muted)}
+.diagram-cp-workspace [data-canvas-overlay]{max-width:100%}
+.diagram-cp-workspace-placeholder{display:flex;flex:1;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:12px;min-height:0}
+.diagram-cp-workspace-placeholder svg{display:block;min-height:0;flex:1;width:100%}
+.diagram-cp-workspace-placeholder small{font-size:10px;color:var(--diagram-muted)}
+.diagram-cp-workspace-access{padding:0 8px 6px;font-size:10px;line-height:1.55;color:#617365;margin:0;flex-shrink:0}
+.diagram-cp-card.is-exchanged{border-color:#a9c0af}
+.diagram-compact-workspace.is-cp-workspace .diagram-unified-tools,.diagram-compact-workspace.is-cp-workspace .diagram-drafting-bar,.diagram-compact-workspace.is-cp-workspace .diagram-symbol-dock,.diagram-compact-workspace.is-cp-workspace .diagram-layer-status{display:none}
+.diagram-compact-workspace.is-cp-workspace .diagram-context-shelf{display:none}
+.diagram-compact-workspace.is-cp-workspace .diagram-paper-work-area{position:relative}
+.diagram-compact-workspace .diagram-model-surface[hidden]{display:none}
+.diagram-model-surface>.fold-angle-panel{bottom:88px;max-height:calc(100% - 100px)}

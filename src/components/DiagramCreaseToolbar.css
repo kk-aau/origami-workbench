@@ -1,0 +1,6 @@
+.diagram-crease-toolbar{position:absolute;z-index:7;display:flex;flex-direction:column;gap:6px;width:max-content;max-width:calc(100% - 32px);padding:8px 9px;border:1px solid #b9cdbc;border-radius:6px;background:#fffefaf5;box-shadow:0 3px 12px #293d351c;color:var(--diagram-ink,#293d35);font-size:10px;line-height:1.4;user-select:none;cursor:default}
+.diagram-crease-toolbar .diagram-crease-action-row{display:flex;align-items:center;flex-wrap:wrap;gap:4px}
+.diagram-crease-toolbar .diagram-crease-action-label{min-width:26px;color:#728570;font-size:9px}
+.diagram-workspace .diagram-crease-toolbar button{min-height:25px;padding:4px 7px;font-size:10px;white-space:nowrap}
+.diagram-crease-toolbar .diagram-note{margin:0;font-size:9px;line-height:1.5;max-width:280px}
+@media(max-width:1280px){.diagram-crease-toolbar{padding:7px;gap:5px}.diagram-workspace .diagram-crease-toolbar button{padding:4px 6px}}

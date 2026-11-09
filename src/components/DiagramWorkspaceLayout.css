@@ -1,0 +1,166 @@
+/* Compact drafting layout: tools above, selection beside the paper, content below. */
+.diagram-workspace.diagram-compact-workspace{position:relative;grid-template-columns:140px minmax(0,1fr);--diagram-muted:#617365}
+.diagram-workspace.diagram-compact-workspace.has-properties{grid-template-columns:140px minmax(0,1fr) 266px}
+.diagram-compact-workspace.is-library{display:block}
+.diagram-compact-workspace .diagram-properties[hidden]{display:none}
+.diagram-compact-workspace .diagram-main{container-type:inline-size;container-name:diagram-main}
+.diagram-compact-workspace .diagram-document-heading{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:36px;padding:4px 10px;border-bottom:1px solid var(--diagram-line);flex-shrink:0;flex-wrap:wrap}
+.diagram-document-name{display:flex;align-items:center;gap:8px;min-width:0;flex:1}
+.diagram-document-name>strong{max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px}
+.diagram-document-name>button{font-size:10px;min-height:25px;padding:3px 7px}
+.diagram-step-readout{font-size:10px;color:#617365;white-space:nowrap;font-variant-numeric:tabular-nums}
+.diagram-compact-workspace .diagram-toolbar-end{gap:4px;flex-wrap:wrap}
+.diagram-compact-workspace .diagram-toolbar-end button{font-size:10px;min-height:27px;padding:4px 7px;white-space:nowrap}
+.diagram-unified-tools{display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;padding:4px 10px;border-bottom:1px solid var(--diagram-line);flex-shrink:0;background:var(--diagram-sheet);isolation:isolate;z-index:12}
+.diagram-unified-tools>.diagram-tool-group{gap:4px;flex-wrap:wrap}
+.diagram-unified-tools button,.diagram-unified-tools select{min-height:28px;padding:4px 7px;white-space:nowrap;font-size:11px}
+.diagram-unified-tools select{border:1px solid var(--diagram-line);border-radius:4px;background:var(--diagram-sheet);color:var(--diagram-ink);max-width:106px}
+.diagram-unified-tools>.diagram-precision-toolbar{flex:0 1 auto;min-width:0;align-self:auto}
+.diagram-unified-tools .diagram-precision-buttons{justify-content:flex-start;gap:4px}
+.diagram-unified-tools .diagram-precision-panel{left:0;transform:none;top:calc(100% + 7px);width:330px;max-width:calc(100vw - 180px);z-index:30}
+.diagram-unified-tools .diagram-paper-state-controls{margin-left:auto;flex-direction:row;align-items:center;gap:7px;flex-wrap:wrap}
+.diagram-unified-tools .diagram-pose-badge{border:0;background:transparent;padding:2px 0;color:#5d7463}
+.diagram-compact-workspace .diagram-drafting-bar{justify-content:flex-start;gap:6px 16px;padding:4px 10px;background:#f3f6ef;z-index:10}
+.diagram-compact-workspace .diagram-drafting-bar>div{column-gap:8px;row-gap:6px}
+.diagram-compact-workspace .diagram-drafting-bar .diagram-line-style-controls{gap:6px 12px}
+.diagram-compact-workspace .diagram-line-category-controls button{min-height:28px;padding:4px 6px;font-size:11px}
+.diagram-compact-workspace .diagram-line-category-controls svg{width:21px}
+.diagram-compact-workspace .diagram-line-appearance{gap:8px}
+.diagram-compact-workspace .diagram-line-appearance>label{gap:4px;font-size:10px}
+.diagram-compact-workspace .diagram-line-appearance input,.diagram-compact-workspace .diagram-line-appearance select{height:27px}
+.diagram-compact-workspace .diagram-grid-inline{padding-left:12px;border-left:1px solid #d4dfd1}
+.diagram-grid-inline>.number-field,.diagram-new-symbol-style>.number-field{display:flex;align-items:center;gap:4px;margin:0;min-width:0}
+.diagram-grid-inline .number-field>span:first-child,.diagram-new-symbol-style .number-field>span:first-child{font-size:10px;color:#5f7261}
+.diagram-grid-inline .number-input input{width:48px;height:26px;padding:3px 4px}
+.diagram-grid-inline .number-input,.diagram-new-symbol-style .number-input{width:auto;min-width:0;padding:2px 4px}
+.diagram-grid-division-controls{display:inline-flex;align-items:center;gap:4px;flex-shrink:0}
+.diagram-grid-division-controls>.number-field{display:flex;align-items:center;gap:4px;min-width:0;margin:0}
+.diagram-grid-division-controls>button{min-width:25px;min-height:26px;padding:2px 4px}
+.diagram-new-symbol-style .number-input input{width:54px;height:26px;padding:3px 4px}
+.diagram-new-symbol-style input[type=color]{width:26px;height:25px;padding:2px;border:1px solid var(--diagram-line);border-radius:3px;background:var(--diagram-sheet)}
+.diagram-compact-workspace .diagram-drafting-bar .diagram-paper-parameters{gap:6px 8px}
+.diagram-compact-workspace .diagram-paper-parameters .number-input{width:auto;padding:2px 4px}
+.diagram-compact-workspace .diagram-drafting-bar label{color:#5c705e}
+.diagram-compact-workspace .diagram-body{padding:7px 8px 4px;grid-template-columns:minmax(0,1fr) 7px minmax(190px,min(var(--diagram-cp-width),30%))}
+.diagram-compact-workspace .diagram-edit-layout{margin-top:0;border-top:0}
+.diagram-compact-workspace .diagram-drawing-heading{padding:8px 12px;border-bottom:1px solid var(--diagram-line)}
+.diagram-compact-workspace .diagram-drawing-heading h2{margin:0;font-size:14px}
+.diagram-compact-workspace .diagram-model-surface{padding:0;min-height:0}
+.diagram-compact-workspace .diagram-cp-shelf{grid-template-rows:repeat(2,minmax(300px,1fr));overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:#9bae9b #f3f6ef}
+.diagram-compact-workspace .diagram-cp-card>header{padding:7px 9px}
+.diagram-workspace.diagram-compact-workspace .diagram-cp-card>.diagram-cp-image{flex:1 1 0;min-height:0;height:0}
+.diagram-compact-workspace .diagram-cp-card>.diagram-cp-meta{flex-shrink:0;padding-bottom:5px;color:#617365}
+.diagram-compact-workspace .diagram-cp-actions{padding:6px;gap:4px}
+.diagram-compact-workspace .diagram-cp-actions button{min-height:26px;padding:4px}
+.diagram-context-shelf{display:flex;flex-direction:column;flex:0 0 212px;width:212px;min-width:0;min-height:0;border-right:1px solid var(--diagram-line);background:#fffefa;overflow:hidden}
+.diagram-context-shelf>nav{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:6px;border-bottom:1px solid var(--diagram-line);flex-shrink:0}
+.diagram-context-shelf>nav button{font-size:11px;padding:5px 3px;min-height:29px;white-space:nowrap}
+.diagram-context-shelf>.diagram-layer-stack{flex:1 1 0;width:100%;min-height:0;border:0}
+.diagram-context-shelf .diagram-layer-stack-header{min-height:32px;padding:7px 9px}
+.diagram-context-shelf{overflow:auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:#9bae9b #f3f6ef}
+.diagram-context-shelf>.diagram-layer-stack.has-layer-controls{flex:1 0 auto;min-height:0;overflow:visible}
+.diagram-layer-stack-controls .diagram-context-content{overflow:visible}
+.diagram-layer-stack-controls .diagram-context-content>section{padding:8px;border-bottom:1px solid var(--diagram-line)}
+.diagram-layer-stack-controls .diagram-context-content>section:last-child{border-bottom:0}
+.diagram-layer-stack-controls .diagram-context-content header{margin-bottom:6px}
+.diagram-layer-stack-controls .diagram-context-content .diagram-crease-action-label{display:none}
+.diagram-context-content .diagram-selected-type{display:flex;flex-wrap:nowrap;margin-top:0}
+.diagram-selected-type>label{display:flex;align-items:center;gap:6px;flex:1;min-width:0;font-size:10px}
+.diagram-selected-type>label>span{flex-shrink:0;white-space:nowrap}
+.diagram-selected-type select{width:100%;min-width:0;min-height:28px;padding:3px;font-size:11px;border:1px solid var(--diagram-line);border-radius:4px;background:var(--diagram-sheet);color:var(--diagram-ink)}
+.diagram-layer-stack-controls .diagram-selection-properties{min-height:25px;padding:3px 5px;font-size:10px;white-space:nowrap}
+.diagram-visual-layer-controls header label{font-size:10px;white-space:nowrap}
+.diagram-layer-scope-actions{display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px}
+.diagram-layer-stack .diagram-layer-scope-actions button{min-height:28px;padding:3px 1px;font-size:10px;white-space:nowrap}
+.diagram-layer-secondary-actions{display:flex;justify-content:space-between;gap:5px;margin-top:6px}
+.diagram-layer-stack .diagram-layer-secondary-actions button{min-height:25px;padding:3px 5px;font-size:10px}
+.diagram-context-empty{padding:10px;margin:0;font-size:11px;line-height:1.6;color:#516953}
+@media(max-height:850px){
+  .diagram-context-shelf .has-layer-controls .diagram-layer-stack-preview{height:88px}
+  .diagram-context-shelf .has-layer-controls .diagram-layer-stack-card{top:4px;width:104px;height:66px;left:26px}
+  .diagram-context-shelf .has-layer-controls .diagram-layer-stack-visibility{padding-bottom:6px}
+  .diagram-context-shelf .has-layer-controls .diagram-layer-stack-analysis{padding-bottom:6px}
+  .diagram-context-shelf .has-layer-controls .diagram-layer-stack-selection-hint{padding-top:4px;padding-bottom:4px}
+}
+.diagram-context-content{flex:1;min-height:0;overflow:auto;overscroll-behavior:contain;scrollbar-width:thin}
+.diagram-context-content>section{padding:10px;border-bottom:1px solid var(--diagram-line)}
+.diagram-context-content header{display:flex;align-items:center;justify-content:space-between;gap:6px;margin-bottom:8px}
+.diagram-context-content h3{font-size:11px;margin:0;font-weight:600}
+.diagram-context-content header>small{font-size:9px;color:#647765}
+.diagram-context-content .diagram-note{margin:6px 0;color:#637565;line-height:1.6}
+.diagram-context-content .diagram-text-field{margin-bottom:8px}
+.diagram-context-content .diagram-text-field>span{color:#5f7362}
+.diagram-context-content .diagram-full-button{margin-top:6px;min-height:28px}
+.diagram-context-content .diagram-text-field select{width:100%}
+.diagram-context-content .diagram-coordinate-row{gap:5px;margin-top:7px}
+.diagram-context-content .number-field>span:first-child{color:#637563}
+.diagram-context-content .diagram-line-appearance{gap:8px;display:grid;grid-template-columns:1fr 1fr}
+.diagram-context-content .diagram-line-pattern-control{grid-column:1/-1}
+.diagram-context-content .diagram-line-pattern-control select{flex:1;width:auto}
+.diagram-context-content .diagram-line-width-control{gap:3px}
+.diagram-context-content .diagram-line-width-control input{width:48px}
+.diagram-context-content .diagram-crease-action-row{display:flex;align-items:center;flex-wrap:wrap;gap:4px;margin-top:6px}
+.diagram-context-content .diagram-crease-action-label{width:100%;font-size:10px;color:#617664}
+.diagram-context-content .diagram-crease-action-row button{font-size:10px;min-height:27px;padding:4px 6px}
+.diagram-context-content .diagram-transform-fields{grid-template-columns:minmax(0,1fr) auto;gap:5px;margin-top:8px}
+.diagram-context-content .diagram-button-row{margin-top:6px}
+.diagram-context-content .diagram-members{max-height:180px;overflow:auto;margin-top:8px}
+.diagram-context-content .diagram-members label{padding:6px}
+.diagram-context-content .diagram-context-help{font-size:10px;color:#637565;margin:6px 0}
+.diagram-context-help summary{cursor:pointer}
+.diagram-context-details{padding:9px 10px;border-bottom:1px solid var(--diagram-line)}
+.diagram-context-details>summary{font-size:11px;color:#4e6856;cursor:pointer}
+.diagram-context-details>section{padding-top:10px}
+.diagram-compact-workspace .diagram-layer-status{padding:3px 9px;gap:8px;min-height:21px;font-size:10px}
+.diagram-compact-workspace .diagram-layer-status .diagram-tool-hint{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#607461;font-size:9px}
+.diagram-compact-workspace .diagram-layer-status>span:last-child{white-space:nowrap;color:#607461;font-size:9px}
+.diagram-compact-workspace .diagram-step-caption{display:grid;grid-template-columns:minmax(145px,.7fr) minmax(160px,1.3fr) auto;align-items:start;gap:8px;padding:7px 9px;background:#f3f6ef}
+.diagram-compact-workspace .diagram-step-caption>label{display:flex;align-items:center;gap:6px;min-width:0}
+.diagram-compact-workspace .diagram-step-caption>label>span{flex-shrink:0;margin:0;font-size:10px;color:#4e6856;font-weight:500}
+.diagram-compact-workspace .diagram-step-title-field input{height:30px;padding:4px 7px;font-size:11px}
+.diagram-compact-workspace .diagram-step-caption textarea{min-height:30px;height:30px;max-height:96px;line-height:1.55;padding:5px 7px;font-size:11px}
+.diagram-compact-workspace .diagram-step-caption textarea:focus{height:58px}
+.diagram-compact-workspace .diagram-step-navigation{display:flex;flex-direction:row;gap:5px;padding:0}
+.diagram-compact-workspace .diagram-step-navigation button{min-height:30px;font-size:10px;padding:4px 7px}
+.diagram-compact-workspace .diagram-footer{min-height:20px;padding:3px 10px;font-size:9px}
+.diagram-inspector-heading{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:7px 10px;border-bottom:1px solid var(--diagram-line);flex-shrink:0}
+.diagram-inspector-heading>strong{font-size:11px;font-weight:600}
+.diagram-inspector-heading>button{display:grid;place-items:center;min-height:25px;width:25px;padding:3px;border:0;background:transparent}
+.diagram-inspector-heading svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round}
+.diagram-compact-workspace .diagram-property-scroll>section{padding:11px 10px}
+.diagram-compact-workspace ::selection{background:#d9e8dc;color:#293d35}
+.diagram-compact-workspace input,.diagram-compact-workspace textarea{caret-color:#426f59}
+.diagram-compact-workspace input:focus-visible,.diagram-compact-workspace textarea:focus-visible,.diagram-compact-workspace select:focus-visible{outline:2px solid #426f59;outline-offset:1px}
+@media(max-width:1600px){
+  .diagram-workspace.diagram-compact-workspace.has-properties{grid-template-columns:140px minmax(0,1fr)}
+  .diagram-compact-workspace .diagram-properties:not([hidden]){position:absolute;right:0;top:0;bottom:0;width:266px;z-index:28;box-shadow:-8px 0 20px #293d3518}
+}
+@container diagram-main (max-width:1450px){
+  .diagram-compact-workspace .diagram-symbol-dock{width:144px}
+  .diagram-context-shelf{flex-basis:188px;width:188px}
+}
+@container diagram-main (max-width:1120px){
+  .diagram-compact-workspace .diagram-symbol-dock{width:132px}
+  .diagram-compact-workspace .diagram-symbol-dock-body{grid-template-columns:minmax(0,1fr) 34px;gap:4px;padding-left:5px}
+  .diagram-compact-workspace .diagram-symbol-dock-item{min-height:86px}
+  .diagram-compact-workspace .diagram-symbol-dock-item svg{width:64px;height:64px}
+  .diagram-compact-workspace .diagram-symbol-dock-item span{font-size:9px}
+  .diagram-compact-workspace .diagram-symbol-dock-categories button{font-size:9px;min-height:38px}
+  .diagram-compact-workspace .diagram-unified-tools{column-gap:9px}
+  .diagram-unified-tools .diagram-paper-state-controls{margin-left:0}
+  .diagram-compact-workspace .diagram-step-caption{grid-template-columns:minmax(0,1fr) auto;row-gap:5px}
+  .diagram-compact-workspace .diagram-step-description-field{grid-column:1/-1;grid-row:2}
+  .diagram-compact-workspace .diagram-step-navigation{grid-column:2;grid-row:1}
+}
+@media(max-width:1100px){
+  .diagram-workspace.diagram-compact-workspace,.diagram-workspace.diagram-compact-workspace.has-properties{grid-template-columns:116px minmax(0,1fr)}
+  .diagram-context-shelf{flex-basis:174px;width:174px}
+  .diagram-document-name>strong{max-width:160px}
+  .diagram-step-readout{font-size:9px}
+  .diagram-compact-workspace .diagram-layer-status>span:last-child{display:none}
+  .diagram-context-shelf>nav button{font-size:10px}
+}
+@media(prefers-reduced-motion:reduce){.diagram-compact-workspace *{scroll-behavior:auto}}
+.diagram-tear-window-controls{padding:10px;border-top:1px solid #e1e8dc;background:#fffef9}
+.diagram-tear-window-controls p{margin:9px 0 0;font-size:10px;line-height:1.6;color:#516953}
+.diagram-tear-window-controls .number-field{min-width:0}

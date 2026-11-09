@@ -1,0 +1,1954 @@
+{
+  "default": {
+    "family": "flasher",
+    "rings": 2,
+    "heightOrder": 2,
+    "rotationalOrder": 4,
+    "radialIncrement": 0.05,
+    "diagonal": "Y",
+    "minimumAngleDeg": 10
+  },
+  "valid": [
+    {
+      "name": "missing-fields-0",
+      "input": {
+        "family": "flasher"
+      },
+      "expected": {
+        "family": "flasher",
+        "rings": 2,
+        "heightOrder": 2,
+        "rotationalOrder": 4,
+        "radialIncrement": 0.05,
+        "diagonal": "Y",
+        "minimumAngleDeg": 10
+      }
+    },
+    {
+      "name": "missing-fields-1",
+      "input": {
+        "family": "flasher",
+        "rings": 2
+      },
+      "expected": {
+        "family": "flasher",
+        "rings": 2,
+        "heightOrder": 2,
+        "rotationalOrder": 4,
+        "radialIncrement": 0.05,
+        "diagonal": "Y",
+        "minimumAngleDeg": 10
+      }
+    },
+    {
+      "name": "missing-fields-2",
+      "input": {
+        "family": "flasher",
+        "heightOrder": 2
+      },
+      "expected": {
+        "family": "flasher",
+        "rings": 2,
+        "heightOrder": 2,
+        "rotationalOrder": 4,
+        "radialIncrement": 0.05,
+        "diagonal": "Y",
+        "minimumAngleDeg": 10
+      }
+    },
+    {
+      "name": "missing-fields-3",
+      "input": {
+        "family": "flasher",
+        "rings": 2,
+        "heightOrder": 2
+      },
+      "expected": {
+        "family": "flasher",
+        "rings": 2,
+        "heightOrder": 2,
+        "rotationalOrder": 4,
+        "radialIncrement": 0.05,
+        "diagonal": "Y",
+        "minimumAngleDeg": 10
+      }
+    },
+    {
+      "name": "missing-fields-4",
+      "input": {
+        "family": "flasher",
+        "rotationalOrder": 4
+      },
+      "expected": {
+        "family": "flasher",
+        "rings": 2,
+        "heightOrder": 2,
+        "rotationalOrder": 4,
+        "radialIncrement": 0.05,
+        "diagonal": "Y",
+        "minimumAngleDeg": 10
+      }
+    },
+    {
+      "name": "missing-fields-5",
+      "input": {
+        "family": "flasher",
+        "rings": 2,
+        "rotationalOrder": 4
+      },
+      "expected": {
+        "family": "flasher",
+        "rings": 2,
+        "heightOrder": 2,
+        "rotationalOrder": 4,
+        "radialIncrement": 0.05,
+        "diagonal": "Y",
+        "minimumAngleDeg": 10
+      }
+    },
+    {
+      "name": "missing-fields-6",
+      "input": {
+        "family": "flasher",
+        "heightOrder": 2,
+        "rotationalOrder": 4
+      },
+      "expected": {
+        "family": "flasher",
+        "rings": 2,
+        "heightOrder": 2,
+        "rotationalOrder": 4,
+        "radialIncrement": 0.05,
+        "diagonal": "Y",
+        "minimumAngleDeg": 10
+      }
+    },
+    {
+      "name": "missing-fields-7",
+      "input": {
+        "family": "flasher",
+        "rings": 2,
+        "heightOrder": 2,
+        "rotationalOrder": 4
+      },
+      "expected": {
+        "family": "flasher",
+        "rings": 2,
+        "heightOrder": 2,
+        "rotationalOrder": 4,
+        "radialIncrement": 0.05,
+        "diagonal": "Y",
+        "minimumAngleDeg": 10
+      }
+    },
+    {
+      "name": "missing-fields-8",
+      "input": {
+        "family": "flasher",
+        "radialIncrement": 0.05
+      },
+      "expected": {
+        "family": "flasher",
+        "rings": 2,
+        "heightOrder": 2,
+        "rotationalOrder": 4,
+        "radialIncrement": 0.05,
+        "diagonal": "Y",
+        "minimumAngleDeg": 10
+      }
+    },
+    {
+      "name": "missing-fields-9",
+      "input": {
+        "family": "flasher",
+        "rings": 2,
+        "radialIncrement": 0.05
+      },
+      "expected": {
+        "family": "flasher",
+        "rings": 2,
+        "heightOrder": 2,
+        "rotationalOrder": 4,
+        "radialIncrement": 0.05,
+        "diagonal": "Y",
+        "minimumAngleDeg": 10
+      }
+    },
+    {
+      "name": "missing-fields-10",
+      "input": {
+        "family": "flasher",
+        "heightOrder": 2,
+        "radialIncrement": 0.05
+      },
+      "expected": {
+        "family": "flasher",
+        "rings": 2,
+        "heightOrder": 2,
+        "rotationalOrder": 4,
+        "radialIncrement": 0.05,
+        "diagonal": "Y",
+        "minimumAngleDeg": 10
+      }
+    },
+    {
+      "name": "missing-fields-11",
+      "input": {
+        "family": "flasher",
+        "rings": 2,
+        "heightOrder": 2,
+        "radialIncrement": 0.05
+      },
+      "expected": {
+        "family": "flasher",
+        "rings": 2,
+        "heightOrder": 2,
+        "rotationalOrder": 4,
+        "radialIncrement": 0.05,
+        "diagonal": "Y",
+        "minimumAngleDeg": 10
+      }
+    },
+    {
+      "name": "missing-fields-12",
+      "input": {
+        "family": "flasher",
+        "rotationalOrder": 4,
+        "radialIncrement": 0.05
+      },
+      "expected": {
+        "family": "flasher",
+        "rings": 2,
+        "heightOrder": 2,
+        "rotationalOrder": 4,
+        "radialIncrement": 0.05,
+        "diagonal": "Y",
+        "minimumAngleDeg": 10
+      }
+    },
+    {
+      "name": "missing-fields-13",
+      "input": {
+        "family": "flasher",
+        "rings": 2,
+        "rotationalOrder": 4,
+        "radialIncrement": 0.05
+      },
+      "expected": {
+        "family": "flasher",
+        "rings": 2,
+        "heightOrder": 2,
+        "rotationalOrder": 4,
+        "radialIncrement": 0.05,
+        "diagonal": "Y",
+        "minimumAngleDeg": 10
+      }
+    },
+    {
+      "name": "missing-fields-14",
+      "input": {
+        "family": "flasher",
+        "heightOrder": 2,
+        "rotationalOrder": 4,
+        "radialIncrement": 0.05
+      },
+      "expected": {
+        "family": "flasher",
+        "rings": 2,
+        "heightOrder": 2,
+        "rotationalOrder": 4,
+        "radialIncrement": 0.05,
+        "diagonal": "Y",
+        "minimumAngleDeg": 10
+      }
+    },
+    {
+      "name": "missing-fields-15",
+      "input": {
+        "family": "flasher",
+        "rings": 2,
+        "heightOrder": 2,
+        "rotationalOrder": 4,
+        "radialIncrement": 0.05
+      },
+      "expected": {
+        "family": "flasher",
+        "rings": 2,
+        "heightOrder": 2,
+        "rotationalOrder": 4,
+        "radialIncrement": 0.05,
+        "diagonal": "Y",
+        "minimumAngleDeg": 10
+      }
+    },
+    {
+      "name": "missing-fields-16",
+      "input": {
+        "family": "flasher",
+        "diagonal": "Y"
+      },
+      "expected": {
+        "family": "flasher",
+        "rings": 2,
+        "heightOrder": 2,
+        "rotationalOrder": 4,
+        "radialIncrement": 0.05,
+        "diagonal": "Y",
+        "minimumAngleDeg": 10
+      }
+    },
+    {
+      "name": "missing-fields-17",
+      "input": {
+        "family": "flasher",
+        "rings": 2,
+        "diagonal": "Y"
+      },
+      "expected": {
+        "family": "flasher",
+        "rings": 2,
+        "heightOrder": 2,
+        "rotationalOrder": 4,
+        "radialIncrement": 0.05,
+        "diagonal": "Y",
+        "minimumAngleDeg": 10
+      }
+    },
+    {
+      "name": "missing-fields-18",
+      "input": {
+        "family": "flasher",
+        "heightOrder": 2,
+        "diagonal": "Y"
+      },
+      "expected": {
+        "family": "flasher",
+        "rings": 2,
+        "heightOrder": 2,
+        "rotationalOrder": 4,
+        "radialIncrement": 0.05,
+        "diagonal": "Y",
+        "minimumAngleDeg": 10
+      }
+    },
+    {
+      "name": "missing-fields-19",
+      "input": {
+        "family": "flasher",
+        "rings": 2,
+        "heightOrder": 2,
+        "diagonal": "Y"
+      },
+      "expected": {
+        "family": "flasher",
+        "rings": 2,
+        "heightOrder": 2,
+        "rotationalOrder": 4,
+        "radialIncrement": 0.05,
+        "diagonal": "Y",
+        "minimumAngleDeg": 10
+      }
+    },
+    {
+      "name": "missing-fields-20",
+      "input": {
+        "family": "flasher",
+        "rotationalOrder": 4,
+        "diagonal": "Y"
+      },
+      "expected": {
+        "family": "flasher",
+        "rings": 2,
+        "heightOrder": 2,
+        "rotationalOrder": 4,
+        "radialIncrement": 0.05,
+        "diagonal": "Y",
+        "minimumAngleDeg": 10
+      }
+    },
+    {
+      "name": "missing-fields-21",
+      "input": {
+        "family": "flasher",
+        "rings": 2,
+        "rotationalOrder": 4,
+        "diagonal": "Y"
+      },
+      "expected": {
+        "family": "flasher",
+        "rings": 2,
+        "heightOrder": 2,
+        "rotationalOrder": 4,
+        "radialIncrement": 0.05,
+        "diagonal": "Y",
+        "minimumAngleDeg": 10
+      }
+    },
+    {
+      "name": "missing-fields-22",
+      "input": {
+        "family": "flasher",
+        "heightOrder": 2,
+        "rotationalOrder": 4,
+        "diagonal": "Y"
+      },
+      "expected": {
+        "family": "flasher",
+        "rings": 2,
+        "heightOrder": 2,
+        "rotationalOrder": 4,
+        "radialIncrement": 0.05,
+        "diagonal": "Y",
+        "minimumAngleDeg": 10
+      }
+    },
+    {
+      "name": "missing-fields-23",
+      "input": {
+        "family": "flasher",
+        "rings": 2,
+        "heightOrder": 2,
+        "rotationalOrder": 4,
+        "diagonal": "Y"
+      },
+      "expected": {
+        "family": "flasher",
+        "rings": 2,
+        "heightOrder": 2,
+        "rotationalOrder": 4,
+        "radialIncrement": 0.05,
+        "diagonal": "Y",
+        "minimumAngleDeg": 10
+      }
+    },
+    {
+      "name": "missing-fields-24",
+      "input": {
+        "family": "flasher",
+        "radialIncrement": 0.05,
+        "diagonal": "Y"
+      },
+      "expected": {
+        "family": "flasher",
+        "rings": 2,
+        "heightOrder": 2,
+        "rotationalOrder": 4,
+        "radialIncrement": 0.05,
+        "diagonal": "Y",
+        "minimumAngleDeg": 10
+      }
+    },
+    {
+      "name": "missing-fields-25",
+      "input": {
+        "family": "flasher",
+        "rings": 2,
+        "radialIncrement": 0.05,
+        "diagonal": "Y"
+      },
+      "expected": {
+        "family": "flasher",
+        "rings": 2,
+        "heightOrder": 2,
+        "rotationalOrder": 4,
+        "radialIncrement": 0.05,
+        "diagonal": "Y",
+        "minimumAngleDeg": 10
+      }
+    },
+    {
+      "name": "missing-fields-26",
+      "input": {
+        "family": "flasher",
+        "heightOrder": 2,
+        "radialIncrement": 0.05,
+        "diagonal": "Y"
+      },
+      "expected": {
+        "family": "flasher",
+        "rings": 2,
+        "heightOrder": 2,
+        "rotationalOrder": 4,
+        "radialIncrement": 0.05,
+        "diagonal": "Y",
+        "minimumAngleDeg": 10
+      }
+    },
+    {
+      "name": "missing-fields-27",
+      "input": {
+        "family": "flasher",
+        "rings": 2,
+        "heightOrder": 2,
+        "radialIncrement": 0.05,
+        "diagonal": "Y"
+      },
+      "expected": {
+        "family": "flasher",
+        "rings": 2,
+        "heightOrder": 2,
+        "rotationalOrder": 4,
+        "radialIncrement": 0.05,
+        "diagonal": "Y",
+        "minimumAngleDeg": 10
+      }
+    },
+    {
+      "name": "missing-fields-28",
+      "input": {
+        "family": "flasher",
+        "rotationalOrder": 4,
+        "radialIncrement": 0.05,
+        "diagonal": "Y"
+      },
+      "expected": {
+        "family": "flasher",
+        "rings": 2,
+        "heightOrder": 2,
+        "rotationalOrder": 4,
+        "radialIncrement": 0.05,
+        "diagonal": "Y",
+        "minimumAngleDeg": 10
+      }
+    },
+    {
+      "name": "missing-fields-29",
+      "input": {
+        "family": "flasher",
+        "rings": 2,
+        "rotationalOrder": 4,
+        "radialIncrement": 0.05,
+        "diagonal": "Y"
+      },
+      "expected": {
+        "family": "flasher",
+        "rings": 2,
+        "heightOrder": 2,
+        "rotationalOrder": 4,
+        "radialIncrement": 0.05,
+        "diagonal": "Y",
+        "minimumAngleDeg": 10
+      }
+    },
+    {
+      "name": "missing-fields-30",
+      "input": {
+        "family": "flasher",
+        "heightOrder": 2,
+        "rotationalOrder": 4,
+        "radialIncrement": 0.05,
+        "diagonal": "Y"
+      },
+      "expected": {
+        "family": "flasher",
+        "rings": 2,
+        "heightOrder": 2,
+        "rotationalOrder": 4,
+        "radialIncrement": 0.05,
+        "diagonal": "Y",
+        "minimumAngleDeg": 10
+      }
+    },
+    {
+      "name": "missing-fields-31",
+      "input": {
+        "family": "flasher",
+        "rings": 2,
+        "heightOrder": 2,
+        "rotationalOrder": 4,
+        "radialIncrement": 0.05,
+        "diagonal": "Y"
+      },
+      "expected": {
+        "family": "flasher",
+        "rings": 2,
+        "heightOrder": 2,
+        "rotationalOrder": 4,
+        "radialIncrement": 0.05,
+        "diagonal": "Y",
+        "minimumAngleDeg": 10
+      }
+    },
+    {
+      "name": "missing-fields-32",
+      "input": {
+        "family": "flasher",
+        "minimumAngleDeg": 10
+      },
+      "expected": {
+        "family": "flasher",
+        "rings": 2,
+        "heightOrder": 2,
+        "rotationalOrder": 4,
+        "radialIncrement": 0.05,
+        "diagonal": "Y",
+        "minimumAngleDeg": 10
+      }
+    },
+    {
+      "name": "missing-fields-33",
+      "input": {
+        "family": "flasher",
+        "rings": 2,
+        "minimumAngleDeg": 10
+      },
+      "expected": {
+        "family": "flasher",
+        "rings": 2,
+        "heightOrder": 2,
+        "rotationalOrder": 4,
+        "radialIncrement": 0.05,
+        "diagonal": "Y",
+        "minimumAngleDeg": 10
+      }
+    },
+    {
+      "name": "missing-fields-34",
+      "input": {
+        "family": "flasher",
+        "heightOrder": 2,
+        "minimumAngleDeg": 10
+      },
+      "expected": {
+        "family": "flasher",
+        "rings": 2,
+        "heightOrder": 2,
+        "rotationalOrder": 4,
+        "radialIncrement": 0.05,
+        "diagonal": "Y",
+        "minimumAngleDeg": 10
+      }
+    },
+    {
+      "name": "missing-fields-35",
+      "input": {
+        "family": "flasher",
+        "rings": 2,
+        "heightOrder": 2,
+        "minimumAngleDeg": 10
+      },
+      "expected": {
+        "family": "flasher",
+        "rings": 2,
+        "heightOrder": 2,
+        "rotationalOrder": 4,
+        "radialIncrement": 0.05,
+        "diagonal": "Y",
+        "minimumAngleDeg": 10
+      }
+    },
+    {
+      "name": "missing-fields-36",
+      "input": {
+        "family": "flasher",
+        "rotationalOrder": 4,
+        "minimumAngleDeg": 10
+      },
+      "expected": {
+        "family": "flasher",
+        "rings": 2,
+        "heightOrder": 2,
+        "rotationalOrder": 4,
+        "radialIncrement": 0.05,
+        "diagonal": "Y",
+        "minimumAngleDeg": 10
+      }
+    },
+    {
+      "name": "missing-fields-37",
+      "input": {
+        "family": "flasher",
+        "rings": 2,
+        "rotationalOrder": 4,
+        "minimumAngleDeg": 10
+      },
+      "expected": {
+        "family": "flasher",
+        "rings": 2,
+        "heightOrder": 2,
+        "rotationalOrder": 4,
+        "radialIncrement": 0.05,
+        "diagonal": "Y",
+        "minimumAngleDeg": 10
+      }
+    },
+    {
+      "name": "missing-fields-38",
+      "input": {
+        "family": "flasher",
+        "heightOrder": 2,
+        "rotationalOrder": 4,
+        "minimumAngleDeg": 10
+      },
+      "expected": {
+        "family": "flasher",
+        "rings": 2,
+        "heightOrder": 2,
+        "rotationalOrder": 4,
+        "radialIncrement": 0.05,
+        "diagonal": "Y",
+        "minimumAngleDeg": 10
+      }
+    },
+    {
+      "name": "missing-fields-39",
+      "input": {
+        "family": "flasher",
+        "rings": 2,
+        "heightOrder": 2,
+        "rotationalOrder": 4,
+        "minimumAngleDeg": 10
+      },
+      "expected": {
+        "family": "flasher",
+        "rings": 2,
+        "heightOrder": 2,
+        "rotationalOrder": 4,
+        "radialIncrement": 0.05,
+        "diagonal": "Y",
+        "minimumAngleDeg": 10
+      }
+    },
+    {
+      "name": "missing-fields-40",
+      "input": {
+        "family": "flasher",
+        "radialIncrement": 0.05,
+        "minimumAngleDeg": 10
+      },
+      "expected": {
+        "family": "flasher",
+        "rings": 2,
+        "heightOrder": 2,
+        "rotationalOrder": 4,
+        "radialIncrement": 0.05,
+        "diagonal": "Y",
+        "minimumAngleDeg": 10
+      }
+    },
+    {
+      "name": "missing-fields-41",
+      "input": {
+        "family": "flasher",
+        "rings": 2,
+        "radialIncrement": 0.05,
+        "minimumAngleDeg": 10
+      },
+      "expected": {
+        "family": "flasher",
+        "rings": 2,
+        "heightOrder": 2,
+        "rotationalOrder": 4,
+        "radialIncrement": 0.05,
+        "diagonal": "Y",
+        "minimumAngleDeg": 10
+      }
+    },
+    {
+      "name": "missing-fields-42",
+      "input": {
+        "family": "flasher",
+        "heightOrder": 2,
+        "radialIncrement": 0.05,
+        "minimumAngleDeg": 10
+      },
+      "expected": {
+        "family": "flasher",
+        "rings": 2,
+        "heightOrder": 2,
+        "rotationalOrder": 4,
+        "radialIncrement": 0.05,
+        "diagonal": "Y",
+        "minimumAngleDeg": 10
+      }
+    },
+    {
+      "name": "missing-fields-43",
+      "input": {
+        "family": "flasher",
+        "rings": 2,
+        "heightOrder": 2,
+        "radialIncrement": 0.05,
+        "minimumAngleDeg": 10
+      },
+      "expected": {
+        "family": "flasher",
+        "rings": 2,
+        "heightOrder": 2,
+        "rotationalOrder": 4,
+        "radialIncrement": 0.05,
+        "diagonal": "Y",
+        "minimumAngleDeg": 10
+      }
+    },
+    {
+      "name": "missing-fields-44",
+      "input": {
+        "family": "flasher",
+        "rotationalOrder": 4,
+        "radialIncrement": 0.05,
+        "minimumAngleDeg": 10
+      },
+      "expected": {
+        "family": "flasher",
+        "rings": 2,
+        "heightOrder": 2,
+        "rotationalOrder": 4,
+        "radialIncrement": 0.05,
+        "diagonal": "Y",
+        "minimumAngleDeg": 10
+      }
+    },
+    {
+      "name": "missing-fields-45",
+      "input": {
+        "family": "flasher",
+        "rings": 2,
+        "rotationalOrder": 4,
+        "radialIncrement": 0.05,
+        "minimumAngleDeg": 10
+      },
+      "expected": {
+        "family": "flasher",
+        "rings": 2,
+        "heightOrder": 2,
+        "rotationalOrder": 4,
+        "radialIncrement": 0.05,
+        "diagonal": "Y",
+        "minimumAngleDeg": 10
+      }
+    },
+    {
+      "name": "missing-fields-46",
+      "input": {
+        "family": "flasher",
+        "heightOrder": 2,
+        "rotationalOrder": 4,
+        "radialIncrement": 0.05,
+        "minimumAngleDeg": 10
+      },
+      "expected": {
+        "family": "flasher",
+        "rings": 2,
+        "heightOrder": 2,
+        "rotationalOrder": 4,
+        "radialIncrement": 0.05,
+        "diagonal": "Y",
+        "minimumAngleDeg": 10
+      }
+    },
+    {
+      "name": "missing-fields-47",
+      "input": {
+        "family": "flasher",
+        "rings": 2,
+        "heightOrder": 2,
+        "rotationalOrder": 4,
+        "radialIncrement": 0.05,
+        "minimumAngleDeg": 10
+      },
+      "expected": {
+        "family": "flasher",
+        "rings": 2,
+        "heightOrder": 2,
+        "rotationalOrder": 4,
+        "radialIncrement": 0.05,
+        "diagonal": "Y",
+        "minimumAngleDeg": 10
+      }
+    },
+    {
+      "name": "missing-fields-48",
+      "input": {
+        "family": "flasher",
+        "diagonal": "Y",
+        "minimumAngleDeg": 10
+      },
+      "expected": {
+        "family": "flasher",
+        "rings": 2,
+        "heightOrder": 2,
+        "rotationalOrder": 4,
+        "radialIncrement": 0.05,
+        "diagonal": "Y",
+        "minimumAngleDeg": 10
+      }
+    },
+    {
+      "name": "missing-fields-49",
+      "input": {
+        "family": "flasher",
+        "rings": 2,
+        "diagonal": "Y",
+        "minimumAngleDeg": 10
+      },
+      "expected": {
+        "family": "flasher",
+        "rings": 2,
+        "heightOrder": 2,
+        "rotationalOrder": 4,
+        "radialIncrement": 0.05,
+        "diagonal": "Y",
+        "minimumAngleDeg": 10
+      }
+    },
+    {
+      "name": "missing-fields-50",
+      "input": {
+        "family": "flasher",
+        "heightOrder": 2,
+        "diagonal": "Y",
+        "minimumAngleDeg": 10
+      },
+      "expected": {
+        "family": "flasher",
+        "rings": 2,
+        "heightOrder": 2,
+        "rotationalOrder": 4,
+        "radialIncrement": 0.05,
+        "diagonal": "Y",
+        "minimumAngleDeg": 10
+      }
+    },
+    {
+      "name": "missing-fields-51",
+      "input": {
+        "family": "flasher",
+        "rings": 2,
+        "heightOrder": 2,
+        "diagonal": "Y",
+        "minimumAngleDeg": 10
+      },
+      "expected": {
+        "family": "flasher",
+        "rings": 2,
+        "heightOrder": 2,
+        "rotationalOrder": 4,
+        "radialIncrement": 0.05,
+        "diagonal": "Y",
+        "minimumAngleDeg": 10
+      }
+    },
+    {
+      "name": "missing-fields-52",
+      "input": {
+        "family": "flasher",
+        "rotationalOrder": 4,
+        "diagonal": "Y",
+        "minimumAngleDeg": 10
+      },
+      "expected": {
+        "family": "flasher",
+        "rings": 2,
+        "heightOrder": 2,
+        "rotationalOrder": 4,
+        "radialIncrement": 0.05,
+        "diagonal": "Y",
+        "minimumAngleDeg": 10
+      }
+    },
+    {
+      "name": "missing-fields-53",
+      "input": {
+        "family": "flasher",
+        "rings": 2,
+        "rotationalOrder": 4,
+        "diagonal": "Y",
+        "minimumAngleDeg": 10
+      },
+      "expected": {
+        "family": "flasher",
+        "rings": 2,
+        "heightOrder": 2,
+        "rotationalOrder": 4,
+        "radialIncrement": 0.05,
+        "diagonal": "Y",
+        "minimumAngleDeg": 10
+      }
+    },
+    {
+      "name": "missing-fields-54",
+      "input": {
+        "family": "flasher",
+        "heightOrder": 2,
+        "rotationalOrder": 4,
+        "diagonal": "Y",
+        "minimumAngleDeg": 10
+      },
+      "expected": {
+        "family": "flasher",
+        "rings": 2,
+        "heightOrder": 2,
+        "rotationalOrder": 4,
+        "radialIncrement": 0.05,
+        "diagonal": "Y",
+        "minimumAngleDeg": 10
+      }
+    },
+    {
+      "name": "missing-fields-55",
+      "input": {
+        "family": "flasher",
+        "rings": 2,
+        "heightOrder": 2,
+        "rotationalOrder": 4,
+        "diagonal": "Y",
+        "minimumAngleDeg": 10
+      },
+      "expected": {
+        "family": "flasher",
+        "rings": 2,
+        "heightOrder": 2,
+        "rotationalOrder": 4,
+        "radialIncrement": 0.05,
+        "diagonal": "Y",
+        "minimumAngleDeg": 10
+      }
+    },
+    {
+      "name": "missing-fields-56",
+      "input": {
+        "family": "flasher",
+        "radialIncrement": 0.05,
+        "diagonal": "Y",
+        "minimumAngleDeg": 10
+      },
+      "expected": {
+        "family": "flasher",
+        "rings": 2,
+        "heightOrder": 2,
+        "rotationalOrder": 4,
+        "radialIncrement": 0.05,
+        "diagonal": "Y",
+        "minimumAngleDeg": 10
+      }
+    },
+    {
+      "name": "missing-fields-57",
+      "input": {
+        "family": "flasher",
+        "rings": 2,
+        "radialIncrement": 0.05,
+        "diagonal": "Y",
+        "minimumAngleDeg": 10
+      },
+      "expected": {
+        "family": "flasher",
+        "rings": 2,
+        "heightOrder": 2,
+        "rotationalOrder": 4,
+        "radialIncrement": 0.05,
+        "diagonal": "Y",
+        "minimumAngleDeg": 10
+      }
+    },
+    {
+      "name": "missing-fields-58",
+      "input": {
+        "family": "flasher",
+        "heightOrder": 2,
+        "radialIncrement": 0.05,
+        "diagonal": "Y",
+        "minimumAngleDeg": 10
+      },
+      "expected": {
+        "family": "flasher",
+        "rings": 2,
+        "heightOrder": 2,
+        "rotationalOrder": 4,
+        "radialIncrement": 0.05,
+        "diagonal": "Y",
+        "minimumAngleDeg": 10
+      }
+    },
+    {
+      "name": "missing-fields-59",
+      "input": {
+        "family": "flasher",
+        "rings": 2,
+        "heightOrder": 2,
+        "radialIncrement": 0.05,
+        "diagonal": "Y",
+        "minimumAngleDeg": 10
+      },
+      "expected": {
+        "family": "flasher",
+        "rings": 2,
+        "heightOrder": 2,
+        "rotationalOrder": 4,
+        "radialIncrement": 0.05,
+        "diagonal": "Y",
+        "minimumAngleDeg": 10
+      }
+    },
+    {
+      "name": "missing-fields-60",
+      "input": {
+        "family": "flasher",
+        "rotationalOrder": 4,
+        "radialIncrement": 0.05,
+        "diagonal": "Y",
+        "minimumAngleDeg": 10
+      },
+      "expected": {
+        "family": "flasher",
+        "rings": 2,
+        "heightOrder": 2,
+        "rotationalOrder": 4,
+        "radialIncrement": 0.05,
+        "diagonal": "Y",
+        "minimumAngleDeg": 10
+      }
+    },
+    {
+      "name": "missing-fields-61",
+      "input": {
+        "family": "flasher",
+        "rings": 2,
+        "rotationalOrder": 4,
+        "radialIncrement": 0.05,
+        "diagonal": "Y",
+        "minimumAngleDeg": 10
+      },
+      "expected": {
+        "family": "flasher",
+        "rings": 2,
+        "heightOrder": 2,
+        "rotationalOrder": 4,
+        "radialIncrement": 0.05,
+        "diagonal": "Y",
+        "minimumAngleDeg": 10
+      }
+    },
+    {
+      "name": "missing-fields-62",
+      "input": {
+        "family": "flasher",
+        "heightOrder": 2,
+        "rotationalOrder": 4,
+        "radialIncrement": 0.05,
+        "diagonal": "Y",
+        "minimumAngleDeg": 10
+      },
+      "expected": {
+        "family": "flasher",
+        "rings": 2,
+        "heightOrder": 2,
+        "rotationalOrder": 4,
+        "radialIncrement": 0.05,
+        "diagonal": "Y",
+        "minimumAngleDeg": 10
+      }
+    },
+    {
+      "name": "missing-fields-63",
+      "input": {
+        "family": "flasher",
+        "rings": 2,
+        "heightOrder": 2,
+        "rotationalOrder": 4,
+        "radialIncrement": 0.05,
+        "diagonal": "Y",
+        "minimumAngleDeg": 10
+      },
+      "expected": {
+        "family": "flasher",
+        "rings": 2,
+        "heightOrder": 2,
+        "rotationalOrder": 4,
+        "radialIncrement": 0.05,
+        "diagonal": "Y",
+        "minimumAngleDeg": 10
+      }
+    },
+    {
+      "name": "valid-64",
+      "input": {
+        "family": "flasher",
+        "rings": 1,
+        "heightOrder": 9,
+        "rotationalOrder": 16,
+        "radialIncrement": 0.05,
+        "diagonal": "Y",
+        "minimumAngleDeg": 10
+      },
+      "expected": {
+        "family": "flasher",
+        "rings": 1,
+        "heightOrder": 9,
+        "rotationalOrder": 16,
+        "radialIncrement": 0.05,
+        "diagonal": "Y",
+        "minimumAngleDeg": 10
+      }
+    },
+    {
+      "name": "valid-65",
+      "input": {
+        "family": "flasher",
+        "rings": 9,
+        "heightOrder": 1,
+        "rotationalOrder": 3,
+        "radialIncrement": 0.05,
+        "diagonal": "Y",
+        "minimumAngleDeg": 10
+      },
+      "expected": {
+        "family": "flasher",
+        "rings": 9,
+        "heightOrder": 1,
+        "rotationalOrder": 3,
+        "radialIncrement": 0.05,
+        "diagonal": "Y",
+        "minimumAngleDeg": 10
+      }
+    },
+    {
+      "name": "valid-66",
+      "input": {
+        "family": "flasher",
+        "rings": 2,
+        "heightOrder": 2,
+        "rotationalOrder": 4,
+        "radialIncrement": 0,
+        "diagonal": "Y",
+        "minimumAngleDeg": 0
+      },
+      "expected": {
+        "family": "flasher",
+        "rings": 2,
+        "heightOrder": 2,
+        "rotationalOrder": 4,
+        "radialIncrement": 0,
+        "diagonal": "Y",
+        "minimumAngleDeg": 0
+      }
+    },
+    {
+      "name": "valid-67",
+      "input": {
+        "family": "flasher",
+        "rings": 2,
+        "heightOrder": 2,
+        "rotationalOrder": 4,
+        "radialIncrement": 0.5,
+        "diagonal": "Y",
+        "minimumAngleDeg": 90
+      },
+      "expected": {
+        "family": "flasher",
+        "rings": 2,
+        "heightOrder": 2,
+        "rotationalOrder": 4,
+        "radialIncrement": 0.5,
+        "diagonal": "Y",
+        "minimumAngleDeg": 90
+      }
+    },
+    {
+      "name": "valid-68",
+      "input": {
+        "family": "flasher",
+        "rings": 2,
+        "heightOrder": 2,
+        "rotationalOrder": 4,
+        "radialIncrement": 0.05,
+        "diagonal": "X",
+        "minimumAngleDeg": 10
+      },
+      "expected": {
+        "family": "flasher",
+        "rings": 2,
+        "heightOrder": 2,
+        "rotationalOrder": 4,
+        "radialIncrement": 0.05,
+        "diagonal": "X",
+        "minimumAngleDeg": 10
+      }
+    },
+    {
+      "name": "valid-69",
+      "input": {
+        "family": "flasher",
+        "rings": 2,
+        "heightOrder": 2,
+        "rotationalOrder": 4,
+        "radialIncrement": 0.05,
+        "diagonal": "Z",
+        "minimumAngleDeg": 10
+      },
+      "expected": {
+        "family": "flasher",
+        "rings": 2,
+        "heightOrder": 2,
+        "rotationalOrder": 4,
+        "radialIncrement": 0.05,
+        "diagonal": "Z",
+        "minimumAngleDeg": 10
+      }
+    },
+    {
+      "name": "valid-70",
+      "input": {
+        "family": "flasher",
+        "rings": 2.0,
+        "heightOrder": 2.0,
+        "rotationalOrder": 4.0,
+        "radialIncrement": 0.05,
+        "diagonal": "Y",
+        "minimumAngleDeg": 10
+      },
+      "expected": {
+        "family": "flasher",
+        "rings": 2.0,
+        "heightOrder": 2.0,
+        "rotationalOrder": 4.0,
+        "radialIncrement": 0.05,
+        "diagonal": "Y",
+        "minimumAngleDeg": 10
+      }
+    },
+    {
+      "name": "rotation-budget-default-r2h2-m17-409-faces",
+      "input": {
+        "family": "flasher",
+        "rotationalOrder": 17
+      },
+      "expected": {
+        "family": "flasher",
+        "rings": 2,
+        "heightOrder": 2,
+        "rotationalOrder": 17,
+        "radialIncrement": 0.05,
+        "diagonal": "Y",
+        "minimumAngleDeg": 10
+      }
+    }
+  ],
+  "invalid": [
+    {
+      "name": "rings-null",
+      "input": {
+        "family": "flasher",
+        "rings": null
+      }
+    },
+    {
+      "name": "rings-false",
+      "input": {
+        "family": "flasher",
+        "rings": false
+      }
+    },
+    {
+      "name": "rings-true",
+      "input": {
+        "family": "flasher",
+        "rings": true
+      }
+    },
+    {
+      "name": "rings-empty-array",
+      "input": {
+        "family": "flasher",
+        "rings": []
+      }
+    },
+    {
+      "name": "rings-singleton-array",
+      "input": {
+        "family": "flasher",
+        "rings": [
+          2
+        ]
+      }
+    },
+    {
+      "name": "rings-object",
+      "input": {
+        "family": "flasher",
+        "rings": {}
+      }
+    },
+    {
+      "name": "rings-value-object",
+      "input": {
+        "family": "flasher",
+        "rings": {
+          "value": 2
+        }
+      }
+    },
+    {
+      "name": "rings-empty-string",
+      "input": {
+        "family": "flasher",
+        "rings": ""
+      }
+    },
+    {
+      "name": "rings-wrong-string",
+      "input": {
+        "family": "flasher",
+        "rings": "Y"
+      }
+    },
+    {
+      "name": "rings-numeric-string",
+      "input": {
+        "family": "flasher",
+        "rings": "2"
+      }
+    },
+    {
+      "name": "rings-overflow-integer",
+      "input": {
+        "family": "flasher",
+        "rings": 10000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+      }
+    },
+    {
+      "name": "heightOrder-null",
+      "input": {
+        "family": "flasher",
+        "heightOrder": null
+      }
+    },
+    {
+      "name": "heightOrder-false",
+      "input": {
+        "family": "flasher",
+        "heightOrder": false
+      }
+    },
+    {
+      "name": "heightOrder-true",
+      "input": {
+        "family": "flasher",
+        "heightOrder": true
+      }
+    },
+    {
+      "name": "heightOrder-empty-array",
+      "input": {
+        "family": "flasher",
+        "heightOrder": []
+      }
+    },
+    {
+      "name": "heightOrder-singleton-array",
+      "input": {
+        "family": "flasher",
+        "heightOrder": [
+          2
+        ]
+      }
+    },
+    {
+      "name": "heightOrder-object",
+      "input": {
+        "family": "flasher",
+        "heightOrder": {}
+      }
+    },
+    {
+      "name": "heightOrder-value-object",
+      "input": {
+        "family": "flasher",
+        "heightOrder": {
+          "value": 2
+        }
+      }
+    },
+    {
+      "name": "heightOrder-empty-string",
+      "input": {
+        "family": "flasher",
+        "heightOrder": ""
+      }
+    },
+    {
+      "name": "heightOrder-wrong-string",
+      "input": {
+        "family": "flasher",
+        "heightOrder": "Y"
+      }
+    },
+    {
+      "name": "heightOrder-numeric-string",
+      "input": {
+        "family": "flasher",
+        "heightOrder": "2"
+      }
+    },
+    {
+      "name": "heightOrder-overflow-integer",
+      "input": {
+        "family": "flasher",
+        "heightOrder": 10000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+      }
+    },
+    {
+      "name": "rotationalOrder-null",
+      "input": {
+        "family": "flasher",
+        "rotationalOrder": null
+      }
+    },
+    {
+      "name": "rotationalOrder-false",
+      "input": {
+        "family": "flasher",
+        "rotationalOrder": false
+      }
+    },
+    {
+      "name": "rotationalOrder-true",
+      "input": {
+        "family": "flasher",
+        "rotationalOrder": true
+      }
+    },
+    {
+      "name": "rotationalOrder-empty-array",
+      "input": {
+        "family": "flasher",
+        "rotationalOrder": []
+      }
+    },
+    {
+      "name": "rotationalOrder-singleton-array",
+      "input": {
+        "family": "flasher",
+        "rotationalOrder": [
+          4
+        ]
+      }
+    },
+    {
+      "name": "rotationalOrder-object",
+      "input": {
+        "family": "flasher",
+        "rotationalOrder": {}
+      }
+    },
+    {
+      "name": "rotationalOrder-value-object",
+      "input": {
+        "family": "flasher",
+        "rotationalOrder": {
+          "value": 4
+        }
+      }
+    },
+    {
+      "name": "rotationalOrder-empty-string",
+      "input": {
+        "family": "flasher",
+        "rotationalOrder": ""
+      }
+    },
+    {
+      "name": "rotationalOrder-wrong-string",
+      "input": {
+        "family": "flasher",
+        "rotationalOrder": "Y"
+      }
+    },
+    {
+      "name": "rotationalOrder-numeric-string",
+      "input": {
+        "family": "flasher",
+        "rotationalOrder": "4"
+      }
+    },
+    {
+      "name": "rotationalOrder-overflow-integer",
+      "input": {
+        "family": "flasher",
+        "rotationalOrder": 10000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+      }
+    },
+    {
+      "name": "radialIncrement-null",
+      "input": {
+        "family": "flasher",
+        "radialIncrement": null
+      }
+    },
+    {
+      "name": "radialIncrement-false",
+      "input": {
+        "family": "flasher",
+        "radialIncrement": false
+      }
+    },
+    {
+      "name": "radialIncrement-true",
+      "input": {
+        "family": "flasher",
+        "radialIncrement": true
+      }
+    },
+    {
+      "name": "radialIncrement-empty-array",
+      "input": {
+        "family": "flasher",
+        "radialIncrement": []
+      }
+    },
+    {
+      "name": "radialIncrement-singleton-array",
+      "input": {
+        "family": "flasher",
+        "radialIncrement": [
+          0.05
+        ]
+      }
+    },
+    {
+      "name": "radialIncrement-object",
+      "input": {
+        "family": "flasher",
+        "radialIncrement": {}
+      }
+    },
+    {
+      "name": "radialIncrement-value-object",
+      "input": {
+        "family": "flasher",
+        "radialIncrement": {
+          "value": 0.05
+        }
+      }
+    },
+    {
+      "name": "radialIncrement-empty-string",
+      "input": {
+        "family": "flasher",
+        "radialIncrement": ""
+      }
+    },
+    {
+      "name": "radialIncrement-wrong-string",
+      "input": {
+        "family": "flasher",
+        "radialIncrement": "Y"
+      }
+    },
+    {
+      "name": "radialIncrement-numeric-string",
+      "input": {
+        "family": "flasher",
+        "radialIncrement": "0.05"
+      }
+    },
+    {
+      "name": "radialIncrement-overflow-integer",
+      "input": {
+        "family": "flasher",
+        "radialIncrement": 10000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+      }
+    },
+    {
+      "name": "diagonal-null",
+      "input": {
+        "family": "flasher",
+        "diagonal": null
+      }
+    },
+    {
+      "name": "diagonal-false",
+      "input": {
+        "family": "flasher",
+        "diagonal": false
+      }
+    },
+    {
+      "name": "diagonal-true",
+      "input": {
+        "family": "flasher",
+        "diagonal": true
+      }
+    },
+    {
+      "name": "diagonal-empty-array",
+      "input": {
+        "family": "flasher",
+        "diagonal": []
+      }
+    },
+    {
+      "name": "diagonal-singleton-array",
+      "input": {
+        "family": "flasher",
+        "diagonal": [
+          "Y"
+        ]
+      }
+    },
+    {
+      "name": "diagonal-object",
+      "input": {
+        "family": "flasher",
+        "diagonal": {}
+      }
+    },
+    {
+      "name": "diagonal-value-object",
+      "input": {
+        "family": "flasher",
+        "diagonal": {
+          "value": "Y"
+        }
+      }
+    },
+    {
+      "name": "diagonal-empty-string",
+      "input": {
+        "family": "flasher",
+        "diagonal": ""
+      }
+    },
+    {
+      "name": "diagonal-wrong-string",
+      "input": {
+        "family": "flasher",
+        "diagonal": "Q"
+      }
+    },
+    {
+      "name": "minimumAngleDeg-null",
+      "input": {
+        "family": "flasher",
+        "minimumAngleDeg": null
+      }
+    },
+    {
+      "name": "minimumAngleDeg-false",
+      "input": {
+        "family": "flasher",
+        "minimumAngleDeg": false
+      }
+    },
+    {
+      "name": "minimumAngleDeg-true",
+      "input": {
+        "family": "flasher",
+        "minimumAngleDeg": true
+      }
+    },
+    {
+      "name": "minimumAngleDeg-empty-array",
+      "input": {
+        "family": "flasher",
+        "minimumAngleDeg": []
+      }
+    },
+    {
+      "name": "minimumAngleDeg-singleton-array",
+      "input": {
+        "family": "flasher",
+        "minimumAngleDeg": [
+          10
+        ]
+      }
+    },
+    {
+      "name": "minimumAngleDeg-object",
+      "input": {
+        "family": "flasher",
+        "minimumAngleDeg": {}
+      }
+    },
+    {
+      "name": "minimumAngleDeg-value-object",
+      "input": {
+        "family": "flasher",
+        "minimumAngleDeg": {
+          "value": 10
+        }
+      }
+    },
+    {
+      "name": "minimumAngleDeg-empty-string",
+      "input": {
+        "family": "flasher",
+        "minimumAngleDeg": ""
+      }
+    },
+    {
+      "name": "minimumAngleDeg-wrong-string",
+      "input": {
+        "family": "flasher",
+        "minimumAngleDeg": "Y"
+      }
+    },
+    {
+      "name": "minimumAngleDeg-numeric-string",
+      "input": {
+        "family": "flasher",
+        "minimumAngleDeg": "10"
+      }
+    },
+    {
+      "name": "minimumAngleDeg-overflow-integer",
+      "input": {
+        "family": "flasher",
+        "minimumAngleDeg": 10000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+      }
+    },
+    {
+      "name": "invalid-64",
+      "input": {
+        "family": "flasher",
+        "rings": 2.5
+      }
+    },
+    {
+      "name": "invalid-65",
+      "input": {
+        "family": "flasher",
+        "heightOrder": 2.5
+      }
+    },
+    {
+      "name": "invalid-66",
+      "input": {
+        "family": "flasher",
+        "rotationalOrder": 4.5
+      }
+    },
+    {
+      "name": "invalid-67",
+      "input": {
+        "family": "flasher",
+        "rings": 0
+      }
+    },
+    {
+      "name": "invalid-68",
+      "input": {
+        "family": "flasher",
+        "heightOrder": 10
+      }
+    },
+    {
+      "name": "invalid-69",
+      "input": {
+        "family": "flasher",
+        "rotationalOrder": 150
+      }
+    },
+    {
+      "name": "invalid-70",
+      "input": {
+        "family": "flasher",
+        "rings": 5,
+        "heightOrder": 2
+      }
+    },
+    {
+      "name": "invalid-71",
+      "input": {
+        "family": "flasher",
+        "rings": 9,
+        "heightOrder": 1,
+        "rotationalOrder": 4
+      }
+    },
+    {
+      "name": "invalid-72",
+      "input": {
+        "family": "flasher",
+        "radialIncrement": -0.001
+      }
+    },
+    {
+      "name": "invalid-73",
+      "input": {
+        "family": "flasher",
+        "minimumAngleDeg": 90.01
+      }
+    },
+    {
+      "name": "invalid-74",
+      "input": {
+        "family": "flasher",
+        "diagonal": 0
+      }
+    },
+    {
+      "name": "invalid-75",
+      "input": {
+        "family": "flasher",
+        "diagonal": 10
+      }
+    },
+    {
+      "name": "invalid-76",
+      "input": {
+        "family": "flasher",
+        "unknown": true
+      }
+    },
+    {
+      "name": "rotation-budget-default-r2h2-m25-601-faces",
+      "input": {
+        "family": "flasher",
+        "rotationalOrder": 25
+      }
+    }
+  ],
+  "raw": [
+    {
+      "name": "integral-decimal",
+      "text": "{\"family\":\"flasher\",\"rings\":2.0}",
+      "expected": {
+        "family": "flasher",
+        "rings": 2,
+        "heightOrder": 2,
+        "rotationalOrder": 4,
+        "radialIncrement": 0.05,
+        "diagonal": "Y",
+        "minimumAngleDeg": 10
+      }
+    },
+    {
+      "name": "integral-exponent",
+      "text": "{\"family\":\"flasher\",\"heightOrder\":2e0,\"rotationalOrder\":4e0}",
+      "expected": {
+        "family": "flasher",
+        "rings": 2,
+        "heightOrder": 2,
+        "rotationalOrder": 4,
+        "radialIncrement": 0.05,
+        "diagonal": "Y",
+        "minimumAngleDeg": 10
+      }
+    },
+    {
+      "name": "fraction-exponent",
+      "text": "{\"family\":\"flasher\",\"rings\":25e-1}",
+      "expected": null
+    },
+    {
+      "name": "exponent-overflow",
+      "text": "{\"family\":\"flasher\",\"radialIncrement\":1e999}",
+      "expected": null
+    },
+    {
+      "name": "rotation-budget-m17-exponent-number",
+      "text": "{\"family\":\"flasher\",\"rotationalOrder\":17e0}",
+      "expected": {
+        "family": "flasher",
+        "rings": 2,
+        "heightOrder": 2,
+        "rotationalOrder": 17,
+        "radialIncrement": 0.05,
+        "diagonal": "Y",
+        "minimumAngleDeg": 10
+      }
+    }
+  ]
+}

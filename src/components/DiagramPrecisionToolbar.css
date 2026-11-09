@@ -1,0 +1,20 @@
+.diagram-precision-toolbar{position:relative;flex:1;min-width:180px;align-self:center;color:var(--diagram-ink)}
+.diagram-precision-buttons{display:flex;gap:4px;align-items:center;justify-content:center;flex-wrap:wrap}
+.diagram-workspace .diagram-precision-buttons button{display:flex;align-items:center;justify-content:center;gap:5px;min-height:30px;padding:5px 7px;font-size:11px;white-space:nowrap}
+.diagram-precision-buttons svg{width:21px;height:9px;flex-shrink:0}.diagram-precision-buttons small{font-size:9px;color:#64815e}
+.diagram-fold-action-toggle{display:flex;gap:1px;margin:0 3px;padding:2px;border:1px solid #cfdbc9;border-radius:4px;background:#f1f5ed}
+.diagram-workspace .diagram-fold-action-toggle button{border:0;background:transparent;min-height:25px;padding:4px 7px;font-size:10px}
+.diagram-workspace .diagram-fold-action-toggle button[aria-pressed="true"]{background:#426f59;color:#fffef7;box-shadow:0 1px 2px #29452d20}
+.diagram-precision-panel{position:absolute;top:calc(100% + 12px);left:50%;transform:translateX(-50%);z-index:12;width:min(350px,100% + 100px);padding:14px 14px 10px;border:1px solid #bacbb8;border-radius:5px;background:#fffef8;box-shadow:0 5px 18px #324d3520;font-size:11px}
+.diagram-precision-panel label{display:flex;gap:9px;align-items:center;min-width:0;padding-right:12px}.diagram-precision-panel label>span{white-space:nowrap;color:#63816a}.diagram-precision-panel input,.diagram-precision-panel select{flex:1;min-width:0;width:100%;padding:5px 7px;border:1px solid #ccd9c8;border-radius:3px;background:#fafcf5;color:#293d35;font-size:11px}
+.diagram-precision-panel p{margin:8px 0 0;font-size:10px;line-height:1.7;color:#7b8874}.diagram-precision-panel p.is-error{color:#a65540}
+.diagram-custom-angle{margin-top:10px}
+.diagram-custom-angle-actions{display:flex;justify-content:flex-end;gap:6px;margin-top:8px;padding-right:12px}
+.diagram-custom-angle-actions button{min-height:27px;padding:4px 9px}
+.diagram-custom-angle input[aria-invalid=true]{border-color:#a65540}
+.diagram-custom-angle-actions button:first-child{background:#426f59;color:#fffefa;border-color:#426f59}
+.diagram-workspace .diagram-precision-close{position:absolute;right:3px;top:2px;border:0;background:transparent;min-height:20px;padding:0 4px;color:#7b907c;font-size:16px}
+.diagram-precision-ratio{display:flex;align-items:center;gap:8px}.diagram-precision-ratio label{flex:1;padding:0}.diagram-precision-ratio b{color:#779070;font-weight:500}
+.diagram-precision-examples{display:flex;gap:5px;margin-top:8px}.diagram-workspace .diagram-precision-examples button,.diagram-workspace .diagram-precision-point-info button{min-height:22px;padding:3px 7px;font-size:10px}
+.diagram-precision-point-info{display:flex;justify-content:space-between;align-items:center;margin-top:8px;padding-top:8px;border-top:1px solid #e2e9da;font-size:9px;color:#819276}
+@media(max-width:1280px){.diagram-workspace .diagram-precision-buttons button{gap:3px;font-size:10px;min-height:25px;padding:4px 6px}.diagram-precision-buttons{gap:4px}.diagram-precision-buttons svg{width:18px}.diagram-precision-toolbar{min-width:155px}.diagram-precision-panel{left:0;transform:none;max-width:calc(100vw - 220px)}}

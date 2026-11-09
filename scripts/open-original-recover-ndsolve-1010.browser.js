@@ -1,0 +1,2 @@
+async page=>{await page.getByRole('button',{name:'镶嵌设计',exact:true}).click();await page.getByRole('button',{name:'空间构造'}).click();await page.locator('details.tess-source-tools summary').click();await page.getByLabel('原式工具与参考示例',{exact:true}).selectOption('curved-system-helpers-native');await page.waitForFunction(()=>document.querySelector('.native-system-helpers-dialog .nsh-status')?.getAttribute('data-status')==='ready');return {opened:true};}
+

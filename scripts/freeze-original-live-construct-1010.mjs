@@ -1,0 +1,32 @@
+import fs from 'node:fs';
+import path from 'node:path';
+import crypto from 'node:crypto';
+import assert from 'node:assert/strict';
+const read=f=>fs.readFileSync(f,'utf8'),hash=f=>crypto.createHash('sha256').update(fs.readFileSync(f)).digest('hex');
+const all=dir=>fs.readdirSync(dir,{recursive:true}).map(f=>path.join(dir,f).replaceAll('\\','/')).filter(f=>fs.statSync(f).isFile()&&!f.includes('__pycache__'));
+const run=JSON.parse(read('output/original-live-construct-full-run-1010.json'));assert.equal(run.exitCode,0);assert.equal(run.inputsUnchanged,true);assert.equal(run.inputs.length,1840);
+assert.equal(run.tests.frontend,2785);assert.ok(run.tests.backend>1257);assert.equal(run.tests.desktop,7);assert.equal(run.tests.serverWorker,63);
+for(const row of run.inputs)assert.equal(hash(row.file),row.sha256,row.file);
+const continuation=JSON.parse(read(run.continuationRecord));assert.equal(continuation.exitCode,0);assert.ok(continuation.stages.every(s=>s.exitCode===0));
+assert.equal(Number(read('output/original-live-construct-build-1010.log').match(/(\d+) modules transformed/)?.[1]),1021);
+const root='output/original-ring-unsafe-courteous-browser-1010';
+const files=['unsafe/browser-tests.log','ring-log/browser-tests.log','paraboloidal-x/browser-tests.log','courteous/browser-tests.log','courteous/browser-switches.log'],expected=[30,18,21,18,9];
+const browsers=files.map((name,i)=>{const file=root+'/'+name,r=JSON.parse(read(file).match(/^### Result\r?\n([^\r\n]+)/m)[1]);assert.equal(r.passed,expected[i]);assert.deepEqual(r.errors,[]);return{file,passed:r.passed,bundle:new URL(r.bundle,'http://127.0.0.1:8861').pathname};});
+assert.ok(browsers.every(b=>b.bundle===browsers[0].bundle));assert.ok(fs.existsSync('dist'+browsers[0].bundle));
+const unsafe=JSON.parse(read(root+'/unsafe/download-audit.json'));assert.equal(unsafe.actualDownloads,8);assert.equal(unsafe.downloadChecks,39);
+const ring=JSON.parse(read(root+'/ring-log/download-audit.json'));assert.equal(ring.actualUserDownloads,10);assert.deepEqual(ring.ordinaryDXFLineCounts,[204,204]);assert.equal(ring.layersSolved,true);
+const x=JSON.parse(read(root+'/paraboloidal-x/download-audit.json'));assert.equal(x.actualUserDownloads,7);assert.equal(x.checks,35);assert.equal(x.geometryCoverage,true);assert.equal(x.ordinaryDXFUnchanged,true);
+const courteous=JSON.parse(read(root+'/courteous/download-audit.json'));assert.equal(courteous.actualOrdinaryFileDownloads,8);assert.equal(courteous.passed,100);
+const preservation=JSON.parse(read('output/original-live-construct-preservation-1010.json'));assert.equal(preservation.verified,true);assert.equal(preservation.previousArchiveFilesVerified,2544);assert.equal(preservation.ordinaryAndOptimizedDXFPreserved,true);
+const paths=new Set([...all('src'),...all('backend'),...all('tests'),...all('vendor/simulator'),...all('dist'),...all('docs'),...all(root),...all('output/original-ring-unsafe-courteous-server-1010/projects'),
+ ...fs.readdirSync('scripts').filter(f=>/original.*1010|curve2.*1010|ndsolve.*1010|ring.*1010|huffman.*1010|woven.*1010|linked.*1010|rectangular.*1010|summarize-browser.*1010/.test(f)).map(f=>'scripts/'+f),
+ ...fs.readdirSync('output').filter(f=>/original-(live-construct|ring-log-independent|ring-unsafe-early|unsafe-twist-range-root).*1010\.(json|log)$/.test(f)).map(f=>'output/'+f),...preservation.integrationReports,
+ 'README.md','package.json','package-lock.json','tsconfig.json','vite.config.ts','server.mjs','output/audits/original-helpers-final-1010.json']);
+for(const file of ['output/parallel/original-unsafe-twist-range-1010/delivery-frozen.json','output/parallel/original-unsafe-twist-range-1010/delivery/integration-manifest.json','output/parallel/original-unsafe-twist-range-1010/delivery/unsafe-twist-range.patch','output/parallel/original-ring-log-1010/delivery/manifest.json','output/parallel/original-ring-log-1010/delivery/original-ring-log.patch','output/parallel/original-ring-log-1010/delivery/README.md','output/parallel/original-ring-log-1010/delivery-early-adoption/manifest.json','output/parallel/original-ring-log-1010/delivery-early-adoption/ring-log-early-adoption.patch','output/parallel/original-courteous-anarchy-1010/delivery-manifest.json','output/parallel/original-courteous-anarchy-1010/courteous-anarchy-lines.patch','output/parallel/original-courteous-anarchy-1010/README-交付.md','output/parallel/original-courteous-anarchy-1010/original-scope-and-candidate-correction.json','output/parallel/original-paraboloidal-x-1010/delivery-frozen.json','output/parallel/original-paraboloidal-x-1010/delivery/integration-manifest.json','output/parallel/original-paraboloidal-x-1010/delivery/paraboloidal-x.patch'])paths.add(file);
+const archive='output/audits/original-live-construct-artifacts-1010',manifest='output/audits/original-live-construct-final-1010.json';assert.ok(!fs.existsSync(archive)&&!fs.existsSync(manifest));fs.mkdirSync(archive,{recursive:true});
+const snapshots=[];for(const file of [...paths].sort()){
+ assert.ok(fs.existsSync(file),file);const target=path.join(archive,file);fs.mkdirSync(path.dirname(target),{recursive:true});fs.copyFileSync(file,target,fs.constants.COPYFILE_EXCL);assert.equal(hash(target),hash(file));snapshots.push({file,sha256:hash(file),bytes:fs.statSync(file).size});
+}
+const report={verified:true,verifiedAt:new Date().toISOString(),completeOrigamicaGoal:false,archive,snapshots,scope:['finite original Ring intrinsic Log formulas and actual CP','original paraboloidal Flasher X option and verified CP/static 3D','original Courteous Lines acceptance mode and actual woven CP','original five-input Unsafe helper; no global CP certification'],tests:{...run.tests,buildModules:1021,mainAppFocused:96},browsers,bundle:browsers[0].bundle,userButtonExportFiles:33,continuationRecord:run.continuationRecord,preservation,
+ notVerified:['full original Wolfram numeric/symbolic/default/controller/interpolation/options semantics','all numerical/layer/collision/physical domains','original Courteous Graph two stages/tolerances, missing DualFaces and additional finite Flasher factor domain are in next isolated batch','native portable EXE, third-party import or machine; not packaged or published']};
+fs.writeFileSync(manifest,JSON.stringify(report,null,2),{flag:'wx'});console.log(JSON.stringify({frozen:snapshots.length,tests:report.tests,userButtonExportFiles:33,completeOrigamicaGoal:false}));

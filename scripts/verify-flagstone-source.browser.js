@@ -1,0 +1,13 @@
+async page=>{
+ const checks=[],check=(ok,s)=>{if(!ok)throw Error(s);checks.push(s);},button=name=>page.getByRole('button',{name,exact:true});
+ const ready=()=>page.waitForFunction(()=>document.querySelector('.tess-preview-status')?.getAttribute('data-pending')==='false');
+ const result=()=>page.waitForResponse(r=>r.url().endsWith('/api/tessellate')&&r.request().postDataJSON()?.family==='flagstone'&&r.request().postDataJSON()?.motherParams);
+ await page.setViewportSize({width:1000,height:720});await button('保存工程').click();await page.locator('.save-dot.saved').waitFor();await button('镶嵌设计').click();await button('06 自定义').click();await ready();
+ let wait=result();await button('用于铺石').click();let r=await (await wait).json();await ready();check(r.stats.parameters.motherParams.family==='custom'&&r.stats.checks.local.status==='passed','自定义母结构直接构造铺石');
+ const mother=r.mother;wait=result();await page.getByLabel('褶宽比',{exact:true}).fill('.3');await page.getByLabel('褶宽比',{exact:true}).press('Enter');r=await (await wait).json();await ready();check(JSON.stringify(r.mother)===JSON.stringify(mother)&&r.stats.parameters.width===.3,'调整铺石褶宽保持源母结构');
+ check(await page.locator('.inspector').evaluate(e=>e.scrollHeight<=e.clientHeight+1),'通用铺石面板无滚动');
+ await button('编辑铺石母参数').click();await page.getByLabel('铺石母结构 JSON').fill(JSON.stringify({family:'nonperiodic',kind:'delaunay',count:9,seed:1,depth:1,angle:36,scale:.3,boundaryMode:'hull'}));wait=result();await button('采用铺石母参数').click();r=await (await wait).json();await ready();check(r.stats.parameters.motherParams.kind==='delaunay'&&r.stats.checks.local.status==='passed','改用非周期 Delaunay 母结构重新构造');
+ await button('采用折痕副本 →').click();await button('保存工程').click();await page.locator('.save-dot.saved').waitFor();await button('镶嵌设计').click();await button('01 单元扭转').click();wait=result();await button('读取工程参数').click();r=await (await wait).json();await ready();check(r.stats.parameters.motherParams.kind==='delaunay'&&r.stats.parameters.width===.3,'工程恢复保留嵌套源参数与褶宽');
+ await button('编辑铺石母参数').click();await page.getByLabel('铺石母结构 JSON').fill(JSON.stringify({family:'nonperiodic',kind:'voronoi',count:9,seed:1,depth:1,angle:36,scale:.3}));wait=result();await button('采用铺石母参数').click();const failure=await wait;r=await failure.json();check(failure.status()===422&&r.error.includes('双褶'),'有交叉的非周期双褶明确拒绝');check(await button('采用折痕副本 →').isDisabled(),'失败参数不会被当作可采用结果');
+ await button('返回母结构').click();await ready();check(await page.getByLabel('母结构类型',{exact:true}).inputValue()==='voronoi','可返回原母结构继续编辑');return {passed:checks.length,checks};
+}

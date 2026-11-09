@@ -1,0 +1,50 @@
+{
+  "name": "@treemaker/origami-simulator",
+  "private": true,
+  "version": "0.1.0",
+  "description": "FOLD-in origami simulation library adapted from Origami Simulator",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./testing": {
+      "types": "./dist/testing.d.ts",
+      "import": "./dist/testing.js"
+    }
+  },
+  "files": [
+    "dist",
+    "LICENSE",
+    "NOTICE",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "bench:sim": "vitest run --config vitest.bench.config.ts --disable-console-intercept",
+    "bench:cpu-ceiling": "vitest run --config vitest.bench.config.ts bench/cpuCeiling.bench.ts --disable-console-intercept",
+    "bench:prepare": "vitest run --config vitest.bench.config.ts bench/prepare.bench.ts --disable-console-intercept",
+    "bench:upstream-parity": "vitest run --config vitest.bench.config.ts bench/upstreamParity.bench.ts --disable-console-intercept",
+    "bench:unwrap-spike": "vitest run --config vitest.bench.config.ts bench/unwrapSpike.bench.ts --disable-console-intercept",
+    "bench:gpu-parity": "vitest run --config vitest.bench.config.ts bench/gpuParity.bench.ts --disable-console-intercept",
+    "bench:gpu-stability": "vitest run --config vitest.bench.config.ts bench/gpuStability.bench.ts --disable-console-intercept"
+  },
+  "dependencies": {
+    "earcut": "^3.0.2"
+  },
+  "peerDependencies": {},
+  "devDependencies": {
+    "@types/earcut": "^3.0.0",
+    "@types/node": "^24.10.1",
+    "typescript": "~5.9.3",
+    "vitest": "^4.0.18",
+    "playwright": "^1.60.0",
+    "vite": "^7.1.7"
+  }
+}

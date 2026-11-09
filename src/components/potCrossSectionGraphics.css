@@ -1,0 +1,22 @@
+.tess-dialog.pot-cross-section-dialog[open]{width:min(660px,calc(100vw - 28px));box-sizing:border-box}
+.pot-cross-section-note{font-size:12px;line-height:1.45;margin:5px 0;color:var(--muted)}
+.pot-cross-section-options{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px 12px;align-items:center}
+.pot-cross-section-options>label,.pot-cross-section-range>label{display:flex;align-items:center;justify-content:space-between;gap:6px;min-width:0;font-size:11px}
+.pot-cross-section-options input[type=number],.pot-cross-section-range input{width:74px;box-sizing:border-box;min-width:0;padding:3px;border:1px solid var(--line);border-radius:4px;background:var(--paper);color:inherit;font-size:11px}
+.pot-cross-section-options select{min-width:0;max-width:104px;font:inherit;padding:3px;border:1px solid var(--line);border-radius:4px;background:var(--paper);color:inherit}
+.pot-cross-section-range{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:5px 0}
+.pot-cross-section-range>label{flex-direction:column;align-items:stretch}
+.pot-cross-section-range input{width:100%}
+.pot-cross-section-plot{display:flex;align-items:center;justify-content:center;border:1px solid var(--line);border-radius:5px;background:#f3f5f3;min-height:100px;max-height:230px;overflow:auto;margin:7px 0}
+.pot-cross-section-plot>div{width:100%;max-width:100%}
+.pot-cross-section-plot>div>svg{display:block;max-width:100%;height:auto;margin:auto}
+.pot-cross-section-status{font-size:11px;margin:4px 0;font-variant-numeric:tabular-nums}
+.pot-cross-section-error{font-size:12px;color:#a53931;margin:5px 0}
+.pot-cross-section-input{font-size:11px;margin:5px 0}
+.pot-cross-section-input>summary{cursor:pointer}
+.pot-cross-section-input textarea{box-sizing:border-box;width:100%;height:64px;font:11px/1.4 monospace;resize:vertical;display:block;margin-top:4px}
+.pot-cross-section-source-actions,.pot-cross-section-downloads{display:flex;flex-wrap:wrap;gap:5px;margin-top:5px}
+.pot-cross-section-source-actions>label{position:relative;overflow:hidden;cursor:pointer;border:1px solid var(--line);padding:4px 7px;border-radius:4px}
+.pot-cross-section-source-actions input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%}
+.pot-cross-section-source-actions button,.pot-cross-section-downloads button{font-size:11px;padding:4px 7px}
+@media(max-width:560px){.pot-cross-section-options{grid-template-columns:repeat(2,minmax(0,1fr))}.pot-cross-section-range{grid-template-columns:repeat(2,minmax(0,1fr))}}

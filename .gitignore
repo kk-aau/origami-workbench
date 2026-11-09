@@ -1,0 +1,16 @@
+node_modules/
+.toolchain/
+.runtime/
+.venv/
+output/
+build/
+release/
+dist/
+src-tauri/target/
+src-tauri/gen/
+__pycache__/
+*.pyc
+*.tsbuildinfo
+.env
+.env.*
+!*.example

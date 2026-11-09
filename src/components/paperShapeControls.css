@@ -1,0 +1,14 @@
+.tess-controls .paper-shape-controls{margin:2px 0 4px}
+.tess-controls .paper-shape-row{display:grid;align-items:center;gap:5px}
+.tess-controls .paper-shape-row.has-paper{grid-template-columns:minmax(0,1fr) 72px 102px}
+.tess-controls .paper-shape-controls .select-field,
+.tess-controls .paper-shape-controls .tess-number{margin:1px 0}
+.tess-controls .paper-shape-controls .select-field{min-width:0;gap:3px;font-size:11px;white-space:nowrap}
+.tess-controls .paper-shape-controls .select-field select{width:105px;min-width:0;padding:3px 2px}
+.tess-controls .paper-shape-row.has-paper .select-field select{width:0;flex:1}
+.tess-controls .paper-shape-row.has-paper .tess-number input[type=number]{width:54px}
+.tess-controls .paper-shape-controls .tess-number input[type=range]{display:none}
+.tess-controls .paper-shape-row>div{min-width:0}
+.tess-controls .paper-shape-warning{display:flex;align-items:center;justify-content:space-between;gap:6px;margin:2px 0 5px;color:#92542f;font-size:11px;line-height:1.35}
+.tess-controls .paper-shape-warning button{flex:none;white-space:nowrap}
+.tess-controls .paper-recovery-actions{display:flex;align-items:center;gap:6px;flex:none}

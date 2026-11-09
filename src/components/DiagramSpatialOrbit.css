@@ -1,0 +1,14 @@
+.diagram-spatial-orbit{position:absolute;inset:0;z-index:4;background:transparent;overflow:hidden;touch-action:none;outline:none;cursor:grab}
+.diagram-spatial-orbit.is-previewing{background:#fafbf7}
+.diagram-spatial-orbit.is-dragging{cursor:grabbing}
+.diagram-spatial-orbit[aria-busy=true]{cursor:progress}
+.diagram-spatial-orbit:focus-visible{box-shadow:inset 0 0 0 2px #426f59}
+.diagram-spatial-orbit>canvas,.diagram-spatial-orbit>svg{display:block;width:100%;height:100%;pointer-events:none}
+.diagram-spatial-orbit>canvas[hidden]{display:none}
+.diagram-spatial-orbit-preview,.diagram-spatial-orbit-preview>svg{display:block;width:100%;height:100%;pointer-events:none}
+.diagram-spatial-orbit-help{position:absolute;left:12px;right:12px;top:12px;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;pointer-events:none;color:#365344;font-size:11px;line-height:1.7}
+.diagram-spatial-orbit-help>div{padding:5px 8px;background:#fffefaf2;border:1px solid #c7d4c5;border-radius:4px}
+.diagram-spatial-orbit-help span{display:block;font-size:10px;color:#4b6554}
+.diagram-spatial-orbit-help button{pointer-events:auto;min-height:28px;padding:4px 9px;font-size:11px;background:#fffefa}
+.diagram-spatial-orbit-help button:focus-visible{outline:2px solid #426f59;outline-offset:2px}
+.diagram-spatial-orbit-readout{position:absolute;bottom:14px;left:50%;transform:translateX(-50%);padding:5px 9px;background:#fffefaf2;border:1px solid #c7d4c5;border-radius:4px;color:#365344;font-size:11px;font-variant-numeric:tabular-nums;white-space:nowrap;pointer-events:none}

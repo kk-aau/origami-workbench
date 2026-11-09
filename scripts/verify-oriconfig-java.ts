@@ -1,0 +1,28 @@
+import assert from 'node:assert/strict';
+import {spawnSync} from 'node:child_process';
+import {fileURLToPath} from 'node:url';
+import {exportOriconfigHotkeys,exportOriconfigSettings} from '../src/app/oriconfigExport';
+import {defaultCreaseDisplay} from '../src/app/creaseDisplay';
+import {defaultGridAppearance} from '../src/app/gridAppearance';
+import {defaultToolShortcuts,type ToolShortcutAction} from '../src/app/toolShortcuts';
+const validator=fileURLToPath(new URL('../tests/fixtures/ValidateExportedOriconfig.java',import.meta.url));
+const run=(bytes:Uint8Array,native=false)=>{
+ const result=spawnSync('java',[validator,Buffer.from(bytes).toString('base64'),...(native?['native']:[])],{encoding:'utf8',timeout:20000,windowsHide:true,maxBuffer:1024*1024});
+ if(result.error)throw new Error('需要可用的 Java 11+ 源文件运行器：'+result.error.message);
+ return result;
+};
+const selected:ToolShortcutAction[]=['tool:line','tool:select','tool:perpendicular','preset:M'];
+const bytes=exportOriconfigHotkeys({...defaultToolShortcuts(),'tool:line':null,'tool:select':'Ctrl+Shift+Q','tool:perpendicular':'Shift+P'},selected,true);
+const result=run(bytes);assert.equal(result.status,0,result.stderr);
+assert.deepEqual(result.stdout.trim().split(/\r?\n/),['colRedAction=pressed 1','drawCreaseFreeAction=UNBOUND','perpendicularDrawAction=shift pressed P','selectAction=shift ctrl pressed Q']);
+const functional=run(exportOriconfigHotkeys({...defaultToolShortcuts(),'tool:line':'F2','tool:select':'Shift+1'},['tool:line','tool:select'],true));
+assert.equal(functional.status,0,functional.stderr);assert.match(functional.stdout,/drawCreaseFreeAction=pressed F2/);assert.match(functional.stdout,/selectAction=shift pressed 1/);
+const corrupt=bytes.slice(),needle=Buffer.from('pressed 1'),offset=Buffer.from(corrupt).indexOf(needle);
+assert.ok(offset>=0);corrupt[offset+needle.length-1]='2'.charCodeAt(0);const rejected=run(corrupt);assert.notEqual(rejected.status,0);assert.match(rejected.stderr,/CRC/);
+const preferences={...defaultCreaseDisplay(),'zhezhi.gridAppearance':defaultGridAppearance(),'zhezhi.theme':'dark'};
+const nativeBytes=exportOriconfigSettings(defaultToolShortcuts(),['tool:line'],true,preferences),native=run(nativeBytes,true);
+assert.equal(native.status,0,native.stderr);assert.equal(native.stdout.trim(),'drawCreaseFreeAction=pressed L');
+const damaged=nativeBytes.slice(),marker=Buffer.from('dark'),nativeOffset=Buffer.from(damaged).indexOf(marker);
+assert.ok(nativeOffset>=0);damaged[nativeOffset]='x'.charCodeAt(0);
+const failedNative=run(damaged,true);assert.notEqual(failedNative.status,0);assert.match(failedNative.stderr,/CRC/);
+console.log('Java ZIP / properties / KeyStroke 验证通过：3 个导出包（含工作台扩展）、快捷键与扩展配置 CRC 篡改均被拒绝。此检查不替代 Oriedita 整体 UI 验收。');

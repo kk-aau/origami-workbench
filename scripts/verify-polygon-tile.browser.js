@@ -1,0 +1,12 @@
+async page=>{
+ const checks=[],check=(ok,s)=>{if(!ok)throw Error(s);checks.push(s);},button=name=>page.getByRole('button',{name,exact:true});
+ const ready=()=>page.waitForFunction(()=>document.querySelector('.tess-preview-status')?.getAttribute('data-pending')==='false');
+ const result=(extra={})=>page.waitForResponse(r=>r.url().endsWith('/api/tessellate')&&r.request().postDataJSON()?.family==='polygon-tile'&&Object.entries(extra).every(([k,v])=>r.request().postDataJSON()?.[k]===v));
+ await page.setViewportSize({width:1000,height:720});await button('保存工程').click();await page.locator('.save-dot.saved').waitFor();await button('镶嵌设计').click();await button('01 单元扭转').click();let wait=result();await page.getByLabel('单元结构',{exact:true}).selectOption({value:'precise'});let r=await (await wait).json();await ready();check(r.stats.checks.local.status==='passed','精确多边形通过单元扭转入口生成');
+ for(const variant of ['general','centered-angle','offset','centered']){wait=result({variant});await page.getByLabel('精确多边形方式',{exact:true}).selectOption({value:variant});r=await (await wait).json();await ready();check(r.stats.checks.geometry.status==='passed'&&r.stats.checks.local.status==='passed','精确变体 '+variant);check(await page.locator('.inspector').evaluate(e=>e.scrollHeight<=e.clientHeight+1),'变体面板无滚动 '+variant);}
+ await button('输入顶点').click();await page.getByLabel('精确多边形坐标',{exact:true}).fill('[[-2,-1],[2,-1],[2,1],[-2,1]]');wait=result();await button('采用多边形坐标').click();r=await (await wait).json();await ready();check(r.stats.parameters.polygon[0][0]===-2,'自定义多边形按外边参数构造');
+ await button('中心边山谷').click();wait=result();await button('全部谷折').click();r=await (await wait).json();await ready();check(r.source.centralTypes.every(t=>t==='V'),'中心逐边赋型进入实际折痕');await button('完成').click();
+ wait=result();await page.getByLabel('边缘褶宽',{exact:true}).fill('.35');await page.getByLabel('边缘褶宽',{exact:true}).press('Enter');r=await (await wait).json();await ready();check(r.stats.parameters.width===.35&&r.stats.parameters.polygon[0][0]===-2&&r.source.centralTypes.every(t=>t==='V'),'调参保持编辑的几何与山谷');
+ await button('采用折痕副本 →').click();await button('保存工程').click();await page.locator('.save-dot.saved').waitFor();await button('镶嵌设计').click();await button('02 周期拼接').click();wait=result();await button('读取工程参数').click();r=await (await wait).json();await ready();check(r.stats.parameters.family==='polygon-tile'&&r.stats.parameters.width===.35,'精确多边形工程恢复');
+ await page.screenshot({path:'output/playwright/polygon-tile.png'});return {passed:checks.length,checks};
+}

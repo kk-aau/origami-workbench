@@ -1,0 +1,13 @@
+.curved-ribbon-pair-dialog .csp-controls{overflow:auto}
+.curved-ribbon-pair-dialog .csp-fields{flex:none}
+.curved-ribbon-pair-dialog .csp-status{flex:none}
+.curved-ribbon-pair-dialog .csp-legend i.crp-base-key{background:#ead49d}
+.curved-ribbon-pair-dialog .csp-legend i.crp-minus-key{background:#e58a71}
+.curved-ribbon-pair-dialog .csp-legend i.crp-plus-key{background:#65c7ad}
+.crp-band{fill:#66bdab29;stroke:none}
+.crp-ruling{stroke:#91b9ad;stroke-width:1;opacity:.54}
+.crp-active{stroke:#f3e0b4;stroke-width:2.2;opacity:.9}
+.crp-boundary,.crp-base{fill:none;vector-effect:non-scaling-stroke;stroke-linecap:round;stroke-linejoin:round}
+.crp-boundary{stroke-width:1.5}.crp-boundary.minus{stroke:#e58a71}.crp-boundary.plus{stroke:#65c7ad}
+.crp-base{stroke:#f3e0b4;stroke-width:2.1;stroke-dasharray:5 4}
+.crp-marker{fill:#f3e0b4;stroke:#15292b;stroke-width:2}

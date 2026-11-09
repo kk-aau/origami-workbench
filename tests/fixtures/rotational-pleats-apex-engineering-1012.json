@@ -1,0 +1,1709 @@
+{
+  "source": "original source recipe with actual bounded backend replies using current .venv; not Wolfram or browser user download",
+  "cases": {
+    "wedge-original": {
+      "recipe": {
+        "base": {
+          "model": "flat-strip",
+          "pathMm": [
+            [
+              0,
+              0
+            ],
+            [
+              1,
+              0
+            ],
+            [
+              1,
+              1
+            ],
+            [
+              0.5,
+              1.2
+            ]
+          ],
+          "widthMm": 0,
+          "spreadAngleDeg": 10,
+          "edgeTypes": "automatic"
+        },
+        "repetitionPairs": 18,
+        "arcDeg": 360,
+        "splitBentFaces": false,
+        "splitBendToleranceDeg": 1
+      },
+      "result": {
+        "schema": "original-in2667-engineering-shared-apex-root-v2",
+        "sourceKey": "{\"base\":{\"model\":\"flat-strip\",\"pathMm\":[[0,0],[1,0],[1,1],[0.5,1.2]],\"widthMm\":0,\"spreadAngleDeg\":10,\"edgeTypes\":\"automatic\"},\"repetitionPairs\":18,\"arcDeg\":360,\"splitBentFaces\":false,\"splitBendToleranceDeg\":1}",
+        "query": {
+          "schema": "original-in2667-shared-apex-query-v2",
+          "sourceKey": "{\"base\":{\"model\":\"flat-strip\",\"pathMm\":[[0,0],[1,0],[1,1],[0.5,1.2]],\"widthMm\":0,\"spreadAngleDeg\":10,\"edgeTypes\":\"automatic\"},\"repetitionPairs\":18,\"arcDeg\":360,\"splitBentFaces\":false,\"splitBendToleranceDeg\":1}",
+          "verticesMm": [
+            [
+              0,
+              0
+            ],
+            [
+              0.9195498155886401,
+              -0.08045018441136
+            ],
+            [
+              2.2968009828520772,
+              -0.20094404837475693
+            ],
+            [
+              2.5385164807134504,
+              -0.2220914142361518
+            ],
+            [
+              1.095876796297105,
+              0.09587679629710497
+            ],
+            [
+              1.7711283483150067,
+              0.15495365212695714
+            ],
+            [
+              2.5385164807134504,
+              0.2220914142361518
+            ]
+          ],
+          "edges": [
+            [
+              0,
+              1
+            ],
+            [
+              1,
+              2
+            ],
+            [
+              2,
+              3
+            ],
+            [
+              1,
+              4
+            ],
+            [
+              2,
+              5
+            ],
+            [
+              3,
+              6
+            ],
+            [
+              0,
+              4
+            ],
+            [
+              4,
+              5
+            ],
+            [
+              5,
+              6
+            ]
+          ],
+          "faces": [
+            [
+              0,
+              1,
+              4
+            ],
+            [
+              1,
+              2,
+              5,
+              4
+            ],
+            [
+              2,
+              3,
+              6,
+              5
+            ]
+          ],
+          "flatVerticesMm": [
+            [
+              0,
+              0
+            ],
+            [
+              0.9195498155886401,
+              -0.08045018441136
+            ],
+            [
+              0.7990559516252427,
+              1.2968009828520772
+            ],
+            [
+              0.5824826805456031,
+              1.406206701364009
+            ],
+            [
+              1.095876796297105,
+              0.09587679629710497
+            ],
+            [
+              1.154953652126957,
+              0.7711283483150067
+            ],
+            [
+              0.41751731945439596,
+              0.9937932986359895
+            ]
+          ],
+          "bottom": [
+            0,
+            1,
+            2,
+            3
+          ],
+          "top": [
+            0,
+            4,
+            5,
+            6
+          ],
+          "repetitionPairs": 18,
+          "arcDeg": 360
+        },
+        "solutionVertices3D": [
+          [
+            1.7178383548946226e-30,
+            -7.534249004139586e-31,
+            -1.4804548125561e-30
+          ],
+          [
+            0.8289003541868987,
+            4.1908015969251945e-30,
+            0.40616289632333213
+          ],
+          [
+            0.8524482359113348,
+            3.4477115718487285e-30,
+            1.7884743830178547
+          ],
+          [
+            0.6701398747041547,
+            3.0193600202076018e-31,
+            1.9485907607660382
+          ],
+          [
+            0.9296853492862859,
+            0.16392861064854541,
+            0.5647573591055517
+          ],
+          [
+            1.076988803315186,
+            0.18990218394538952,
+            1.225878981289152
+          ],
+          [
+            0.411174293215564,
+            0.07250112166763746,
+            1.5950673526713741
+          ]
+        ],
+        "solver": {
+          "method": "scipy-hybr-original-full-initial-analytic-product-jacobian",
+          "reportedSuccess": true,
+          "message": "The solution converged.",
+          "nfev": 33,
+          "initialJacobianRank": 19,
+          "variables": 21,
+          "initialSingularJacobian": true,
+          "initialCoordinatesExactlyOriginalRx90": true,
+          "stationaryAnchorUntranslated": [
+            0,
+            0,
+            0
+          ]
+        },
+        "residuals": {
+          "maximumOriginalConstraint": 4.440892098500626e-15,
+          "maximumMinimumDiagonalError": 3.497202527569243e-14,
+          "shape": [
+            1.7178383548946226e-30,
+            -7.534249004139586e-31,
+            -1.4804548125561e-30,
+            4.1908015969251945e-30,
+            3.4477115718487285e-30,
+            3.0193600202076018e-31,
+            -5.673990180828956e-18,
+            -1.5745282499311493e-17,
+            4.6465975881653705e-19,
+            0
+          ],
+          "edges": [
+            0,
+            0,
+            -4.440892098500626e-15,
+            0,
+            0,
+            0,
+            0,
+            -1.1102230246251565e-16,
+            -3.3306690738754696e-16
+          ],
+          "diagonalProduct": [
+            -4.734106135834206e-18,
+            1.7135350425924681e-16
+          ],
+          "diagonalErrors": [
+            [
+              -0.00710683954309177,
+              6.661338147750939e-16
+            ],
+            [
+              -3.497202527569243e-14,
+              -0.004899730653527445
+            ]
+          ]
+        },
+        "source": {
+          "notebookSHA256": "19b3b06baffb8d59d663f2bfaa5ea55df77da2a84a5a4cc008dcedf019c8dba9",
+          "definitionCell": "In[2667]",
+          "savedExampleCells": [
+            "In[2669]"
+          ],
+          "originalDiagonalConstraint": "error13 * error24 == 0; not both errors zero",
+          "unitConvention": "1 original unit = 1 mm, unchanged",
+          "WolframExecuted": false,
+          "originalWolframBranchUniquelyCertified": false,
+          "rigidSceneCertified": false,
+          "continuousMotionCertified": false,
+          "wholeLayerOrderCertified": false
+        },
+        "numericalPolicy": {
+          "originalConstraintAbsolute": 2e-09,
+          "minimumOneDiagonalRelative": 2e-08,
+          "maxfev": 6000,
+          "xtol": 1e-11,
+          "intervalCertificate": false
+        }
+      }
+    },
+    "wedge-partial-n12-phi240": {
+      "recipe": {
+        "base": {
+          "model": "flat-strip",
+          "pathMm": [
+            [
+              0,
+              0
+            ],
+            [
+              1,
+              0
+            ],
+            [
+              1,
+              1
+            ],
+            [
+              0.5,
+              1.2
+            ]
+          ],
+          "widthMm": 0,
+          "spreadAngleDeg": 10,
+          "edgeTypes": "automatic"
+        },
+        "repetitionPairs": 12,
+        "arcDeg": 240,
+        "splitBentFaces": false,
+        "splitBendToleranceDeg": 1
+      },
+      "result": {
+        "schema": "original-in2667-engineering-shared-apex-root-v2",
+        "sourceKey": "{\"base\":{\"model\":\"flat-strip\",\"pathMm\":[[0,0],[1,0],[1,1],[0.5,1.2]],\"widthMm\":0,\"spreadAngleDeg\":10,\"edgeTypes\":\"automatic\"},\"repetitionPairs\":12,\"arcDeg\":240,\"splitBentFaces\":false,\"splitBendToleranceDeg\":1}",
+        "query": {
+          "schema": "original-in2667-shared-apex-query-v2",
+          "sourceKey": "{\"base\":{\"model\":\"flat-strip\",\"pathMm\":[[0,0],[1,0],[1,1],[0.5,1.2]],\"widthMm\":0,\"spreadAngleDeg\":10,\"edgeTypes\":\"automatic\"},\"repetitionPairs\":12,\"arcDeg\":240,\"splitBentFaces\":false,\"splitBendToleranceDeg\":1}",
+          "verticesMm": [
+            [
+              0,
+              0
+            ],
+            [
+              0.9195498155886401,
+              -0.08045018441136
+            ],
+            [
+              2.2968009828520772,
+              -0.20094404837475693
+            ],
+            [
+              2.5385164807134504,
+              -0.2220914142361518
+            ],
+            [
+              1.095876796297105,
+              0.09587679629710497
+            ],
+            [
+              1.7711283483150067,
+              0.15495365212695714
+            ],
+            [
+              2.5385164807134504,
+              0.2220914142361518
+            ]
+          ],
+          "edges": [
+            [
+              0,
+              1
+            ],
+            [
+              1,
+              2
+            ],
+            [
+              2,
+              3
+            ],
+            [
+              1,
+              4
+            ],
+            [
+              2,
+              5
+            ],
+            [
+              3,
+              6
+            ],
+            [
+              0,
+              4
+            ],
+            [
+              4,
+              5
+            ],
+            [
+              5,
+              6
+            ]
+          ],
+          "faces": [
+            [
+              0,
+              1,
+              4
+            ],
+            [
+              1,
+              2,
+              5,
+              4
+            ],
+            [
+              2,
+              3,
+              6,
+              5
+            ]
+          ],
+          "flatVerticesMm": [
+            [
+              0,
+              0
+            ],
+            [
+              0.9195498155886401,
+              -0.08045018441136
+            ],
+            [
+              0.7990559516252427,
+              1.2968009828520772
+            ],
+            [
+              0.5824826805456031,
+              1.406206701364009
+            ],
+            [
+              1.095876796297105,
+              0.09587679629710497
+            ],
+            [
+              1.154953652126957,
+              0.7711283483150067
+            ],
+            [
+              0.41751731945439596,
+              0.9937932986359895
+            ]
+          ],
+          "bottom": [
+            0,
+            1,
+            2,
+            3
+          ],
+          "top": [
+            0,
+            4,
+            5,
+            6
+          ],
+          "repetitionPairs": 12,
+          "arcDeg": 240
+        },
+        "solutionVertices3D": [
+          [
+            1.7178383548946226e-30,
+            -7.534249004139586e-31,
+            -1.4804548125561e-30
+          ],
+          [
+            0.8289003541868987,
+            4.1908015969251945e-30,
+            0.40616289632333213
+          ],
+          [
+            0.8524482359113348,
+            3.4477115718487285e-30,
+            1.7884743830178547
+          ],
+          [
+            0.6701398747041547,
+            3.0193600202076018e-31,
+            1.9485907607660382
+          ],
+          [
+            0.9296853492862859,
+            0.16392861064854541,
+            0.5647573591055517
+          ],
+          [
+            1.076988803315186,
+            0.18990218394538952,
+            1.225878981289152
+          ],
+          [
+            0.411174293215564,
+            0.07250112166763746,
+            1.5950673526713741
+          ]
+        ],
+        "solver": {
+          "method": "scipy-hybr-original-full-initial-analytic-product-jacobian",
+          "reportedSuccess": true,
+          "message": "The solution converged.",
+          "nfev": 33,
+          "initialJacobianRank": 19,
+          "variables": 21,
+          "initialSingularJacobian": true,
+          "initialCoordinatesExactlyOriginalRx90": true,
+          "stationaryAnchorUntranslated": [
+            0,
+            0,
+            0
+          ]
+        },
+        "residuals": {
+          "maximumOriginalConstraint": 4.440892098500626e-15,
+          "maximumMinimumDiagonalError": 3.497202527569243e-14,
+          "shape": [
+            1.7178383548946226e-30,
+            -7.534249004139586e-31,
+            -1.4804548125561e-30,
+            4.1908015969251945e-30,
+            3.4477115718487285e-30,
+            3.0193600202076018e-31,
+            -5.673990180828956e-18,
+            -1.5745282499311493e-17,
+            4.6465975881653705e-19,
+            0
+          ],
+          "edges": [
+            0,
+            0,
+            -4.440892098500626e-15,
+            0,
+            0,
+            0,
+            0,
+            -1.1102230246251565e-16,
+            -3.3306690738754696e-16
+          ],
+          "diagonalProduct": [
+            -4.734106135834206e-18,
+            1.7135350425924681e-16
+          ],
+          "diagonalErrors": [
+            [
+              -0.00710683954309177,
+              6.661338147750939e-16
+            ],
+            [
+              -3.497202527569243e-14,
+              -0.004899730653527445
+            ]
+          ]
+        },
+        "source": {
+          "notebookSHA256": "19b3b06baffb8d59d663f2bfaa5ea55df77da2a84a5a4cc008dcedf019c8dba9",
+          "definitionCell": "In[2667]",
+          "savedExampleCells": [
+            "In[2669]"
+          ],
+          "originalDiagonalConstraint": "error13 * error24 == 0; not both errors zero",
+          "unitConvention": "1 original unit = 1 mm, unchanged",
+          "WolframExecuted": false,
+          "originalWolframBranchUniquelyCertified": false,
+          "rigidSceneCertified": false,
+          "continuousMotionCertified": false,
+          "wholeLayerOrderCertified": false
+        },
+        "numericalPolicy": {
+          "originalConstraintAbsolute": 2e-09,
+          "minimumOneDiagonalRelative": 2e-08,
+          "maxfev": 6000,
+          "xtol": 1e-11,
+          "intervalCertificate": false
+        }
+      }
+    },
+    "wedge-partial-spread8-phi288": {
+      "recipe": {
+        "base": {
+          "model": "flat-strip",
+          "pathMm": [
+            [
+              0,
+              0
+            ],
+            [
+              1,
+              0
+            ],
+            [
+              1,
+              1
+            ],
+            [
+              0.5,
+              1.2
+            ]
+          ],
+          "widthMm": 0,
+          "spreadAngleDeg": 8,
+          "edgeTypes": "automatic"
+        },
+        "repetitionPairs": 18,
+        "arcDeg": 288,
+        "splitBentFaces": false,
+        "splitBendToleranceDeg": 1
+      },
+      "result": {
+        "schema": "original-in2667-engineering-shared-apex-root-v2",
+        "sourceKey": "{\"base\":{\"model\":\"flat-strip\",\"pathMm\":[[0,0],[1,0],[1,1],[0.5,1.2]],\"widthMm\":0,\"spreadAngleDeg\":8,\"edgeTypes\":\"automatic\"},\"repetitionPairs\":18,\"arcDeg\":288,\"splitBentFaces\":false,\"splitBendToleranceDeg\":1}",
+        "query": {
+          "schema": "original-in2667-shared-apex-query-v2",
+          "sourceKey": "{\"base\":{\"model\":\"flat-strip\",\"pathMm\":[[0,0],[1,0],[1,1],[0.5,1.2]],\"widthMm\":0,\"spreadAngleDeg\":8,\"edgeTypes\":\"automatic\"},\"repetitionPairs\":18,\"arcDeg\":288,\"splitBentFaces\":false,\"splitBendToleranceDeg\":1}",
+          "verticesMm": [
+            [
+              0,
+              0
+            ],
+            [
+              0.9346433689081134,
+              -0.06535663109188668
+            ],
+            [
+              2.2303610727811396,
+              -0.1559620393024929
+            ],
+            [
+              2.5385164807134504,
+              -0.17751036456235134
+            ],
+            [
+              1.0751842036105046,
+              0.07518420361050476
+            ],
+            [
+              1.8127695374330843,
+              0.12676119454100765
+            ],
+            [
+              2.5385164807134504,
+              0.17751036456235134
+            ]
+          ],
+          "edges": [
+            [
+              0,
+              1
+            ],
+            [
+              1,
+              2
+            ],
+            [
+              2,
+              3
+            ],
+            [
+              1,
+              4
+            ],
+            [
+              2,
+              5
+            ],
+            [
+              3,
+              6
+            ],
+            [
+              0,
+              4
+            ],
+            [
+              4,
+              5
+            ],
+            [
+              5,
+              6
+            ]
+          ],
+          "faces": [
+            [
+              0,
+              1,
+              4
+            ],
+            [
+              1,
+              2,
+              5,
+              4
+            ],
+            [
+              2,
+              3,
+              6,
+              5
+            ]
+          ],
+          "flatVerticesMm": [
+            [
+              0,
+              0
+            ],
+            [
+              0.9346433689081134,
+              -0.06535663109188668
+            ],
+            [
+              0.8440379606975049,
+              1.2303610727811394
+            ],
+            [
+              0.5659256943546724,
+              1.3648142358866866
+            ],
+            [
+              1.0751842036105046,
+              0.07518420361050476
+            ],
+            [
+              1.126761194541006,
+              0.8127695374330843
+            ],
+            [
+              0.4340743056453231,
+              1.0351857641133106
+            ]
+          ],
+          "bottom": [
+            0,
+            1,
+            2,
+            3
+          ],
+          "top": [
+            0,
+            4,
+            5,
+            6
+          ],
+          "repetitionPairs": 18,
+          "arcDeg": 288
+        },
+        "solutionVertices3D": [
+          [
+            2.5996803824446867e-29,
+            1.6317323101103895e-29,
+            2.4760459096971116e-29
+          ],
+          [
+            0.8341360975099712,
+            2.1807018570516815e-29,
+            0.4266692947733941
+          ],
+          [
+            0.8714640861435632,
+            8.262064663845587e-29,
+            1.7250145221268776
+          ],
+          [
+            0.6339881315789455,
+            -5.213291749080955e-30,
+            1.9225727585106231
+          ],
+          [
+            0.9150635953105727,
+            0.12860380149071912,
+            0.5547913255860502
+          ],
+          [
+            1.0568669667097796,
+            0.1485329656707769,
+            1.2801787689144521
+          ],
+          [
+            0.42984992434173225,
+            0.06041146716374682,
+            1.6384640379662943
+          ]
+        ],
+        "solver": {
+          "method": "scipy-hybr-original-full-initial-analytic-product-jacobian",
+          "reportedSuccess": true,
+          "message": "The solution converged.",
+          "nfev": 34,
+          "initialJacobianRank": 19,
+          "variables": 21,
+          "initialSingularJacobian": true,
+          "initialCoordinatesExactlyOriginalRx90": true,
+          "stationaryAnchorUntranslated": [
+            0,
+            0,
+            0
+          ]
+        },
+        "residuals": {
+          "maximumOriginalConstraint": 6.439293542825908e-15,
+          "maximumMinimumDiagonalError": 2.0627943797535409e-13,
+          "shape": [
+            2.5996803824446867e-29,
+            1.6317323101103895e-29,
+            2.4760459096971116e-29,
+            2.1807018570516815e-29,
+            8.262064663845587e-29,
+            -5.213291749080955e-30,
+            -9.66056715379759e-18,
+            2.400046839374823e-17,
+            -2.728973153920781e-18,
+            0
+          ],
+          "edges": [
+            4.440892098500626e-16,
+            0,
+            -6.439293542825908e-15,
+            8.881784197001252e-16,
+            0,
+            -1.1102230246251565e-16,
+            8.881784197001252e-16,
+            1.1102230246251565e-15,
+            -7.771561172376096e-16
+          ],
+          "diagonalProduct": [
+            -6.283421126581978e-17,
+            9.56725324272043e-16
+          ],
+          "diagonalErrors": [
+            [
+              -0.0048789677662562925,
+              1.2878587085651816e-14
+            ],
+            [
+              -2.0627943797535409e-13,
+              -0.0046380062582211945
+            ]
+          ]
+        },
+        "source": {
+          "notebookSHA256": "19b3b06baffb8d59d663f2bfaa5ea55df77da2a84a5a4cc008dcedf019c8dba9",
+          "definitionCell": "In[2667]",
+          "savedExampleCells": [
+            "In[2669]"
+          ],
+          "originalDiagonalConstraint": "error13 * error24 == 0; not both errors zero",
+          "unitConvention": "1 original unit = 1 mm, unchanged",
+          "WolframExecuted": false,
+          "originalWolframBranchUniquelyCertified": false,
+          "rigidSceneCertified": false,
+          "continuousMotionCertified": false,
+          "wholeLayerOrderCertified": false
+        },
+        "numericalPolicy": {
+          "originalConstraintAbsolute": 2e-09,
+          "minimumOneDiagonalRelative": 2e-08,
+          "maxfev": 6000,
+          "xtol": 1e-11,
+          "intervalCertificate": false
+        }
+      }
+    },
+    "wedge-full-n24-spread7.5": {
+      "recipe": {
+        "base": {
+          "model": "flat-strip",
+          "pathMm": [
+            [
+              0,
+              0
+            ],
+            [
+              1,
+              0
+            ],
+            [
+              1,
+              1
+            ],
+            [
+              0.5,
+              1.2
+            ]
+          ],
+          "widthMm": 0,
+          "spreadAngleDeg": 7.5,
+          "edgeTypes": "automatic"
+        },
+        "repetitionPairs": 24,
+        "arcDeg": 360,
+        "splitBentFaces": false,
+        "splitBendToleranceDeg": 1
+      },
+      "result": {
+        "schema": "original-in2667-engineering-shared-apex-root-v2",
+        "sourceKey": "{\"base\":{\"model\":\"flat-strip\",\"pathMm\":[[0,0],[1,0],[1,1],[0.5,1.2]],\"widthMm\":0,\"spreadAngleDeg\":7.5,\"edgeTypes\":\"automatic\"},\"repetitionPairs\":24,\"arcDeg\":360,\"splitBentFaces\":false,\"splitBendToleranceDeg\":1}",
+        "query": {
+          "schema": "original-in2667-shared-apex-query-v2",
+          "sourceKey": "{\"base\":{\"model\":\"flat-strip\",\"pathMm\":[[0,0],[1,0],[1,1],[0.5,1.2]],\"widthMm\":0,\"spreadAngleDeg\":7.5,\"edgeTypes\":\"automatic\"},\"repetitionPairs\":24,\"arcDeg\":360,\"splitBentFaces\":false,\"splitBendToleranceDeg\":1}",
+          "verticesMm": [
+            [
+              0,
+              0
+            ],
+            [
+              0.9384882314963784,
+              -0.06151176850362156
+            ],
+            [
+              2.214373142839082,
+              -0.14513768374673558
+            ],
+            [
+              2.5385164807134504,
+              -0.16638316055951144
+            ],
+            [
+              1.0701407290837746,
+              0.07014072908377429
+            ],
+            [
+              1.823470121928175,
+              0.11951654613129725
+            ],
+            [
+              2.5385164807134504,
+              0.16638316055951144
+            ]
+          ],
+          "edges": [
+            [
+              0,
+              1
+            ],
+            [
+              1,
+              2
+            ],
+            [
+              2,
+              3
+            ],
+            [
+              1,
+              4
+            ],
+            [
+              2,
+              5
+            ],
+            [
+              3,
+              6
+            ],
+            [
+              0,
+              4
+            ],
+            [
+              4,
+              5
+            ],
+            [
+              5,
+              6
+            ]
+          ],
+          "faces": [
+            [
+              0,
+              1,
+              4
+            ],
+            [
+              1,
+              2,
+              5,
+              4
+            ],
+            [
+              2,
+              3,
+              6,
+              5
+            ]
+          ],
+          "flatVerticesMm": [
+            [
+              0,
+              0
+            ],
+            [
+              0.9384882314963784,
+              -0.06151176850362156
+            ],
+            [
+              0.8548623162532675,
+              1.2143731428390825
+            ],
+            [
+              0.5617931545341341,
+              1.3544828863353273
+            ],
+            [
+              1.0701407290837746,
+              0.07014072908377429
+            ],
+            [
+              1.1195165461312995,
+              0.8234701219281748
+            ],
+            [
+              0.4382068454658721,
+              1.0455171136646757
+            ]
+          ],
+          "bottom": [
+            0,
+            1,
+            2,
+            3
+          ],
+          "top": [
+            0,
+            4,
+            5,
+            6
+          ],
+          "repetitionPairs": 24,
+          "arcDeg": 360
+        },
+        "solutionVertices3D": [
+          [
+            5.360422273768695e-28,
+            -1.9906221608455745e-29,
+            1.29559324489726e-28
+          ],
+          [
+            0.8354979699794081,
+            1.3927220479807264e-27,
+            0.4318414066320328
+          ],
+          [
+            0.8762398801175548,
+            1.1970608454865728e-27,
+            1.7098146839154522
+          ],
+          [
+            0.6251288359461823,
+            -4.3102810011297303e-29,
+            1.915881462578343
+          ],
+          [
+            0.9114550815330337,
+            0.11999533792254742,
+            0.5522423880370134
+          ],
+          [
+            1.0514005661144599,
+            0.13841951049377058,
+            1.2938750172023985
+          ],
+          [
+            0.43445792515596626,
+            0.05719747094342086,
+            1.6492234839480482
+          ]
+        ],
+        "solver": {
+          "method": "scipy-hybr-original-full-initial-analytic-product-jacobian",
+          "reportedSuccess": true,
+          "message": "The solution converged.",
+          "nfev": 34,
+          "initialJacobianRank": 19,
+          "variables": 21,
+          "initialSingularJacobian": true,
+          "initialCoordinatesExactlyOriginalRx90": true,
+          "stationaryAnchorUntranslated": [
+            0,
+            0,
+            0
+          ]
+        },
+        "residuals": {
+          "maximumOriginalConstraint": 6.106226635438361e-15,
+          "maximumMinimumDiagonalError": 2.9043434324194095e-13,
+          "shape": [
+            5.360422273768695e-28,
+            -1.9906221608455745e-29,
+            1.29559324489726e-28,
+            1.3927220479807264e-27,
+            1.1970608454865728e-27,
+            -4.3102810011297303e-29,
+            9.958194460178548e-20,
+            -1.0396855390397123e-17,
+            -2.1591280302746493e-18,
+            0
+          ],
+          "edges": [
+            8.881784197001252e-16,
+            4.440892098500626e-16,
+            -6.106226635438361e-15,
+            1.7763568394002505e-15,
+            -1.1102230246251565e-16,
+            4.440892098500626e-16,
+            1.3322676295501878e-15,
+            2.220446049250313e-15,
+            0
+          ],
+          "diagonalProduct": [
+            -6.186017000218648e-17,
+            1.2934530088598948e-15
+          ],
+          "diagonalErrors": [
+            [
+              -0.004353022477670665,
+              1.4210854715202004e-14
+            ],
+            [
+              -2.9043434324194095e-13,
+              -0.004453512606057086
+            ]
+          ]
+        },
+        "source": {
+          "notebookSHA256": "19b3b06baffb8d59d663f2bfaa5ea55df77da2a84a5a4cc008dcedf019c8dba9",
+          "definitionCell": "In[2667]",
+          "savedExampleCells": [
+            "In[2669]"
+          ],
+          "originalDiagonalConstraint": "error13 * error24 == 0; not both errors zero",
+          "unitConvention": "1 original unit = 1 mm, unchanged",
+          "WolframExecuted": false,
+          "originalWolframBranchUniquelyCertified": false,
+          "rigidSceneCertified": false,
+          "continuousMotionCertified": false,
+          "wholeLayerOrderCertified": false
+        },
+        "numericalPolicy": {
+          "originalConstraintAbsolute": 2e-09,
+          "minimumOneDiagonalRelative": 2e-08,
+          "maxfev": 6000,
+          "xtol": 1e-11,
+          "intervalCertificate": false
+        }
+      }
+    },
+    "trapezoid-closed-n18-spread10": {
+      "recipe": {
+        "base": {
+          "model": "flat-strip",
+          "pathMm": [
+            [
+              0.1,
+              0
+            ],
+            [
+              1,
+              0
+            ],
+            [
+              1,
+              1
+            ]
+          ],
+          "widthMm": 0.1,
+          "spreadAngleDeg": 10,
+          "edgeTypes": "automatic"
+        },
+        "repetitionPairs": 18,
+        "arcDeg": 360,
+        "splitBentFaces": false,
+        "splitBendToleranceDeg": 1
+      },
+      "result": {
+        "schema": "original-in2667-engineering-root-v1",
+        "sourceKey": "{\"base\":{\"model\":\"flat-strip\",\"pathMm\":[[0.1,0],[1,0],[1,1]],\"widthMm\":0.1,\"spreadAngleDeg\":10,\"edgeTypes\":\"automatic\"},\"repetitionPairs\":18,\"arcDeg\":360,\"splitBentFaces\":false,\"splitBendToleranceDeg\":1}",
+        "query": {
+          "schema": "original-in2667-bounded-query-v1",
+          "sourceKey": "{\"base\":{\"model\":\"flat-strip\",\"pathMm\":[[0.1,0],[1,0],[1,1]],\"widthMm\":0.1,\"spreadAngleDeg\":10,\"edgeTypes\":\"automatic\"},\"repetitionPairs\":18,\"arcDeg\":360,\"splitBentFaces\":false,\"splitBendToleranceDeg\":1}",
+          "verticesMm": [
+            [
+              0,
+              -0.05
+            ],
+            [
+              0.781617343250344,
+              -0.11838265674965599
+            ],
+            [
+              1.9,
+              -0.2162284606992556
+            ],
+            [
+              0,
+              0.05
+            ],
+            [
+              1.04108295648225,
+              0.14108295648224972
+            ],
+            [
+              1.9,
+              0.2162284606992556
+            ]
+          ],
+          "edges": [
+            [
+              0,
+              1
+            ],
+            [
+              1,
+              2
+            ],
+            [
+              0,
+              3
+            ],
+            [
+              1,
+              4
+            ],
+            [
+              2,
+              5
+            ],
+            [
+              3,
+              4
+            ],
+            [
+              4,
+              5
+            ]
+          ],
+          "faces": [
+            [
+              0,
+              1,
+              4,
+              3
+            ],
+            [
+              1,
+              2,
+              5,
+              4
+            ]
+          ],
+          "flatVerticesMm": [
+            [
+              0.1,
+              -0.05
+            ],
+            [
+              0.881617343250344,
+              -0.11838265674965599
+            ],
+            [
+              0.7837715393007456,
+              1.0000000000000004
+            ],
+            [
+              0.1,
+              0.05
+            ],
+            [
+              1.14108295648225,
+              0.14108295648224972
+            ],
+            [
+              1.216228460699257,
+              1.0000000000000004
+            ]
+          ],
+          "bottom": [
+            0,
+            1,
+            2
+          ],
+          "top": [
+            3,
+            4,
+            5
+          ],
+          "repetitionPairs": 18,
+          "arcDeg": 360
+        },
+        "solutionVertices3D": [
+          [
+            0.1,
+            -8.999739049562825e-27,
+            -0.05
+          ],
+          [
+            0.8759730641440906,
+            -1.905985748418238e-26,
+            0.06605025952878557
+          ],
+          [
+            0.8210631492369418,
+            1.7169389475514222e-28,
+            1.1873613089320507
+          ],
+          [
+            0.07678233073236017,
+            0.013538796549795847,
+            0.046320510908952964
+          ],
+          [
+            1.0722018478633193,
+            0.18905811454377594,
+            0.31180644493383797
+          ],
+          [
+            1.1977512175307319,
+            0.21119585582708175,
+            1.1645271557391341
+          ]
+        ],
+        "solver": {
+          "method": "scipy-hybr-original-full-initial-analytic-product-jacobian",
+          "reportedSuccess": true,
+          "message": "The solution converged.",
+          "nfev": 52,
+          "initialJacobianRank": 16,
+          "variables": 18,
+          "initialSingularJacobian": true,
+          "initialCoordinatesExactlyOriginalRx90": true,
+          "stationaryAnchorUntranslated": [
+            0.1,
+            0,
+            -0.05
+          ]
+        },
+        "residuals": {
+          "maximumOriginalConstraint": 2.220446049250313e-16,
+          "maximumMinimumDiagonalError": 9.992007221626409e-16,
+          "shape": [
+            0,
+            -8.999739049562825e-27,
+            0,
+            -1.905985748418238e-26,
+            1.7169389475514222e-28,
+            1.3353463512234423e-18,
+            -2.6947678178004154e-17,
+            1.0983427774996327e-19,
+            0
+          ],
+          "edges": [
+            2.220446049250313e-16,
+            0,
+            -1.1102230246251565e-16,
+            0,
+            2.220446049250313e-16,
+            0,
+            0
+          ],
+          "diagonalProduct": [
+            1.6963930627778236e-18,
+            2.9181066040430687e-18
+          ],
+          "diagonalErrors": [
+            [
+              -0.0038199375827000503,
+              -4.440892098500626e-16
+            ],
+            [
+              -0.002920440847687944,
+              -9.992007221626409e-16
+            ]
+          ]
+        },
+        "source": {
+          "notebookSHA256": "19b3b06baffb8d59d663f2bfaa5ea55df77da2a84a5a4cc008dcedf019c8dba9",
+          "definitionCell": "In[2667]",
+          "savedExampleCells": [
+            "In[2668]",
+            "In[2670]",
+            "In[2671]"
+          ],
+          "originalDiagonalConstraint": "error13 * error24 == 0; not both errors zero",
+          "unitConvention": "1 original unit = 1 mm, unchanged",
+          "WolframExecuted": false,
+          "originalWolframBranchUniquelyCertified": false,
+          "rigidSceneCertified": false,
+          "continuousMotionCertified": false,
+          "wholeLayerOrderCertified": false
+        },
+        "numericalPolicy": {
+          "originalConstraintAbsolute": 2e-09,
+          "minimumOneDiagonalRelative": 2e-08,
+          "maxfev": 6000,
+          "xtol": 1e-11,
+          "intervalCertificate": false
+        }
+      }
+    },
+    "trapezoid-spread4-phi45": {
+      "recipe": {
+        "base": {
+          "model": "flat-strip",
+          "pathMm": [
+            [
+              0.1,
+              0
+            ],
+            [
+              1,
+              0
+            ],
+            [
+              1,
+              1
+            ],
+            [
+              0.5,
+              1.2
+            ]
+          ],
+          "widthMm": 0.4,
+          "spreadAngleDeg": 4,
+          "edgeTypes": "automatic"
+        },
+        "repetitionPairs": 2,
+        "arcDeg": 45,
+        "splitBentFaces": false,
+        "splitBendToleranceDeg": 1
+      },
+      "result": {
+        "schema": "original-in2667-engineering-root-v1",
+        "sourceKey": "{\"base\":{\"model\":\"flat-strip\",\"pathMm\":[[0.1,0],[1,0],[1,1],[0.5,1.2]],\"widthMm\":0.4,\"spreadAngleDeg\":4,\"edgeTypes\":\"automatic\"},\"repetitionPairs\":2,\"arcDeg\":45,\"splitBentFaces\":false,\"splitBendToleranceDeg\":1}",
+        "query": {
+          "schema": "original-in2667-bounded-query-v1",
+          "sourceKey": "{\"base\":{\"model\":\"flat-strip\",\"pathMm\":[[0.1,0],[1,0],[1,1],[0.5,1.2]],\"widthMm\":0.4,\"spreadAngleDeg\":4,\"edgeTypes\":\"automatic\"},\"repetitionPairs\":2,\"arcDeg\":45,\"splitBentFaces\":false,\"splitBendToleranceDeg\":1}",
+          "verticesMm": [
+            [
+              0,
+              -0.2
+            ],
+            [
+              0.6763802801481815,
+              -0.22361971985181842
+            ],
+            [
+              2.3148020632214052,
+              -0.28083466926877676
+            ],
+            [
+              2.4385164807134503,
+              -0.2851548719248223
+            ],
+            [
+              0,
+              0.2
+            ],
+            [
+              1.1398027905135757,
+              0.23980279051357542
+            ],
+            [
+              1.5258893654638983,
+              0.253285230801274
+            ],
+            [
+              2.4385164807134503,
+              0.2851548719248223
+            ]
+          ],
+          "edges": [
+            [
+              0,
+              1
+            ],
+            [
+              1,
+              2
+            ],
+            [
+              2,
+              3
+            ],
+            [
+              0,
+              4
+            ],
+            [
+              1,
+              5
+            ],
+            [
+              2,
+              6
+            ],
+            [
+              3,
+              7
+            ],
+            [
+              4,
+              5
+            ],
+            [
+              5,
+              6
+            ],
+            [
+              6,
+              7
+            ]
+          ],
+          "faces": [
+            [
+              0,
+              1,
+              5,
+              4
+            ],
+            [
+              1,
+              2,
+              6,
+              5
+            ],
+            [
+              2,
+              3,
+              7,
+              6
+            ]
+          ],
+          "flatVerticesMm": [
+            [
+              0.1,
+              -0.2
+            ],
+            [
+              0.7763802801481815,
+              -0.22361971985181842
+            ],
+            [
+              0.7191653307312249,
+              1.4148020632214056
+            ],
+            [
+              0.6059038607498293,
+              1.464759651874569
+            ],
+            [
+              0.1,
+              0.2
+            ],
+            [
+              1.2398027905135758,
+              0.23980279051357542
+            ],
+            [
+              1.253285230801275,
+              0.6258893654638984
+            ],
+            [
+              0.3940961392501734,
+              0.9352403481254308
+            ]
+          ],
+          "bottom": [
+            0,
+            1,
+            2,
+            3
+          ],
+          "top": [
+            4,
+            5,
+            6,
+            7
+          ],
+          "repetitionPairs": 2,
+          "arcDeg": 45
+        },
+        "solutionVertices3D": [
+          [
+            0.1,
+            1.579091799536559e-30,
+            -0.2
+          ],
+          [
+            0.7762857319652384,
+            3.039558724836615e-29,
+            -0.17381253583386488
+          ],
+          [
+            0.750829952003614,
+            8.256764929647118e-29,
+            1.4654102961667672
+          ],
+          [
+            0.6450696459242355,
+            4.08061458138179e-30,
+            1.529742861049426
+          ],
+          [
+            0.07059223429074775,
+            0.014041668441392104,
+            0.198670308479791
+          ],
+          [
+            1.1863479260926253,
+            0.23597927451503153,
+            0.2797110304485502
+          ],
+          [
+            1.208824272342036,
+            0.24045009775754675,
+            0.6653526323949601
+          ],
+          [
+            0.3865236924403119,
+            0.07688434271162922,
+            1.0272530684041057
+          ]
+        ],
+        "solver": {
+          "method": "scipy-hybr-original-full-initial-analytic-product-jacobian",
+          "reportedSuccess": true,
+          "message": "The solution converged.",
+          "nfev": 33,
+          "initialJacobianRank": 21,
+          "variables": 24,
+          "initialSingularJacobian": true,
+          "initialCoordinatesExactlyOriginalRx90": true,
+          "stationaryAnchorUntranslated": [
+            0.1,
+            0,
+            -0.2
+          ]
+        },
+        "residuals": {
+          "maximumOriginalConstraint": 2.220446049250313e-16,
+          "maximumMinimumDiagonalError": 2.220446049250313e-14,
+          "shape": [
+            0,
+            1.579091799536559e-30,
+            0,
+            3.039558724836615e-29,
+            8.256764929647118e-29,
+            4.08061458138179e-30,
+            1.6630120219367286e-18,
+            -2.287852088816524e-17,
+            2.121870764981377e-17,
+            -1.6028579092604284e-18,
+            0
+          ],
+          "edges": [
+            0,
+            2.220446049250313e-16,
+            -2.220446049250313e-16,
+            -1.1102230246251565e-16,
+            0,
+            2.220446049250313e-16,
+            2.220446049250313e-16,
+            2.220446049250313e-16,
+            0,
+            -2.220446049250313e-16
+          ],
+          "diagonalProduct": [
+            9.943484155721304e-19,
+            -2.969754352054671e-18,
+            3.3450316298204552e-18
+          ],
+          "diagonalErrors": [
+            [
+              -0.00895629430769418,
+              -1.1102230246251565e-16
+            ],
+            [
+              2.220446049250313e-14,
+              -0.00013374584593295324
+            ],
+            [
+              -0.0075323416008009625,
+              -4.440892098500626e-16
+            ]
+          ]
+        },
+        "source": {
+          "notebookSHA256": "19b3b06baffb8d59d663f2bfaa5ea55df77da2a84a5a4cc008dcedf019c8dba9",
+          "definitionCell": "In[2667]",
+          "savedExampleCells": [
+            "In[2668]",
+            "In[2670]",
+            "In[2671]"
+          ],
+          "originalDiagonalConstraint": "error13 * error24 == 0; not both errors zero",
+          "unitConvention": "1 original unit = 1 mm, unchanged",
+          "WolframExecuted": false,
+          "originalWolframBranchUniquelyCertified": false,
+          "rigidSceneCertified": false,
+          "continuousMotionCertified": false,
+          "wholeLayerOrderCertified": false
+        },
+        "numericalPolicy": {
+          "originalConstraintAbsolute": 2e-09,
+          "minimumOneDiagonalRelative": 2e-08,
+          "maxfev": 6000,
+          "xtol": 1e-11,
+          "intervalCertificate": false
+        }
+      }
+    }
+  }
+}

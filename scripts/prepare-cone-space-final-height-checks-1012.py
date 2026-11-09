@@ -1,0 +1,10 @@
+from pathlib import Path
+import hashlib,json,difflib,shutil
+root=Path.cwd().resolve();work=root/'output/parallel/cone-space-check-snapshot-005-1012/work';out=root/'output/parallel/cone-space-final-height-delta-1012';assert not out.exists();out.mkdir();name='src/components/GenericSpacePaperBridgeDialog.css';sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+p=root/name;before=sha(p);assert before==sha(work/name);s=p.read_text(encoding='utf8');needle='.gsp-workspace>aside{gap:4px}.gsp-dialog .gsp-functions{padding:5px 0;gap:3px}';assert s.count(needle)==1
+new=s.replace(needle,'.gsp-workspace>aside{gap:2px}.gsp-dialog .gsp-functions{padding:5px 0;gap:2px}')+'\n.gsp-state{height:36px;min-height:36px;max-height:36px;overflow:auto;box-sizing:border-box}\n'
+dest=out/name;dest.parent.mkdir(parents=True,exist_ok=True);dest.write_text(new,encoding='utf8');patch=out/'final-height.patch';patch.write_text(''.join(difflib.unified_diff(s.splitlines(True),new.splitlines(True),fromfile='a/'+name,tofile='b/'+name)),encoding='utf8')
+(out/'manifest.json').write_text(json.dumps(dict(files=[dict(target=name,source=str(dest),baselineSha256=before,sha256=sha(dest),kind='replace')],patchSha256=sha(patch),reason='Leave hint above sidebar bottom; keep realtime status height fixed'),ensure_ascii=False,indent=2),encoding='utf8')
+saved=out/'before'/name;saved.parent.mkdir(parents=True,exist_ok=True);shutil.copy2(work/name,saved)
+text=(work/'scripts/run-cone-space-checks-006-1012.mjs').read_text(encoding='utf8').replace("file='../../../cone-space-checks-006-1012.json',log='../../../cone-space-checks-006-1012.log',baseFile='../../../cone-space-checks-005-1012.json'", "file='../../../cone-space-checks-007-1012.json',log='../../../cone-space-checks-007-1012.log',baseFile='../../../cone-space-checks-006-1012.json'").replace('parallel/cone-space-height-delta-1012/manifest.json','parallel/cone-space-final-height-delta-1012/manifest.json')
+q=work/'scripts/run-cone-space-checks-007-1012.mjs';assert not q.exists();q.write_text(text,encoding='utf8');print('Prepared final spacing and fixed status slots for the short viewport.')

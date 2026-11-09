@@ -1,0 +1,4 @@
+.icon.icon-wide{width:27px}
+.construction-icon-backdrop{display:none}
+/* Keep existing geometry black and legible in dark mode as well. */
+:root[data-theme="dark"] .construction-icon-backdrop{display:block}

@@ -1,0 +1,33 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import {blankDoc} from '../../src/app/state';
+import {computeFlatFold} from '../../src/core/flatFold';
+import {createDiagramProject,adoptDiagramPose,appendDiagramStep,updateDiagramAnnotations,updateDiagramFoldLink} from '../../src/app/diagramProject';
+import {reconcileDiagramFoldAnnotations,refreshDiagramFoldDrawing} from '../../src/app/diagramFoldTransactions';
+import {defaultModelView} from '../../src/app/modelViewState';
+import type {DiagramSymbolAnnotation} from '../../src/app/diagramAnnotations';
+
+for(const symbol of ['rotate','rotateCCW','flip'] as const)test(`${symbol} preserves later linked crease styling while reprojecting its material position`,()=>{
+  let n=0;const ids=()=>`direction-style-${++n}`,doc=blankDoc('direction',100,100),result=computeFlatFold(doc);
+  let project=createDiagramProject(doc,ids);
+  project=adoptDiagramPose(project,project.steps[0].id,project.steps[0].beforeId,result);
+  project=appendDiagramStep(project,ids);
+  const step=project.steps[1];
+  project=adoptDiagramPose(project,step.id,step.beforeId,result);
+  project=updateDiagramFoldLink(project,step.id,{enabled:true,layers:'top',selectedFaces:[]});
+  project=reconcileDiagramFoldAnnotations(project,step.id,[{id:'styled',kind:'line',a:[0,20],b:[100,20],style:'valley',color:'#ff0000',width:2}]);
+  const states=structuredClone(project.states),vertices=structuredClone(project.steps[1].pose!.result.geometry.vertices);
+  const instruction:DiagramSymbolAnnotation={id:'instruction',kind:'symbol',symbol,turnAngle:90,position:[130,50],size:30,rotation:0,color:'#000000',width:.7};
+  if(symbol==='flip')delete instruction.turnAngle;
+  project=updateDiagramAnnotations(project,project.steps[0].id,[instruction]);
+  project=refreshDiagramFoldDrawing(project,step.id,defaultModelView());
+  const lines=project.steps[1].annotations!.filter(a=>a.kind==='line'&&a.style===(symbol==='flip'?'mountain':'valley'));
+  assert.equal(lines.length,1);
+  const line=lines[0];assert.equal(line.color,'#ff0000');assert.equal(line.width,2);
+  assert.deepEqual(line.foldFaces,[0]);
+  const xs=[line.a[0],line.b[0]],ys=[line.a[1],line.b[1]];
+  if(symbol!=='flip')assert.ok(xs.every(x=>Math.abs(x-(symbol==='rotate'?80:20))<1e-8)&&Math.abs(ys[0]-ys[1])>99.9);
+  else assert.ok(ys.every(y=>Math.abs(y-20)<1e-8));
+  assert.deepEqual(project.states,states);assert.deepEqual(project.steps[1].pose!.result.geometry.vertices,vertices);
+  assert.deepEqual(project.steps[0].annotations,[instruction]);
+});

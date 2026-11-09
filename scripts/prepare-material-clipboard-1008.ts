@@ -1,0 +1,13 @@
+import fs from 'node:fs';
+import {materialCutFixture,materialSlitFixture} from '../tests/fixtures/materialModel';
+import {setStartingFace} from '../src/app/flatFoldSettings';
+import {exportDocument} from '../src/core/formats';
+import {blankDoc,exampleDoc} from '../src/app/state';
+import type {Doc,Point} from '../src/core/types';
+const source=setStartingFace(materialCutFixture().source,4);source.name='材料剪贴板原版';source.segments.push({id:'guide-keep',a:[0,0],b:[200,0],assignment:'A',angle:0});source.objects=[{id:'source-text',kind:'text',position:[10,230],text:'源注释不复制',fontSize:10,color:'#333333'}];
+const frameTarget=setStartingFace(materialCutFixture().source,3);frameTarget.name='异根材料目标';
+const target=setStartingFace(materialSlitFixture().source,4);target.name='材料剪贴板目标';target.objects=[{id:'target-text',kind:'text',position:[10,340],text:'目标注释保留',fontSize:10,color:'#333333'}];
+const noFF=structuredClone(target);noFF.name='缺少FF的剪贴板目标';delete (noFF.metadata!.materialTopology as {foldedVertices?:Point[]}).foldedVertices;
+const plain=blankDoc('普通纸张粘贴目标'),accordion=exampleDoc();accordion.name='普通手风琴粘贴目标';const empty:Doc={schemaVersion:2,name:'空材料粘贴目标',paper:{width:300,height:300},segments:[],objects:[]};
+for(const [name,doc] of [['source',source],['frame-target',frameTarget],['target',target],['no-ff',noFF],['plain',plain],['accordion',accordion],['empty',empty]] as const)fs.writeFileSync(`output/playwright/material-clipboard-${name}-1008.zhezhi.json`,exportDocument(doc,'json').text);
+console.log('Prepared genuine original, slit target, absent FF, ordinary square/accordion and empty clipboard targets.');

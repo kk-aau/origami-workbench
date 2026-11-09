@@ -1,0 +1,15 @@
+import fs from 'node:fs';
+import {editMaterialFaces} from '../src/core/materialFaceEdit';
+import {materialDoc,materialSlitFixture} from '../tests/fixtures/materialModel';
+import {materialCanonical} from '../src/core/materialFaceCommon';
+import {exportDocument} from '../src/core/formats';
+import {inspectMaterialTopology} from '../src/core/materialTopology';
+import type {MaterialCurveIntent} from '../src/core/materialCurves';
+import type {Point} from '../src/core/types';
+const p:Point[]=[[0,0],[100,0],[100,100],[0,100]],e:[number,number][]=[[0,1],[1,2],[2,3],[3,0]],source=materialDoc(materialCanonical(p,e,e.map(()=>'B'),e.map(()=>0),[[0,1,2,3]],[[0,1,2,3]]),p),recipe=(radius=20,center:Point=[45,50]):MaterialCurveIntent=>({kind:'material-face-curves',face:0,curves:[{kind:'ellipse',center,radii:[radius,15],rotation:13,assignment:'F'}],deviation:1,fixedPoint:[10,10],cpOnly:false,scope:'component'});
+const first=editMaterialFaces(source,recipe()).doc,two=editMaterialFaces(first,recipe(12,[70,50])).doc;two.name='参数曲线双组';two.segments.push({id:'model-aux',a:[4,6],b:[96,90],assignment:'A',angle:null,displayColor:'#765432'});two.metadata!.userNote='保留组外标注';
+const slit=materialSlitFixture().source,r=recipe(40,[150,95]);r.curves[0]={kind:'ellipse',center:[150,95],radii:[45,35],rotation:13,assignment:'F'};const cut=editMaterialFaces(slit,r).doc;cut.name='参数曲线切口';
+const manual=structuredClone(two),m=manual.metadata!.materialTopology as any;for(const q of m.graph.vertices_coords)q[0]+=7;for(const q of m.foldedVertices)q[0]+=7;for(const s of manual.segments){s.a[0]+=7;s.b[0]+=7;}if(manual.flatFold)for(const q of manual.flatFold.startingFace)q[0]+=7;manual.name='组外已移动材料';if(!inspectMaterialTopology(manual).ok)throw Error('Invalid moved source');
+let eight=structuredClone(source);for(let i=0;i<8;i++){const req=recipe(3,[20+(i%4)*20,30+Math.floor(i/4)*40]);req.curves[0]={kind:'ellipse',center:[20+(i%4)*20,30+Math.floor(i/4)*40],radii:[3,3],rotation:0,assignment:'F'};eight=editMaterialFaces(eight,req).doc;}eight.name='参数曲线八组';
+for(const [name,doc]of [['two',two],['slit',cut],['manual',manual],['base',source],['eight',eight]] as const)fs.writeFileSync(`output/playwright/material-network-model-curve-regression-${name}-initial-1009.zhezhi.json`,exportDocument(doc,'json').text);
+console.log('Prepared double groups, same-component slit, manual edit and original base projects.');

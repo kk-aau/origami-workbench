@@ -1,0 +1,4525 @@
+{
+  "family": "origamica-generic-uncurl",
+  "query": {
+    "family": "uncurl-generic-native",
+    "curve": [
+      "2*s",
+      "0",
+      "sqrt(0)"
+    ],
+    "normal": [
+      "0",
+      "0",
+      "3"
+    ],
+    "parameterStart": -0.5,
+    "parameterEnd": 0.5,
+    "segments": 32,
+    "initialPoint": [
+      0.0,
+      0.0
+    ],
+    "initialTangent": [
+      1.0,
+      0.0
+    ]
+  },
+  "source": {
+    "functions": [
+      "UncurlCurveInDevelopableSystem",
+      "Darboux3DSystemOld",
+      "RecoverCurve2DSystemOld"
+    ],
+    "definitionCells": [
+      "In[3841]",
+      "In[3802]",
+      "In[3645]"
+    ],
+    "ruleOrder": [
+      "Speed3D",
+      "Curvature3D",
+      "Torsion3D",
+      "NormalCurvature3D",
+      "GeodesicCurvature3D",
+      "FrenetDarbouxAngle",
+      "GeodesicTorsion3D",
+      "Curve3D",
+      "TangentVector3D",
+      "NormalVector3D",
+      "BinormalVector3D",
+      "SurfaceNormalVector3D",
+      "TangentNormalVector3D",
+      "Curve2D",
+      "Speed2D",
+      "LeftCurvature2D",
+      "Curvature2D",
+      "TangentVector2D",
+      "LeftNormalVector2D",
+      "NormalVector2D"
+    ],
+    "wolframNumericOutAvailable": false,
+    "simplification": "None",
+    "assumptions": [],
+    "sourceJetsConvention": "physical-derivatives",
+    "expressionDerivativeConvention": "safe-ast-chain-rule-constant-only-folding"
+  },
+  "normalization": {
+    "sourceOrigin": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "sourceScale": 2.0,
+    "recoveredOrigin": [
+      0.0,
+      0.0
+    ],
+    "recoveredScale": 2.0,
+    "anchorParameter": 0.0,
+    "sourceScaleConvention": "max-sampled-relative-radius-or-displayed-speed-span-or-one",
+    "recoveredScaleConvention": "sampled-maximum-speed-times-full-integration-span-or-one"
+  },
+  "sample": {
+    "parameters": [
+      -0.5,
+      -0.46875,
+      -0.4375,
+      -0.40625,
+      -0.375,
+      -0.34375,
+      -0.3125,
+      -0.28125,
+      -0.25,
+      -0.21875,
+      -0.1875,
+      -0.15625,
+      -0.125,
+      -0.09375,
+      -0.0625,
+      -0.03125,
+      0.0,
+      0.03125,
+      0.0625,
+      0.09375,
+      0.125,
+      0.15625,
+      0.1875,
+      0.21875,
+      0.25,
+      0.28125,
+      0.3125,
+      0.34375,
+      0.375,
+      0.40625,
+      0.4375,
+      0.46875,
+      0.5
+    ],
+    "rows": [
+      {
+        "s": -0.5,
+        "rules": {
+          "Speed3D": 2.0,
+          "Curvature3D": 0.0,
+          "Torsion3D": null,
+          "NormalCurvature3D": 0.0,
+          "GeodesicCurvature3D": 0.0,
+          "FrenetDarbouxAngle": null,
+          "GeodesicTorsion3D": null,
+          "Curve3D": [
+            -1.0,
+            0.0,
+            0.0
+          ],
+          "TangentVector3D": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "NormalVector3D": null,
+          "BinormalVector3D": null,
+          "SurfaceNormalVector3D": [
+            0.0,
+            0.0,
+            3.0
+          ],
+          "TangentNormalVector3D": [
+            0.0,
+            3.0,
+            0.0
+          ],
+          "Curve2D": [
+            -1.0000000000000002,
+            0.0
+          ],
+          "Speed2D": 2.0,
+          "LeftCurvature2D": 0.0,
+          "Curvature2D": 0.0,
+          "TangentVector2D": [
+            1.0,
+            0.0
+          ],
+          "LeftNormalVector2D": [
+            -0.0,
+            1.0
+          ],
+          "NormalVector2D": [
+            -0.0,
+            0.0
+          ]
+        },
+        "sourceJets": {
+          "curve": [
+            [
+              -1.0,
+              0.0,
+              0.0
+            ],
+            [
+              2.0,
+              0.0,
+              0.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.0
+            ]
+          ],
+          "normal": [
+            [
+              0.0,
+              0.0,
+              3.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.0
+            ]
+          ]
+        },
+        "sourceCurve": [
+          -1.0,
+          0.0,
+          0.0
+        ],
+        "normalizedSourceCurve": [
+          -0.5,
+          0.0,
+          0.0
+        ],
+        "recoveredCurve": [
+          -1.0000000000000002,
+          0.0
+        ],
+        "normalizedRecoveredCurve": [
+          -0.5000000000000001,
+          0.0
+        ],
+        "angle2D": 0.0,
+        "undefined": [
+          {
+            "key": "Torsion3D",
+            "code": "source-rule-undefined"
+          },
+          {
+            "key": "FrenetDarbouxAngle",
+            "code": "source-rule-undefined"
+          },
+          {
+            "key": "GeodesicTorsion3D",
+            "code": "source-rule-undefined"
+          },
+          {
+            "key": "NormalVector3D",
+            "code": "source-rule-undefined"
+          },
+          {
+            "key": "BinormalVector3D",
+            "code": "source-rule-undefined"
+          }
+        ],
+        "undefinedSourceJets": []
+      },
+      {
+        "s": -0.46875,
+        "rules": {
+          "Speed3D": 2.0,
+          "Curvature3D": 0.0,
+          "Torsion3D": null,
+          "NormalCurvature3D": 0.0,
+          "GeodesicCurvature3D": 0.0,
+          "FrenetDarbouxAngle": null,
+          "GeodesicTorsion3D": null,
+          "Curve3D": [
+            -0.9375,
+            0.0,
+            0.0
+          ],
+          "TangentVector3D": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "NormalVector3D": null,
+          "BinormalVector3D": null,
+          "SurfaceNormalVector3D": [
+            0.0,
+            0.0,
+            3.0
+          ],
+          "TangentNormalVector3D": [
+            0.0,
+            3.0,
+            0.0
+          ],
+          "Curve2D": [
+            -0.9375000000000001,
+            0.0
+          ],
+          "Speed2D": 2.0,
+          "LeftCurvature2D": 0.0,
+          "Curvature2D": 0.0,
+          "TangentVector2D": [
+            1.0,
+            0.0
+          ],
+          "LeftNormalVector2D": [
+            -0.0,
+            1.0
+          ],
+          "NormalVector2D": [
+            -0.0,
+            0.0
+          ]
+        },
+        "sourceJets": {
+          "curve": [
+            [
+              -0.9375,
+              0.0,
+              0.0
+            ],
+            [
+              2.0,
+              0.0,
+              0.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.0
+            ]
+          ],
+          "normal": [
+            [
+              0.0,
+              0.0,
+              3.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.0
+            ]
+          ]
+        },
+        "sourceCurve": [
+          -0.9375,
+          0.0,
+          0.0
+        ],
+        "normalizedSourceCurve": [
+          -0.46875,
+          0.0,
+          0.0
+        ],
+        "recoveredCurve": [
+          -0.9375000000000001,
+          0.0
+        ],
+        "normalizedRecoveredCurve": [
+          -0.46875000000000006,
+          0.0
+        ],
+        "angle2D": 0.0,
+        "undefined": [
+          {
+            "key": "Torsion3D",
+            "code": "source-rule-undefined"
+          },
+          {
+            "key": "FrenetDarbouxAngle",
+            "code": "source-rule-undefined"
+          },
+          {
+            "key": "GeodesicTorsion3D",
+            "code": "source-rule-undefined"
+          },
+          {
+            "key": "NormalVector3D",
+            "code": "source-rule-undefined"
+          },
+          {
+            "key": "BinormalVector3D",
+            "code": "source-rule-undefined"
+          }
+        ],
+        "undefinedSourceJets": []
+      },
+      {
+        "s": -0.4375,
+        "rules": {
+          "Speed3D": 2.0,
+          "Curvature3D": 0.0,
+          "Torsion3D": null,
+          "NormalCurvature3D": 0.0,
+          "GeodesicCurvature3D": 0.0,
+          "FrenetDarbouxAngle": null,
+          "GeodesicTorsion3D": null,
+          "Curve3D": [
+            -0.875,
+            0.0,
+            0.0
+          ],
+          "TangentVector3D": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "NormalVector3D": null,
+          "BinormalVector3D": null,
+          "SurfaceNormalVector3D": [
+            0.0,
+            0.0,
+            3.0
+          ],
+          "TangentNormalVector3D": [
+            0.0,
+            3.0,
+            0.0
+          ],
+          "Curve2D": [
+            -0.8750000000000001,
+            0.0
+          ],
+          "Speed2D": 2.0,
+          "LeftCurvature2D": 0.0,
+          "Curvature2D": 0.0,
+          "TangentVector2D": [
+            1.0,
+            0.0
+          ],
+          "LeftNormalVector2D": [
+            -0.0,
+            1.0
+          ],
+          "NormalVector2D": [
+            -0.0,
+            0.0
+          ]
+        },
+        "sourceJets": {
+          "curve": [
+            [
+              -0.875,
+              0.0,
+              0.0
+            ],
+            [
+              2.0,
+              0.0,
+              0.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.0
+            ]
+          ],
+          "normal": [
+            [
+              0.0,
+              0.0,
+              3.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.0
+            ]
+          ]
+        },
+        "sourceCurve": [
+          -0.875,
+          0.0,
+          0.0
+        ],
+        "normalizedSourceCurve": [
+          -0.4375,
+          0.0,
+          0.0
+        ],
+        "recoveredCurve": [
+          -0.8750000000000001,
+          0.0
+        ],
+        "normalizedRecoveredCurve": [
+          -0.43750000000000006,
+          0.0
+        ],
+        "angle2D": 0.0,
+        "undefined": [
+          {
+            "key": "Torsion3D",
+            "code": "source-rule-undefined"
+          },
+          {
+            "key": "FrenetDarbouxAngle",
+            "code": "source-rule-undefined"
+          },
+          {
+            "key": "GeodesicTorsion3D",
+            "code": "source-rule-undefined"
+          },
+          {
+            "key": "NormalVector3D",
+            "code": "source-rule-undefined"
+          },
+          {
+            "key": "BinormalVector3D",
+            "code": "source-rule-undefined"
+          }
+        ],
+        "undefinedSourceJets": []
+      },
+      {
+        "s": -0.40625,
+        "rules": {
+          "Speed3D": 2.0,
+          "Curvature3D": 0.0,
+          "Torsion3D": null,
+          "NormalCurvature3D": 0.0,
+          "GeodesicCurvature3D": 0.0,
+          "FrenetDarbouxAngle": null,
+          "GeodesicTorsion3D": null,
+          "Curve3D": [
+            -0.8125,
+            0.0,
+            0.0
+          ],
+          "TangentVector3D": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "NormalVector3D": null,
+          "BinormalVector3D": null,
+          "SurfaceNormalVector3D": [
+            0.0,
+            0.0,
+            3.0
+          ],
+          "TangentNormalVector3D": [
+            0.0,
+            3.0,
+            0.0
+          ],
+          "Curve2D": [
+            -0.8125000000000001,
+            0.0
+          ],
+          "Speed2D": 2.0,
+          "LeftCurvature2D": 0.0,
+          "Curvature2D": 0.0,
+          "TangentVector2D": [
+            1.0,
+            0.0
+          ],
+          "LeftNormalVector2D": [
+            -0.0,
+            1.0
+          ],
+          "NormalVector2D": [
+            -0.0,
+            0.0
+          ]
+        },
+        "sourceJets": {
+          "curve": [
+            [
+              -0.8125,
+              0.0,
+              0.0
+            ],
+            [
+              2.0,
+              0.0,
+              0.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.0
+            ]
+          ],
+          "normal": [
+            [
+              0.0,
+              0.0,
+              3.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.0
+            ]
+          ]
+        },
+        "sourceCurve": [
+          -0.8125,
+          0.0,
+          0.0
+        ],
+        "normalizedSourceCurve": [
+          -0.40625,
+          0.0,
+          0.0
+        ],
+        "recoveredCurve": [
+          -0.8125000000000001,
+          0.0
+        ],
+        "normalizedRecoveredCurve": [
+          -0.40625000000000006,
+          0.0
+        ],
+        "angle2D": 0.0,
+        "undefined": [
+          {
+            "key": "Torsion3D",
+            "code": "source-rule-undefined"
+          },
+          {
+            "key": "FrenetDarbouxAngle",
+            "code": "source-rule-undefined"
+          },
+          {
+            "key": "GeodesicTorsion3D",
+            "code": "source-rule-undefined"
+          },
+          {
+            "key": "NormalVector3D",
+            "code": "source-rule-undefined"
+          },
+          {
+            "key": "BinormalVector3D",
+            "code": "source-rule-undefined"
+          }
+        ],
+        "undefinedSourceJets": []
+      },
+      {
+        "s": -0.375,
+        "rules": {
+          "Speed3D": 2.0,
+          "Curvature3D": 0.0,
+          "Torsion3D": null,
+          "NormalCurvature3D": 0.0,
+          "GeodesicCurvature3D": 0.0,
+          "FrenetDarbouxAngle": null,
+          "GeodesicTorsion3D": null,
+          "Curve3D": [
+            -0.75,
+            0.0,
+            0.0
+          ],
+          "TangentVector3D": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "NormalVector3D": null,
+          "BinormalVector3D": null,
+          "SurfaceNormalVector3D": [
+            0.0,
+            0.0,
+            3.0
+          ],
+          "TangentNormalVector3D": [
+            0.0,
+            3.0,
+            0.0
+          ],
+          "Curve2D": [
+            -0.7500000000000001,
+            0.0
+          ],
+          "Speed2D": 2.0,
+          "LeftCurvature2D": 0.0,
+          "Curvature2D": 0.0,
+          "TangentVector2D": [
+            1.0,
+            0.0
+          ],
+          "LeftNormalVector2D": [
+            -0.0,
+            1.0
+          ],
+          "NormalVector2D": [
+            -0.0,
+            0.0
+          ]
+        },
+        "sourceJets": {
+          "curve": [
+            [
+              -0.75,
+              0.0,
+              0.0
+            ],
+            [
+              2.0,
+              0.0,
+              0.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.0
+            ]
+          ],
+          "normal": [
+            [
+              0.0,
+              0.0,
+              3.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.0
+            ]
+          ]
+        },
+        "sourceCurve": [
+          -0.75,
+          0.0,
+          0.0
+        ],
+        "normalizedSourceCurve": [
+          -0.375,
+          0.0,
+          0.0
+        ],
+        "recoveredCurve": [
+          -0.7500000000000001,
+          0.0
+        ],
+        "normalizedRecoveredCurve": [
+          -0.37500000000000006,
+          0.0
+        ],
+        "angle2D": 0.0,
+        "undefined": [
+          {
+            "key": "Torsion3D",
+            "code": "source-rule-undefined"
+          },
+          {
+            "key": "FrenetDarbouxAngle",
+            "code": "source-rule-undefined"
+          },
+          {
+            "key": "GeodesicTorsion3D",
+            "code": "source-rule-undefined"
+          },
+          {
+            "key": "NormalVector3D",
+            "code": "source-rule-undefined"
+          },
+          {
+            "key": "BinormalVector3D",
+            "code": "source-rule-undefined"
+          }
+        ],
+        "undefinedSourceJets": []
+      },
+      {
+        "s": -0.34375,
+        "rules": {
+          "Speed3D": 2.0,
+          "Curvature3D": 0.0,
+          "Torsion3D": null,
+          "NormalCurvature3D": 0.0,
+          "GeodesicCurvature3D": 0.0,
+          "FrenetDarbouxAngle": null,
+          "GeodesicTorsion3D": null,
+          "Curve3D": [
+            -0.6875,
+            0.0,
+            0.0
+          ],
+          "TangentVector3D": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "NormalVector3D": null,
+          "BinormalVector3D": null,
+          "SurfaceNormalVector3D": [
+            0.0,
+            0.0,
+            3.0
+          ],
+          "TangentNormalVector3D": [
+            0.0,
+            3.0,
+            0.0
+          ],
+          "Curve2D": [
+            -0.6875000000000001,
+            0.0
+          ],
+          "Speed2D": 2.0,
+          "LeftCurvature2D": 0.0,
+          "Curvature2D": 0.0,
+          "TangentVector2D": [
+            1.0,
+            0.0
+          ],
+          "LeftNormalVector2D": [
+            -0.0,
+            1.0
+          ],
+          "NormalVector2D": [
+            -0.0,
+            0.0
+          ]
+        },
+        "sourceJets": {
+          "curve": [
+            [
+              -0.6875,
+              0.0,
+              0.0
+            ],
+            [
+              2.0,
+              0.0,
+              0.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.0
+            ]
+          ],
+          "normal": [
+            [
+              0.0,
+              0.0,
+              3.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.0
+            ]
+          ]
+        },
+        "sourceCurve": [
+          -0.6875,
+          0.0,
+          0.0
+        ],
+        "normalizedSourceCurve": [
+          -0.34375,
+          0.0,
+          0.0
+        ],
+        "recoveredCurve": [
+          -0.6875000000000001,
+          0.0
+        ],
+        "normalizedRecoveredCurve": [
+          -0.34375000000000006,
+          0.0
+        ],
+        "angle2D": 0.0,
+        "undefined": [
+          {
+            "key": "Torsion3D",
+            "code": "source-rule-undefined"
+          },
+          {
+            "key": "FrenetDarbouxAngle",
+            "code": "source-rule-undefined"
+          },
+          {
+            "key": "GeodesicTorsion3D",
+            "code": "source-rule-undefined"
+          },
+          {
+            "key": "NormalVector3D",
+            "code": "source-rule-undefined"
+          },
+          {
+            "key": "BinormalVector3D",
+            "code": "source-rule-undefined"
+          }
+        ],
+        "undefinedSourceJets": []
+      },
+      {
+        "s": -0.3125,
+        "rules": {
+          "Speed3D": 2.0,
+          "Curvature3D": 0.0,
+          "Torsion3D": null,
+          "NormalCurvature3D": 0.0,
+          "GeodesicCurvature3D": 0.0,
+          "FrenetDarbouxAngle": null,
+          "GeodesicTorsion3D": null,
+          "Curve3D": [
+            -0.625,
+            0.0,
+            0.0
+          ],
+          "TangentVector3D": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "NormalVector3D": null,
+          "BinormalVector3D": null,
+          "SurfaceNormalVector3D": [
+            0.0,
+            0.0,
+            3.0
+          ],
+          "TangentNormalVector3D": [
+            0.0,
+            3.0,
+            0.0
+          ],
+          "Curve2D": [
+            -0.6250000000000001,
+            0.0
+          ],
+          "Speed2D": 2.0,
+          "LeftCurvature2D": 0.0,
+          "Curvature2D": 0.0,
+          "TangentVector2D": [
+            1.0,
+            0.0
+          ],
+          "LeftNormalVector2D": [
+            -0.0,
+            1.0
+          ],
+          "NormalVector2D": [
+            -0.0,
+            0.0
+          ]
+        },
+        "sourceJets": {
+          "curve": [
+            [
+              -0.625,
+              0.0,
+              0.0
+            ],
+            [
+              2.0,
+              0.0,
+              0.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.0
+            ]
+          ],
+          "normal": [
+            [
+              0.0,
+              0.0,
+              3.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.0
+            ]
+          ]
+        },
+        "sourceCurve": [
+          -0.625,
+          0.0,
+          0.0
+        ],
+        "normalizedSourceCurve": [
+          -0.3125,
+          0.0,
+          0.0
+        ],
+        "recoveredCurve": [
+          -0.6250000000000001,
+          0.0
+        ],
+        "normalizedRecoveredCurve": [
+          -0.31250000000000006,
+          0.0
+        ],
+        "angle2D": 0.0,
+        "undefined": [
+          {
+            "key": "Torsion3D",
+            "code": "source-rule-undefined"
+          },
+          {
+            "key": "FrenetDarbouxAngle",
+            "code": "source-rule-undefined"
+          },
+          {
+            "key": "GeodesicTorsion3D",
+            "code": "source-rule-undefined"
+          },
+          {
+            "key": "NormalVector3D",
+            "code": "source-rule-undefined"
+          },
+          {
+            "key": "BinormalVector3D",
+            "code": "source-rule-undefined"
+          }
+        ],
+        "undefinedSourceJets": []
+      },
+      {
+        "s": -0.28125,
+        "rules": {
+          "Speed3D": 2.0,
+          "Curvature3D": 0.0,
+          "Torsion3D": null,
+          "NormalCurvature3D": 0.0,
+          "GeodesicCurvature3D": 0.0,
+          "FrenetDarbouxAngle": null,
+          "GeodesicTorsion3D": null,
+          "Curve3D": [
+            -0.5625,
+            0.0,
+            0.0
+          ],
+          "TangentVector3D": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "NormalVector3D": null,
+          "BinormalVector3D": null,
+          "SurfaceNormalVector3D": [
+            0.0,
+            0.0,
+            3.0
+          ],
+          "TangentNormalVector3D": [
+            0.0,
+            3.0,
+            0.0
+          ],
+          "Curve2D": [
+            -0.5625000000000001,
+            0.0
+          ],
+          "Speed2D": 2.0,
+          "LeftCurvature2D": 0.0,
+          "Curvature2D": 0.0,
+          "TangentVector2D": [
+            1.0,
+            0.0
+          ],
+          "LeftNormalVector2D": [
+            -0.0,
+            1.0
+          ],
+          "NormalVector2D": [
+            -0.0,
+            0.0
+          ]
+        },
+        "sourceJets": {
+          "curve": [
+            [
+              -0.5625,
+              0.0,
+              0.0
+            ],
+            [
+              2.0,
+              0.0,
+              0.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.0
+            ]
+          ],
+          "normal": [
+            [
+              0.0,
+              0.0,
+              3.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.0
+            ]
+          ]
+        },
+        "sourceCurve": [
+          -0.5625,
+          0.0,
+          0.0
+        ],
+        "normalizedSourceCurve": [
+          -0.28125,
+          0.0,
+          0.0
+        ],
+        "recoveredCurve": [
+          -0.5625000000000001,
+          0.0
+        ],
+        "normalizedRecoveredCurve": [
+          -0.28125000000000006,
+          0.0
+        ],
+        "angle2D": 0.0,
+        "undefined": [
+          {
+            "key": "Torsion3D",
+            "code": "source-rule-undefined"
+          },
+          {
+            "key": "FrenetDarbouxAngle",
+            "code": "source-rule-undefined"
+          },
+          {
+            "key": "GeodesicTorsion3D",
+            "code": "source-rule-undefined"
+          },
+          {
+            "key": "NormalVector3D",
+            "code": "source-rule-undefined"
+          },
+          {
+            "key": "BinormalVector3D",
+            "code": "source-rule-undefined"
+          }
+        ],
+        "undefinedSourceJets": []
+      },
+      {
+        "s": -0.25,
+        "rules": {
+          "Speed3D": 2.0,
+          "Curvature3D": 0.0,
+          "Torsion3D": null,
+          "NormalCurvature3D": 0.0,
+          "GeodesicCurvature3D": 0.0,
+          "FrenetDarbouxAngle": null,
+          "GeodesicTorsion3D": null,
+          "Curve3D": [
+            -0.5,
+            0.0,
+            0.0
+          ],
+          "TangentVector3D": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "NormalVector3D": null,
+          "BinormalVector3D": null,
+          "SurfaceNormalVector3D": [
+            0.0,
+            0.0,
+            3.0
+          ],
+          "TangentNormalVector3D": [
+            0.0,
+            3.0,
+            0.0
+          ],
+          "Curve2D": [
+            -0.5,
+            0.0
+          ],
+          "Speed2D": 2.0,
+          "LeftCurvature2D": 0.0,
+          "Curvature2D": 0.0,
+          "TangentVector2D": [
+            1.0,
+            0.0
+          ],
+          "LeftNormalVector2D": [
+            -0.0,
+            1.0
+          ],
+          "NormalVector2D": [
+            -0.0,
+            0.0
+          ]
+        },
+        "sourceJets": {
+          "curve": [
+            [
+              -0.5,
+              0.0,
+              0.0
+            ],
+            [
+              2.0,
+              0.0,
+              0.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.0
+            ]
+          ],
+          "normal": [
+            [
+              0.0,
+              0.0,
+              3.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.0
+            ]
+          ]
+        },
+        "sourceCurve": [
+          -0.5,
+          0.0,
+          0.0
+        ],
+        "normalizedSourceCurve": [
+          -0.25,
+          0.0,
+          0.0
+        ],
+        "recoveredCurve": [
+          -0.5,
+          0.0
+        ],
+        "normalizedRecoveredCurve": [
+          -0.25,
+          0.0
+        ],
+        "angle2D": 0.0,
+        "undefined": [
+          {
+            "key": "Torsion3D",
+            "code": "source-rule-undefined"
+          },
+          {
+            "key": "FrenetDarbouxAngle",
+            "code": "source-rule-undefined"
+          },
+          {
+            "key": "GeodesicTorsion3D",
+            "code": "source-rule-undefined"
+          },
+          {
+            "key": "NormalVector3D",
+            "code": "source-rule-undefined"
+          },
+          {
+            "key": "BinormalVector3D",
+            "code": "source-rule-undefined"
+          }
+        ],
+        "undefinedSourceJets": []
+      },
+      {
+        "s": -0.21875,
+        "rules": {
+          "Speed3D": 2.0,
+          "Curvature3D": 0.0,
+          "Torsion3D": null,
+          "NormalCurvature3D": 0.0,
+          "GeodesicCurvature3D": 0.0,
+          "FrenetDarbouxAngle": null,
+          "GeodesicTorsion3D": null,
+          "Curve3D": [
+            -0.4375,
+            0.0,
+            0.0
+          ],
+          "TangentVector3D": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "NormalVector3D": null,
+          "BinormalVector3D": null,
+          "SurfaceNormalVector3D": [
+            0.0,
+            0.0,
+            3.0
+          ],
+          "TangentNormalVector3D": [
+            0.0,
+            3.0,
+            0.0
+          ],
+          "Curve2D": [
+            -0.43750000000000006,
+            0.0
+          ],
+          "Speed2D": 2.0,
+          "LeftCurvature2D": 0.0,
+          "Curvature2D": 0.0,
+          "TangentVector2D": [
+            1.0,
+            0.0
+          ],
+          "LeftNormalVector2D": [
+            -0.0,
+            1.0
+          ],
+          "NormalVector2D": [
+            -0.0,
+            0.0
+          ]
+        },
+        "sourceJets": {
+          "curve": [
+            [
+              -0.4375,
+              0.0,
+              0.0
+            ],
+            [
+              2.0,
+              0.0,
+              0.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.0
+            ]
+          ],
+          "normal": [
+            [
+              0.0,
+              0.0,
+              3.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.0
+            ]
+          ]
+        },
+        "sourceCurve": [
+          -0.4375,
+          0.0,
+          0.0
+        ],
+        "normalizedSourceCurve": [
+          -0.21875,
+          0.0,
+          0.0
+        ],
+        "recoveredCurve": [
+          -0.43750000000000006,
+          0.0
+        ],
+        "normalizedRecoveredCurve": [
+          -0.21875000000000003,
+          0.0
+        ],
+        "angle2D": 0.0,
+        "undefined": [
+          {
+            "key": "Torsion3D",
+            "code": "source-rule-undefined"
+          },
+          {
+            "key": "FrenetDarbouxAngle",
+            "code": "source-rule-undefined"
+          },
+          {
+            "key": "GeodesicTorsion3D",
+            "code": "source-rule-undefined"
+          },
+          {
+            "key": "NormalVector3D",
+            "code": "source-rule-undefined"
+          },
+          {
+            "key": "BinormalVector3D",
+            "code": "source-rule-undefined"
+          }
+        ],
+        "undefinedSourceJets": []
+      },
+      {
+        "s": -0.1875,
+        "rules": {
+          "Speed3D": 2.0,
+          "Curvature3D": 0.0,
+          "Torsion3D": null,
+          "NormalCurvature3D": 0.0,
+          "GeodesicCurvature3D": 0.0,
+          "FrenetDarbouxAngle": null,
+          "GeodesicTorsion3D": null,
+          "Curve3D": [
+            -0.375,
+            0.0,
+            0.0
+          ],
+          "TangentVector3D": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "NormalVector3D": null,
+          "BinormalVector3D": null,
+          "SurfaceNormalVector3D": [
+            0.0,
+            0.0,
+            3.0
+          ],
+          "TangentNormalVector3D": [
+            0.0,
+            3.0,
+            0.0
+          ],
+          "Curve2D": [
+            -0.37500000000000006,
+            0.0
+          ],
+          "Speed2D": 2.0,
+          "LeftCurvature2D": 0.0,
+          "Curvature2D": 0.0,
+          "TangentVector2D": [
+            1.0,
+            0.0
+          ],
+          "LeftNormalVector2D": [
+            -0.0,
+            1.0
+          ],
+          "NormalVector2D": [
+            -0.0,
+            0.0
+          ]
+        },
+        "sourceJets": {
+          "curve": [
+            [
+              -0.375,
+              0.0,
+              0.0
+            ],
+            [
+              2.0,
+              0.0,
+              0.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.0
+            ]
+          ],
+          "normal": [
+            [
+              0.0,
+              0.0,
+              3.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.0
+            ]
+          ]
+        },
+        "sourceCurve": [
+          -0.375,
+          0.0,
+          0.0
+        ],
+        "normalizedSourceCurve": [
+          -0.1875,
+          0.0,
+          0.0
+        ],
+        "recoveredCurve": [
+          -0.37500000000000006,
+          0.0
+        ],
+        "normalizedRecoveredCurve": [
+          -0.18750000000000003,
+          0.0
+        ],
+        "angle2D": 0.0,
+        "undefined": [
+          {
+            "key": "Torsion3D",
+            "code": "source-rule-undefined"
+          },
+          {
+            "key": "FrenetDarbouxAngle",
+            "code": "source-rule-undefined"
+          },
+          {
+            "key": "GeodesicTorsion3D",
+            "code": "source-rule-undefined"
+          },
+          {
+            "key": "NormalVector3D",
+            "code": "source-rule-undefined"
+          },
+          {
+            "key": "BinormalVector3D",
+            "code": "source-rule-undefined"
+          }
+        ],
+        "undefinedSourceJets": []
+      },
+      {
+        "s": -0.15625,
+        "rules": {
+          "Speed3D": 2.0,
+          "Curvature3D": 0.0,
+          "Torsion3D": null,
+          "NormalCurvature3D": 0.0,
+          "GeodesicCurvature3D": 0.0,
+          "FrenetDarbouxAngle": null,
+          "GeodesicTorsion3D": null,
+          "Curve3D": [
+            -0.3125,
+            0.0,
+            0.0
+          ],
+          "TangentVector3D": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "NormalVector3D": null,
+          "BinormalVector3D": null,
+          "SurfaceNormalVector3D": [
+            0.0,
+            0.0,
+            3.0
+          ],
+          "TangentNormalVector3D": [
+            0.0,
+            3.0,
+            0.0
+          ],
+          "Curve2D": [
+            -0.31250000000000006,
+            0.0
+          ],
+          "Speed2D": 2.0,
+          "LeftCurvature2D": 0.0,
+          "Curvature2D": 0.0,
+          "TangentVector2D": [
+            1.0,
+            0.0
+          ],
+          "LeftNormalVector2D": [
+            -0.0,
+            1.0
+          ],
+          "NormalVector2D": [
+            -0.0,
+            0.0
+          ]
+        },
+        "sourceJets": {
+          "curve": [
+            [
+              -0.3125,
+              0.0,
+              0.0
+            ],
+            [
+              2.0,
+              0.0,
+              0.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.0
+            ]
+          ],
+          "normal": [
+            [
+              0.0,
+              0.0,
+              3.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.0
+            ]
+          ]
+        },
+        "sourceCurve": [
+          -0.3125,
+          0.0,
+          0.0
+        ],
+        "normalizedSourceCurve": [
+          -0.15625,
+          0.0,
+          0.0
+        ],
+        "recoveredCurve": [
+          -0.31250000000000006,
+          0.0
+        ],
+        "normalizedRecoveredCurve": [
+          -0.15625000000000003,
+          0.0
+        ],
+        "angle2D": 0.0,
+        "undefined": [
+          {
+            "key": "Torsion3D",
+            "code": "source-rule-undefined"
+          },
+          {
+            "key": "FrenetDarbouxAngle",
+            "code": "source-rule-undefined"
+          },
+          {
+            "key": "GeodesicTorsion3D",
+            "code": "source-rule-undefined"
+          },
+          {
+            "key": "NormalVector3D",
+            "code": "source-rule-undefined"
+          },
+          {
+            "key": "BinormalVector3D",
+            "code": "source-rule-undefined"
+          }
+        ],
+        "undefinedSourceJets": []
+      },
+      {
+        "s": -0.125,
+        "rules": {
+          "Speed3D": 2.0,
+          "Curvature3D": 0.0,
+          "Torsion3D": null,
+          "NormalCurvature3D": 0.0,
+          "GeodesicCurvature3D": 0.0,
+          "FrenetDarbouxAngle": null,
+          "GeodesicTorsion3D": null,
+          "Curve3D": [
+            -0.25,
+            0.0,
+            0.0
+          ],
+          "TangentVector3D": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "NormalVector3D": null,
+          "BinormalVector3D": null,
+          "SurfaceNormalVector3D": [
+            0.0,
+            0.0,
+            3.0
+          ],
+          "TangentNormalVector3D": [
+            0.0,
+            3.0,
+            0.0
+          ],
+          "Curve2D": [
+            -0.25000000000000006,
+            0.0
+          ],
+          "Speed2D": 2.0,
+          "LeftCurvature2D": 0.0,
+          "Curvature2D": 0.0,
+          "TangentVector2D": [
+            1.0,
+            0.0
+          ],
+          "LeftNormalVector2D": [
+            -0.0,
+            1.0
+          ],
+          "NormalVector2D": [
+            -0.0,
+            0.0
+          ]
+        },
+        "sourceJets": {
+          "curve": [
+            [
+              -0.25,
+              0.0,
+              0.0
+            ],
+            [
+              2.0,
+              0.0,
+              0.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.0
+            ]
+          ],
+          "normal": [
+            [
+              0.0,
+              0.0,
+              3.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.0
+            ]
+          ]
+        },
+        "sourceCurve": [
+          -0.25,
+          0.0,
+          0.0
+        ],
+        "normalizedSourceCurve": [
+          -0.125,
+          0.0,
+          0.0
+        ],
+        "recoveredCurve": [
+          -0.25000000000000006,
+          0.0
+        ],
+        "normalizedRecoveredCurve": [
+          -0.12500000000000003,
+          0.0
+        ],
+        "angle2D": 0.0,
+        "undefined": [
+          {
+            "key": "Torsion3D",
+            "code": "source-rule-undefined"
+          },
+          {
+            "key": "FrenetDarbouxAngle",
+            "code": "source-rule-undefined"
+          },
+          {
+            "key": "GeodesicTorsion3D",
+            "code": "source-rule-undefined"
+          },
+          {
+            "key": "NormalVector3D",
+            "code": "source-rule-undefined"
+          },
+          {
+            "key": "BinormalVector3D",
+            "code": "source-rule-undefined"
+          }
+        ],
+        "undefinedSourceJets": []
+      },
+      {
+        "s": -0.09375,
+        "rules": {
+          "Speed3D": 2.0,
+          "Curvature3D": 0.0,
+          "Torsion3D": null,
+          "NormalCurvature3D": 0.0,
+          "GeodesicCurvature3D": 0.0,
+          "FrenetDarbouxAngle": null,
+          "GeodesicTorsion3D": null,
+          "Curve3D": [
+            -0.1875,
+            0.0,
+            0.0
+          ],
+          "TangentVector3D": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "NormalVector3D": null,
+          "BinormalVector3D": null,
+          "SurfaceNormalVector3D": [
+            0.0,
+            0.0,
+            3.0
+          ],
+          "TangentNormalVector3D": [
+            0.0,
+            3.0,
+            0.0
+          ],
+          "Curve2D": [
+            -0.18750000000000006,
+            0.0
+          ],
+          "Speed2D": 2.0,
+          "LeftCurvature2D": 0.0,
+          "Curvature2D": 0.0,
+          "TangentVector2D": [
+            1.0,
+            0.0
+          ],
+          "LeftNormalVector2D": [
+            -0.0,
+            1.0
+          ],
+          "NormalVector2D": [
+            -0.0,
+            0.0
+          ]
+        },
+        "sourceJets": {
+          "curve": [
+            [
+              -0.1875,
+              0.0,
+              0.0
+            ],
+            [
+              2.0,
+              0.0,
+              0.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.0
+            ]
+          ],
+          "normal": [
+            [
+              0.0,
+              0.0,
+              3.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.0
+            ]
+          ]
+        },
+        "sourceCurve": [
+          -0.1875,
+          0.0,
+          0.0
+        ],
+        "normalizedSourceCurve": [
+          -0.09375,
+          0.0,
+          0.0
+        ],
+        "recoveredCurve": [
+          -0.18750000000000006,
+          0.0
+        ],
+        "normalizedRecoveredCurve": [
+          -0.09375000000000003,
+          0.0
+        ],
+        "angle2D": 0.0,
+        "undefined": [
+          {
+            "key": "Torsion3D",
+            "code": "source-rule-undefined"
+          },
+          {
+            "key": "FrenetDarbouxAngle",
+            "code": "source-rule-undefined"
+          },
+          {
+            "key": "GeodesicTorsion3D",
+            "code": "source-rule-undefined"
+          },
+          {
+            "key": "NormalVector3D",
+            "code": "source-rule-undefined"
+          },
+          {
+            "key": "BinormalVector3D",
+            "code": "source-rule-undefined"
+          }
+        ],
+        "undefinedSourceJets": []
+      },
+      {
+        "s": -0.0625,
+        "rules": {
+          "Speed3D": 2.0,
+          "Curvature3D": 0.0,
+          "Torsion3D": null,
+          "NormalCurvature3D": 0.0,
+          "GeodesicCurvature3D": 0.0,
+          "FrenetDarbouxAngle": null,
+          "GeodesicTorsion3D": null,
+          "Curve3D": [
+            -0.125,
+            0.0,
+            0.0
+          ],
+          "TangentVector3D": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "NormalVector3D": null,
+          "BinormalVector3D": null,
+          "SurfaceNormalVector3D": [
+            0.0,
+            0.0,
+            3.0
+          ],
+          "TangentNormalVector3D": [
+            0.0,
+            3.0,
+            0.0
+          ],
+          "Curve2D": [
+            -0.12500000000000006,
+            0.0
+          ],
+          "Speed2D": 2.0,
+          "LeftCurvature2D": 0.0,
+          "Curvature2D": 0.0,
+          "TangentVector2D": [
+            1.0,
+            0.0
+          ],
+          "LeftNormalVector2D": [
+            -0.0,
+            1.0
+          ],
+          "NormalVector2D": [
+            -0.0,
+            0.0
+          ]
+        },
+        "sourceJets": {
+          "curve": [
+            [
+              -0.125,
+              0.0,
+              0.0
+            ],
+            [
+              2.0,
+              0.0,
+              0.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.0
+            ]
+          ],
+          "normal": [
+            [
+              0.0,
+              0.0,
+              3.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.0
+            ]
+          ]
+        },
+        "sourceCurve": [
+          -0.125,
+          0.0,
+          0.0
+        ],
+        "normalizedSourceCurve": [
+          -0.0625,
+          0.0,
+          0.0
+        ],
+        "recoveredCurve": [
+          -0.12500000000000006,
+          0.0
+        ],
+        "normalizedRecoveredCurve": [
+          -0.06250000000000003,
+          0.0
+        ],
+        "angle2D": 0.0,
+        "undefined": [
+          {
+            "key": "Torsion3D",
+            "code": "source-rule-undefined"
+          },
+          {
+            "key": "FrenetDarbouxAngle",
+            "code": "source-rule-undefined"
+          },
+          {
+            "key": "GeodesicTorsion3D",
+            "code": "source-rule-undefined"
+          },
+          {
+            "key": "NormalVector3D",
+            "code": "source-rule-undefined"
+          },
+          {
+            "key": "BinormalVector3D",
+            "code": "source-rule-undefined"
+          }
+        ],
+        "undefinedSourceJets": []
+      },
+      {
+        "s": -0.03125,
+        "rules": {
+          "Speed3D": 2.0,
+          "Curvature3D": 0.0,
+          "Torsion3D": null,
+          "NormalCurvature3D": 0.0,
+          "GeodesicCurvature3D": 0.0,
+          "FrenetDarbouxAngle": null,
+          "GeodesicTorsion3D": null,
+          "Curve3D": [
+            -0.0625,
+            0.0,
+            0.0
+          ],
+          "TangentVector3D": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "NormalVector3D": null,
+          "BinormalVector3D": null,
+          "SurfaceNormalVector3D": [
+            0.0,
+            0.0,
+            3.0
+          ],
+          "TangentNormalVector3D": [
+            0.0,
+            3.0,
+            0.0
+          ],
+          "Curve2D": [
+            -0.06250000000000003,
+            0.0
+          ],
+          "Speed2D": 2.0,
+          "LeftCurvature2D": 0.0,
+          "Curvature2D": 0.0,
+          "TangentVector2D": [
+            1.0,
+            0.0
+          ],
+          "LeftNormalVector2D": [
+            -0.0,
+            1.0
+          ],
+          "NormalVector2D": [
+            -0.0,
+            0.0
+          ]
+        },
+        "sourceJets": {
+          "curve": [
+            [
+              -0.0625,
+              0.0,
+              0.0
+            ],
+            [
+              2.0,
+              0.0,
+              0.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.0
+            ]
+          ],
+          "normal": [
+            [
+              0.0,
+              0.0,
+              3.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.0
+            ]
+          ]
+        },
+        "sourceCurve": [
+          -0.0625,
+          0.0,
+          0.0
+        ],
+        "normalizedSourceCurve": [
+          -0.03125,
+          0.0,
+          0.0
+        ],
+        "recoveredCurve": [
+          -0.06250000000000003,
+          0.0
+        ],
+        "normalizedRecoveredCurve": [
+          -0.031250000000000014,
+          0.0
+        ],
+        "angle2D": 0.0,
+        "undefined": [
+          {
+            "key": "Torsion3D",
+            "code": "source-rule-undefined"
+          },
+          {
+            "key": "FrenetDarbouxAngle",
+            "code": "source-rule-undefined"
+          },
+          {
+            "key": "GeodesicTorsion3D",
+            "code": "source-rule-undefined"
+          },
+          {
+            "key": "NormalVector3D",
+            "code": "source-rule-undefined"
+          },
+          {
+            "key": "BinormalVector3D",
+            "code": "source-rule-undefined"
+          }
+        ],
+        "undefinedSourceJets": []
+      },
+      {
+        "s": 0.0,
+        "rules": {
+          "Speed3D": 2.0,
+          "Curvature3D": 0.0,
+          "Torsion3D": null,
+          "NormalCurvature3D": 0.0,
+          "GeodesicCurvature3D": 0.0,
+          "FrenetDarbouxAngle": null,
+          "GeodesicTorsion3D": null,
+          "Curve3D": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "TangentVector3D": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "NormalVector3D": null,
+          "BinormalVector3D": null,
+          "SurfaceNormalVector3D": [
+            0.0,
+            0.0,
+            3.0
+          ],
+          "TangentNormalVector3D": [
+            0.0,
+            3.0,
+            0.0
+          ],
+          "Curve2D": [
+            0.0,
+            0.0
+          ],
+          "Speed2D": 2.0,
+          "LeftCurvature2D": 0.0,
+          "Curvature2D": 0.0,
+          "TangentVector2D": [
+            1.0,
+            0.0
+          ],
+          "LeftNormalVector2D": [
+            -0.0,
+            1.0
+          ],
+          "NormalVector2D": [
+            -0.0,
+            0.0
+          ]
+        },
+        "sourceJets": {
+          "curve": [
+            [
+              0.0,
+              0.0,
+              0.0
+            ],
+            [
+              2.0,
+              0.0,
+              0.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.0
+            ]
+          ],
+          "normal": [
+            [
+              0.0,
+              0.0,
+              3.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.0
+            ]
+          ]
+        },
+        "sourceCurve": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "normalizedSourceCurve": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "recoveredCurve": [
+          0.0,
+          0.0
+        ],
+        "normalizedRecoveredCurve": [
+          0.0,
+          0.0
+        ],
+        "angle2D": 0.0,
+        "undefined": [
+          {
+            "key": "Torsion3D",
+            "code": "source-rule-undefined"
+          },
+          {
+            "key": "FrenetDarbouxAngle",
+            "code": "source-rule-undefined"
+          },
+          {
+            "key": "GeodesicTorsion3D",
+            "code": "source-rule-undefined"
+          },
+          {
+            "key": "NormalVector3D",
+            "code": "source-rule-undefined"
+          },
+          {
+            "key": "BinormalVector3D",
+            "code": "source-rule-undefined"
+          }
+        ],
+        "undefinedSourceJets": []
+      },
+      {
+        "s": 0.03125,
+        "rules": {
+          "Speed3D": 2.0,
+          "Curvature3D": 0.0,
+          "Torsion3D": null,
+          "NormalCurvature3D": 0.0,
+          "GeodesicCurvature3D": 0.0,
+          "FrenetDarbouxAngle": null,
+          "GeodesicTorsion3D": null,
+          "Curve3D": [
+            0.0625,
+            0.0,
+            0.0
+          ],
+          "TangentVector3D": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "NormalVector3D": null,
+          "BinormalVector3D": null,
+          "SurfaceNormalVector3D": [
+            0.0,
+            0.0,
+            3.0
+          ],
+          "TangentNormalVector3D": [
+            0.0,
+            3.0,
+            0.0
+          ],
+          "Curve2D": [
+            0.06250000000000003,
+            0.0
+          ],
+          "Speed2D": 2.0,
+          "LeftCurvature2D": 0.0,
+          "Curvature2D": 0.0,
+          "TangentVector2D": [
+            1.0,
+            0.0
+          ],
+          "LeftNormalVector2D": [
+            -0.0,
+            1.0
+          ],
+          "NormalVector2D": [
+            -0.0,
+            0.0
+          ]
+        },
+        "sourceJets": {
+          "curve": [
+            [
+              0.0625,
+              0.0,
+              0.0
+            ],
+            [
+              2.0,
+              0.0,
+              0.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.0
+            ]
+          ],
+          "normal": [
+            [
+              0.0,
+              0.0,
+              3.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.0
+            ]
+          ]
+        },
+        "sourceCurve": [
+          0.0625,
+          0.0,
+          0.0
+        ],
+        "normalizedSourceCurve": [
+          0.03125,
+          0.0,
+          0.0
+        ],
+        "recoveredCurve": [
+          0.06250000000000003,
+          0.0
+        ],
+        "normalizedRecoveredCurve": [
+          0.031250000000000014,
+          0.0
+        ],
+        "angle2D": 0.0,
+        "undefined": [
+          {
+            "key": "Torsion3D",
+            "code": "source-rule-undefined"
+          },
+          {
+            "key": "FrenetDarbouxAngle",
+            "code": "source-rule-undefined"
+          },
+          {
+            "key": "GeodesicTorsion3D",
+            "code": "source-rule-undefined"
+          },
+          {
+            "key": "NormalVector3D",
+            "code": "source-rule-undefined"
+          },
+          {
+            "key": "BinormalVector3D",
+            "code": "source-rule-undefined"
+          }
+        ],
+        "undefinedSourceJets": []
+      },
+      {
+        "s": 0.0625,
+        "rules": {
+          "Speed3D": 2.0,
+          "Curvature3D": 0.0,
+          "Torsion3D": null,
+          "NormalCurvature3D": 0.0,
+          "GeodesicCurvature3D": 0.0,
+          "FrenetDarbouxAngle": null,
+          "GeodesicTorsion3D": null,
+          "Curve3D": [
+            0.125,
+            0.0,
+            0.0
+          ],
+          "TangentVector3D": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "NormalVector3D": null,
+          "BinormalVector3D": null,
+          "SurfaceNormalVector3D": [
+            0.0,
+            0.0,
+            3.0
+          ],
+          "TangentNormalVector3D": [
+            0.0,
+            3.0,
+            0.0
+          ],
+          "Curve2D": [
+            0.12500000000000006,
+            0.0
+          ],
+          "Speed2D": 2.0,
+          "LeftCurvature2D": 0.0,
+          "Curvature2D": 0.0,
+          "TangentVector2D": [
+            1.0,
+            0.0
+          ],
+          "LeftNormalVector2D": [
+            -0.0,
+            1.0
+          ],
+          "NormalVector2D": [
+            -0.0,
+            0.0
+          ]
+        },
+        "sourceJets": {
+          "curve": [
+            [
+              0.125,
+              0.0,
+              0.0
+            ],
+            [
+              2.0,
+              0.0,
+              0.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.0
+            ]
+          ],
+          "normal": [
+            [
+              0.0,
+              0.0,
+              3.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.0
+            ]
+          ]
+        },
+        "sourceCurve": [
+          0.125,
+          0.0,
+          0.0
+        ],
+        "normalizedSourceCurve": [
+          0.0625,
+          0.0,
+          0.0
+        ],
+        "recoveredCurve": [
+          0.12500000000000006,
+          0.0
+        ],
+        "normalizedRecoveredCurve": [
+          0.06250000000000003,
+          0.0
+        ],
+        "angle2D": 0.0,
+        "undefined": [
+          {
+            "key": "Torsion3D",
+            "code": "source-rule-undefined"
+          },
+          {
+            "key": "FrenetDarbouxAngle",
+            "code": "source-rule-undefined"
+          },
+          {
+            "key": "GeodesicTorsion3D",
+            "code": "source-rule-undefined"
+          },
+          {
+            "key": "NormalVector3D",
+            "code": "source-rule-undefined"
+          },
+          {
+            "key": "BinormalVector3D",
+            "code": "source-rule-undefined"
+          }
+        ],
+        "undefinedSourceJets": []
+      },
+      {
+        "s": 0.09375,
+        "rules": {
+          "Speed3D": 2.0,
+          "Curvature3D": 0.0,
+          "Torsion3D": null,
+          "NormalCurvature3D": 0.0,
+          "GeodesicCurvature3D": 0.0,
+          "FrenetDarbouxAngle": null,
+          "GeodesicTorsion3D": null,
+          "Curve3D": [
+            0.1875,
+            0.0,
+            0.0
+          ],
+          "TangentVector3D": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "NormalVector3D": null,
+          "BinormalVector3D": null,
+          "SurfaceNormalVector3D": [
+            0.0,
+            0.0,
+            3.0
+          ],
+          "TangentNormalVector3D": [
+            0.0,
+            3.0,
+            0.0
+          ],
+          "Curve2D": [
+            0.18750000000000006,
+            0.0
+          ],
+          "Speed2D": 2.0,
+          "LeftCurvature2D": 0.0,
+          "Curvature2D": 0.0,
+          "TangentVector2D": [
+            1.0,
+            0.0
+          ],
+          "LeftNormalVector2D": [
+            -0.0,
+            1.0
+          ],
+          "NormalVector2D": [
+            -0.0,
+            0.0
+          ]
+        },
+        "sourceJets": {
+          "curve": [
+            [
+              0.1875,
+              0.0,
+              0.0
+            ],
+            [
+              2.0,
+              0.0,
+              0.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.0
+            ]
+          ],
+          "normal": [
+            [
+              0.0,
+              0.0,
+              3.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.0
+            ]
+          ]
+        },
+        "sourceCurve": [
+          0.1875,
+          0.0,
+          0.0
+        ],
+        "normalizedSourceCurve": [
+          0.09375,
+          0.0,
+          0.0
+        ],
+        "recoveredCurve": [
+          0.18750000000000006,
+          0.0
+        ],
+        "normalizedRecoveredCurve": [
+          0.09375000000000003,
+          0.0
+        ],
+        "angle2D": 0.0,
+        "undefined": [
+          {
+            "key": "Torsion3D",
+            "code": "source-rule-undefined"
+          },
+          {
+            "key": "FrenetDarbouxAngle",
+            "code": "source-rule-undefined"
+          },
+          {
+            "key": "GeodesicTorsion3D",
+            "code": "source-rule-undefined"
+          },
+          {
+            "key": "NormalVector3D",
+            "code": "source-rule-undefined"
+          },
+          {
+            "key": "BinormalVector3D",
+            "code": "source-rule-undefined"
+          }
+        ],
+        "undefinedSourceJets": []
+      },
+      {
+        "s": 0.125,
+        "rules": {
+          "Speed3D": 2.0,
+          "Curvature3D": 0.0,
+          "Torsion3D": null,
+          "NormalCurvature3D": 0.0,
+          "GeodesicCurvature3D": 0.0,
+          "FrenetDarbouxAngle": null,
+          "GeodesicTorsion3D": null,
+          "Curve3D": [
+            0.25,
+            0.0,
+            0.0
+          ],
+          "TangentVector3D": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "NormalVector3D": null,
+          "BinormalVector3D": null,
+          "SurfaceNormalVector3D": [
+            0.0,
+            0.0,
+            3.0
+          ],
+          "TangentNormalVector3D": [
+            0.0,
+            3.0,
+            0.0
+          ],
+          "Curve2D": [
+            0.25000000000000006,
+            0.0
+          ],
+          "Speed2D": 2.0,
+          "LeftCurvature2D": 0.0,
+          "Curvature2D": 0.0,
+          "TangentVector2D": [
+            1.0,
+            0.0
+          ],
+          "LeftNormalVector2D": [
+            -0.0,
+            1.0
+          ],
+          "NormalVector2D": [
+            -0.0,
+            0.0
+          ]
+        },
+        "sourceJets": {
+          "curve": [
+            [
+              0.25,
+              0.0,
+              0.0
+            ],
+            [
+              2.0,
+              0.0,
+              0.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.0
+            ]
+          ],
+          "normal": [
+            [
+              0.0,
+              0.0,
+              3.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.0
+            ]
+          ]
+        },
+        "sourceCurve": [
+          0.25,
+          0.0,
+          0.0
+        ],
+        "normalizedSourceCurve": [
+          0.125,
+          0.0,
+          0.0
+        ],
+        "recoveredCurve": [
+          0.25000000000000006,
+          0.0
+        ],
+        "normalizedRecoveredCurve": [
+          0.12500000000000003,
+          0.0
+        ],
+        "angle2D": 0.0,
+        "undefined": [
+          {
+            "key": "Torsion3D",
+            "code": "source-rule-undefined"
+          },
+          {
+            "key": "FrenetDarbouxAngle",
+            "code": "source-rule-undefined"
+          },
+          {
+            "key": "GeodesicTorsion3D",
+            "code": "source-rule-undefined"
+          },
+          {
+            "key": "NormalVector3D",
+            "code": "source-rule-undefined"
+          },
+          {
+            "key": "BinormalVector3D",
+            "code": "source-rule-undefined"
+          }
+        ],
+        "undefinedSourceJets": []
+      },
+      {
+        "s": 0.15625,
+        "rules": {
+          "Speed3D": 2.0,
+          "Curvature3D": 0.0,
+          "Torsion3D": null,
+          "NormalCurvature3D": 0.0,
+          "GeodesicCurvature3D": 0.0,
+          "FrenetDarbouxAngle": null,
+          "GeodesicTorsion3D": null,
+          "Curve3D": [
+            0.3125,
+            0.0,
+            0.0
+          ],
+          "TangentVector3D": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "NormalVector3D": null,
+          "BinormalVector3D": null,
+          "SurfaceNormalVector3D": [
+            0.0,
+            0.0,
+            3.0
+          ],
+          "TangentNormalVector3D": [
+            0.0,
+            3.0,
+            0.0
+          ],
+          "Curve2D": [
+            0.31250000000000006,
+            0.0
+          ],
+          "Speed2D": 2.0,
+          "LeftCurvature2D": 0.0,
+          "Curvature2D": 0.0,
+          "TangentVector2D": [
+            1.0,
+            0.0
+          ],
+          "LeftNormalVector2D": [
+            -0.0,
+            1.0
+          ],
+          "NormalVector2D": [
+            -0.0,
+            0.0
+          ]
+        },
+        "sourceJets": {
+          "curve": [
+            [
+              0.3125,
+              0.0,
+              0.0
+            ],
+            [
+              2.0,
+              0.0,
+              0.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.0
+            ]
+          ],
+          "normal": [
+            [
+              0.0,
+              0.0,
+              3.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.0
+            ]
+          ]
+        },
+        "sourceCurve": [
+          0.3125,
+          0.0,
+          0.0
+        ],
+        "normalizedSourceCurve": [
+          0.15625,
+          0.0,
+          0.0
+        ],
+        "recoveredCurve": [
+          0.31250000000000006,
+          0.0
+        ],
+        "normalizedRecoveredCurve": [
+          0.15625000000000003,
+          0.0
+        ],
+        "angle2D": 0.0,
+        "undefined": [
+          {
+            "key": "Torsion3D",
+            "code": "source-rule-undefined"
+          },
+          {
+            "key": "FrenetDarbouxAngle",
+            "code": "source-rule-undefined"
+          },
+          {
+            "key": "GeodesicTorsion3D",
+            "code": "source-rule-undefined"
+          },
+          {
+            "key": "NormalVector3D",
+            "code": "source-rule-undefined"
+          },
+          {
+            "key": "BinormalVector3D",
+            "code": "source-rule-undefined"
+          }
+        ],
+        "undefinedSourceJets": []
+      },
+      {
+        "s": 0.1875,
+        "rules": {
+          "Speed3D": 2.0,
+          "Curvature3D": 0.0,
+          "Torsion3D": null,
+          "NormalCurvature3D": 0.0,
+          "GeodesicCurvature3D": 0.0,
+          "FrenetDarbouxAngle": null,
+          "GeodesicTorsion3D": null,
+          "Curve3D": [
+            0.375,
+            0.0,
+            0.0
+          ],
+          "TangentVector3D": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "NormalVector3D": null,
+          "BinormalVector3D": null,
+          "SurfaceNormalVector3D": [
+            0.0,
+            0.0,
+            3.0
+          ],
+          "TangentNormalVector3D": [
+            0.0,
+            3.0,
+            0.0
+          ],
+          "Curve2D": [
+            0.37500000000000006,
+            0.0
+          ],
+          "Speed2D": 2.0,
+          "LeftCurvature2D": 0.0,
+          "Curvature2D": 0.0,
+          "TangentVector2D": [
+            1.0,
+            0.0
+          ],
+          "LeftNormalVector2D": [
+            -0.0,
+            1.0
+          ],
+          "NormalVector2D": [
+            -0.0,
+            0.0
+          ]
+        },
+        "sourceJets": {
+          "curve": [
+            [
+              0.375,
+              0.0,
+              0.0
+            ],
+            [
+              2.0,
+              0.0,
+              0.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.0
+            ]
+          ],
+          "normal": [
+            [
+              0.0,
+              0.0,
+              3.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.0
+            ]
+          ]
+        },
+        "sourceCurve": [
+          0.375,
+          0.0,
+          0.0
+        ],
+        "normalizedSourceCurve": [
+          0.1875,
+          0.0,
+          0.0
+        ],
+        "recoveredCurve": [
+          0.37500000000000006,
+          0.0
+        ],
+        "normalizedRecoveredCurve": [
+          0.18750000000000003,
+          0.0
+        ],
+        "angle2D": 0.0,
+        "undefined": [
+          {
+            "key": "Torsion3D",
+            "code": "source-rule-undefined"
+          },
+          {
+            "key": "FrenetDarbouxAngle",
+            "code": "source-rule-undefined"
+          },
+          {
+            "key": "GeodesicTorsion3D",
+            "code": "source-rule-undefined"
+          },
+          {
+            "key": "NormalVector3D",
+            "code": "source-rule-undefined"
+          },
+          {
+            "key": "BinormalVector3D",
+            "code": "source-rule-undefined"
+          }
+        ],
+        "undefinedSourceJets": []
+      },
+      {
+        "s": 0.21875,
+        "rules": {
+          "Speed3D": 2.0,
+          "Curvature3D": 0.0,
+          "Torsion3D": null,
+          "NormalCurvature3D": 0.0,
+          "GeodesicCurvature3D": 0.0,
+          "FrenetDarbouxAngle": null,
+          "GeodesicTorsion3D": null,
+          "Curve3D": [
+            0.4375,
+            0.0,
+            0.0
+          ],
+          "TangentVector3D": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "NormalVector3D": null,
+          "BinormalVector3D": null,
+          "SurfaceNormalVector3D": [
+            0.0,
+            0.0,
+            3.0
+          ],
+          "TangentNormalVector3D": [
+            0.0,
+            3.0,
+            0.0
+          ],
+          "Curve2D": [
+            0.43750000000000006,
+            0.0
+          ],
+          "Speed2D": 2.0,
+          "LeftCurvature2D": 0.0,
+          "Curvature2D": 0.0,
+          "TangentVector2D": [
+            1.0,
+            0.0
+          ],
+          "LeftNormalVector2D": [
+            -0.0,
+            1.0
+          ],
+          "NormalVector2D": [
+            -0.0,
+            0.0
+          ]
+        },
+        "sourceJets": {
+          "curve": [
+            [
+              0.4375,
+              0.0,
+              0.0
+            ],
+            [
+              2.0,
+              0.0,
+              0.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.0
+            ]
+          ],
+          "normal": [
+            [
+              0.0,
+              0.0,
+              3.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.0
+            ]
+          ]
+        },
+        "sourceCurve": [
+          0.4375,
+          0.0,
+          0.0
+        ],
+        "normalizedSourceCurve": [
+          0.21875,
+          0.0,
+          0.0
+        ],
+        "recoveredCurve": [
+          0.43750000000000006,
+          0.0
+        ],
+        "normalizedRecoveredCurve": [
+          0.21875000000000003,
+          0.0
+        ],
+        "angle2D": 0.0,
+        "undefined": [
+          {
+            "key": "Torsion3D",
+            "code": "source-rule-undefined"
+          },
+          {
+            "key": "FrenetDarbouxAngle",
+            "code": "source-rule-undefined"
+          },
+          {
+            "key": "GeodesicTorsion3D",
+            "code": "source-rule-undefined"
+          },
+          {
+            "key": "NormalVector3D",
+            "code": "source-rule-undefined"
+          },
+          {
+            "key": "BinormalVector3D",
+            "code": "source-rule-undefined"
+          }
+        ],
+        "undefinedSourceJets": []
+      },
+      {
+        "s": 0.25,
+        "rules": {
+          "Speed3D": 2.0,
+          "Curvature3D": 0.0,
+          "Torsion3D": null,
+          "NormalCurvature3D": 0.0,
+          "GeodesicCurvature3D": 0.0,
+          "FrenetDarbouxAngle": null,
+          "GeodesicTorsion3D": null,
+          "Curve3D": [
+            0.5,
+            0.0,
+            0.0
+          ],
+          "TangentVector3D": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "NormalVector3D": null,
+          "BinormalVector3D": null,
+          "SurfaceNormalVector3D": [
+            0.0,
+            0.0,
+            3.0
+          ],
+          "TangentNormalVector3D": [
+            0.0,
+            3.0,
+            0.0
+          ],
+          "Curve2D": [
+            0.5,
+            0.0
+          ],
+          "Speed2D": 2.0,
+          "LeftCurvature2D": 0.0,
+          "Curvature2D": 0.0,
+          "TangentVector2D": [
+            1.0,
+            0.0
+          ],
+          "LeftNormalVector2D": [
+            -0.0,
+            1.0
+          ],
+          "NormalVector2D": [
+            -0.0,
+            0.0
+          ]
+        },
+        "sourceJets": {
+          "curve": [
+            [
+              0.5,
+              0.0,
+              0.0
+            ],
+            [
+              2.0,
+              0.0,
+              0.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.0
+            ]
+          ],
+          "normal": [
+            [
+              0.0,
+              0.0,
+              3.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.0
+            ]
+          ]
+        },
+        "sourceCurve": [
+          0.5,
+          0.0,
+          0.0
+        ],
+        "normalizedSourceCurve": [
+          0.25,
+          0.0,
+          0.0
+        ],
+        "recoveredCurve": [
+          0.5,
+          0.0
+        ],
+        "normalizedRecoveredCurve": [
+          0.25,
+          0.0
+        ],
+        "angle2D": 0.0,
+        "undefined": [
+          {
+            "key": "Torsion3D",
+            "code": "source-rule-undefined"
+          },
+          {
+            "key": "FrenetDarbouxAngle",
+            "code": "source-rule-undefined"
+          },
+          {
+            "key": "GeodesicTorsion3D",
+            "code": "source-rule-undefined"
+          },
+          {
+            "key": "NormalVector3D",
+            "code": "source-rule-undefined"
+          },
+          {
+            "key": "BinormalVector3D",
+            "code": "source-rule-undefined"
+          }
+        ],
+        "undefinedSourceJets": []
+      },
+      {
+        "s": 0.28125,
+        "rules": {
+          "Speed3D": 2.0,
+          "Curvature3D": 0.0,
+          "Torsion3D": null,
+          "NormalCurvature3D": 0.0,
+          "GeodesicCurvature3D": 0.0,
+          "FrenetDarbouxAngle": null,
+          "GeodesicTorsion3D": null,
+          "Curve3D": [
+            0.5625,
+            0.0,
+            0.0
+          ],
+          "TangentVector3D": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "NormalVector3D": null,
+          "BinormalVector3D": null,
+          "SurfaceNormalVector3D": [
+            0.0,
+            0.0,
+            3.0
+          ],
+          "TangentNormalVector3D": [
+            0.0,
+            3.0,
+            0.0
+          ],
+          "Curve2D": [
+            0.5625000000000001,
+            0.0
+          ],
+          "Speed2D": 2.0,
+          "LeftCurvature2D": 0.0,
+          "Curvature2D": 0.0,
+          "TangentVector2D": [
+            1.0,
+            0.0
+          ],
+          "LeftNormalVector2D": [
+            -0.0,
+            1.0
+          ],
+          "NormalVector2D": [
+            -0.0,
+            0.0
+          ]
+        },
+        "sourceJets": {
+          "curve": [
+            [
+              0.5625,
+              0.0,
+              0.0
+            ],
+            [
+              2.0,
+              0.0,
+              0.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.0
+            ]
+          ],
+          "normal": [
+            [
+              0.0,
+              0.0,
+              3.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.0
+            ]
+          ]
+        },
+        "sourceCurve": [
+          0.5625,
+          0.0,
+          0.0
+        ],
+        "normalizedSourceCurve": [
+          0.28125,
+          0.0,
+          0.0
+        ],
+        "recoveredCurve": [
+          0.5625000000000001,
+          0.0
+        ],
+        "normalizedRecoveredCurve": [
+          0.28125000000000006,
+          0.0
+        ],
+        "angle2D": 0.0,
+        "undefined": [
+          {
+            "key": "Torsion3D",
+            "code": "source-rule-undefined"
+          },
+          {
+            "key": "FrenetDarbouxAngle",
+            "code": "source-rule-undefined"
+          },
+          {
+            "key": "GeodesicTorsion3D",
+            "code": "source-rule-undefined"
+          },
+          {
+            "key": "NormalVector3D",
+            "code": "source-rule-undefined"
+          },
+          {
+            "key": "BinormalVector3D",
+            "code": "source-rule-undefined"
+          }
+        ],
+        "undefinedSourceJets": []
+      },
+      {
+        "s": 0.3125,
+        "rules": {
+          "Speed3D": 2.0,
+          "Curvature3D": 0.0,
+          "Torsion3D": null,
+          "NormalCurvature3D": 0.0,
+          "GeodesicCurvature3D": 0.0,
+          "FrenetDarbouxAngle": null,
+          "GeodesicTorsion3D": null,
+          "Curve3D": [
+            0.625,
+            0.0,
+            0.0
+          ],
+          "TangentVector3D": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "NormalVector3D": null,
+          "BinormalVector3D": null,
+          "SurfaceNormalVector3D": [
+            0.0,
+            0.0,
+            3.0
+          ],
+          "TangentNormalVector3D": [
+            0.0,
+            3.0,
+            0.0
+          ],
+          "Curve2D": [
+            0.6250000000000001,
+            0.0
+          ],
+          "Speed2D": 2.0,
+          "LeftCurvature2D": 0.0,
+          "Curvature2D": 0.0,
+          "TangentVector2D": [
+            1.0,
+            0.0
+          ],
+          "LeftNormalVector2D": [
+            -0.0,
+            1.0
+          ],
+          "NormalVector2D": [
+            -0.0,
+            0.0
+          ]
+        },
+        "sourceJets": {
+          "curve": [
+            [
+              0.625,
+              0.0,
+              0.0
+            ],
+            [
+              2.0,
+              0.0,
+              0.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.0
+            ]
+          ],
+          "normal": [
+            [
+              0.0,
+              0.0,
+              3.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.0
+            ]
+          ]
+        },
+        "sourceCurve": [
+          0.625,
+          0.0,
+          0.0
+        ],
+        "normalizedSourceCurve": [
+          0.3125,
+          0.0,
+          0.0
+        ],
+        "recoveredCurve": [
+          0.6250000000000001,
+          0.0
+        ],
+        "normalizedRecoveredCurve": [
+          0.31250000000000006,
+          0.0
+        ],
+        "angle2D": 0.0,
+        "undefined": [
+          {
+            "key": "Torsion3D",
+            "code": "source-rule-undefined"
+          },
+          {
+            "key": "FrenetDarbouxAngle",
+            "code": "source-rule-undefined"
+          },
+          {
+            "key": "GeodesicTorsion3D",
+            "code": "source-rule-undefined"
+          },
+          {
+            "key": "NormalVector3D",
+            "code": "source-rule-undefined"
+          },
+          {
+            "key": "BinormalVector3D",
+            "code": "source-rule-undefined"
+          }
+        ],
+        "undefinedSourceJets": []
+      },
+      {
+        "s": 0.34375,
+        "rules": {
+          "Speed3D": 2.0,
+          "Curvature3D": 0.0,
+          "Torsion3D": null,
+          "NormalCurvature3D": 0.0,
+          "GeodesicCurvature3D": 0.0,
+          "FrenetDarbouxAngle": null,
+          "GeodesicTorsion3D": null,
+          "Curve3D": [
+            0.6875,
+            0.0,
+            0.0
+          ],
+          "TangentVector3D": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "NormalVector3D": null,
+          "BinormalVector3D": null,
+          "SurfaceNormalVector3D": [
+            0.0,
+            0.0,
+            3.0
+          ],
+          "TangentNormalVector3D": [
+            0.0,
+            3.0,
+            0.0
+          ],
+          "Curve2D": [
+            0.6875000000000001,
+            0.0
+          ],
+          "Speed2D": 2.0,
+          "LeftCurvature2D": 0.0,
+          "Curvature2D": 0.0,
+          "TangentVector2D": [
+            1.0,
+            0.0
+          ],
+          "LeftNormalVector2D": [
+            -0.0,
+            1.0
+          ],
+          "NormalVector2D": [
+            -0.0,
+            0.0
+          ]
+        },
+        "sourceJets": {
+          "curve": [
+            [
+              0.6875,
+              0.0,
+              0.0
+            ],
+            [
+              2.0,
+              0.0,
+              0.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.0
+            ]
+          ],
+          "normal": [
+            [
+              0.0,
+              0.0,
+              3.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.0
+            ]
+          ]
+        },
+        "sourceCurve": [
+          0.6875,
+          0.0,
+          0.0
+        ],
+        "normalizedSourceCurve": [
+          0.34375,
+          0.0,
+          0.0
+        ],
+        "recoveredCurve": [
+          0.6875000000000001,
+          0.0
+        ],
+        "normalizedRecoveredCurve": [
+          0.34375000000000006,
+          0.0
+        ],
+        "angle2D": 0.0,
+        "undefined": [
+          {
+            "key": "Torsion3D",
+            "code": "source-rule-undefined"
+          },
+          {
+            "key": "FrenetDarbouxAngle",
+            "code": "source-rule-undefined"
+          },
+          {
+            "key": "GeodesicTorsion3D",
+            "code": "source-rule-undefined"
+          },
+          {
+            "key": "NormalVector3D",
+            "code": "source-rule-undefined"
+          },
+          {
+            "key": "BinormalVector3D",
+            "code": "source-rule-undefined"
+          }
+        ],
+        "undefinedSourceJets": []
+      },
+      {
+        "s": 0.375,
+        "rules": {
+          "Speed3D": 2.0,
+          "Curvature3D": 0.0,
+          "Torsion3D": null,
+          "NormalCurvature3D": 0.0,
+          "GeodesicCurvature3D": 0.0,
+          "FrenetDarbouxAngle": null,
+          "GeodesicTorsion3D": null,
+          "Curve3D": [
+            0.75,
+            0.0,
+            0.0
+          ],
+          "TangentVector3D": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "NormalVector3D": null,
+          "BinormalVector3D": null,
+          "SurfaceNormalVector3D": [
+            0.0,
+            0.0,
+            3.0
+          ],
+          "TangentNormalVector3D": [
+            0.0,
+            3.0,
+            0.0
+          ],
+          "Curve2D": [
+            0.7500000000000001,
+            0.0
+          ],
+          "Speed2D": 2.0,
+          "LeftCurvature2D": 0.0,
+          "Curvature2D": 0.0,
+          "TangentVector2D": [
+            1.0,
+            0.0
+          ],
+          "LeftNormalVector2D": [
+            -0.0,
+            1.0
+          ],
+          "NormalVector2D": [
+            -0.0,
+            0.0
+          ]
+        },
+        "sourceJets": {
+          "curve": [
+            [
+              0.75,
+              0.0,
+              0.0
+            ],
+            [
+              2.0,
+              0.0,
+              0.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.0
+            ]
+          ],
+          "normal": [
+            [
+              0.0,
+              0.0,
+              3.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.0
+            ]
+          ]
+        },
+        "sourceCurve": [
+          0.75,
+          0.0,
+          0.0
+        ],
+        "normalizedSourceCurve": [
+          0.375,
+          0.0,
+          0.0
+        ],
+        "recoveredCurve": [
+          0.7500000000000001,
+          0.0
+        ],
+        "normalizedRecoveredCurve": [
+          0.37500000000000006,
+          0.0
+        ],
+        "angle2D": 0.0,
+        "undefined": [
+          {
+            "key": "Torsion3D",
+            "code": "source-rule-undefined"
+          },
+          {
+            "key": "FrenetDarbouxAngle",
+            "code": "source-rule-undefined"
+          },
+          {
+            "key": "GeodesicTorsion3D",
+            "code": "source-rule-undefined"
+          },
+          {
+            "key": "NormalVector3D",
+            "code": "source-rule-undefined"
+          },
+          {
+            "key": "BinormalVector3D",
+            "code": "source-rule-undefined"
+          }
+        ],
+        "undefinedSourceJets": []
+      },
+      {
+        "s": 0.40625,
+        "rules": {
+          "Speed3D": 2.0,
+          "Curvature3D": 0.0,
+          "Torsion3D": null,
+          "NormalCurvature3D": 0.0,
+          "GeodesicCurvature3D": 0.0,
+          "FrenetDarbouxAngle": null,
+          "GeodesicTorsion3D": null,
+          "Curve3D": [
+            0.8125,
+            0.0,
+            0.0
+          ],
+          "TangentVector3D": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "NormalVector3D": null,
+          "BinormalVector3D": null,
+          "SurfaceNormalVector3D": [
+            0.0,
+            0.0,
+            3.0
+          ],
+          "TangentNormalVector3D": [
+            0.0,
+            3.0,
+            0.0
+          ],
+          "Curve2D": [
+            0.8125000000000001,
+            0.0
+          ],
+          "Speed2D": 2.0,
+          "LeftCurvature2D": 0.0,
+          "Curvature2D": 0.0,
+          "TangentVector2D": [
+            1.0,
+            0.0
+          ],
+          "LeftNormalVector2D": [
+            -0.0,
+            1.0
+          ],
+          "NormalVector2D": [
+            -0.0,
+            0.0
+          ]
+        },
+        "sourceJets": {
+          "curve": [
+            [
+              0.8125,
+              0.0,
+              0.0
+            ],
+            [
+              2.0,
+              0.0,
+              0.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.0
+            ]
+          ],
+          "normal": [
+            [
+              0.0,
+              0.0,
+              3.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.0
+            ]
+          ]
+        },
+        "sourceCurve": [
+          0.8125,
+          0.0,
+          0.0
+        ],
+        "normalizedSourceCurve": [
+          0.40625,
+          0.0,
+          0.0
+        ],
+        "recoveredCurve": [
+          0.8125000000000001,
+          0.0
+        ],
+        "normalizedRecoveredCurve": [
+          0.40625000000000006,
+          0.0
+        ],
+        "angle2D": 0.0,
+        "undefined": [
+          {
+            "key": "Torsion3D",
+            "code": "source-rule-undefined"
+          },
+          {
+            "key": "FrenetDarbouxAngle",
+            "code": "source-rule-undefined"
+          },
+          {
+            "key": "GeodesicTorsion3D",
+            "code": "source-rule-undefined"
+          },
+          {
+            "key": "NormalVector3D",
+            "code": "source-rule-undefined"
+          },
+          {
+            "key": "BinormalVector3D",
+            "code": "source-rule-undefined"
+          }
+        ],
+        "undefinedSourceJets": []
+      },
+      {
+        "s": 0.4375,
+        "rules": {
+          "Speed3D": 2.0,
+          "Curvature3D": 0.0,
+          "Torsion3D": null,
+          "NormalCurvature3D": 0.0,
+          "GeodesicCurvature3D": 0.0,
+          "FrenetDarbouxAngle": null,
+          "GeodesicTorsion3D": null,
+          "Curve3D": [
+            0.875,
+            0.0,
+            0.0
+          ],
+          "TangentVector3D": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "NormalVector3D": null,
+          "BinormalVector3D": null,
+          "SurfaceNormalVector3D": [
+            0.0,
+            0.0,
+            3.0
+          ],
+          "TangentNormalVector3D": [
+            0.0,
+            3.0,
+            0.0
+          ],
+          "Curve2D": [
+            0.8750000000000001,
+            0.0
+          ],
+          "Speed2D": 2.0,
+          "LeftCurvature2D": 0.0,
+          "Curvature2D": 0.0,
+          "TangentVector2D": [
+            1.0,
+            0.0
+          ],
+          "LeftNormalVector2D": [
+            -0.0,
+            1.0
+          ],
+          "NormalVector2D": [
+            -0.0,
+            0.0
+          ]
+        },
+        "sourceJets": {
+          "curve": [
+            [
+              0.875,
+              0.0,
+              0.0
+            ],
+            [
+              2.0,
+              0.0,
+              0.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.0
+            ]
+          ],
+          "normal": [
+            [
+              0.0,
+              0.0,
+              3.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.0
+            ]
+          ]
+        },
+        "sourceCurve": [
+          0.875,
+          0.0,
+          0.0
+        ],
+        "normalizedSourceCurve": [
+          0.4375,
+          0.0,
+          0.0
+        ],
+        "recoveredCurve": [
+          0.8750000000000001,
+          0.0
+        ],
+        "normalizedRecoveredCurve": [
+          0.43750000000000006,
+          0.0
+        ],
+        "angle2D": 0.0,
+        "undefined": [
+          {
+            "key": "Torsion3D",
+            "code": "source-rule-undefined"
+          },
+          {
+            "key": "FrenetDarbouxAngle",
+            "code": "source-rule-undefined"
+          },
+          {
+            "key": "GeodesicTorsion3D",
+            "code": "source-rule-undefined"
+          },
+          {
+            "key": "NormalVector3D",
+            "code": "source-rule-undefined"
+          },
+          {
+            "key": "BinormalVector3D",
+            "code": "source-rule-undefined"
+          }
+        ],
+        "undefinedSourceJets": []
+      },
+      {
+        "s": 0.46875,
+        "rules": {
+          "Speed3D": 2.0,
+          "Curvature3D": 0.0,
+          "Torsion3D": null,
+          "NormalCurvature3D": 0.0,
+          "GeodesicCurvature3D": 0.0,
+          "FrenetDarbouxAngle": null,
+          "GeodesicTorsion3D": null,
+          "Curve3D": [
+            0.9375,
+            0.0,
+            0.0
+          ],
+          "TangentVector3D": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "NormalVector3D": null,
+          "BinormalVector3D": null,
+          "SurfaceNormalVector3D": [
+            0.0,
+            0.0,
+            3.0
+          ],
+          "TangentNormalVector3D": [
+            0.0,
+            3.0,
+            0.0
+          ],
+          "Curve2D": [
+            0.9375000000000001,
+            0.0
+          ],
+          "Speed2D": 2.0,
+          "LeftCurvature2D": 0.0,
+          "Curvature2D": 0.0,
+          "TangentVector2D": [
+            1.0,
+            0.0
+          ],
+          "LeftNormalVector2D": [
+            -0.0,
+            1.0
+          ],
+          "NormalVector2D": [
+            -0.0,
+            0.0
+          ]
+        },
+        "sourceJets": {
+          "curve": [
+            [
+              0.9375,
+              0.0,
+              0.0
+            ],
+            [
+              2.0,
+              0.0,
+              0.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.0
+            ]
+          ],
+          "normal": [
+            [
+              0.0,
+              0.0,
+              3.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.0
+            ]
+          ]
+        },
+        "sourceCurve": [
+          0.9375,
+          0.0,
+          0.0
+        ],
+        "normalizedSourceCurve": [
+          0.46875,
+          0.0,
+          0.0
+        ],
+        "recoveredCurve": [
+          0.9375000000000001,
+          0.0
+        ],
+        "normalizedRecoveredCurve": [
+          0.46875000000000006,
+          0.0
+        ],
+        "angle2D": 0.0,
+        "undefined": [
+          {
+            "key": "Torsion3D",
+            "code": "source-rule-undefined"
+          },
+          {
+            "key": "FrenetDarbouxAngle",
+            "code": "source-rule-undefined"
+          },
+          {
+            "key": "GeodesicTorsion3D",
+            "code": "source-rule-undefined"
+          },
+          {
+            "key": "NormalVector3D",
+            "code": "source-rule-undefined"
+          },
+          {
+            "key": "BinormalVector3D",
+            "code": "source-rule-undefined"
+          }
+        ],
+        "undefinedSourceJets": []
+      },
+      {
+        "s": 0.5,
+        "rules": {
+          "Speed3D": 2.0,
+          "Curvature3D": 0.0,
+          "Torsion3D": null,
+          "NormalCurvature3D": 0.0,
+          "GeodesicCurvature3D": 0.0,
+          "FrenetDarbouxAngle": null,
+          "GeodesicTorsion3D": null,
+          "Curve3D": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "TangentVector3D": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "NormalVector3D": null,
+          "BinormalVector3D": null,
+          "SurfaceNormalVector3D": [
+            0.0,
+            0.0,
+            3.0
+          ],
+          "TangentNormalVector3D": [
+            0.0,
+            3.0,
+            0.0
+          ],
+          "Curve2D": [
+            1.0000000000000002,
+            0.0
+          ],
+          "Speed2D": 2.0,
+          "LeftCurvature2D": 0.0,
+          "Curvature2D": 0.0,
+          "TangentVector2D": [
+            1.0,
+            0.0
+          ],
+          "LeftNormalVector2D": [
+            -0.0,
+            1.0
+          ],
+          "NormalVector2D": [
+            -0.0,
+            0.0
+          ]
+        },
+        "sourceJets": {
+          "curve": [
+            [
+              1.0,
+              0.0,
+              0.0
+            ],
+            [
+              2.0,
+              0.0,
+              0.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.0
+            ]
+          ],
+          "normal": [
+            [
+              0.0,
+              0.0,
+              3.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.0
+            ]
+          ]
+        },
+        "sourceCurve": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "normalizedSourceCurve": [
+          0.5,
+          0.0,
+          0.0
+        ],
+        "recoveredCurve": [
+          1.0000000000000002,
+          0.0
+        ],
+        "normalizedRecoveredCurve": [
+          0.5000000000000001,
+          0.0
+        ],
+        "angle2D": 0.0,
+        "undefined": [
+          {
+            "key": "Torsion3D",
+            "code": "source-rule-undefined"
+          },
+          {
+            "key": "FrenetDarbouxAngle",
+            "code": "source-rule-undefined"
+          },
+          {
+            "key": "GeodesicTorsion3D",
+            "code": "source-rule-undefined"
+          },
+          {
+            "key": "NormalVector3D",
+            "code": "source-rule-undefined"
+          },
+          {
+            "key": "BinormalVector3D",
+            "code": "source-rule-undefined"
+          }
+        ],
+        "undefinedSourceJets": []
+      }
+    ]
+  },
+  "domain": {
+    "requestedInterval": [
+      -0.5,
+      0.5
+    ],
+    "integrationInterval": [
+      -0.5,
+      0.5
+    ],
+    "anchorParameter": 0.0,
+    "recoveryStatus": "ready",
+    "branches": [
+      {
+        "direction": -1,
+        "endParameter": -0.5,
+        "status": "ready",
+        "code": null,
+        "message": null,
+        "evaluations": 542
+      },
+      {
+        "direction": 1,
+        "endParameter": 0.5,
+        "status": "ready",
+        "code": null,
+        "message": null,
+        "evaluations": 542
+      }
+    ],
+    "continuousDomainCertified": false
+  },
+  "limits": {
+    "maximumSourceCharacters": 240,
+    "maximumSourceAstNodes": 96,
+    "maximumDerivedAstNodes": 8192,
+    "maximumParameterMagnitude": 10.0,
+    "minimumDisplayedSpan": 0.01,
+    "maximumDisplayedSpan": 12.0,
+    "minimumSegments": 8,
+    "maximumSegments": 128,
+    "maximumInitialCoordinateMagnitude": 1000000000000.0,
+    "maximumScalarEvaluations": 524288,
+    "maximumAstWeightedEvaluations": 16000000,
+    "maximumOffsetProducts": 262144,
+    "maximumIntegrationEvaluations": 24000
+  },
+  "diagnostics": {
+    "initialTangentAngle": 0.0,
+    "initialTangentMagnitude": 1.0,
+    "initialTangentMagnitudePreserved": false,
+    "sourceNormalNormalized": false,
+    "sourceNormalOrthogonalized": false,
+    "undefinedRuleCount": 165,
+    "undefinedSourceJetCount": 0,
+    "budget": {
+      "scalarEvaluations": 20209,
+      "astWeightedEvaluations": 24816,
+      "offsetProducts": 0,
+      "integrationEvaluations": 1084
+    },
+    "integrationMethod": "DOP853",
+    "relativeTolerance": 2e-12,
+    "absoluteTolerance": 2e-14
+  },
+  "certification": {
+    "allSampledSourceValuesFinite": true,
+    "allSampledRulesFinite": false,
+    "allSampledRecoveredPointsFinite": true,
+    "sourceFormulaEvaluated": true,
+    "originalRuleOrderPreserved": true,
+    "recoveryFixedAtParameterZero": true,
+    "rawSurfaceNormalPreserved": true,
+    "initialTangentDirectionOnly": true,
+    "continuousDomainCertified": false,
+    "integrationErrorIntervalCertified": false,
+    "symbolicObjectsReproduced": false,
+    "wolframOptionsReproduced": false,
+    "exactStraightCreaseFOLD": false,
+    "adoptableCreasePattern": false,
+    "globalFoldingCertified": false
+  }
+}

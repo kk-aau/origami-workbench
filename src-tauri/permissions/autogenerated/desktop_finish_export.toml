@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-desktop-finish-export"
+description = "Enables the desktop_finish_export command without any pre-configured scope."
+commands.allow = ["desktop_finish_export"]
+
+[[permission]]
+identifier = "deny-desktop-finish-export"
+description = "Denies the desktop_finish_export command without any pre-configured scope."
+commands.deny = ["desktop_finish_export"]

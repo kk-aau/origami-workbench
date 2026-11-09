@@ -1,0 +1,17 @@
+.original-array-spatial{height:100%;min-height:0;min-width:0;margin:0;display:flex;flex-direction:column;gap:5px;padding:5px;box-sizing:border-box}
+.original-array-spatial-toolbar{display:flex;align-items:center;justify-content:space-between;gap:6px;flex:none;font-size:12px;color:#53675a}
+.original-array-spatial-toolbar button{height:28px;min-height:28px;padding:3px 7px;font-size:12px;line-height:1.2}
+.original-array-spatial>svg{height:0!important;min-height:0;flex:1;width:100%;display:block;touch-action:none;cursor:grab;background:#fafcfb;border-radius:4px}
+.original-array-spatial>svg:active{cursor:grabbing}.original-array-spatial-axes{pointer-events:none}
+.original-array-spatial figcaption{flex:none;margin:0;font-size:12px;line-height:1.35;color:#53675a}
+.original-array-spatial-query{display:flex;align-items:center;gap:6px;flex:none;min-width:0;font-size:12px;line-height:1.3;color:#405849}
+.original-array-spatial-query input{width:56px;min-width:0;height:26px;padding:2px 4px;box-sizing:border-box;font-size:12px;border:1px solid #cbd7cd;border-radius:3px;background:#fffefb}
+.original-array-spatial-query output{overflow-wrap:anywhere;font-variant-numeric:tabular-nums}
+.original-array-view-tabs{display:flex;gap:5px;flex:none;align-items:center}
+.original-array-view-tabs button{min-height:28px;height:28px;padding:3px 8px;font-size:12px;line-height:1.2;border:1px solid #cad8cf;border-radius:4px;background:#f9fbf9;color:#3b5546}
+.original-array-view-tabs button[aria-pressed=true]{background:#e3eee5;border-color:#799485;color:#234c35}
+.mhcp-heading:has(.original-array-view-tabs){min-height:28px;flex:none}.mhcp-heading:has(.original-array-view-tabs)>span{font-size:11px}
+.ym-plot-slot:has(>.original-array-view-tabs){display:flex;flex-direction:column;gap:5px}.ym-plot-slot:has(>.original-array-view-tabs)>.ym-figure{height:auto;flex:1;min-height:0}.ym-plot-slot:has(>.original-array-view-tabs)>.original-array-spatial{flex:1;height:0}
+.ym-plot-slot:has(>.original-array-view-tabs)>.ym-placeholder{flex:1;height:auto;min-height:0}
+.mhcp-fold-control{display:flex;align-items:center;gap:5px}.mhcp-fold-control input[type=number]{width:74px;flex:none}.mhcp-fold-control input[type=range]{min-width:0;flex:1;padding:0}
+.ym-field:has(.ym-fold-control){grid-column:auto}.ym-fold-control{display:flex;align-items:center;gap:5px}.ym-fold-control input[type=number]{width:62px;flex:none}.ym-fold-control input[type=range]{min-width:0;flex:1;padding:0}

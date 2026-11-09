@@ -1,0 +1,60 @@
+.diagram-animation-backdrop{position:fixed;inset:0;z-index:140;display:flex;align-items:center;justify-content:center;padding:20px;background:#263a3173}
+.diagram-animation-dialog{width:min(1100px,94vw);height:min(800px,90vh);min-width:0;min-height:360px;display:flex;flex-direction:column;overflow:hidden;outline:none;border:1px solid #bdcdbd;border-radius:8px;background:#fffefa;color:#293d35;box-shadow:0 22px 90px #142a3540}
+.diagram-animation-dialog button,.diagram-animation-dialog select{font:inherit;font-size:12px;color:#426750;border:1px solid #d1ddcd;background:#fffefa;border-radius:4px;cursor:pointer}
+.diagram-animation-dialog button{min-height:32px;padding:6px 12px;display:inline-flex;align-items:center;justify-content:center;gap:7px}
+.diagram-animation-dialog button:hover:not(:disabled){background:#edf3e8;border-color:#a7bea8}
+.diagram-animation-dialog button:disabled{opacity:.45;cursor:default}
+.diagram-animation-dialog :is(button,input,select):focus-visible{outline:2px solid #426f59;outline-offset:3px}
+.diagram-animation-header{flex-shrink:0;display:flex;align-items:center;justify-content:space-between;gap:20px;padding:18px 24px 16px;border-bottom:1px solid #dce5d7}
+.diagram-animation-header>div{min-width:0}
+.diagram-animation-header p{margin:0 0 5px;font-size:11px;color:#7b8f78;letter-spacing:1px}
+.diagram-animation-header h2{margin:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:21px;font-weight:500;line-height:1.4}
+.diagram-animation-header .diagram-animation-close{flex-shrink:0;width:34px;height:34px;min-height:34px;padding:0;font-size:25px;font-weight:300;line-height:1;border-color:transparent;background:transparent;color:#6c826c}
+.diagram-animation-viewbar{flex-shrink:0;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px 14px;padding:10px 20px;border-bottom:1px solid #dce5d7;background:#f8faf4}
+.diagram-animation-state{display:flex;align-items:center;gap:7px;font-size:11px;color:#627b61;line-height:1.5}
+.diagram-animation-state i{width:6px;height:6px;flex-shrink:0;border-radius:50%;background:#629174}
+.diagram-animation-path{margin-left:7px;padding-left:10px;border-left:1px solid #d2decf;font-size:10px;color:#83917c}
+.diagram-animation-state.is-error{color:#a05a48}.diagram-animation-state.is-error i{background:#b8725b}
+.diagram-animation-viewbar>div{display:flex;flex-wrap:wrap;gap:4px}
+.diagram-animation-viewbar button{min-height:27px;padding:4px 12px;font-size:11px;background:transparent;border-color:transparent}
+.diagram-animation-viewbar button[aria-pressed=true]{color:#355f48;background:#e6eee3;border-color:#bdceba}
+.diagram-animation-stage{flex:1;position:relative;min-height:120px;min-width:0;background:#eef2eb;overflow:hidden}
+.diagram-animation-stage iframe{position:absolute;inset:0;display:block;width:100%;height:100%;border:0;background:#eef2eb}
+.diagram-animation-viewhint{position:absolute;right:16px;bottom:13px;pointer-events:none;font-size:10px;color:#7d907c;background:#f8faf4df;border:1px solid #dce5d7aa;border-radius:4px;padding:5px 8px}
+.diagram-animation-loading{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:11px;background:#eef2eb;pointer-events:none}
+.diagram-animation-loading>span{width:27px;height:27px;border:2px solid #d2decf;border-top-color:#567b60;border-radius:50%;animation:diagram-animation-spin 1s linear infinite}
+.diagram-animation-loading p{margin:0;color:#758c72;font-size:12px}
+.diagram-animation-error{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:min(420px,calc(100% - 40px));padding:22px 24px;border:1px solid #dec6b8;border-radius:6px;background:#fffdf8f5;box-shadow:0 8px 25px #4b392212;color:#92634d}
+.diagram-animation-error strong{font-size:14px;font-weight:600}.diagram-animation-error p{font-size:12px;line-height:1.8;margin:9px 0 0;overflow-wrap:anywhere}
+.diagram-animation-controls{display:block;flex-shrink:0;padding:14px 22px 16px;border-top:1px solid #d2decd;background:#fffefa}
+.diagram-animation-timeline-labels{display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:10px;color:#7f9079}
+.diagram-animation-timeline-labels>span{flex:1;display:flex;align-items:center;gap:6px}
+.diagram-animation-timeline-labels>span:last-child{justify-content:flex-end}
+.diagram-animation-timeline-labels strong{font-size:11px;font-weight:600;color:#516e50}
+.diagram-animation-timeline-labels output{color:#426750;font:18px Consolas,'Microsoft YaHei',monospace;min-width:53px;text-align:center;font-variant-numeric:tabular-nums}
+.diagram-animation-timeline-labels output small{font-size:11px;margin-left:2px;color:#84957c}
+.diagram-animation-timeline{display:block;width:100%;height:22px;margin:6px 0 10px;accent-color:#426f59;cursor:pointer}
+.diagram-animation-timeline:disabled{opacity:.5;cursor:default}
+.diagram-animation-batches{display:flex;align-items:center;flex-wrap:wrap;gap:8px 12px;margin:0 0 11px;color:#758970;font-size:11px}
+.diagram-animation-batches output{font-variant-numeric:tabular-nums;color:#426750;min-width:100px}
+.diagram-animation-batches>div{display:flex;flex-wrap:wrap;gap:4px}
+.diagram-animation-batches button{min-width:27px;min-height:27px;padding:3px 7px;font-size:11px}
+.diagram-animation-batches button[aria-pressed=true]{background:#e6eee3;border-color:#a8bea6;color:#355f48}
+.diagram-animation-batches>span{font-size:10px;color:#83917c}
+.diagram-animation-playbar{display:flex;align-items:center;justify-content:space-between;gap:18px}
+.diagram-animation-play-buttons{display:flex;align-items:center;gap:7px;flex-shrink:0}
+.diagram-animation-play-buttons svg{width:15px;height:15px;flex-shrink:0}
+.diagram-animation-play-buttons .diagram-animation-primary{min-width:93px;background:#426f59;color:#fff;border-color:#426f59}
+.diagram-animation-play-buttons .diagram-animation-primary:hover:not(:disabled){background:#365e48;border-color:#365e48}
+.diagram-animation-playbar p{font-size:11px;line-height:1.6;color:#81917a;margin:0 auto 0 0}
+.diagram-animation-speed{display:flex;align-items:center;gap:8px;font-size:11px;color:#7a8e74;flex-shrink:0}
+.diagram-animation-speed select{min-height:30px;padding:4px 7px;min-width:65px;background:#f7faf3}
+.diagram-animation-warnings{border-top:1px solid #e6ecdf;margin-top:12px;padding-top:9px;font-size:11px;line-height:1.7;color:#8c795e;max-height:115px;overflow:auto}
+.diagram-animation-warnings summary{cursor:pointer;width:fit-content}.diagram-animation-warnings ul{margin:6px 0 0;padding-left:20px}.diagram-animation-warnings li+li{margin-top:3px}
+@keyframes diagram-animation-spin{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){.diagram-animation-loading>span{animation:none}}
+@media(max-width:650px){.diagram-animation-backdrop{padding:10px}.diagram-animation-dialog{width:100%;height:94vh;min-height:320px}.diagram-animation-header{padding:12px 16px}.diagram-animation-header h2{font-size:18px}.diagram-animation-viewbar{padding:8px 12px}.diagram-animation-controls{padding:12px 14px}.diagram-animation-playbar{flex-wrap:wrap;gap:10px}.diagram-animation-playbar p{order:3;width:100%;font-size:10px}.diagram-animation-speed{margin-left:auto}.diagram-animation-viewhint{font-size:9px;right:9px;bottom:9px}}
+@media(max-height:600px){.diagram-animation-header{padding:10px 18px}.diagram-animation-header p{margin-bottom:2px;font-size:10px}.diagram-animation-header h2{font-size:18px}.diagram-animation-viewbar{padding-top:6px;padding-bottom:6px}.diagram-animation-controls{padding-top:9px;padding-bottom:10px}.diagram-animation-playbar p{display:none}.diagram-animation-warnings{max-height:60px;margin-top:8px;padding-top:6px}}
+.diagram-animation-collision-note{margin:8px 0 0;color:var(--muted,#61746b);font-size:11px;line-height:1.5}
+.diagram-animation-dialog.ui-dialog>footer.diagram-animation-controls{display:block}
+.diagram-animation-dialog.ui-dialog>footer>.diagram-animation-collision-note{margin:8px 0 0;font-size:11px}

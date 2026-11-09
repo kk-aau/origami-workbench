@@ -1,0 +1,29 @@
+import fs from 'node:fs';
+import assert from 'node:assert/strict';
+import {importDocument} from '../src/core/formats';
+import {inspectMaterialTopology} from '../src/core/materialTopology';
+import {editMaterialFaces} from '../src/core/materialFaceEdit';
+import {sampleMaterialCurves,type MaterialCurveIntent} from '../src/core/materialCurves';
+import {computeFlatFold} from '../src/core/flatFold';
+import {exportDXF,DXF_LAYERS} from '../src/core/dxf';
+import type {Doc,Assignment} from '../src/core/types';
+const read=(name:string,ext:string)=>fs.readFileSync(`output/playwright/material-curves-across-${name}-1009.${ext}`,'utf8'),material=(doc:Doc)=>{const m=inspectMaterialTopology(doc);assert.ok(m.ok,m.ok?'':m.reason);return m;};
+const cases:Record<string,unknown>={};
+for(const name of ['F','M','exterior','hole','gap','overlap','slit','original']){
+ const source=importDocument(fs.readFileSync(`output/playwright/material-curves-across-${name}-initial-1009.zhezhi.json`,'utf8'),'json').doc,old=material(source),native=importDocument(read(name,'zhezhi.json'),'json').doc,m=material(native),fold=importDocument(read(name,'fold'),'fold').doc,fm=material(fold),record=native.metadata!.materialCurveConstruction as {intent:MaterialCurveIntent;sampledGraph:unknown;errorBounds:number[];insertedSegmentIds:string[]};
+ assert.ok(record.intent.scope);const expected=editMaterialFaces(source,record.intent),em=material(expected.doc);assert.deepEqual(m.graph,em.graph);assert.deepEqual(m.foldedVertices,em.foldedVertices);assert.equal(m.startingFace,em.startingFace);assert.deepEqual(fm.graph,m.graph);assert.deepEqual(fm.foldedVertices,m.foldedVertices);assert.equal(fm.startingFace,m.startingFace);assert.deepEqual(m.graph.vertices_coords.slice(0,old.graph.vertices_coords.length),old.graph.vertices_coords);assert.deepEqual(m.foldedVertices!.slice(0,old.graph.vertices_coords.length),old.foldedVertices);
+ const sample=sampleMaterialCurves(record.intent.curves,record.intent.deviation);assert.deepEqual(sample.graph,record.sampledGraph);assert.deepEqual(sample.errorBounds,record.errorBounds);assert.ok(sample.maximumError<=record.intent.deviation);assert.equal(m.components.length,old.components.length);assert.equal(computeFlatFold(native).layers.status,'solved');assert.equal(computeFlatFold(fold).layers.status,'solved');
+ const stat=expected.curves!.clipping!;assert.equal(stat.curveForInsertedSegment.length,record.insertedSegmentIds.length);if(['exterior','hole','gap'].includes(name))assert.ok(stat.blankLength>0);if(['F','M','original','slit'].includes(name))assert.ok(stat.faces>=2);if(['gap','overlap'].includes(name))assert.equal(stat.components,2);assert.equal(m.components.reduce((n,c)=>n+c.boundaryLoops.length,0),old.components.reduce((n,c)=>n+c.boundaryLoops.length,0));
+ const owner=new Map<number,number>();m.components.forEach((c,i)=>c.vertices.forEach(v=>owner.set(v,i)));for(const [a,b]of m.graph.edges_vertices)assert.equal(owner.get(a),owner.get(b));
+ const dxf=read(name,'dxf');assert.equal(dxf,exportDXF(native).text);assert.ok(dxf.includes('AC1009'));assert.ok(!dxf.includes('LWPOLYLINE'));
+ const tokens=dxf.trim().split(/\r?\n/),entities:Map<number,string>[]=[];let entity:Map<number,string>|null=null;
+ for(let i=0;i<tokens.length;i+=2){const code=Number(tokens[i]),value=tokens[i+1];if(code===0){if(entity)entities.push(entity);entity=value==='LINE'?new Map():null;}else if(entity)entity.set(code,value);}
+ assert.equal(entities.length,native.segments.length);native.segments.forEach((s,i)=>{const e=entities[i];assert.equal(e.get(8),DXF_LAYERS[s.assignment as Assignment].name);for(const [code,value]of [[10,s.a[0]],[20,-s.a[1]],[11,s.b[0]],[21,-s.b[1]]] as const)assert.ok(Number(e.get(code))===value);});
+ cases[name]={vertices:m.graph.vertices_coords.length,edges:m.graph.edges_vertices.length,faces:m.graph.faces_vertices!.length,materials:m.components.length,clippedFaces:stat.faces,selectedMaterials:stat.components,materialLength:stat.materialLength,blankLength:stat.blankLength,ordinaryDXFLines:entities.length};
+}
+const source=importDocument(fs.readFileSync('output/playwright/material-curves-across-F-initial-1009.zhezhi.json','utf8'),'json').doc,old=material(source);
+for(const name of ['cancel','undo']){const doc=importDocument(read(name,'zhezhi.json'),'json').doc,m=material(doc);assert.deepEqual(m.graph,old.graph);assert.deepEqual(m.foldedVertices,old.foldedVertices);assert.deepEqual(doc.segments,source.segments);assert.equal(doc.metadata!.materialCurveConstruction,undefined);}
+const applied=importDocument(read('history-applied','zhezhi.json'),'json').doc,redo=importDocument(read('redo','zhezhi.json'),'json').doc;assert.deepEqual(material(redo),material(applied));assert.deepEqual(redo.segments,applied.segments);assert.deepEqual(redo.metadata!.materialCurveConstruction,applied.metadata!.materialCurveConstruction);
+const cp=importDocument(read('cp-only','zhezhi.json'),'json').doc,cm=material(cp),record=cp.metadata!.materialCurveConstruction as {intent:MaterialCurveIntent};assert.equal(cm.foldedVertices,undefined);assert.ok(record.intent.scope&&record.intent.cpOnly);assert.deepEqual(cm.graph,material(editMaterialFaces(source,record.intent).doc).graph);
+fs.writeFileSync('output/audits/material-curves-across-download-1009.json',JSON.stringify({verified:true,eightActualDownloadGroups:true,independentScopeAndGeometryReplay:true,oldCPFFAndMaterialBanksPreserved:true,nativeFOLDCPFFRootExact:true,reopenedLayersSolved:true,clippedPaperHolesAndBlanks:true,noMaterialCoordinateWelding:true,ordinaryR12LINEMillimetersCountsExact:true,cancelUndoRedoExact:true,explicitCPOnlyHasNoStaleFF:true,cases},null,2));
+console.log('Verified eight actual cross-face curve projects: exact replay, original CP/FF/banks, JSON/FOLD roots/layers, clipped holes/blanks and ordinary R12 LINE millimeters/counts.');

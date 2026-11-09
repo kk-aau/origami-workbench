@@ -1,0 +1,13 @@
+.fold-angle-panel{position:absolute;right:12px;bottom:72px;z-index:8;width:240px;max-width:calc(100% - 24px);max-height:calc(100% - 88px);overflow:auto;background:var(--surface,#fafbf7);color:var(--ink,#263b31);border:1px solid var(--line,#d3ded2);border-radius:var(--radius,5px);font-size:12px;line-height:1.5;cursor:default;pointer-events:auto;scrollbar-color:var(--line,#d3ded2) var(--surface,#fafbf7);scrollbar-width:thin}
+.fold-angle-panel .fold-angle-panel-toggle{display:flex;width:100%;justify-content:flex-start;gap:8px;min-height:36px;padding:7px 10px;border:0;border-radius:0;color:inherit;background:transparent;font-size:12px}
+.fold-angle-panel .fold-angle-panel-toggle:hover{background:var(--tint,#e1ede2)}
+.fold-angle-panel-toggle>strong{font-size:12px;font-weight:600}
+.fold-angle-panel-count{margin-left:auto;color:var(--muted,#637366);font-size:11px;font-variant-numeric:tabular-nums}
+.fold-angle-panel-toggle>svg{flex:0 0 16px;color:var(--muted,#637366)}
+.fold-angle-panel .fold-angle-panel-toggle:focus-visible{outline:2px solid var(--accent,#1e6550);outline-offset:-3px}
+.fold-angle-panel-body{padding:0 10px 10px}
+.fold-angle-panel-body[hidden]{display:none}
+.fold-angle-panel .fold-angle-panel-current{margin:0 0 8px;color:var(--muted,#637366);font-size:11px;font-variant-numeric:tabular-nums}
+.fold-angle-panel .fold-angle-panel-help,.fold-angle-panel .fold-angle-panel-ignored{margin:8px 0 0;color:var(--muted,#637366);font-size:11px;line-height:1.55}
+.fold-angle-panel::selection,.fold-angle-panel ::selection{color:var(--ink,#263b31);background:var(--tint,#e1ede2)}
+@media(max-height:720px){.fold-angle-panel{bottom:68px;max-height:calc(100% - 84px)}}

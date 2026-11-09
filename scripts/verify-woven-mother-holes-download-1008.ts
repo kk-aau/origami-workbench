@@ -1,0 +1,24 @@
+import fs from 'node:fs';
+import assert from 'node:assert/strict';
+import {prepareTessResult} from '../src/app/tessellation';
+import {inspectWovenCutTopology} from '../src/app/wovenCutTopology';
+import {wovenMaterialDocument} from '../src/app/wovenMaterialDocument';
+import {importDocument} from '../src/core/formats';
+import {inspectMaterialTopology} from '../src/core/materialTopology';
+import {computeFlatFold} from '../src/core/flatFold';
+import {exportDXF,DXF_LAYERS} from '../src/core/dxf';
+const read=(name:string)=>fs.readFileSync(name,'utf8'),log=read('output/audits/woven-mother-holes-browser-complete-1008.log');
+assert.ok(!log.includes('### Error'));const browser=JSON.parse(log.split(/\r?\n/)[1]);assert.deepEqual(browser.errors,[]);
+const native=importDocument(read('output/playwright/woven-mother-holes-adopted-1008.zhezhi.json'),'json').doc,params=(native.metadata!.tessellation as any).parameters;
+const packet=JSON.parse(read('output/playwright/woven-mother-holes-mother-1008.json'));assert.deepEqual(packet.graph,params.graph);assert.deepEqual(params.graph.holeFaces,[4]);assert.equal(params.graph.vertices[0][0],-2.01);
+const expected=wovenMaterialDocument(prepareTessResult(browser.response,params),params),original=inspectMaterialTopology(expected),actual=inspectMaterialTopology(native);
+assert.ok(original.ok,original.ok?'':original.reason);assert.ok(actual.ok,actual.ok?'':actual.reason);assert.deepEqual(actual.graph,original.graph);assert.deepEqual(actual.foldedVertices,original.foldedVertices);
+const inspection=inspectWovenCutTopology(prepareTessResult(browser.response,params),params);assert.ok(inspection.ok,inspection.ok?'':inspection.reason);
+const folded=importDocument(read('output/playwright/woven-mother-holes-adopted-1008.fold'),'fold').doc,reopened=inspectMaterialTopology(folded);assert.ok(reopened.ok,reopened.ok?'':reopened.reason);assert.deepEqual(reopened.graph,actual.graph);assert.deepEqual(reopened.foldedVertices,actual.foldedVertices);
+for(const doc of [native,folded])assert.equal(computeFlatFold(doc).layers.status,'solved');
+const dxf=read('output/playwright/woven-mother-holes-adopted-1008.dxf');assert.equal(dxf,exportDXF(native).text);
+const tokens=dxf.trim().split(/\r?\n/),entities:Map<number,string>[]=[];let entity:Map<number,string>|null=null;
+for(let i=0;i<tokens.length;i+=2){const code=Number(tokens[i]),value=tokens[i+1];if(code===0){if(entity)entities.push(entity);entity=value==='LINE'?new Map():null;}else if(entity)entity.set(code,value);}
+assert.equal(entities.length,native.segments.length);native.segments.forEach((s,i)=>{const e=entities[i];assert.equal(e.get(8),DXF_LAYERS[s.assignment].name);for(const [code,value] of [[10,s.a[0]],[20,-s.a[1]],[11,s.b[0]],[21,-s.b[1]]] as const)assert.ok(Number(e.get(code))===value,'Exact numeric DXF endpoint; signed zero has identical position');});
+const report={verified:true,browser:browser.passed,explicitHoleProvenance:true,exactNativeAndFOLDGeometry:true,exactNativeAndFOLDFoldedPositions:true,ordinaryDXFLinesMillimetersExact:true,layers:'solved',mother:{vertices:params.graph.vertices.length,edges:params.graph.edges.length,holeFaces:params.graph.holeFaces,materialFaces:browser.response.mother.faces_vertices.length},cp:{vertices:actual.graph.vertices_coords.length,edges:actual.graph.edges_vertices.length,faces:actual.graph.faces_vertices!.length,components:actual.components.length},dxfLines:entities.length,closureError:browser.response.source.closureError};
+fs.writeFileSync('output/audits/woven-mother-holes-download-1008.json',JSON.stringify(report,null,2));console.log(JSON.stringify(report));

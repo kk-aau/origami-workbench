@@ -1,0 +1,76 @@
+.tool-command-settings{--command-border:#dbe5d5;--command-muted:#82917d;min-width:0}
+.tool-command-input-mode{display:flex;align-items:flex-start;gap:9px;margin:0 0 12px;padding:0 0 12px;border-bottom:1px solid var(--command-border);cursor:pointer;color:#405d43}
+.tool-command-input-mode>input{flex:none;width:15px;height:15px;margin:2px 0 0;accent-color:#426f59}
+.tool-command-input-mode>span{display:flex;flex-direction:column;gap:4px;min-width:0}
+.tool-command-input-mode strong{font-size:12px;font-weight:500;line-height:1.6}
+.tool-command-input-mode small{font-size:11px;line-height:1.7;color:#61745e}
+.tool-command-input-mode>input:focus-visible{outline:2px solid #426f59;outline-offset:2px}
+.tool-command-settings-introduction{margin:0 0 14px;color:#6a7f69;font-size:12px;line-height:1.8}
+.tool-command-settings-toolbar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
+.tool-command-settings-scopes{display:flex;gap:4px;padding:3px;border:1px solid var(--command-border);border-radius:5px;background:#f1f5eb}
+.storage-settings-dialog .tool-command-settings-scopes button{display:flex;align-items:center;gap:9px;border:1px solid transparent;background:transparent;color:#7b8b73;padding:7px 11px}
+.storage-settings-dialog .tool-command-settings-scopes button.is-active{background:#fffefa;border-color:#c9d9bf;color:#3e654b;box-shadow:0 1px 3px #3d5e3510}
+.tool-command-settings-scopes button span{font-size:10px;color:#8b9a82}
+.storage-settings-dialog .tool-command-settings-restore{border:0;background:transparent;padding:6px 0;font-size:10px;color:#788d6c}
+.tool-command-settings-search{display:flex;align-items:center;gap:12px;margin-bottom:12px;color:#7a8b72;font-size:10px}
+.tool-command-settings-search input{flex:1;min-width:0;border:1px solid var(--command-border);border-radius:4px;padding:8px 10px;background:#fffefa;color:#42624a;font:inherit;font-size:11px}
+.tool-command-settings-search input::placeholder{color:#9aa891}
+.tool-command-settings-list{max-height:360px;overflow:auto;scrollbar-width:thin;border:1px solid var(--command-border);border-radius:5px;background:#fffefa}
+.tool-command-settings table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:11px}
+.tool-command-settings-function-column{width:22%}
+.tool-command-settings-primary-column{width:18%}
+.tool-command-settings-alias-column{width:50%}
+.tool-command-settings-action-column{width:10%}
+.tool-command-settings thead{position:sticky;top:0;z-index:1;background:#f1f5eb}
+.tool-command-settings th,.tool-command-settings td{padding:11px 10px;text-align:left;border-bottom:1px solid #e8ede2;vertical-align:middle}
+.tool-command-settings thead th{color:#819177;font-size:10px;font-weight:500;letter-spacing:.5px}
+.tool-command-settings tbody tr:last-child th,.tool-command-settings tbody tr:last-child td{border-bottom:0}
+.tool-command-settings tbody tr:hover{background:#f8faf3}
+.tool-command-settings tbody th{font-weight:400}
+.tool-command-settings tbody label{display:block;min-width:0;cursor:text}
+.tool-command-settings tbody strong{font-size:12px;font-weight:500;line-height:1.6;color:#405d43;overflow-wrap:anywhere}
+.tool-command-settings tbody input{width:100%;min-width:0;box-sizing:border-box;height:32px;border:1px solid #d6e1cd;border-radius:4px;background:#fffefa;padding:6px 8px;color:#42664e;font:11px Consolas,'Courier New',monospace}
+.tool-command-settings tbody input::placeholder{color:#a0ab96;font-size:10px}
+.tool-command-settings .tool-command-primary-cell>input{max-width:105px;background:#f4f8ef;border-color:#cbdcc2;font-size:12px;font-weight:600;letter-spacing:.3px}
+.tool-command-primary-default{display:block;margin-top:5px;color:#95a18c;font-size:9px;line-height:1.4}
+.tool-command-alias-tags{display:flex;align-items:center;flex-wrap:wrap;gap:5px;min-height:28px}
+.tool-command-alias-tag{display:inline-flex;align-items:center;max-width:100%;min-width:0;gap:3px;padding:2px 3px 2px 8px;border:1px solid #d9e4d2;border-radius:4px;background:#f1f5ec;color:#526f50}
+.tool-command-alias-tag>code{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:11px/1.6 Consolas,'Microsoft YaHei UI',monospace}
+.storage-settings-dialog .tool-command-settings tbody .tool-command-alias-tag>button{display:grid;place-items:center;flex:none;min-width:24px;min-height:24px;padding:0;border:0;background:transparent;color:#8b9a82;font:15px/1 sans-serif}
+.storage-settings-dialog .tool-command-settings tbody .tool-command-alias-tag>button:hover{background:#e1ead9;color:#526f50}
+.storage-settings-dialog .tool-command-settings tbody .tool-command-alias-add{min-height:28px;padding:4px 8px;border:1px dashed #cddbc4;border-radius:4px;background:transparent;color:#76916a;font-size:10px}
+.tool-command-alias-empty{color:#a1ac98;font-size:10px;margin-right:3px}
+.tool-command-alias-entry{display:flex;align-items:center;gap:5px;margin-top:8px;min-width:0}
+.tool-command-alias-entry>input{flex:1}
+.storage-settings-dialog .tool-command-settings tbody .tool-command-alias-entry>button{flex:none;min-height:29px;padding:4px 7px;border:1px solid #cbdcc2;border-radius:4px;background:#edf4e8;font-size:10px}
+.storage-settings-dialog .tool-command-settings tbody .tool-command-alias-entry>.tool-command-alias-cancel{border-color:transparent;background:transparent;color:#899a7d}
+.storage-settings-dialog .tool-command-settings tbody button{border:0;background:transparent;padding:4px 0;font-size:10px;color:#7b906f}
+.tool-command-settings tbody tr.has-conflict{background:#fff5eb}
+.tool-command-settings tbody input[aria-invalid=true]{border-color:#c98d75;background:#fffcf6}
+.tool-command-settings-feedback{min-height:34px;padding:10px 0 4px;color:#89977f;font-size:10px;line-height:1.8}
+.tool-command-settings-feedback p{margin:0 0 4px}
+.tool-command-settings-feedback .tool-command-settings-error{color:#a3614e}
+.tool-command-settings-footer{display:flex;align-items:center;justify-content:flex-end;gap:8px;padding-top:12px;border-top:1px solid var(--command-border)}
+.tool-command-settings-footer>span{margin-right:auto;color:#91a088;font-size:10px}
+.tool-command-settings-empty{margin:0;padding:30px 12px;text-align:center;color:#899780;font-size:11px}
+.tool-command-settings-sr-only{position:absolute;width:1px;height:1px;padding:0;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+.storage-settings-dialog>main:not([hidden]):has(>.tool-command-settings){display:flex;flex-direction:column;overflow:hidden}
+.storage-settings-dialog .tool-command-settings{display:flex;flex-direction:column;flex:1 1 auto;min-height:0}
+.tool-command-settings>*:not(.tool-command-settings-list){flex-shrink:0}
+.tool-command-settings .tool-command-settings-list{flex:1 1 360px;min-height:96px}
+.tool-command-settings .tool-command-settings-feedback{max-height:90px;overflow:auto;scrollbar-width:thin}
+@media(max-width:650px){
+  .tool-command-settings-toolbar{align-items:flex-start;flex-wrap:wrap}
+  .tool-command-settings-list{max-height:330px}
+  .tool-command-settings th,.tool-command-settings td{padding:9px 6px}
+  .tool-command-settings-function-column{width:24%}
+  .tool-command-settings-primary-column{width:23%}
+  .tool-command-settings-alias-column{width:43%}
+  .tool-command-settings-action-column{width:10%}
+  .tool-command-settings tbody strong{font-size:11px}
+  .tool-command-alias-entry{flex-wrap:wrap}
+  .tool-command-alias-entry>input{flex-basis:100%}
+  .tool-command-settings-footer{flex-wrap:wrap}
+  .tool-command-settings-footer>span{width:100%;margin:0 0 2px}
+  .tool-command-settings-introduction{font-size:11px}
+}

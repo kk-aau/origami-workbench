@@ -1,0 +1,12 @@
+import fs from 'node:fs';
+import assert from 'node:assert/strict';
+const file='src/components/WovenGraphDialog.tsx';let text=fs.readFileSync(file,'utf8');
+const start=text.indexOf('  <div className="woven-graph-canvas"><svg'),end=text.indexOf('  <div className={`woven-graph-status',start);
+assert.ok(start>=0&&end>start,'Expected original plot/inspection block');
+text=text.slice(0,start)+`  {editable&&draft?<WovenGraphEditor key={mode+'-'+showInput} graph={draft} numbers={numbers} maxEdges={native?128:1024} onChange={editDraft}/>:<><div className="woven-graph-canvas">
+   <WovenGraphCanvas key={effectiveView+'-'+mode+'-'+showInput} points={points} edges={edges} kinds={effectiveView==='mother'?undefined:original!.edges_assignment} numbers={numbers} selectedEdge={edge} cuts={effectiveView==='mother'?[]:cuts} face={face>=0?faces[face]:undefined} label={effectiveView==='mother'?'有限母图源编号':effectiveView==='cp'?'编织原CP切口图':'编织原FF线框图'} onEdgePick={i=>{setSelectedEdge(i);if(onlyCuts&&!cuts.includes(i))setOnlyCuts(false);}}/>
+   <span className="woven-graph-caption">{effectiveView==='mother'?'点边从0编号；选手工母图可编辑，源线网在原输入中编辑。':effectiveView==='cp'?'原CP数组从0编号；内部切口保留B。':'原FF坐标线框；这里只检查几何，不表示层序。'}</span></div>
+  <div className="woven-graph-inspector"><label>边<select aria-label="检查原边编号" disabled={!available.length} value={edge??''} onChange={e=>setSelectedEdge(Number(e.target.value))}>{available.map(i=><option key={i} value={i}>E{i}{effectiveView==='mother'?'':\` · \${original!.edges_assignment[i]}\${cuts.includes(i)?' 切口':''}\`}</option>)}</select></label><label>面<select aria-label="检查原面编号" disabled={!faces.length} value={face} onChange={e=>setSelectedFace(Number(e.target.value))}><option value="-1">不选</option>{faces.map((_,i)=><option key={i} value={i}>F{i}</option>)}</select></label><span data-testid="woven-edge-info">{edge!==undefined?\`E\${edge}\${assignment?\` · \${assignment}\${activeCut?' 内部切口':''} · \${owner.map(f=>\`F\${f}\`).join(' ↔ ')} · \${topology!.edgeRestoreAnglesDeg[edge]}°\`:''}\`:'无可用边'}</span></div>
+  <div className="woven-graph-coordinates" title={a&&b?\`\${JSON.stringify(a)} → \${JSON.stringify(b)}\`:''}>{a&&b?\`(\${a.map(format).join(', ')}) → (\${b.map(format).join(', ')})\`:'—'}{face>=0&&<span>F{face} · 原绕向 {topology!.foldedFaceWinding[face]}</span>}</div></>}
+`+text.slice(end);
+fs.writeFileSync(file,text);console.log('Replaced plot with interactive/read-only source-coordinate canvases; old views and inspection retained.');

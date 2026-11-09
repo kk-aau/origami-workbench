@@ -1,0 +1,9 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "main-local",
+  "description": "Only the migration's local main and startup windows may use the desktop bridge.",
+  "windows": ["main"],
+  "remote": { "urls": ["http://127.0.0.1:*/"] },
+  "local": false,
+  "permissions": ["allow-desktop-ready", "allow-desktop-close-ack", "allow-desktop-open-logs", "allow-desktop-open-project", "allow-desktop-pick-directory", "allow-desktop-print", "allow-desktop-window-state", "allow-desktop-window-action", "allow-desktop-open-data-directory", "allow-desktop-prepare-export", "allow-desktop-write-export", "allow-desktop-finish-export", "allow-desktop-cancel-export"]
+}

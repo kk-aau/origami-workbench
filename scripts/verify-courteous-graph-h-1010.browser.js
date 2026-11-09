@@ -1,0 +1,25 @@
+async page=>{
+ const checks=[],errors=[];page.on('pageerror',e=>errors.push(e.message));const check=(v,name)=>{if(!v)throw Error(name);checks.push(name);};
+ const ready=()=>page.waitForFunction(()=>[...document.querySelectorAll('button')].some(b=>b.textContent==='采用折痕副本 →'&&!b.disabled),{},{timeout:45000});
+ const apiFor=predicate=>page.waitForResponse(r=>r.url().endsWith('/api/tessellate')&&r.status()===200&&predicate(r.request().postDataJSON()));
+ const capture=async(name,value)=>{const wait=page.waitForEvent('download');await page.evaluate(({name,value})=>{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(value,null,2)],{type:'application/json'}));a.download=name;a.click();},{name,value});await(await wait).saveAs('output/playwright/courteous-graph/'+name);};
+ const exported=async(name)=>{await page.getByRole('button',{name:'导出作品',exact:true}).click();const d=page.getByRole('dialog');await d.getByRole('combobox').selectOption('json');const wait=page.waitForEvent('download');await d.getByRole('button',{name:'导出文件',exact:true}).click();await(await wait).saveAs(`output/playwright/courteous-graph/${name}.json`);await d.getByRole('button',{name:'关闭窗口',exact:true}).click();};
+ await page.getByLabel('编织定义版本',{exact:true}).selectOption('current');await page.getByLabel('线组方式',{exact:true}).selectOption('random');await page.getByLabel('随机母线接受规则',{exact:true}).selectOption('original-courteous-graph');
+ const basePending=apiFor(q=>q.randomVersion==='original-courteous-graph'&&q.width===.02&&q.count===2&&!q.fullEdgeInsets&&!q.segmentInsets);await page.getByRole('button',{name:'原随机母图示例',exact:true}).click();const base=await(await basePending).json();await ready();
+ await page.getByRole('button',{name:'逐段内缩',exact:true}).click();await page.getByLabel('逐边内缩设置方式',{exact:true}).selectOption('full');
+ const fullPending=apiFor(q=>q.randomVersion==='original-courteous-graph'&&q.fullEdgeInsets?.edgeCount===12);await page.getByRole('dialog').getByRole('button',{name:'保存逐段内缩',exact:true}).click();const full=await(await fullPending).json();await ready();
+ check(JSON.stringify(full.mother)===JSON.stringify(base.mother)&&JSON.stringify(full.source.courteousGraph)===JSON.stringify(base.source.courteousGraph),'full h keeps literal original Graph and source order');
+ check(full.source.edgeWidths.every(h=>h===.02)&&full.source.requestedEdgeInsets.every(h=>h===.01),'all twelve h including boundary propagate to actual source widths');
+ check((await page.locator('body').innerText()).includes('✓ 层序已解'),'full h actual global layer solved before ordinary adoption');await capture('full-h-response.json',full);await page.screenshot({path:'output/playwright/courteous-graph/full-h-ready.png',fullPage:true});
+ await page.getByRole('button',{name:'采用折痕副本 →',exact:true}).click();await page.getByRole('button',{name:'折痕编辑',exact:true}).click();await exported('full-h-project');check(true,'full h ordinary CP adopted and actual native JSON downloaded');
+ await page.getByRole('button',{name:'镶嵌设计',exact:true}).click();await page.getByRole('button',{name:'原随机母图示例',exact:true}).click();await ready();
+ await page.getByRole('button',{name:'逐段内缩',exact:true}).click();await page.getByLabel('逐边内缩设置方式',{exact:true}).selectOption('segments');
+ const values=await page.getByLabel('母结构段编号',{exact:true}).locator('option').evaluateAll(options=>options.filter(o=>o.textContent.includes('线 1')).map(o=>o.value));check(values.length===2,'both segments of original first accepted line are editable');
+ for(const value of values){await page.getByLabel('母结构段编号',{exact:true}).selectOption(value);await page.getByLabel('当前段单侧内缩',{exact:true}).fill('0.0125');}
+ const segmentPending=apiFor(q=>q.randomVersion==='original-courteous-graph'&&q.segmentInsets?.length===2);await page.getByRole('dialog').getByRole('button',{name:'保存逐段内缩',exact:true}).click();const segments=await(await segmentPending).json();await ready();
+ check(JSON.stringify(segments.mother)===JSON.stringify(base.mother)&&JSON.stringify(segments.source.courteousGraph)===JSON.stringify(base.source.courteousGraph),'segment edits keep actual original Graph');
+ check(segments.source.edgeWidths.filter((_,i)=>segments.source.edgeLines[i]===0).every(h=>h===.025),'actual segment h independently maps to first original line widths');
+ check((await page.locator('body').innerText()).includes('✓ 层序已解'),'segment h actual global layer solved before ordinary adoption');await capture('segment-h-response.json',segments);await page.screenshot({path:'output/playwright/courteous-graph/segment-h-ready.png',fullPage:true});
+ await page.getByRole('button',{name:'采用折痕副本 →',exact:true}).click();await page.getByRole('button',{name:'折痕编辑',exact:true}).click();await exported('segment-h-project');check(true,'segment h ordinary CP adopted and actual native JSON downloaded');
+ check(errors.length===0,'no page errors');const result={passed:checks.length,checks,errors,actualOrdinaryFileDownloads:2};await capture('browser-h-evidence.json',result);return result;
+}

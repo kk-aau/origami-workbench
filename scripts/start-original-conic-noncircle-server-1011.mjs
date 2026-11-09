@@ -1,0 +1,13 @@
+import fs from 'node:fs';
+import assert from 'node:assert/strict';
+import crypto from 'node:crypto';
+import path from 'node:path';
+assert.equal(process.env.ZHEZHI_PORT,'8867');
+assert.equal(path.resolve(process.env.ZHEZHI_DATA_DIR??''),path.resolve('output/original-conic-noncircle-main-server-1011'));
+const record=JSON.parse(fs.readFileSync('output/parallel/original-conic-noncircle-cp-integrated-1010.json','utf8'));
+assert.equal(record.verified,true);
+for(const row of record.files)assert.equal(crypto.createHash('sha256').update(fs.readFileSync(row.file)).digest('hex'),row.after,row.file);
+assert.ok(fs.existsSync('dist/index.html'));
+process.env.PYTHONDONTWRITEBYTECODE='1';process.env.OPENBLAS_NUM_THREADS='1';process.env.OMP_NUM_THREADS='1';
+fs.writeFileSync('output/original-conic-noncircle-server-pid-1011.json',JSON.stringify({pid:process.pid,port:8867,startedAt:new Date().toISOString(),cwd:process.cwd(),data:process.env.ZHEZHI_DATA_DIR,allIntegratedSourceHashesVerified:true},null,2),{flag:'wx'});
+await import('../server.mjs');

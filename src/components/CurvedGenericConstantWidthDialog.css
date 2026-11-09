@@ -1,0 +1,4 @@
+.generic-constant-width-dialog .gnw-function-row{grid-template-columns:1fr}
+.generic-constant-width-dialog .gnw-numbers{grid-template-columns:repeat(2,minmax(0,1fr))}
+.gcw-foot{fill:#d298e5}
+@media(max-width:600px){.generic-constant-width-dialog .gnw-function-row{grid-template-columns:repeat(2,minmax(0,1fr))}.generic-constant-width-dialog .gnw-numbers{grid-template-columns:repeat(3,minmax(0,1fr))}.generic-constant-width-dialog .gnw-mode,.generic-constant-width-dialog .gnw-storage{grid-column:1/-1}}

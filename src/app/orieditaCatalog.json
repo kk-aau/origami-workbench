@@ -1,0 +1,2022 @@
+[
+  {
+    "id": "DRAW_CREASE_FREE_1",
+    "name": "自由画线",
+    "group": "线段与顶点",
+    "kind": "交互模式",
+    "source": "drawCreaseFreeAction",
+    "description": "drawCreaseFreeAction · DRAW_CREASE_FREE_1 / MH·DrawCreaseFree · L · 自由画直线段；起终点可在任意位置，接近已有点仍会吸附。不是自由手绘曲线。",
+    "status": "基础可用，变体待齐",
+    "tool": "line"
+  },
+  {
+    "id": "MOVE_CREASE_PATTERN_2",
+    "name": "平移折痕视图",
+    "group": "背景与视图",
+    "kind": "交互模式",
+    "source": "moveCreasePatternAction",
+    "description": "moveCreasePatternAction · MOVE_CREASE_PATTERN_2 / MH·MoveCreasePattern · T · 移动画布，不改变折痕坐标。",
+    "status": "基础可用，变体待齐",
+    "tool": "pan"
+  },
+  {
+    "id": "LINE_SEGMENT_DELETE_3",
+    "name": "擦除线段",
+    "group": "线型与删除",
+    "kind": "交互模式",
+    "source": "lineSegmentDeleteAction",
+    "description": "lineSegmentDeleteAction · LINE_SEGMENT_DELETE_3 / MH·LineSegmentDelete + POLY_LINE_0 · 左键单击或框选删除主折线；右键仍可快捷删除。",
+    "status": "基础可用，已接入独立擦除工具与右键快捷删除",
+    "tool": "erase"
+  },
+  {
+    "id": "CHANGE_CREASE_TYPE_4",
+    "name": "循环切换山谷边",
+    "group": "线型与删除",
+    "kind": "交互模式",
+    "source": "senbun_henkanAction",
+    "description": "senbun_henkanAction · CHANGE_CREASE_TYPE_4 / MH·ChangeCreaseType · L · 点击单线循环山、谷、边。",
+    "status": "基础可用，变体待齐",
+    "tool": "cycletype"
+  },
+  {
+    "id": "LENGTHEN_CREASE_5",
+    "name": "按当前线型延长",
+    "group": "线段与顶点",
+    "kind": "交互模式",
+    "source": "lengthenCreaseAction",
+    "description": "lengthenCreaseAction · LENGTHEN_CREASE_5 / MH·LengthenCrease · L · 按当前线色延长；选择源线端点后点击实际终止线或纸边，结果采用当前工具栏线型并保持真实有限小段。",
+    "status": "基础可用，批量横截选择变体待齐",
+    "tool": "lengthen"
+  },
+  {
+    "id": "SQUARE_BISECTOR_7",
+    "name": "角平分与平行中线",
+    "group": "精确构造",
+    "kind": "交互模式",
+    "source": "angleBisectorAction",
+    "description": "angleBisectorAction · SQUARE_BISECTOR_7 / MH·SquareBisector · L · 三点使用角平分线入口；两线／平行中线使用精确作图中的两线角平分入口。相交选一个实际截止，平行选两个实际截止或完整中线。",
+    "status": "基础可用，变体待齐",
+    "tool": "bisect"
+  },
+  {
+    "id": "INWARD_8",
+    "name": "兔耳构造",
+    "group": "精确构造",
+    "kind": "交互模式",
+    "source": "rabbitEarAction",
+    "description": "rabbitEarAction · INWARD_8 / MH·Inward · L · 三点兔耳构造，不是整个动物模型模板。",
+    "status": "基础可用，变体待齐",
+    "tool": "rabbitear"
+  },
+  {
+    "id": "PERPENDICULAR_DRAW_9",
+    "name": "点线垂线",
+    "group": "精确构造",
+    "kind": "交互模式",
+    "source": "perpendicularDrawAction",
+    "description": "perpendicularDrawAction · PERPENDICULAR_DRAW_9 / MH·PerpendicularDraw · L · 点到线垂线；点在线上时，还需选择延伸终止线/候选方向。",
+    "status": "基础可用，变体待齐",
+    "tool": "perpendicular"
+  },
+  {
+    "id": "SYMMETRIC_DRAW_10",
+    "name": "单线反射构造",
+    "group": "精确构造",
+    "kind": "交互模式",
+    "source": "symmetricDrawAction",
+    "description": "symmetricDrawAction · SYMMETRIC_DRAW_10 / MH·SymmetricDraw · L · 已有三点反射线和两线反射线：定义轴与原方向后，选择实际截止线。两线入口在镜像 / 变换分组，以支撑直线交点为起点；采用新绘制线型。原版自动延长及受限输入变体待齐。",
+    "status": "基础可用，变体待齐",
+    "tool": "reflection"
+  },
+  {
+    "id": "DRAW_CREASE_RESTRICTED_11",
+    "name": "射线",
+    "group": "线段与顶点",
+    "kind": "交互模式",
+    "source": "drawCreaseRestrictedAction",
+    "description": "迁移版射线：先点击起点与经过点，再选前方已有有限线段，以实际交点结束；保留 drawCreaseRestrictedAction · DRAW_CREASE_RESTRICTED_11 的工具映射与已有布局。",
+    "status": "迁移版定制交互",
+    "tool": "restrictedline"
+  },
+  {
+    "id": "DRAW_CREASE_SYMMETRIC_12",
+    "name": "任意轴镜像所选",
+    "group": "选择与变换",
+    "kind": "交互模式",
+    "source": "reflectAction",
+    "description": "reflectAction · DRAW_CREASE_SYMMETRIC_12 / MH·DrawCreaseSymmetric · L · 工具内单击线身或接触框选切换选择，两点定轴，点击紫色区域镜像所选线段。保留原图、山谷和折角，不复制圆／文字；端点／交点优先定轴，空白网格点也可定轴。同型重合部分去除，冲突拒绝。与 symmetricDraw 自动延长反射不同。",
+    "status": "基础可用，变体待齐",
+    "tool": "mirrorselection"
+  },
+  {
+    "id": "DRAW_CREASE_ANGLE_RESTRICTED_13",
+    "name": "角度会聚画线（deg1）",
+    "group": "角度与公理",
+    "kind": "交互模式",
+    "source": "deg1Action",
+    "description": "deg1Action · DRAW_CREASE_ANGLE_RESTRICTED_13 / MH·DrawCreaseAngleRestricted · R · 指定已有线或两点为基准，选择两束受限角射线的汇交点，绘制会聚线。；已接角度会聚：已有线或两点定基线，双扇交会一次生成两腿；自定义六角索引越界修正，支持共用持久化设置。尚未上游动态验收。",
+    "status": "基础可用，变体待齐",
+    "tool": "angleconverge"
+  },
+  {
+    "id": "DRAW_POINT_14",
+    "name": "在线段上加顶点",
+    "group": "线段与顶点",
+    "kind": "交互模式",
+    "source": "vertexAddAction / v_addAction",
+    "description": "vertexAddAction · DRAW_POINT_14 / MH·DrawPoint · L · 在线内投影位置加顶点，真实分割线段；不是在任意空白处加入孤立点。",
+    "status": "基础可用，变体待齐",
+    "tool": "addvertex"
+  },
+  {
+    "id": "DELETE_POINT_15",
+    "name": "删除同色共线顶点",
+    "group": "线段与顶点",
+    "kind": "交互模式",
+    "source": "vertexDeleteAction / v_delAction",
+    "description": "vertexDeleteAction · DELETE_POINT_15 / MH·DeletePoint · L · 删除共线且同色线段间冗余顶点。",
+    "status": "基础可用，变体待齐",
+    "tool": "mergevertex"
+  },
+  {
+    "id": "ANGLE_SYSTEM_16",
+    "name": "定向截取画线（deg3）",
+    "group": "角度与公理",
+    "kind": "交互模式",
+    "source": "deg3Action",
+    "description": "deg3Action · ANGLE_SYSTEM_16 / MH·AngleSystem · R · 两点确定角度偏置 → 选候选方向 → 选目标线确定长度；四步状态机。；现已提供定向截取入口：第二点起算，选择方向后点击有限前向截止，共用两组等分／两组自定义设置；未做原版动态验收。",
+    "status": "基础可用，变体待齐",
+    "tool": "angledirection"
+  },
+  {
+    "id": "DRAW_CREASE_ANGLE_RESTRICTED_3_18",
+    "name": "角度投影画线（deg4）",
+    "group": "角度与公理",
+    "kind": "交互模式",
+    "source": "deg4Action",
+    "description": "deg4Action · DRAW_CREASE_ANGLE_RESTRICTED_3_18 / MH·DrawCreaseAngleRestricted3_2 · R · 两点确定基准，点选候选射线上的投影位置，接近已有线时可取交点；并非 deg3 的重复按钮。；已接角度投影：第二点起算、第三击投影到候选，近线吸附保留两倍投影误差判据，但只接受有限真实线段。尚未上游动态验收。",
+    "status": "基础可用，变体待齐",
+    "tool": "angleproject"
+  },
+  {
+    "id": "CREASE_SELECT_19",
+    "name": "点选与框选",
+    "group": "选择与变换",
+    "kind": "交互模式",
+    "source": "selectAction / unselectAction",
+    "description": "selectAction, unselectAction · CREASE_SELECT_19 / MH·CreaseSelect；CREASE_UNSELECT_20 / MH·CreaseUnselect · L · 点击线及矩形选择/撤选；不是只支持全选/清空。",
+    "status": "基础可用，变体待齐",
+    "tool": "select"
+  },
+  {
+    "id": "CREASE_UNSELECT_20",
+    "name": "点选与框撤选",
+    "group": "选择与变换",
+    "kind": "交互模式",
+    "source": "selectAction / unselectAction",
+    "description": "selectAction, unselectAction · CREASE_SELECT_19 / MH·CreaseSelect；CREASE_UNSELECT_20 / MH·CreaseUnselect · L · 点击线及矩形选择/撤选；不是只支持全选/清空。 本版点撤选/接触框撤选，不修改几何历史。",
+    "status": "基础可用，变体待齐",
+    "tool": "unselect"
+  },
+  {
+    "id": "CREASE_MOVE_21",
+    "name": "两点移动所选",
+    "group": "选择与变换",
+    "kind": "交互模式",
+    "source": "moveAction",
+    "description": "moveAction · CREASE_MOVE_21 / MH·CreaseMove · L · 按起终点向量移动选中线。",
+    "status": "基础可用，变体待齐",
+    "tool": "moveselection"
+  },
+  {
+    "id": "CREASE_COPY_22",
+    "name": "两点复制所选",
+    "group": "选择与变换",
+    "kind": "交互模式",
+    "source": "copyAction",
+    "description": "copyAction · CREASE_COPY_22 / MH·CreaseCopy · L · 按起终点向量复制选中线。",
+    "status": "基础可用，变体待齐",
+    "tool": "copyselection"
+  },
+  {
+    "id": "CREASE_MAKE_MOUNTAIN_23",
+    "name": "改为山折",
+    "group": "线型与删除",
+    "kind": "交互模式",
+    "source": "toMountainAction / toValleyAction / toEdgeAction / toAuxAction",
+    "description": "toMountainAction, toValleyAction, toEdgeAction, toAuxAction · CREASE_MAKE_MOUNTAIN_23、VALLEY_24、EDGE_25、AUX_60 / MH·CreaseMakeMountain、Valley、Edge、Aux · 已注册/隐藏入口 · 矩形/点击改为指定类型；本次未找到独立可见按钮，现有 UI 以替换下拉工具覆盖类似需求。",
+    "status": "基础可用，上游动态对照待验",
+    "tool": "makemountain"
+  },
+  {
+    "id": "CREASE_MAKE_VALLEY_24",
+    "name": "改为谷折",
+    "group": "线型与删除",
+    "kind": "交互模式",
+    "source": "CREASE_MAKE_VALLEY_24",
+    "description": "独立交互变体；请与同组动作及固定版本 handler 一并核对。",
+    "status": "基础可用，上游动态对照待验",
+    "tool": "makevalley"
+  },
+  {
+    "id": "CREASE_MAKE_EDGE_25",
+    "name": "改为边界",
+    "group": "线型与删除",
+    "kind": "交互模式",
+    "source": "CREASE_MAKE_EDGE_25",
+    "description": "独立交互变体；请与同组动作及固定版本 handler 一并核对。",
+    "status": "基础可用，上游动态对照待验",
+    "tool": "makeedge"
+  },
+  {
+    "id": "BACKGROUND_CHANGE_POSITION_26",
+    "name": "背景四点配准",
+    "group": "背景与视图",
+    "kind": "交互模式",
+    "source": "backgroundSetPositionAction",
+    "description": "backgroundSetPositionAction · BACKGROUND_CHANGE_POSITION_26 / MH·BackgroundChangePosition · T · 四点定背景的平移、尺度与旋转。",
+    "status": "基础可用；四点配准与随画布／固定屏幕联动已接，上游动态对照待齐",
+    "tool": "backgroundposition"
+  },
+  {
+    "id": "LINE_SEGMENT_DIVISION_27",
+    "name": "绘制并等分线段",
+    "group": "线段与顶点",
+    "kind": "交互模式",
+    "source": "senbun_b_nyuryokuAction",
+    "description": "senbun_b_nyuryokuAction · LINE_SEGMENT_DIVISION_27 / MH·LineSegmentDivision · L · 绘制并等分线段；结果是 N 段真实线段，不只是画等分标记。",
+    "status": "基础可用，上游动态对照待验",
+    "tool": "drawdivide"
+  },
+  {
+    "id": "LINE_SEGMENT_RATIO_SET_28",
+    "name": "根式内分比画线",
+    "group": "线段与顶点",
+    "kind": "交互模式",
+    "source": "drawLineSegmentInternalDivisionRatioAction",
+    "description": "drawLineSegmentInternalDivisionRatioAction · LINE_SEGMENT_RATIO_SET_28 / MH·LineSegmentRatioSet · T · 按指定比例绘制两段线；分点成为真实端点。",
+    "status": "基础可用，上游动态对照待验",
+    "tool": "drawratio"
+  },
+  {
+    "id": "POLYGON_SET_NO_CORNERS_29",
+    "name": "正多边形",
+    "group": "精确构造",
+    "kind": "交互模式",
+    "source": "regularPolygonAction",
+    "description": "regularPolygonAction · POLYGON_SET_NO_CORNERS_29 / MH·PolygonSetNoCorners · R · 两点定义一条边，顺时针生成正 N 边形。",
+    "status": "基础可用，变体待齐",
+    "tool": "polygon"
+  },
+  {
+    "id": "CREASE_ADVANCE_TYPE_30",
+    "name": "描图循环改型",
+    "group": "线型与删除",
+    "kind": "交互模式",
+    "source": "senbun_yoke_henkanAction",
+    "description": "senbun_yoke_henkanAction · CREASE_ADVANCE_TYPE_30 / MH·CreaseAdvanceType · T · 背景描图用循环：未选边→选中边→山→谷→边；按住暂时隐藏目标线，松开切换；拖动会恢复。",
+    "status": "基础可用；按住对照、四阶段循环和取消已接，上游动态验收待齐",
+    "tool": "advancetype"
+  },
+  {
+    "id": "CREASE_MOVE_4P_31",
+    "name": "四点移动变换",
+    "group": "选择与变换",
+    "kind": "交互模式",
+    "source": "move2p2pAction",
+    "description": "move2p2pAction · CREASE_MOVE_4P_31 / MH·CreaseMove4p · L · 四点相似变换：A→C、B→D，同时确定平移、缩放、旋转。",
+    "status": "基础可用，变体待齐",
+    "tool": "movefour"
+  },
+  {
+    "id": "CREASE_COPY_4P_32",
+    "name": "四点复制变换",
+    "group": "选择与变换",
+    "kind": "交互模式",
+    "source": "copy2p2pAction",
+    "description": "copy2p2pAction · CREASE_COPY_4P_32 / MH·CreaseCopy4p · L · 同上，但保留原对象生成副本。",
+    "status": "基础可用，变体待齐",
+    "tool": "copyfour"
+  },
+  {
+    "id": "FISH_BONE_DRAW_33",
+    "name": "鱼骨构造",
+    "group": "线段与顶点",
+    "kind": "交互模式",
+    "source": "fishBoneDrawAction",
+    "description": "fishBoneDrawAction · FISH_BONE_DRAW_33 / MH·FishBoneDraw · L · 鱼骨：沿绘制基线生成垂直平行、山谷交替的线，间距取网格宽度。",
+    "status": "基础可用，变体待齐",
+    "tool": "fishbone"
+  },
+  {
+    "id": "CREASE_MAKE_MV_34",
+    "name": "共线分段交替山谷",
+    "group": "线型与删除",
+    "kind": "交互模式",
+    "source": "in_L_col_changeAction",
+    "description": "in_L_col_changeAction · CREASE_MAKE_MV_34 / MH·CreaseMakeMV · L · 沿起点到终点的共线范围，以首段已有山谷为基准，保持首段并依次交替，不使用当前绘图线型。",
+    "status": "基础可用，上游动态对照待验",
+    "tool": "alternatecollinear"
+  },
+  {
+    "id": "DOUBLE_SYMMETRIC_DRAW_35",
+    "name": "横截反射构造",
+    "group": "精确构造",
+    "kind": "交互模式",
+    "source": "doubleSymmetricDrawAction",
+    "description": "doubleSymmetricDrawAction · DOUBLE_SYMMETRIC_DRAW_35 / MH·DoubleSymmetricDraw · L · 两点定义横截轴，只处理原线端点接触轴内部的 T 形连接；反射到首条非辅助线或纸边，预览后确认整组生成。保留原线型／折角，缺少截止整组拒绝，原版受限拖画变体待齐。",
+    "status": "基础可用，变体待齐",
+    "tool": "transverse"
+  },
+  {
+    "id": "CREASES_ALTERNATE_MV_36",
+    "name": "横截线交替山谷",
+    "group": "线型与删除",
+    "kind": "交互模式",
+    "source": "on_L_col_changeAction / on_L_col_changeButton",
+    "description": "on_L_col_changeAction · CREASES_ALTERNATE_MV_36 / MH·CreasesAlternateMV · L · 用横截线，对被相交的各条线依次交替山谷。",
+    "status": "基础可用，上游动态对照待验",
+    "tool": "alternatecross"
+  },
+  {
+    "id": "DRAW_CREASE_ANGLE_RESTRICTED_5_37",
+    "name": "角度拖画（deg2）",
+    "group": "角度与公理",
+    "kind": "交互模式",
+    "source": "deg2Action",
+    "description": "deg2Action · DRAW_CREASE_ANGLE_RESTRICTED_5_37 / MH·DrawCreaseAngleRestricted5 · R · 从已有点拖出符合当前角度系的线，方向先受限，只有共方向附近顶点才能吸附。；现已提供角度拖画入口：两击或拖放，方向投影、有限线交点及共方向顶点／网格吸附；自由起点为扩展，共用角度设置已支持本机跨刷新保留，未做原版动态验收。",
+    "status": "基础可用，变体待齐",
+    "tool": "angledrag"
+  },
+  {
+    "id": "VERTEX_MAKE_ANGULARLY_FLAT_FOLDABLE_38",
+    "name": "顶点局部可平折补线",
+    "group": "角度与公理",
+    "kind": "交互模式",
+    "source": "makeFlatFoldableAction",
+    "description": "makeFlatFoldableAction · VERTEX_MAKE_ANGULARLY_FLAT_FOLDABLE_38 / MH·VertexMakeAngularlyFlatFoldable · L · 从奇数度顶点计算满足角度条件的补线候选，再选方向/目标线。仅局部角度条件，不是全局可折证明。；已接局部平折补线入口：已有奇数度顶点、选择方向（单候选自动）、实际前向截止；单邻线保留线型和折角。仅局部角度条件，未做上游动态验收。",
+    "status": "基础可用，变体待齐",
+    "tool": "localflat"
+  },
+  {
+    "id": "FOLDABLE_LINE_INPUT_39",
+    "name": "补线与网格输入组合",
+    "group": "角度与公理",
+    "kind": "交互模式",
+    "source": "foldableLinePlusGridInputAction",
+    "description": "foldableLinePlusGridInputAction · FOLDABLE_LINE_INPUT_39 / MH·FoldableLineInput · 更多 · 本工作台已独立接入基础组合输入：网格／已有点、方向建议、终点重选与再次确认、实际线截止。上游模式与实现存在，但未找到 action → 模式39的执行注册，尚未动态验证原版入口；本工作台基础可用不代表上游接线已核实。",
+    "status": "基础可用，上游注册待核实",
+    "tool": "foldableinput"
+  },
+  {
+    "id": "PARALLEL_DRAW_40",
+    "name": "过点平行至目标线",
+    "group": "精确构造",
+    "kind": "交互模式",
+    "source": "parallelDrawAction",
+    "description": "parallelDrawAction · PARALLEL_DRAW_40 / MH·ParallelDraw · L · 过点作参考线的平行线，再选终止线。",
+    "status": "基础可用，变体待齐",
+    "tool": "parallel"
+  },
+  {
+    "id": "VERTEX_DELETE_ON_CREASE_41",
+    "name": "删除跨线型共线顶点",
+    "group": "线段与顶点",
+    "kind": "交互模式",
+    "source": "v_del_ccAction",
+    "description": "v_del_ccAction · VERTEX_DELETE_ON_CREASE_41 / MH·VertexDeleteOnCrease · L · 删除共线顶点，允许不同线色；需验收合并后颜色规则。",
+    "status": "基础可用，上游动态对照待验",
+    "tool": "mergecrossvertex"
+  },
+  {
+    "id": "CIRCLE_DRAW_42",
+    "name": "受限圆心半径圆",
+    "group": "圆与反演",
+    "kind": "交互模式",
+    "source": "circleDrawAction",
+    "description": "circleDrawAction · CIRCLE_DRAW_42 / MH·CircleDraw · R · 圆心及确定半径的点均须吸附已有点/网格点的受限圆。",
+    "status": "基础可用，上游动态对照待验",
+    "tool": "restrictedcircle"
+  },
+  {
+    "id": "CIRCLE_DRAW_THREE_POINT_43",
+    "name": "三点圆",
+    "group": "圆与反演",
+    "kind": "交互模式",
+    "source": "circleDrawThreePointAction",
+    "description": "circleDrawThreePointAction · CIRCLE_DRAW_THREE_POINT_43 / MH·CircleDrawThreePoint · R · 过三点圆。",
+    "status": "基础可用，变体待齐",
+    "tool": "circle3"
+  },
+  {
+    "id": "CIRCLE_DRAW_SEPARATE_44",
+    "name": "分离半径圆",
+    "group": "圆与反演",
+    "kind": "交互模式",
+    "source": "circleDrawSeparateAction",
+    "description": "circleDrawSeparateAction · CIRCLE_DRAW_SEPARATE_44 / MH·CircleDrawSeparate · R · 指定圆心，再以另外两点间长度作半径。",
+    "status": "基础可用，变体待齐",
+    "tool": "circleseparate"
+  },
+  {
+    "id": "CIRCLE_DRAW_TANGENT_LINE_45",
+    "name": "点圆／两圆切线",
+    "group": "圆与反演",
+    "kind": "交互模式",
+    "source": "circleDrawTangentLineAction",
+    "description": "circleDrawTangentLineAction · CIRCLE_DRAW_TANGENT_LINE_45 / MH·CircleDrawTangentLine · R · 两圆公切线，或点到圆切线；显示候选供选择。",
+    "status": "基础可用，变体待齐",
+    "tool": "tangentcircles"
+  },
+  {
+    "id": "CIRCLE_DRAW_INVERTED_46",
+    "name": "圆与直线反演",
+    "group": "圆与反演",
+    "kind": "交互模式",
+    "source": "circleDrawInvertedAction",
+    "description": "circleDrawInvertedAction · CIRCLE_DRAW_INVERTED_46 / MH·CircleDrawInverted · R · 以指定圆反演圆或支撑直线；当前拆为圆反演／直线反演，原对象保留。结果圆显式确认，结果直线需两个实际截止线并生成辅助线；不是有限线段对应圆弧。",
+    "status": "基础可用，变体待齐",
+    "tool": "circleinvert"
+  },
+  {
+    "id": "CIRCLE_DRAW_FREE_47",
+    "name": "自由圆",
+    "group": "圆与反演",
+    "kind": "交互模式",
+    "source": "circleDrawFreeAction",
+    "description": "circleDrawFreeAction · CIRCLE_DRAW_FREE_47 / MH·CircleDrawFree · R · 自由圆心/半径；接近现有点仍吸附。",
+    "status": "基础可用，变体待齐",
+    "tool": "circle"
+  },
+  {
+    "id": "CIRCLE_DRAW_CONCENTRIC_48",
+    "name": "按线长偏移同心圆",
+    "group": "圆与反演",
+    "kind": "交互模式",
+    "source": "circleDrawConcentricAction",
+    "description": "circleDrawConcentricAction · CIRCLE_DRAW_CONCENTRIC_48 / MH·CircleDrawConcentric · R · 参考圆同心圆，半径差由新画线段长度指定。",
+    "status": "基础可用，变体待齐",
+    "tool": "circleconcentric"
+  },
+  {
+    "id": "CIRCLE_DRAW_CONCENTRIC_SELECT_49",
+    "name": "按两圆半径差作同心圆",
+    "group": "圆与反演",
+    "kind": "交互模式",
+    "source": "circleDrawConcentricSelectAction",
+    "description": "circleDrawConcentricSelectAction · CIRCLE_DRAW_CONCENTRIC_SELECT_49 / MH·CircleDrawConcentricSelect · R · 选圆 A 定圆心，以 B/C 两圆的半径差调整 A，作新同心圆。",
+    "status": "基础可用，变体待齐",
+    "tool": "circledifference"
+  },
+  {
+    "id": "CIRCLE_DRAW_CONCENTRIC_TWO_CIRCLE_SELECT_50",
+    "name": "两圆外切同心构造",
+    "group": "圆与反演",
+    "kind": "交互模式",
+    "source": "circleDrawTwoConcentricAction",
+    "description": "circleDrawTwoConcentricAction · CIRCLE_DRAW_CONCENTRIC_TWO_CIRCLE_SELECT_50 / MH·CircleDrawConcentricTwoCircleSelect · R · 两圆各生成一个同心圆以外切；两半径同加 (圆心距−r1−r2)/2，结果半径须为正且增量非零。",
+    "status": "基础可用，变体待齐",
+    "tool": "circlepair"
+  },
+  {
+    "id": "PARALLEL_DRAW_WIDTH_51",
+    "name": "定距平行线",
+    "group": "精确构造",
+    "kind": "交互模式",
+    "source": "setParallelDrawWidthAction",
+    "description": "setParallelDrawWidthAction · PARALLEL_DRAW_WIDTH_51 / MH·ParallelDrawWidth · L · 参考线 + 拖动距离指定偏移宽度，选择平行候选线。与过点平行不同。",
+    "status": "基础可用，变体待齐",
+    "tool": "offsetparallel"
+  },
+  {
+    "id": "CONTINUOUS_SYMMETRIC_DRAW_52",
+    "name": "连续折射",
+    "group": "精确构造",
+    "kind": "交互模式",
+    "source": "continuousSymmetricDrawAction",
+    "description": "continuousSymmetricDrawAction · CONTINUOUS_SYMMETRIC_DRAW_52 / MH·ContinuousSymmetricDraw · L · 两点确定初始方向，遇折线将上一段映射后继续，山谷逐段交替；共线分点及符合条件的 T 形可继续，其余多线顶点、纸边或闭环停止。完整路径预览后确认，停止原因明确，整组撤销。",
+    "status": "基础可用，变体待齐",
+    "tool": "continuous"
+  },
+  {
+    "id": "DISPLAY_LENGTH_BETWEEN_POINTS_1_53",
+    "name": "两点长度 L1",
+    "group": "网格与测量",
+    "kind": "交互模式",
+    "source": "l1Action / l2Action",
+    "description": "l1Action, l2Action · DISPLAY_LENGTH_BETWEEN_POINTS_1_53, _2_54 / MH·DisplayLengthBetweenPoints1/2 · R · 两点长度，分别写入 L1/L2；算法同类，不是两种距离算法。源码值为 distance × gridSize / 400（网格单位），不能默认为毫米。",
+    "status": "基础可用，部分参数引用已接",
+    "tool": "measurel1"
+  },
+  {
+    "id": "DISPLAY_LENGTH_BETWEEN_POINTS_2_54",
+    "name": "两点长度 L2",
+    "group": "网格与测量",
+    "kind": "交互模式",
+    "source": "l1Action / l2Action",
+    "description": "l1Action, l2Action · DISPLAY_LENGTH_BETWEEN_POINTS_1_53, _2_54 / MH·DisplayLengthBetweenPoints1/2 · R · 两点长度，分别写入 L1/L2；算法同类，不是两种距离算法。源码值为 distance × gridSize / 400（网格单位），不能默认为毫米。",
+    "status": "基础可用，部分参数引用已接",
+    "tool": "measurel2"
+  },
+  {
+    "id": "DISPLAY_ANGLE_BETWEEN_THREE_POINTS_1_55",
+    "name": "三点角度 A1",
+    "group": "网格与测量",
+    "kind": "交互模式",
+    "source": "a1Action / a2Action / a3Action",
+    "description": "a1Action, a2Action, a3Action · DISPLAY_ANGLE_BETWEEN_THREE_POINTS_1_55, _2_56, _3_57 / MH·DisplayAngleBetweenThreePoints1/2/3 · R · 三点角度，分别存 A1/A2/A3；保留三个可引用测量槽。角方向需按源码回归。",
+    "status": "基础可用，部分参数引用已接",
+    "tool": "measurea1"
+  },
+  {
+    "id": "DISPLAY_ANGLE_BETWEEN_THREE_POINTS_2_56",
+    "name": "三点角度 A2",
+    "group": "网格与测量",
+    "kind": "交互模式",
+    "source": "a1Action / a2Action / a3Action",
+    "description": "a1Action, a2Action, a3Action · DISPLAY_ANGLE_BETWEEN_THREE_POINTS_1_55, _2_56, _3_57 / MH·DisplayAngleBetweenThreePoints1/2/3 · R · 三点角度，分别存 A1/A2/A3；保留三个可引用测量槽。角方向需按源码回归。",
+    "status": "基础可用，部分参数引用已接",
+    "tool": "measurea2"
+  },
+  {
+    "id": "DISPLAY_ANGLE_BETWEEN_THREE_POINTS_3_57",
+    "name": "三点角度 A3",
+    "group": "网格与测量",
+    "kind": "交互模式",
+    "source": "a1Action / a2Action / a3Action",
+    "description": "a1Action, a2Action, a3Action · DISPLAY_ANGLE_BETWEEN_THREE_POINTS_1_55, _2_56, _3_57 / MH·DisplayAngleBetweenThreePoints1/2/3 · R · 三点角度，分别存 A1/A2/A3；保留三个可引用测量槽。角方向需按源码回归。",
+    "status": "基础可用，部分参数引用已接",
+    "tool": "measurea3"
+  },
+  {
+    "id": "CREASE_TOGGLE_MV_58",
+    "name": "区域山谷互换",
+    "group": "线型与删除",
+    "kind": "交互模式",
+    "source": "senbun_henkan2Action",
+    "description": "senbun_henkan2Action · CREASE_TOGGLE_MV_58 / MH·CreaseToggleMV · L · 矩形区域内山谷互换。",
+    "status": "基础可用，上游动态对照待验",
+    "tool": "regionalswap"
+  },
+  {
+    "id": "CIRCLE_CHANGE_COLOR_59",
+    "name": "圆与辅助线着色",
+    "group": "圆与反演",
+    "kind": "交互模式",
+    "source": "sen_tokutyuu_color_henkouAction",
+    "description": "sen_tokutyuu_color_henkouAction · CIRCLE_CHANGE_COLOR_59 / MH·CircleChangeColor · R · 已接颜色参数、单击/接触框着色、紫色命中预览、取消/整批撤销；圆心或圆周命中，最近非辅助线不穿透。显示色与山谷/折角独立，工程及SVG/PNG保色，CP/OPX提示丢失；完整上游动态对照继续。",
+    "status": "基础可用，变体待齐",
+    "tool": "customcolor"
+  },
+  {
+    "id": "CREASE_MAKE_AUX_60",
+    "name": "改为构造辅助线",
+    "group": "线型与删除",
+    "kind": "交互模式",
+    "source": "CREASE_MAKE_AUX_60",
+    "description": "独立交互变体；请与同组动作及固定版本 handler 一并核对。",
+    "status": "基础可用，上游动态对照待验",
+    "tool": "makeaux"
+  },
+  {
+    "id": "OPERATION_FRAME_CREATE_61",
+    "name": "操作框／输出裁切框",
+    "group": "背景与视图",
+    "kind": "交互模式",
+    "source": "operationFrameSelectAction",
+    "description": "operationFrameSelectAction · OPERATION_FRAME_CREATE_61 / MH·OperationFrameCreate · T · 绘制操作框，限定导出图范围。",
+    "status": "基础可用；操作框、SVG／PNG区域导出及背景裁剪已接，上游动态验收待齐",
+    "tool": "operationframe"
+  },
+  {
+    "id": "VORONOI_CREATE_62",
+    "name": "Voronoi 构造",
+    "group": "精确构造",
+    "kind": "交互模式",
+    "source": "voronoiAction",
+    "description": "voronoiAction · VORONOI_CREATE_62 / MH·VoronoiCreate · L · 已接点击加入／再次点击移除种子，紫色临时分区，不写入折痕或保存；后台计算可终止，右击／Esc清空。初始中垂线总长1000 mm，完整上游动态对照及大型点集性能验收继续。",
+    "status": "基础可用，变体待齐",
+    "tool": "voronoi"
+  },
+  {
+    "id": "FLAT_FOLDABLE_CHECK_63",
+    "name": "多边形区域可平折检查",
+    "group": "检查与修复",
+    "kind": "交互模式",
+    "source": "o_F_checkAction",
+    "description": "FLAT_FOLDABLE_CHECK_63 / MouseHandlerFlatFoldableCheck：已接自由多边形轮廓、闭合后沿交叉顺序连续镜像、交叉编号与回位误差；区分几何一致/不一致/无法判断。不是区域内逐顶点定理检查，也不证明山谷/层序/全局可平折。临时检查，不改作品；完整上游动态对照继续。",
+    "status": "基础可用，变体待齐",
+    "tool": "regioncheck"
+  },
+  {
+    "id": "CREASE_DELETE_OVERLAPPING_64",
+    "name": "删除共线重叠线",
+    "group": "线型与删除",
+    "kind": "交互模式",
+    "source": "del_lAction",
+    "description": "del_lAction · CREASE_DELETE_OVERLAPPING_64 / MH·CreaseDeleteOverlapping · 更多 · 画线删除与其共线重叠的线。",
+    "status": "基础可用，上游动态对照待验",
+    "tool": "eraseoverlap"
+  },
+  {
+    "id": "CREASE_DELETE_INTERSECTING_65",
+    "name": "删除横截相交线",
+    "group": "线型与删除",
+    "kind": "交互模式",
+    "source": "del_l_XAction",
+    "description": "del_l_XAction · CREASE_DELETE_INTERSECTING_65 / MH·CreaseDeleteIntersecting · 更多 · 画线删除相交线。",
+    "status": "基础可用，上游动态对照待验",
+    "tool": "erasecross"
+  },
+  {
+    "id": "SELECT_POLYGON_66",
+    "name": "多边形选择",
+    "group": "选择与变换",
+    "kind": "交互模式",
+    "source": "select_polygonAction / unselect_polygonAction",
+    "description": "select_polygonAction, unselect_polygonAction · SELECT_POLYGON_66, UNSELECT_POLYGON_67 / MH·SelectPolygon、UnselectPolygon · 更多 · 绘制闭合多边形，选/撤其内完整线段。",
+    "status": "基础可用，变体待齐",
+    "tool": "selectpolygon"
+  },
+  {
+    "id": "UNSELECT_POLYGON_67",
+    "name": "多边形撤选",
+    "group": "选择与变换",
+    "kind": "交互模式",
+    "source": "select_polygonAction / unselect_polygonAction",
+    "description": "select_polygonAction, unselect_polygonAction · SELECT_POLYGON_66, UNSELECT_POLYGON_67 / MH·SelectPolygon、UnselectPolygon · 更多 · 绘制闭合多边形，选/撤其内完整线段。",
+    "status": "基础可用，变体待齐",
+    "tool": "unselectpolygon"
+  },
+  {
+    "id": "SELECT_LINE_INTERSECTING_68",
+    "name": "划线相交／重叠选择",
+    "group": "选择与变换",
+    "kind": "交互模式",
+    "source": "select_lXAction / unselect_lXAction",
+    "description": "select_lXAction, unselect_lXAction · SELECT_LINE_INTERSECTING_68, UNSELECT_LINE_INTERSECTING_69 / MH·SelectLineIntersecting、UnselectLineIntersecting · 更多 · 画参考线选择/撤选共线重叠**或 X 相交**线；FoldLineSet.select_lX 比英文帮助的 overlapping 更完整。",
+    "status": "基础可用，变体待齐",
+    "tool": "selectcross"
+  },
+  {
+    "id": "UNSELECT_LINE_INTERSECTING_69",
+    "name": "划线相交／重叠撤选",
+    "group": "选择与变换",
+    "kind": "交互模式",
+    "source": "select_lXAction / unselect_lXAction",
+    "description": "select_lXAction, unselect_lXAction · SELECT_LINE_INTERSECTING_68, UNSELECT_LINE_INTERSECTING_69 / MH·SelectLineIntersecting、UnselectLineIntersecting · 更多 · 画参考线选择/撤选共线重叠**或 X 相交**线；FoldLineSet.select_lX 比英文帮助的 overlapping 更完整。",
+    "status": "基础可用，变体待齐",
+    "tool": "unselectcross"
+  },
+  {
+    "id": "LENGTHEN_CREASE_SAME_COLOR_70",
+    "name": "保留原线型延长",
+    "group": "线段与顶点",
+    "kind": "交互模式",
+    "source": "lengthenCrease2Action",
+    "description": "lengthenCrease2Action · LENGTHEN_CREASE_SAME_COLOR_70 / MH·LengthenCreaseSameColor · L · 保持各原线颜色的延长变体；继承上一 handler，而不是另一个完全独立算法。",
+    "status": "基础可用，变体待齐",
+    "tool": "extend"
+  },
+  {
+    "id": "FOLDABLE_LINE_DRAW_71",
+    "name": "自由画线与补线组合",
+    "group": "角度与公理",
+    "kind": "交互模式",
+    "source": "foldableLineDrawAction / foldableLineAction",
+    "description": "foldableLineDrawAction · FOLDABLE_LINE_DRAW_71 / MH·FoldableLineDraw · L · 组合工具：奇数度已有顶点进入补线逻辑，其他起点进入自由画线；补线沿用单邻线类型及折角，多线交点按已有山谷数量自动配平；普通线段使用当前线型。",
+    "status": "基础可用，连续横截与上游变体待齐",
+    "tool": "foldabledraw"
+  },
+  {
+    "id": "REPLACE_LINE_TYPE_SELECT_72",
+    "name": "按来源类型替换线型",
+    "group": "线型与删除",
+    "kind": "交互模式",
+    "source": "replace_lineAction",
+    "description": "replace_lineAction · REPLACE_LINE_TYPE_SELECT_72 / MH·ReplaceTypeSelect · L · 框选区域内，把筛选的来源类型改成目标类型。来源可 Any、山谷组合、特定类型。",
+    "status": "基础可用，变体待齐",
+    "tool": "replacetype"
+  },
+  {
+    "id": "DELETE_LINE_TYPE_SELECT_73",
+    "name": "按类型筛选删除",
+    "group": "线型与删除",
+    "kind": "交互模式",
+    "source": "del_l_typeAction",
+    "description": "del_l_typeAction · DELETE_LINE_TYPE_SELECT_73 / MH·DeleteTypeSelect · L · 按类型筛选框删；下拉选择类型后自动进入工具。",
+    "status": "基础可用，变体待齐",
+    "tool": "deletetype"
+  },
+  {
+    "id": "SELECT_LASSO_74",
+    "name": "套索选择",
+    "group": "选择与变换",
+    "kind": "交互模式",
+    "source": "selectLassoAction / unselectLassoAction",
+    "description": "selectLassoAction, unselectLassoAction · SELECT_LASSO_74, UNSELECT_LASSO_75 / MH·SelectLasso、UnselectLasso · 更多 · 自由套索选/撤选。",
+    "status": "基础可用，变体待齐",
+    "tool": "selectlasso"
+  },
+  {
+    "id": "UNSELECT_LASSO_75",
+    "name": "套索撤选",
+    "group": "选择与变换",
+    "kind": "交互模式",
+    "source": "selectLassoAction / unselectLassoAction",
+    "description": "selectLassoAction, unselectLassoAction · SELECT_LASSO_74, UNSELECT_LASSO_75 / MH·SelectLasso、UnselectLasso · 更多 · 自由套索选/撤选。",
+    "status": "基础可用，变体待齐",
+    "tool": "unselectlasso"
+  },
+  {
+    "id": "TEXT",
+    "name": "文字创建／编辑／移动／删除",
+    "group": "标记与文字",
+    "kind": "交互模式",
+    "source": "textAction",
+    "description": "textAction · TEXT(81) / MH·Text · R · 已接中文多行创建／编辑／拖动／删除及撤销；显式应用草稿，Esc／右击取消。空闲右击优先删文字、否则删线，框选按完整包含／接触规则。字号用世界毫米，随缩放；与原版屏幕字体／自动结束不同，完整上游动态对照仍待。",
+    "status": "基础可用，变体待齐",
+    "tool": "text"
+  },
+  {
+    "id": "MODIFY_CALCULATED_SHAPE_101",
+    "name": "折叠图顶点变形（两模式）",
+    "group": "平折与模型",
+    "kind": "交互模式",
+    "source": "oriagari_sousaAction / oriagari_sousa_2Action",
+    "description": "oriagari_sousaAction / oriagari_sousa_2Action · 折叠图顶点变形两模式 · 底栏两个顶点操作图标 · Oriagari_sousaAction→MODIFY_CALCULATED_SHAPE_101→MouseHandlerModifyCalculatedShape；MODE_1 拖动时改线框，MODE_2 拖动中重算透视；不是通用三维刚性折叠求解",
+    "status": "基础可用，两模式已接入",
+    "tool": null
+  },
+  {
+    "id": "MOVE_CALCULATED_SHAPE_102",
+    "name": "移动折叠图",
+    "group": "平折与模型",
+    "kind": "交互模式",
+    "source": "foldedFigureMoveAction",
+    "description": "foldedFigureMoveAction · 移动折叠图视图 · 底栏 · Register→MOVE_CALCULATED_SHAPE_102",
+    "status": "基础可用，模型板独立视图联动已接入",
+    "tool": null
+  },
+  {
+    "id": "CHANGE_STANDARD_FACE_103",
+    "name": "选择折叠参考面",
+    "group": "平折与模型",
+    "kind": "交互模式",
+    "source": "koteimen_siteiAction",
+    "description": "koteimen_siteiAction · 选择起始参考面 · 左下起始面 · Register→CHANGE_STANDARD_FACE_103→MouseHandlerChangeStandardFace；需已有非 NONE 的识别结果；在 **CP** 面内选点，更新 startingFaceId，必要时回退估算步骤",
+    "status": "基础可用，更多参考面流程待齐",
+    "tool": null
+  },
+  {
+    "id": "ADD_FOLDING_CONSTRAINT",
+    "name": "折叠结果正反色约束",
+    "group": "平折与模型",
+    "kind": "交互模式",
+    "source": "addColorConstraintAction",
+    "description": "addColorConstraintAction · 结果可见正反色约束 · 底栏 Constraints · Register→ADD_FOLDING_CONSTRAINT→MouseHandlerAddFoldingConstraints；在折后面上设白/色面，左击切换、Ctrl+左击邻近追加、右击删除；下次折叠用于筛选层序，非任意手工全序编辑",
+    "status": "基础可用，已接入层序筛选",
+    "tool": null
+  },
+  {
+    "id": "AXIOM_5",
+    "name": "折纸公理 5",
+    "group": "角度与公理",
+    "kind": "交互模式",
+    "source": "axiom5Action",
+    "description": "axiom5Action · AXIOM_5 / MH·Axiom5 · 更多 · 折纸公理 5：折线经过点 B，同时把点 A 映到指定线；显示候选解再选终止位置。",
+    "status": "基础可用，变体待齐",
+    "tool": "axiom5"
+  },
+  {
+    "id": "AXIOM_7",
+    "name": "折纸公理 7",
+    "group": "角度与公理",
+    "kind": "交互模式",
+    "source": "axiom7Action",
+    "description": "axiom7Action · AXIOM_7 / MH·Axiom7 · 更多 · 折纸公理 7：将点映到线 A，折线垂直于线 B；选终止位置。",
+    "status": "基础可用，变体待齐",
+    "tool": "axiom7"
+  },
+  {
+    "id": "lineSegmentDivisionSetAction",
+    "name": "设置等分数量，是上一项参数入口，不另算一种几何算法",
+    "group": "线段与顶点",
+    "kind": "命令／参数",
+    "source": "lineSegmentDivisionSetAction",
+    "description": "lineSegmentDivisionSetAction · L listener 写入分段数并进入 27 · L · 设置等分数量，是上一项参数入口，不另算一种几何算法。",
+    "status": "基础可用，已接入画线等分参数区",
+    "tool": "drawdivide"
+  },
+  {
+    "id": "lineSegmentInternalDivisionRatioSetAction",
+    "name": "内分比输入为 `(A+B√C):(D+E√F)`",
+    "group": "线段与顶点",
+    "kind": "命令／参数",
+    "source": "lineSegmentInternalDivisionRatioSetAction",
+    "description": "lineSegmentInternalDivisionRatioSetAction · LineSegmentInternalDivisionRatioSetAction + 比例模型 · T · 内分比输入为 (A+B√C):(D+E√F)；保留根式，不限纯小数。",
+    "status": "基础可用，已接入根式比例参数区",
+    "tool": "drawratio"
+  },
+  {
+    "id": "polygonSizeSetAction",
+    "name": "正多边形边数设置",
+    "group": "线段与顶点",
+    "kind": "命令／参数",
+    "source": "polygonSizeSetAction",
+    "description": "polygonSizeSetAction · R listener，设置边数并进入 29 · R · 正多边形边数设置。",
+    "status": "基础可用，已接入正多边形参数区",
+    "tool": "polygon"
+  },
+  {
+    "id": "all_s_step_to_orisenAction",
+    "name": "把上述/其他构造中的临时线正式提交为折线",
+    "group": "线段与顶点",
+    "kind": "命令／参数",
+    "source": "all_s_step_to_orisenAction",
+    "description": "all_s_step_to_orisenAction · All_s_step_to_orisenAction · L · 把上述/其他构造中的临时线正式提交为折线；是独立提交命令，非新的网格算法。",
+    "status": "待逐项对齐",
+    "tool": null
+  },
+  {
+    "id": "angleSystemAAction",
+    "name": "选用 A/B 两组 `180/n` 角度系",
+    "group": "角度与公理",
+    "kind": "命令／参数",
+    "source": "angleSystemAAction / angleSystemBAction",
+    "description": "angleSystemAAction, angleSystemBAction · AngleSystemModel 当前 divisor · R · 选用 A/B 两组 180/n 角度系。",
+    "status": "基础可用，已接入角度系统参数区",
+    "tool": "angledrag"
+  },
+  {
+    "id": "angleSystemADecreaseAction",
+    "name": "调整对应角度系",
+    "group": "角度与公理",
+    "kind": "命令／参数",
+    "source": "angleSystemADecreaseAction / angleSystemAIncreaseAction / angleSystemBDecreaseAction / angleSystemBIncreaseAction",
+    "description": "angleSystemADecreaseAction, angleSystemAIncreaseAction, angleSystemBDecreaseAction, angleSystemBIncreaseAction · AngleSystemModel 各 increase/decrease 方法 · R · 调整对应角度系；英文 help 的 Increase/Decrease 指向分母变化，与角度大小方向相反，不要直译成含糊「增加角度」。",
+    "status": "基础可用，已接入角度系统参数区",
+    "tool": "angledrag"
+  },
+  {
+    "id": "restrictedAngleABCSetAction",
+    "name": "三个自定义角度 ABC 参数组",
+    "group": "角度与公理",
+    "kind": "命令／参数",
+    "source": "restrictedAngleABCSetAction / restrictedAngleSetABCAction",
+    "description": "restrictedAngleABCSetAction / UI另有 restrictedAngleSetABCAction · R listener → setCurrentABC() · R · 三个自定义角度 ABC 参数组；存在 action 拼写不一致，见疑点节。",
+    "status": "基础可用，已接入角度系统参数区",
+    "tool": "angledrag"
+  },
+  {
+    "id": "restrictedAngleSetDEFAction",
+    "name": "三个自定义角度 DEF 参数组",
+    "group": "角度与公理",
+    "kind": "命令／参数",
+    "source": "restrictedAngleSetDEFAction",
+    "description": "restrictedAngleSetDEFAction · R listener → setCurrentDEF() · R · 三个自定义角度 DEF 参数组；是同一角度系统的另一参数组。",
+    "status": "基础可用，已接入角度系统参数区",
+    "tool": "angledrag"
+  },
+  {
+    "id": "c_colAction",
+    "name": "设置圆/青色辅助线的自定义显示颜色并进入着色工具",
+    "group": "圆与反演",
+    "kind": "命令／参数",
+    "source": "c_colAction",
+    "description": "c_colAction · R listener → 自定义颜色 + 模式 59 · R · 设置圆/青色辅助线的自定义显示颜色并进入着色工具。",
+    "status": "基础可用，已接入辅助线／圆着色工具",
+    "tool": "customcolor"
+  },
+  {
+    "id": "selectAllAction",
+    "name": "全选/全部撤选",
+    "group": "选择与变换",
+    "kind": "命令／参数",
+    "source": "selectAllAction / unselectAllAction",
+    "description": "selectAllAction, unselectAllAction · Worker select_all / unselect_all · L · 全选/全部撤选。 选择操作栏全选/全部撤选；Ctrl+A全选、Ctrl+Shift+A全部撤选，全选遵守边界保护。",
+    "status": "基础可用，变体待齐",
+    "tool": null
+  },
+  {
+    "id": "selectAnd3ClickAction",
+    "name": "三击由选择切换到最近的移动/四点移动/复制/四点复制/镜像",
+    "group": "选择与变换",
+    "kind": "命令／参数",
+    "source": "selectAnd3ClickAction",
+    "description": "selectAnd3ClickAction · CanvasModel 三击开关；MH·CreaseSelect 分派最近变换模式 · 更多 · 三击由选择切换到最近的移动/四点移动/复制/四点复制/镜像。交互便利选项，不新计一种变换。",
+    "status": "待逐项对齐",
+    "tool": null
+  },
+  {
+    "id": "selectPersistentAction",
+    "name": "折叠等操作后保留选择",
+    "group": "选择与变换",
+    "kind": "命令／参数",
+    "source": "selectPersistentAction",
+    "description": "selectPersistentAction（不在 ActionType enum） · L listener → ApplicationModel · L · 折叠等操作后保留选择。",
+    "status": "部分实现：右侧操作后保持选择覆盖平折启动、两点／四点移动复制、拖动移动、选区镜像及数值变换；保留选区映射到交点分段。默认关闭并持久化，真实浏览器回归待补。",
+    "tool": null
+  },
+  {
+    "id": "undoAction",
+    "name": "主折痕撤销/重做",
+    "group": "选择与变换",
+    "kind": "命令／参数",
+    "source": "undoAction / redoAction",
+    "description": "undoAction, redoAction（不在 ActionType enum） · L UndoRedo listener → Worker · L · 主折痕撤销/重做；另有标记线专用历史，不能混为一条。",
+    "status": "待逐项对齐",
+    "tool": null
+  },
+  {
+    "id": "colRedAction",
+    "name": "后续新画线的山/谷/边/辅助类型",
+    "group": "线型与删除",
+    "kind": "命令／参数",
+    "source": "colRedAction / colBlueAction / colBlackAction / colCyanAction",
+    "description": "colRedAction, colBlueAction, colBlackAction, colCyanAction · CanvasModel setLineColor · L · **后续新画线**的山/谷/边/辅助类型；不得误改现有选线或晚一次刷新。",
+    "status": "待逐项对齐",
+    "tool": null
+  },
+  {
+    "id": "switchReplaceAction",
+    "name": "对调替换的来源/目标",
+    "group": "线型与删除",
+    "kind": "命令／参数",
+    "source": "switchReplaceAction",
+    "description": "switchReplaceAction · ARS 交换 CustomFrom/ToLineType · L · 对调替换的来源/目标；来源 Any 或 M&V 时禁用。",
+    "status": "基础可用，按类型替换参数区支持对调；组合来源时禁用",
+    "tool": "replacetype"
+  },
+  {
+    "id": "zen_yama_tani_henkanAction",
+    "name": "全部山谷互换",
+    "group": "线型与删除",
+    "kind": "命令／参数",
+    "source": "zen_yama_tani_henkanAction",
+    "description": "zen_yama_tani_henkanAction · Worker allMountainValleyChange · L · 全部山谷互换；与上述范围不同。",
+    "status": "待逐项对齐",
+    "tool": null
+  },
+  {
+    "id": "v_del_allAction",
+    "name": "全图批量删除同色共线冗余顶点",
+    "group": "线型与删除",
+    "kind": "命令／参数",
+    "source": "v_del_allAction",
+    "description": "v_del_allAction · Worker v_del_all · L · 全图批量删除同色共线冗余顶点。",
+    "status": "全图同线型共线冗余点可预览合并，跨线型与辅助线待齐",
+    "tool": null
+  },
+  {
+    "id": "v_del_all_ccAction",
+    "name": "全图批量删除共线冗余顶点，不要求同色",
+    "group": "线型与删除",
+    "kind": "命令／参数",
+    "source": "v_del_all_ccAction",
+    "description": "v_del_all_ccAction · Worker v_del_all_cc · 编辑页“跨类型合点”预览全图跨线型规则：边＋山／谷保留折型，山＋谷变为边界；冲突折角可统一指定或保留。",
+    "status": "基础可用，已接入跨线型批量预览与撤销",
+    "tool": null
+  },
+  {
+    "id": "deleteSelectedLineSegmentAction",
+    "name": "删除所选线段",
+    "group": "线型与删除",
+    "kind": "命令／参数",
+    "source": "deleteSelectedLineSegmentAction / d_s_LAction",
+    "description": "deleteSelectedLineSegmentAction · Worker del_selected_senbun + record · L · 删除所选线段。",
+    "status": "待逐项对齐",
+    "tool": null
+  },
+  {
+    "id": "edgeLineSegmentDeleteAction",
+    "name": "仅擦除边线",
+    "group": "线型与删除",
+    "kind": "命令／参数",
+    "source": "edgeLineSegmentDeleteAction",
+    "description": "edgeLineSegmentDeleteAction · 同 3 + BLACK_LINE_2 · 仅擦除边线；工作台现以独立工具过滤真实边界小段。",
+    "status": "基础可用，已接入仅边线擦除",
+    "tool": "eraseedge"
+  },
+  {
+    "id": "auxLiveLineSegmentDeleteAction",
+    "name": "擦除参与构造的青色辅助线",
+    "group": "线型与删除",
+    "kind": "命令／参数",
+    "source": "auxLiveLineSegmentDeleteAction",
+    "description": "auxLiveLineSegmentDeleteAction · 同 3 + AUX_LIVE_LINE_3 · 擦除参与构造的青色辅助线；工作台现以独立工具过滤 A 小段，不影响标记对象。",
+    "status": "基础可用，已接入仅辅助线擦除",
+    "tool": "eraseaux"
+  },
+  {
+    "id": "trimBranchesAction",
+    "name": "清除悬空分枝，执行前置整理并记录历史",
+    "group": "线型与删除",
+    "kind": "命令／参数",
+    "source": "trimBranchesAction",
+    "description": "trimBranchesAction · Worker point_removal → overlapping_line_removal → branch_trim → organizeCircles · 清除未连接到纸张边界的内部悬空分枝；保留边界与闭环，整次操作可撤销。",
+    "status": "基础可用，已接入工程整理入口",
+    "tool": null
+  },
+  {
+    "id": "h_senbun_nyuryokuAction",
+    "name": "独立标记线图层",
+    "group": "标记与文字",
+    "kind": "命令／参数",
+    "source": "h_senbun_nyuryokuAction",
+    "description": "h_senbun_nyuryokuAction · 自由画线模式 1 + AUX_LINE_1 · R · 独立标记线图层；不干扰主折线。",
+    "status": "基础可用：点击／拖画橙色独立标记；使用主撤销，专用历史待齐",
+    "tool": "mark"
+  },
+  {
+    "id": "h_senbun_sakujyoAction",
+    "name": "只删除独立标记线",
+    "group": "标记与文字",
+    "kind": "命令／参数",
+    "source": "h_senbun_sakujyoAction",
+    "description": "h_senbun_sakujyoAction · 擦除模式 3 + AUX_LINE_1 · R · 只删除独立标记线。",
+    "status": "基础可用：左键单击／方向框删标记；右键仍沿用折痕删除",
+    "tool": "erasemark"
+  },
+  {
+    "id": "colOrangeAction",
+    "name": "标记线颜色橙/黄",
+    "group": "标记与文字",
+    "kind": "命令／参数",
+    "source": "colOrangeAction / colYellowAction",
+    "description": "colOrangeAction, colYellowAction · CanvasModel setAuxLiveLineColor · R · 标记线颜色橙/黄。不是新折痕的山谷类型。",
+    "status": "基础可用：标记参数栏切换橙／黄，保存本机偏好；只影响新标记",
+    "tool": "mark"
+  },
+  {
+    "id": "h_senhaba_sageAction",
+    "name": "减/增标记线线宽",
+    "group": "标记与文字",
+    "kind": "命令／参数",
+    "source": "h_senhaba_sageAction / h_senhaba_ageAction",
+    "description": "h_senhaba_sageAction, h_senhaba_ageAction · ApplicationModel 标记线宽 · R · 减/增标记线线宽。",
+    "status": "基础可用：显示设置内独立标记线宽，画布与图像输出同步；非原版共享线宽字段",
+    "tool": null
+  },
+  {
+    "id": "h_undoAction",
+    "name": "标记线专用撤销/重做",
+    "group": "标记与文字",
+    "kind": "命令／参数",
+    "source": "h_undoAction / h_redoAction",
+    "description": "h_undoAction, h_redoAction · Worker auxUndo, auxRedo · R · 标记线专用撤销/重做。",
+    "status": "基础可用：右侧标记专用历史；与主工程历史同步，非原版历史架构逐项复刻",
+    "tool": "mark"
+  },
+  {
+    "id": "displayCpLinesAction",
+    "name": "分别显示主折线、辅助线、独立标记线",
+    "group": "标记与文字",
+    "kind": "命令／参数",
+    "source": "displayCpLinesAction / displayAuxLinesAction / displayLiveAuxLinesAction",
+    "description": "displayCpLinesAction, displayAuxLinesAction, displayLiveAuxLinesAction · 画布底部“对象显示”控制：分别隐藏主折痕、辅助线、独立标记；状态写入本机显示偏好，不修改工程。",
+    "status": "基础可用，已接入显示层开关",
+    "tool": null
+  },
+  {
+    "id": "gridSizeSetAction",
+    "name": "网格份数设值、×2、÷2（下限 1）",
+    "group": "网格与测量",
+    "kind": "命令／参数",
+    "source": "gridSizeSetAction / gridSizeIncreaseAction / gridSizeDecreaseAction",
+    "description": "gridSizeSetAction, gridSizeIncreaseAction, gridSizeDecreaseAction · L listener / GridModel · L · 网格份数设值、×2、÷2（下限 1）；同一参数的三个入口。",
+    "status": "基础可用，右侧支持输入与 ×2／÷2",
+    "tool": null
+  },
+  {
+    "id": "changeGridStateAction",
+    "name": "纸内网格/全画布网格/关闭",
+    "group": "网格与测量",
+    "kind": "命令／参数",
+    "source": "changeGridStateAction",
+    "description": "changeGridStateAction · GridModel advanceBaseState · L · 纸内网格/全画布网格/关闭；当前工作台已接入三态显示与纸内吸附。",
+    "status": "基础可用，三态网格显示已接入",
+    "tool": null
+  },
+  {
+    "id": "setGridParametersAction",
+    "name": "横纵网格比各 `A+B√C` + 网格夹角",
+    "group": "网格与测量",
+    "kind": "命令／参数",
+    "source": "setGridParametersAction",
+    "description": "setGridParametersAction · L listener → GridModel · L · 横纵网格比各 A+B√C + 网格夹角；不是仅正交等宽网格。",
+    "status": "待逐项对齐",
+    "tool": null
+  },
+  {
+    "id": "drawDiagonalGridlinesAction",
+    "name": "各网格单元对角线",
+    "group": "网格与测量",
+    "kind": "命令／参数",
+    "source": "drawDiagonalGridlinesAction",
+    "description": "drawDiagonalGridlinesAction · 各网格单元对角线显示开关；当前工作台作为视觉参考层接入，不增加吸附点或改变折痕坐标。",
+    "status": "基础可用，对角线参考层已接入",
+    "tool": null
+  },
+  {
+    "id": "setIntervalGridSizeAction",
+    "name": "间隔加粗/着色网格的周期",
+    "group": "网格与测量",
+    "kind": "命令／参数",
+    "source": "setIntervalGridSizeAction",
+    "description": "setIntervalGridSizeAction · L listener → GridModel · L · 间隔加粗/着色网格的周期。",
+    "status": "待逐项对齐",
+    "tool": null
+  },
+  {
+    "id": "moveIntervalGridVerticalAction",
+    "name": "间隔网格沿两个方向逐格偏移",
+    "group": "网格与测量",
+    "kind": "命令／参数",
+    "source": "moveIntervalGridVerticalAction / moveIntervalGridHorizontalAction",
+    "description": "moveIntervalGridVerticalAction, moveIntervalGridHorizontalAction · GridModel scale position · L · 间隔网格沿两个方向逐格偏移；注意底层 horizontal/vertical 命名与按钮方向交叉。",
+    "status": "待逐项对齐",
+    "tool": null
+  },
+  {
+    "id": "gridColorAction",
+    "name": "普通网格/间隔网格独立颜色",
+    "group": "网格与测量",
+    "kind": "命令／参数",
+    "source": "gridColorAction / intervalGridColorAction",
+    "description": "gridColorAction, intervalGridColorAction · ApplicationModel 颜色 · L/偏好 · 普通网格/间隔网格独立颜色。",
+    "status": "待逐项对齐",
+    "tool": null
+  },
+  {
+    "id": "gridLineWidthDecreaseAction",
+    "name": "网格线宽设定",
+    "group": "网格与测量",
+    "kind": "命令／参数",
+    "source": "gridLineWidthDecreaseAction / gridLineWidthIncreaseAction",
+    "description": "gridLineWidthDecreaseAction, gridLineWidthIncreaseAction · ApplicationModel 网格线宽 · L · 网格线宽设定。",
+    "status": "待逐项对齐",
+    "tool": null
+  },
+  {
+    "id": "gridConfigureResetAction",
+    "name": "重置整个网格参数集",
+    "group": "网格与测量",
+    "kind": "命令／参数",
+    "source": "gridConfigureResetAction / resetGridAction",
+    "description": "gridConfigureResetAction · GridModel reset · L · 重置整个网格参数集。",
+    "status": "基础可用，右侧可恢复默认网格",
+    "tool": null
+  },
+  {
+    "id": "gridInputAssistAction",
+    "name": "输入辅助点/副网格/坐标提示",
+    "group": "网格与测量",
+    "kind": "命令／参数",
+    "source": "gridInputAssistAction",
+    "description": "gridInputAssistAction（非 ActionType） · AppMenuBar / ApplicationModel · 视图/偏好 · 输入辅助点/副网格/坐标提示；不要把「显示辅助」误当成「开启所有吸附算法」。",
+    "status": "待逐项对齐",
+    "tool": null
+  },
+  {
+    "id": "showPointRangeAction",
+    "name": "显示吸附半径",
+    "group": "网格与测量",
+    "kind": "命令／参数",
+    "source": "showPointRangeAction",
+    "description": "showPointRangeAction（非 ActionType） · ApplicationModel point spotlight · 视图/偏好 · 显示吸附半径；实际距离取 mouseRadius，并随缩放折算。",
+    "status": "待逐项对齐",
+    "tool": null
+  },
+  {
+    "id": "pointOffsetAction",
+    "name": "光标位置偏移辅助",
+    "group": "网格与测量",
+    "kind": "命令／参数",
+    "source": "pointOffsetAction",
+    "description": "pointOffsetAction · ApplicationModel 点偏移 · 视图/偏好 · 光标位置偏移辅助。",
+    "status": "待逐项对齐",
+    "tool": null
+  },
+  {
+    "id": "creasePatternZoomOutAction",
+    "name": "视图缩放与精确倍率",
+    "group": "背景与视图",
+    "kind": "命令／参数",
+    "source": "creasePatternZoomOutAction / creasePatternZoomInAction / scaleFactorSetAction",
+    "description": "creasePatternZoomOutAction, creasePatternZoomInAction, scaleFactorSetAction · CameraModel / 对应 Action / T listener · T · 视图缩放与精确倍率。",
+    "status": "待逐项对齐",
+    "tool": null
+  },
+  {
+    "id": "rotateAnticlockwiseAction",
+    "name": "视图按 1/16 圈旋转及精确角度",
+    "group": "背景与视图",
+    "kind": "命令／参数",
+    "source": "rotateAnticlockwiseAction / rotateClockwiseAction / rotationSetAction",
+    "description": "rotateAnticlockwiseAction, rotateClockwiseAction, rotationSetAction · CameraModel / T listener · T · 视图按 1/16 圈旋转及精确角度。",
+    "status": "待逐项对齐",
+    "tool": null
+  },
+  {
+    "id": "mouseSettingsAction",
+    "name": "是否滚轮缩放",
+    "group": "背景与视图",
+    "kind": "命令／参数",
+    "source": "mouseSettingsAction",
+    "description": "mouseSettingsAction · T listener → mouseWheelMovesCreasePattern · T/偏好 · 是否滚轮缩放；偏好另有精细缩放/速度。",
+    "status": "待逐项对齐",
+    "tool": null
+  },
+  {
+    "id": "readBackgroundAction",
+    "name": "加载背景图用于描线",
+    "group": "背景与视图",
+    "kind": "命令／参数",
+    "source": "readBackgroundAction",
+    "description": "readBackgroundAction · ReadBackgroundAction · T · 加载背景图用于描线。",
+    "status": "待逐项对齐",
+    "tool": null
+  },
+  {
+    "id": "transparentAction",
+    "name": "把软件后方桌面截图作背景",
+    "group": "背景与视图",
+    "kind": "命令／参数",
+    "source": "transparentAction",
+    "description": "transparentAction · Canvas createTransparentBackground · T · 把软件后方桌面截图作背景；不是图像 Alpha 透明度，也不是识图。浏览器版本需明确屏幕捕获权限与替代路径。",
+    "status": "待逐项对齐",
+    "tool": null
+  },
+  {
+    "id": "backgroundToggleAction",
+    "name": "显隐背景",
+    "group": "背景与视图",
+    "kind": "命令／参数",
+    "source": "backgroundToggleAction / backgroundLockAction",
+    "description": "backgroundToggleAction, backgroundLockAction · BackgroundModel · T · 显隐背景；背景随画布锁定。",
+    "status": "基础可用；右侧底图面板支持显隐及随画布／固定屏幕切换，上游动态验收待齐",
+    "tool": null
+  },
+  {
+    "id": "backgroundTrimAction",
+    "name": "按预先操作框裁背景",
+    "group": "背景与视图",
+    "kind": "命令／参数",
+    "source": "backgroundTrimAction",
+    "description": "backgroundTrimAction · BackgroundTrimAction · T · 按预先操作框裁背景。",
+    "status": "基础可用；操作框参数条可裁底图，保留位置／透明度／跟随状态并支持撤销，上游动态验收待齐",
+    "tool": null
+  },
+  {
+    "id": "lineWidthDecreaseAction",
+    "name": "主线宽/顶点标记尺寸，是显示设置，不能改几何",
+    "group": "背景与视图",
+    "kind": "命令／参数",
+    "source": "lineWidthDecreaseAction / lineWidthIncreaseAction / pointSizeDecreaseAction / pointSizeIncreaseAction",
+   "description": "lineWidthDecreaseAction, lineWidthIncreaseAction, pointSizeDecreaseAction, pointSizeIncreaseAction · ApplicationModel · L/偏好 · 主线宽/顶点标记尺寸，是显示设置，不能改几何。",
+    "status": "已提供线宽与顶点大小设置，像素取整差异待对照",
+    "tool": null
+  },
+  {
+    "id": "antiAliasToggleAction",
+    "name": "抗锯齿与折线线型显示",
+    "group": "背景与视图",
+    "kind": "命令／参数",
+    "source": "antiAliasToggleAction / lineStyleChangeAction",
+   "description": "antiAliasToggleAction, lineStyleChangeAction · ApplicationModel · L/偏好 · 抗锯齿与折线线型显示。偏好另有圆线帽等。",
+    "status": "基础可用，显示设置支持抗锯齿与五种线型",
+    "tool": null
+  },
+  {
+    "id": "newAction",
+    "name": "新建工程",
+    "group": "文件与工程",
+    "kind": "命令／参数",
+    "source": "newAction",
+    "description": "newAction · 新建工程 · 文件→New · Menu 直接 listener；未保存确认，初始化 CP、清除折叠模型、记录主/辅助历史",
+    "status": "待逐项对齐",
+    "tool": null
+  },
+  {
+    "id": "openAction",
+    "name": "打开",
+    "group": "文件与工程",
+    "kind": "命令／参数",
+    "source": "openAction",
+    "description": "openAction · 打开 · 文件→Open · Menu→FileService.openFile；对话框过滤 .ori/.cp/.fold",
+    "status": "待逐项对齐",
+    "tool": null
+  },
+  {
+    "id": "openRecentAction",
+    "name": "最近文件 / 清空最近记录",
+    "group": "文件与工程",
+    "kind": "命令／参数",
+    "source": "openRecentAction",
+    "description": "openRecentAction，Recent 子项/清空无独立 ID · 最近文件 / 清空最近记录 · 文件→Open Recent · Menu.setData 生成动态项；打开成功移动到列表顶部，读取错误可移除记录",
+    "status": "待逐项对齐",
+    "tool": null
+  },
+  {
+    "id": "saveAction",
+    "name": "保存",
+    "group": "文件与工程",
+    "kind": "命令／参数",
+    "source": "saveAction",
+    "description": "saveAction · 保存 · 文件→Save · FileService.saveFile；无现有路径时转另存为",
+    "status": "待逐项对齐",
+    "tool": null
+  },
+  {
+    "id": "saveAsAction",
+    "name": "另存为",
+    "group": "文件与工程",
+    "kind": "命令／参数",
+    "source": "saveAsAction",
+    "description": "saveAsAction · 另存为 · 文件→Save as · FileService.saveAsFile + SaveTypeDialog；.cp/.ori/.fold 三种",
+    "status": "待逐项对齐",
+    "tool": null
+  },
+  {
+    "id": "revealInFEAction",
+    "name": "在文件管理器定位",
+    "group": "文件与工程",
+    "kind": "命令／参数",
+    "source": "revealInFEAction",
+    "description": "revealInFEAction · 在文件管理器定位 · 文件→Reveal… · FileService.openFileInFE；新建未命名时禁用。桌面能力，不是网页下载的同义词",
+    "status": "待逐项对齐",
+    "tool": null
+  },
+  {
+    "id": "importAction",
+    "name": "导入为新工程内容",
+    "group": "文件与工程",
+    "kind": "命令／参数",
+    "source": "importAction",
+    "description": "importAction · 导入为新工程内容 · 文件→Import · Register→FileService.importFile；有未保存确认，导入后清除当前保存路径",
+    "status": "待逐项对齐",
+    "tool": null
+  },
+  {
+    "id": "inputDataAction",
+    "name": "追加导入",
+    "group": "文件与工程",
+    "kind": "命令／参数",
+    "source": "inputDataAction",
+    "description": "inputDataAction · 文件库“追加导入折痕”入口；加入 CP/FOLD/OPX/ORI/ORH 的折痕并记录一次历史，不替换当前纸张、底图或对象；尺寸差异不自动缩放。",
+    "status": "基础可用，追加导入已接入",
+    "tool": null
+  },
+  {
+    "id": "exportAction",
+    "name": "导出",
+    "group": "文件与工程",
+    "kind": "命令／参数",
+    "source": "exportAction",
+    "description": "exportAction · 导出 · 文件→Export · Menu 直接 listener→FileService.exportFile；保留活动操作框以便图像导出裁切",
+    "status": "待逐项对齐",
+    "tool": null
+  },
+  {
+    "id": "convertAction",
+    "name": "批量格式转换",
+    "group": "文件与工程",
+    "kind": "命令／参数",
+    "source": "convertAction",
+    "description": "convertAction · 批量格式转换 · 文件→Convert files · ConvertAction；.cp/.ori/.orh/.fold 相互转；多文件及所选目录的直接文件，**不递归子目录**",
+    "status": "待逐项对齐",
+    "tool": null
+  },
+  {
+    "id": "exitAction",
+    "name": "退出",
+    "group": "文件与工程",
+    "kind": "命令／参数",
+    "source": "exitAction",
+    "description": "exitAction · 退出 · 文件→Exit / 关闭窗口 · Menu.closing；未保存确认和终止折叠任务",
+    "status": "待逐项对齐",
+    "tool": null
+  },
+  {
+    "id": "showAutosaveFolderAction",
+    "name": "打开自动保存目录",
+    "group": "文件与工程",
+    "kind": "命令／参数",
+    "source": "showAutosaveFolderAction",
+    "description": "showAutosaveFolderAction · 打开自动保存目录 · 帮助 · Menu→ResourceUtil.getTempDir；用户可从副本恢复",
+    "status": "待逐项对齐",
+    "tool": null
+  },
+  {
+    "id": "prefAction",
+    "name": "偏好设置",
+    "group": "文件与工程",
+    "kind": "命令／参数",
+    "source": "prefAction",
+    "description": "prefAction · 偏好设置 · 文件→Preferences · Menu 创建 Preferences，对话框功能见第 8 节",
+    "status": "待逐项对齐",
+    "tool": null
+  },
+  {
+    "id": "copyClipboardAction",
+    "name": "复制选中折痕到剪贴板",
+    "group": "编辑与历史",
+    "kind": "命令／参数",
+    "source": "copyClipboardAction",
+    "description": "copyClipboardAction · 复制选中折痕到工作台剪贴板；保存几何、山谷、折角与显示色，不等同于画布复制移动工具。",
+    "status": "基础可用，会话剪贴板已接入",
+    "tool": null
+  },
+  {
+    "id": "cutClipboardAction",
+    "name": "剪切选中折痕",
+    "group": "编辑与历史",
+    "kind": "命令／参数",
+    "source": "cutClipboardAction",
+    "description": "cutClipboardAction · 复制到工作台剪贴板后删除选中线；遵守边界保护，整次操作可撤销。",
+    "status": "基础可用，会话剪贴板已接入",
+    "tool": null
+  },
+  {
+    "id": "pasteClipboardAction",
+    "name": "原位粘贴",
+    "group": "编辑与历史",
+    "kind": "命令／参数",
+    "source": "pasteClipboardAction",
+    "description": "pasteClipboardAction · 原位粘贴当前会话剪贴板线段；生成新 ID并保留几何、山谷、折角与显示色。",
+    "status": "基础可用，会话剪贴板已接入",
+    "tool": null
+  },
+  {
+    "id": "pasteOffsetClipboardAction",
+    "name": "偏移粘贴",
+    "group": "编辑与历史",
+    "kind": "命令／参数",
+    "source": "pasteOffsetClipboardAction",
+    "description": "pasteOffsetClipboardAction · 按右侧 X/Y 毫米偏移粘贴当前会话剪贴板；生成新 ID，整次操作可撤销。",
+    "status": "基础可用，会话剪贴板已接入",
+    "tool": null
+  },
+  {
+    "id": "foldedFigureUndoAction",
+    "name": "当前折叠图变形撤销 / 重做",
+    "group": "编辑与历史",
+    "kind": "命令／参数",
+    "source": "foldedFigureUndoAction / foldedFigureRedoAction",
+    "description": "foldedFigureUndoAction / foldedFigureRedoAction · 当前折叠图变形撤销 / 重做 · 底栏 UndoRedo · Bottom listener→activeFigure.undo / redo；与 CP 历史独立",
+    "status": "待逐项对齐",
+    "tool": null
+  },
+  {
+    "id": "suitei_01Action",
+    "name": "识别 CP 结构/面",
+    "group": "平折与模型",
+    "kind": "命令／参数",
+    "source": "suitei_01Action",
+    "description": "suitei_01Action · 识别 CP 结构/面 · 平折分析右栏“识别当前折痕” · 先切分交点并生成顶点、边、纸面与辅助线警告；非图片识别，不直接求层序",
+    "status": "基础可用，已接入只读 CP 拓扑/纸面识别",
+    "tool": null
+  },
+  {
+    "id": "suitei_02Action",
+    "name": "折后线框图",
+    "group": "平折与模型",
+    "kind": "命令／参数",
+    "source": "suitei_02Action",
+    "description": "suitei_02Action · 折后线框图 · 左下 / 结果右键 · SuiteiAction(ORDER_2)，不是有遮挡层序的实体结果",
+    "status": "待逐项对齐",
+    "tool": null
+  },
+  {
+    "id": "suitei_03Action",
+    "name": "折后透视/X-ray 图",
+    "group": "平折与模型",
+    "kind": "命令／参数",
+    "source": "suitei_03Action",
+    "description": "suitei_03Action · 折后透视/X-ray 图 · 左下 / 结果右键 · SuiteiAction(ORDER_3)；不应借此声称找到全层序",
+    "status": "待逐项对齐",
+    "tool": null
+  },
+  {
+    "id": "coloredXRayAction",
+    "name": "彩色 X-ray（设置）",
+    "group": "平折与模型",
+    "kind": "命令／参数",
+    "source": "coloredXRayAction",
+    "description": "coloredXRayAction · 彩色 X-ray（设置） · 左下复选框 · Left→FoldedFigureModel.transparencyColor",
+    "status": "待逐项对齐",
+    "tool": null
+  },
+  {
+    "id": "coloredXRayDecreaseAction",
+    "name": "X-ray 透明度（设置）",
+    "group": "平折与模型",
+    "kind": "命令／参数",
+    "source": "coloredXRayDecreaseAction / coloredXRayIncreaseAction",
+    "description": "coloredXRayDecreaseAction / coloredXRayIncreaseAction · X-ray 透明度（设置） · 左下 · Register→FoldedFigureModel.decreaseTransparency/increaseTransparency",
+    "status": "待逐项对齐",
+    "tool": null
+  },
+  {
+    "id": "drawTwoColoredCpAction",
+    "name": "双色 CP 面染色",
+    "group": "平折与模型",
+    "kind": "命令／参数",
+    "source": "drawTwoColoredCpAction",
+    "description": "drawTwoColoredCpAction · 双色 CP 面染色 · 左下 · Register→Folding.createTwoColoredCp→TwoColoredTask；**必须先选择目标折线范围**，不是位图颜色识别",
+    "status": "待逐项对齐",
+    "tool": null
+  },
+  {
+    "id": "foldAction",
+    "name": "求解完全平折及纸面遮挡",
+    "group": "平折与模型",
+    "kind": "命令／参数",
+    "source": "foldAction",
+    "description": "foldAction · 求解完全平折及纸面遮挡 · 底栏 Fold，默认 F · FoldAction 先 Check4 警告，再 Folding.fold(ORDER_5)；警告允许继续，局部条件与全局结果不同",
+    "status": "待逐项对齐",
+    "tool": null
+  },
+  {
+    "id": "anotherSolutionAction",
+    "name": "下一种层序解",
+    "group": "平折与模型",
+    "kind": "命令／参数",
+    "source": "anotherSolutionAction",
+    "description": "anotherSolutionAction · 下一种层序解 · 底栏 Next · AnotherSolutionAction→Folding.foldAnother，ORDER_6；需活动模型",
+    "status": "待逐项对齐",
+    "tool": null
+  },
+  {
+    "id": "goToFoldedFigureAction",
+    "name": "跳到指定解编号",
+    "group": "平折与模型",
+    "kind": "命令／参数",
+    "source": "goToFoldedFigureAction",
+    "description": "goToFoldedFigureAction · 跳到指定解编号 · 底栏数值 Go · Bottom listener→FoldingEstimateSpecificTask；最小 1，必要时 ORDER_51 从首解重搜",
+    "status": "待逐项对齐",
+    "tool": null
+  },
+  {
+    "id": "As100Action",
+    "name": "最多再求 100 解并批量保存图像",
+    "group": "平折与模型",
+    "kind": "命令／参数",
+    "source": "As100Action / as100Action",
+    "description": "As100Action · 最多再求 100 解并批量保存图像 · 底栏 AS100（入口大小写疑点见后） · As100Action→FoldingEstimateSave100Task；需有下一解可能，逐解输出带编号文件，解耗尽提前停止",
+    "status": "待逐项对齐",
+    "tool": null
+  },
+  {
+    "id": "duplicateFoldedModelAction",
+    "name": "复制折叠模型",
+    "group": "平折与模型",
+    "kind": "命令／参数",
+    "source": "duplicateFoldedModelAction",
+    "description": "duplicateFoldedModelAction · 复制折叠模型 · 折叠结果右键→Duplicate · DuplicateFoldedModelAction→Folding.duplicate；按显示状态重新生成；双色 CP 特殊路径",
+    "status": "待逐项对齐",
+    "tool": null
+  },
+  {
+    "id": "foldedFigureTrashAction",
+    "name": "删除活动折叠模型",
+    "group": "平折与模型",
+    "kind": "命令／参数",
+    "source": "foldedFigureTrashAction",
+    "description": "foldedFigureTrashAction · 删除活动折叠模型 · 底栏垃圾桶 / 结果右键 · TrashAction；不删除原 CP",
+    "status": "待逐项对齐",
+    "tool": null
+  },
+  {
+    "id": "resetAction",
+    "name": "清空 CP、重置相机并移除全部结果",
+    "group": "平折与模型",
+    "kind": "命令／参数",
+    "source": "resetAction",
+    "description": "resetAction · 清空 CP、重置相机并移除全部结果 · 底栏 Reset · ResetAction；这是有破坏性的全部重置，不是模拟暂停/归零",
+    "status": "待逐项对齐",
+    "tool": null
+  },
+  {
+    "id": "haltAction",
+    "name": "中止折叠与 cAMV 检查",
+    "group": "平折与模型",
+    "kind": "命令／参数",
+    "source": "haltAction",
+    "description": "haltAction · 中止折叠与 cAMV 检查 · 底栏停止 / Esc · HaltAction 停止 foldingExecutor 和 camvExecutor",
+    "status": "待逐项对齐",
+    "tool": null
+  },
+  {
+    "id": "foldedFigureFlipAction",
+    "name": "正面/背面/双面显示切换",
+    "group": "平折与模型",
+    "kind": "命令／参数",
+    "source": "foldedFigureFlipAction",
+    "description": "foldedFigureFlipAction · 正面/背面/双面显示切换 · 底栏 / 结果右键 · FlipAction→FoldedFigureModel.advanceState；变形模式下限制双面状态；不是改变 CP 山谷值",
+    "status": "待逐项对齐",
+    "tool": null
+  },
+  {
+    "id": "foldedFigureSizeIncreaseAction",
+    "name": "缩放折叠图视图",
+    "group": "平折与模型",
+    "kind": "命令／参数",
+    "source": "foldedFigureSizeIncreaseAction / foldedFigureSizeDecreaseAction / foldedFigureSizeSetAction",
+    "description": "foldedFigureSizeIncreaseAction / foldedFigureSizeDecreaseAction / foldedFigureSizeSetAction · 缩放折叠图视图 · 底栏缩放组件 · Register + FoldedFigureResize；输入数字/回车/失焦均能设置",
+    "status": "待逐项对齐",
+    "tool": null
+  },
+  {
+    "id": "scaleAction",
+    "name": "折叠图恢复 1 倍比例",
+    "group": "平折与模型",
+    "kind": "命令／参数",
+    "source": "scaleAction",
+    "description": "scaleAction · 折叠图恢复 1 倍比例 · 结果右键 Scale · Register→FoldedFigureModel.scale=1 动画；不是用户输入任意缩放",
+    "status": "待逐项对齐",
+    "tool": null
+  },
+  {
+    "id": "foldedFigureRotateClockwiseAction",
+    "name": "旋转折叠图视图",
+    "group": "平折与模型",
+    "kind": "命令／参数",
+    "source": "foldedFigureRotateClockwiseAction / foldedFigureRotateAntiClockwiseAction / foldedFigureRotateSetAction",
+    "description": "foldedFigureRotateClockwiseAction / foldedFigureRotateAntiClockwiseAction / foldedFigureRotateSetAction · 旋转折叠图视图 · 底栏旋转组件 · Register + FoldedFigureRotate；正/背面旋转方向相关，步进 11.25°，数值归一化到 ±180°",
+    "status": "待逐项对齐",
+    "tool": null
+  },
+  {
+    "id": "frontColorAction",
+    "name": "折叠图正面/背面/轮廓颜色（设置）",
+    "group": "平折与模型",
+    "kind": "命令／参数",
+    "source": "frontColorAction / backColorAction / lineColorAction",
+    "description": "frontColorAction / backColorAction / lineColorAction · 折叠图正面/背面/轮廓颜色（设置） · 底栏色块 · FrontColorAction / BackColorAction / LineColorAction→JColorChooser 与 FoldedFigureModel",
+    "status": "待逐项对齐",
+    "tool": null
+  },
+  {
+    "id": "foldedFigureToggleAntiAliasAction",
+    "name": "折叠图抗锯齿/阴影（设置）",
+    "group": "平折与模型",
+    "kind": "命令／参数",
+    "source": "foldedFigureToggleAntiAliasAction / foldedFigureToggleShadowAction",
+    "description": "foldedFigureToggleAntiAliasAction / foldedFigureToggleShadowAction · 折叠图抗锯齿/阴影（设置） · 底栏 / 偏好 · Register→FoldedFigureModel；阴影是绘图风格，不是三维光照或碰撞计算",
+    "status": "基础可用，平折工具栏支持抗锯齿与阴影切换",
+    "tool": null
+  },
+  {
+    "id": "constraintAction",
+    "name": "`addColorConstraintAction`",
+    "group": "平折与模型",
+    "kind": "命令／参数",
+    "source": "constraintAction",
+    "description": "constraintAction · addColorConstraintAction · 折叠结果颜色约束",
+    "status": "待逐项对齐",
+    "tool": null
+  },
+  {
+    "id": "foldedFigureAntiAliasAction",
+    "name": "`foldedFigureToggleAntiAliasAction`",
+    "group": "平折与模型",
+    "kind": "命令／参数",
+    "source": "foldedFigureAntiAliasAction",
+    "description": "foldedFigureAntiAliasAction · foldedFigureToggleAntiAliasAction · 折叠结果抗锯齿",
+    "status": "基础可用，平折工具栏支持模型抗锯齿",
+    "tool": null
+  },
+  {
+    "id": "shadowAction",
+    "name": "`foldedFigureToggleShadowAction`",
+    "group": "平折与模型",
+    "kind": "命令／参数",
+    "source": "shadowAction",
+    "description": "shadowAction · foldedFigureToggleShadowAction · 折叠结果阴影",
+    "status": "基础可用，平折工具栏支持纸层阴影",
+    "tool": null
+  },
+  {
+    "id": "toggleDarkModeAction",
+    "name": "深/浅主题",
+    "group": "显示与帮助",
+    "kind": "命令／参数",
+    "source": "toggleDarkModeAction",
+    "description": "toggleDarkModeAction · 深/浅主题 · 在显示设置中切换中文工作台浅色／深色外观并保存本机偏好；不改变纸张、折痕或导出数据",
+    "status": "基础可用",
+    "tool": null
+  },
+  {
+    "id": "preciseZoomAction",
+    "name": "平滑/精细缩放",
+    "group": "显示与帮助",
+    "kind": "命令／参数",
+    "source": "preciseZoomAction",
+    "description": "preciseZoomAction · 平滑/精细缩放 · preciseZoom",
+    "status": "编辑／镶嵌画布精细缩放可用，折叠模型待统一",
+    "tool": null
+  },
+  {
+    "id": "displayCommentsAction",
+    "name": "显示注释/文本",
+    "group": "显示与帮助",
+    "kind": "命令／参数",
+    "source": "displayCommentsAction",
+    "description": "displayCommentsAction · 画布底部“对象显示”中的“文字注释”开关；只改变文字对象可见性，不删除文字或改变工程数据。",
+    "status": "基础可用，已接入显示层开关",
+    "tool": null
+  },
+  {
+    "id": "displayStandardFaceMarksAction",
+    "name": "显示参考面及十字等标记",
+    "group": "显示与帮助",
+    "kind": "命令／参数",
+    "source": "displayStandardFaceMarksAction",
+    "description": "displayStandardFaceMarksAction · 显示参考面及十字等标记 · displayMarkings",
+    "status": "待逐项对齐",
+    "tool": null
+  },
+  {
+    "id": "displaySelfIntersectionAction",
+    "name": "显示自交信息",
+    "group": "显示与帮助",
+    "kind": "命令／参数",
+    "source": "displaySelfIntersectionAction",
+    "description": "displaySelfIntersectionAction · 显示自交信息 · displaySelfIntersection；显示开关不等于无碰撞保证",
+    "status": "待逐项对齐",
+    "tool": null
+  },
+  {
+    "id": "cpOnTopAction",
+    "name": "CP 绘制在结果上方",
+    "group": "显示与帮助",
+    "kind": "命令／参数",
+    "source": "cpOnTopAction",
+    "description": "cpOnTopAction · CP 绘制在结果上方 · displayCreasePatternOnTop",
+    "status": "待逐项对齐",
+    "tool": null
+  },
+  {
+    "id": "useAdvancedCheck4DisplayAction",
+    "name": "高级 cAMV 问题显示",
+    "group": "显示与帮助",
+    "kind": "命令／参数",
+    "source": "useAdvancedCheck4DisplayAction",
+    "description": "useAdvancedCheck4DisplayAction · 高级 cAMV 问题显示 · advancedCheck4Display",
+    "status": "待逐项对齐",
+    "tool": null
+  },
+  {
+    "id": "displayTopPanel",
+    "name": "各工具栏显隐",
+    "group": "显示与帮助",
+    "kind": "命令／参数",
+    "source": "displayTopPanel / displayBottomPanel / displayLeftPanel / displayRightPanel",
+    "description": "displayTopPanel / displayBottomPanel / displayLeftPanel / displayRightPanel · 各工具栏显隐 · 同名模型字段",
+    "status": "待逐项对齐",
+    "tool": null
+  },
+  {
+    "id": "moveFoldedModelWithCp",
+    "name": "折叠模型随 CP 视图移动",
+    "group": "显示与帮助",
+    "kind": "命令／参数",
+    "source": "moveFoldedModelWithCp",
+    "description": "moveFoldedModelWithCp · 折叠模型随 CP 视图移动 · moveFoldedModelWithCp",
+    "status": "待逐项对齐",
+    "tool": null
+  },
+  {
+    "id": "doAnimations",
+    "name": "界面动画",
+    "group": "显示与帮助",
+    "kind": "命令／参数",
+    "source": "doAnimations",
+    "description": "doAnimations · 界面动画 · animations，不是三维折叠动画",
+    "status": "待逐项对齐",
+    "tool": null
+  },
+  {
+    "id": "toggleHelpAction",
+    "name": "显示工具帮助窗口",
+    "group": "显示与帮助",
+    "kind": "命令／参数",
+    "source": "toggleHelpAction",
+    "description": "toggleHelpAction · 显示工具帮助窗口 · Register→ApplicationModel.toggleHelpVisible",
+    "status": "待逐项对齐",
+    "tool": null
+  },
+  {
+    "id": "showConfigFolderAction",
+    "name": "打开配置目录",
+    "group": "显示与帮助",
+    "kind": "命令／参数",
+    "source": "showConfigFolderAction",
+    "description": "showConfigFolderAction · 打开配置目录 · ResourceUtil.getAppDir→系统文件管理器",
+    "status": "待逐项对齐",
+    "tool": null
+  },
+  {
+    "id": "pref-182",
+    "name": "类别：逐项设置 / 操作",
+    "group": "偏好与快捷键",
+    "kind": "偏好设置",
+    "source": "实现证据与边界",
+    "description": "类别 · 逐项设置 / 操作 · 实现证据与边界",
+    "status": "待逐项对齐",
+    "tool": null
+  },
+  {
+    "id": "pref-183",
+    "name": "对象显示：CP、构造辅助线、辅助画线、标记、CP 置顶、文本；四工具栏",
+    "group": "偏好与快捷键",
+    "kind": "偏好设置",
+    "source": "Preferences.setData + 各复选 listener，与第 7 节重复入口",
+    "description": "对象显示 · CP、构造辅助线、辅助画线、标记、CP 置顶、文本；四工具栏 · Preferences.setData + 各复选 listener，与第 7 节重复入口",
+    "status": "待逐项对齐",
+    "tool": null
+  },
+  {
+    "id": "pref-184",
+    "name": "计算显示/警告：折叠进度、自交信息、局部不可折警告、CP 导出丢失警告、帮助窗口",
+    "group": "偏好与快捷键",
+    "kind": "偏好设置",
+    "source": "`displayFoldingProgress` / `displaySelfIntersection` / `foldWarning` / `cpExportWarning` / `helpVisible`；部分 warning 字段与勾选值取反",
+    "description": "计算显示/警告 · 折叠进度、自交信息、局部不可折警告、CP 导出丢失警告、帮助窗口 · displayFoldingProgress / displaySelfIntersection / foldWarning / cpExportWarning / helpVisible；部分 warning 字段与勾选值取反",
+    "status": "待逐项对齐",
+    "tool": null
+  },
+  {
+    "id": "pref-185",
+    "name": "线/点显示：CP 线宽、辅助画线线宽、点半径、山谷线型、圆头、抗锯齿、结果抗锯齿、编号显示",
+    "group": "偏好与快捷键",
+    "kind": "偏好设置",
+    "source": "`lineWidth` / `auxLineWidth` / `pointSize` / `lineStyle` / `roundedEnds` / `antiAlias` / FoldedFigureModel.antiAlias / `displayNumbers`",
+   "description": "线/点显示 · CP 线宽、辅助画线线宽、点半径、山谷线型、圆头、抗锯齿、结果抗锯齿、编号显示 · lineWidth / auxLineWidth / pointSize / lineStyle / roundedEnds / antiAlias / FoldedFigureModel.antiAlias / displayNumbers",
+    "status": "编辑画布、平折结果抗锯齿与面编号均可用",
+    "tool": null
+  },
+  {
+    "id": "pref-186",
+    "name": "网格外观：主网格色、加粗网格色、线宽、默认网格数、最大显示密度",
+    "group": "偏好与快捷键",
+    "kind": "偏好设置",
+    "source": "`gridColor` / `gridScaleColor` / `gridLineWidth` / `defaultGridSize` / `minGridUnitSize`；与几何网格参数工具分开",
+    "description": "网格外观 · 主网格色、加粗网格色、线宽、默认网格数、最大显示密度 · gridColor / gridScaleColor / gridLineWidth / defaultGridSize / minGridUnitSize；与几何网格参数工具分开",
+    "status": "基础可用，网格颜色／对角参考色／线宽可保存，默认密度与最小屏幕间距可保存",
+    "tool": null
+  },
+  {
+    "id": "pref-187",
+    "name": "检查外观：cAMV 提示透明度",
+    "group": "偏好与快捷键",
+    "kind": "偏好设置",
+    "source": "check4ColorTransparency / ck4_colorDecreaseAction / ck4_colorIncreaseAction",
+    "description": "检查外观 · cAMV 提示透明度 · check4ColorTransparency；右栏 ck4_colorDecreaseAction / ck4_colorIncreaseAction 是快捷入口",
+    "status": "待逐项对齐",
+    "tool": null
+  },
+  {
+    "id": "pref-188",
+    "name": "主题：深色、网格色脱离主题、折叠图色脱离主题",
+    "group": "偏好与快捷键",
+    "kind": "偏好设置",
+    "source": "`laf` / `isGridColorDetached` / `isFoldedFigureColorDetached`",
+    "description": "主题 · 深色工作台已支持；网格色脱离主题与折叠图独立配色仍需逐项对齐",
+    "status": "部分可用",
+    "tool": null
+  },
+  {
+    "id": "pref-189",
+    "name": "鼠标/视图：精细缩放、缩放速度、滚轮作用于 CP、拾取范围可视化、偏移光标、拾取半径",
+    "group": "偏好与快捷键",
+    "kind": "偏好设置",
+    "source": "`preciseZoom` / `zoomSpeed` / `mouseWheelMovesCreasePattern` / `displayPointSpotlight` / `displayPointOffset` / `mouseRadius`",
+    "description": "鼠标/视图 · 精细缩放、缩放速度、滚轮作用于 CP、拾取范围可视化、偏移光标、拾取半径 · preciseZoom / zoomSpeed / mouseWheelMovesCreasePattern / displayPointSpotlight / displayPointOffset / mouseRadius",
+    "status": "缩放／拾取半径／范围圆／中心指示可用，滚轮目标及模型偏好待齐",
+    "tool": null
+  },
+  {
+    "id": "pref-190",
+    "name": "过渡动画：开关、速度",
+    "group": "偏好与快捷键",
+    "kind": "偏好设置",
+    "source": "`animations` / `animationSpeed`",
+    "description": "过渡动画 · 开关、速度 · animations / animationSpeed",
+    "status": "待逐项对齐",
+    "tool": null
+  },
+  {
+    "id": "pref-191",
+    "name": "快捷键管理：按关键词搜索、仅显示已有快捷键、逐项修改、逐项恢复默认、冲突检查",
+    "group": "偏好与快捷键",
+    "kind": "偏好设置",
+    "source": "Preferences.refreshHotkeyPanel、getRestoreHotkeyButton；SelectKeyStrokeDialog + Buttons.setKeyStroke",
+   "description": "快捷键管理 · 按关键词搜索、仅显示已有快捷键、逐项修改、逐项恢复默认、冲突检查 · Preferences.refreshHotkeyPanel、getRestoreHotkeyButton；SelectKeyStrokeDialog + Buttons.setKeyStroke",
+    "status": "绘图工具快捷键管理可用，基础命令自定义待齐",
+    "tool": null
+  },
+  {
+    "id": "pref-192",
+    "name": "按钮右键快捷键：Change key stroke",
+    "group": "偏好与快捷键",
+    "kind": "偏好设置",
+    "source": "Buttons.addContextMenu；是工具按钮的右键菜单，区别于画布右键删线/折后右键菜单",
+    "description": "按钮右键快捷键 · Change key stroke · Buttons.addContextMenu；是工具按钮的右键菜单，区别于画布右键删线/折后右键菜单",
+    "status": "待逐项对齐",
+    "tool": null
+  },
+  {
+    "id": "pref-193",
+    "name": "设置确认/取消：即时预览、确认、回退",
+    "group": "偏好与快捷键",
+    "kind": "偏好设置",
+    "source": "Preferences.onOK / onCancel，以 tempModel/tempfoldedModel 还原；全量回退（含热键）应动态测试，不假定所有控件回滚无缺陷",
+    "description": "设置确认/取消 · 即时预览、确认、回退 · Preferences.onOK / onCancel，以 tempModel/tempfoldedModel 还原；全量回退（含热键）应动态测试，不假定所有控件回滚无缺陷",
+    "status": "待逐项对齐",
+    "tool": null
+  },
+  {
+    "id": "pref-194",
+    "name": "恢复默认：确认后重设偏好与快捷键",
+    "group": "偏好与快捷键",
+    "kind": "偏好设置",
+    "source": "Preferences.onReset；清 hotkey bundle，重载默认",
+    "description": "恢复默认 · 确认后重设偏好与快捷键 · Preferences.onReset；清 hotkey bundle，重载默认",
+    "status": "待逐项对齐",
+    "tool": null
+  },
+  {
+    "id": "pref-195",
+    "name": "设置导入/导出：`.oriconfig`",
+    "group": "偏好与快捷键",
+    "kind": "偏好设置",
+    "source": "Preferences→FileService.importPref/exportPref；不能混入工程导出",
+   "description": "设置导入/导出 · .oriconfig · Preferences→FileService.importPref/exportPref；不能混入工程导出",
+    "status": "工作台显示／鼠标／网格／主题可往返；Oriedita 导出仅快捷键，完整原版配置待齐",
+    "tool": null
+  },
+  {
+    "id": "ad_fncAction",
+    "name": "更多工具面板",
+    "group": "显示与帮助",
+    "kind": "命令／参数",
+    "source": "ad_fncAction",
+    "description": "打开原版更多工具面板，提供主工具栏之外的构造、选择和检查入口。新工作台以可搜索的完整工具目录承载范围，但未实现工具仍须逐项开发，不能把目录可见算作功能可用。",
+    "status": "待逐项对齐",
+    "tool": null
+  },
+  {
+    "id": "cAMVAction",
+    "name": "局部山谷与可平折检查",
+    "group": "检查与修复",
+    "kind": "命令／参数",
+    "source": "cAMVAction",
+    "description": "源自 Oriedita 1.1.3；编辑页检查结果面板的“局部 cAMV”只报告顶点度数、Kawasaki、Maekawa 与未指派山谷条件，并定位相关线段。",
+    "status": "基础可用，已接入局部检查",
+    "tool": null
+  },
+  {
+    "id": "ckOAction",
+    "name": "检查重复重叠线",
+    "group": "检查与修复",
+    "kind": "命令／参数",
+    "source": "ckOAction",
+    "description": "源自 Oriedita 1.1.3；编辑页“检查折痕”扫描同类型同角度的重复或部分重叠线，点击问题可定位相关小段。",
+    "status": "基础可用，已接入检查结果面板",
+    "tool": null
+  },
+  {
+    "id": "ckTAction",
+    "name": "检查 T 接点",
+    "group": "检查与修复",
+    "kind": "命令／参数",
+    "source": "ckTAction",
+    "description": "源自 Oriedita 1.1.3；编辑页“检查折痕”定位端点落在另一条线段内部的 T 接点，并给出可点击的问题定位。",
+    "status": "基础可用，已接入 T 接点诊断",
+    "tool": null
+  },
+  {
+    "id": "fxOAction",
+    "name": "修复重复重叠线",
+    "group": "检查与修复",
+    "kind": "命令／参数",
+    "source": "fxOAction",
+    "description": "源自 Oriedita 1.1.3；修复重复重叠线先切分交点，再删除同类型同角度的重复小段，冲突线保留并可撤销。",
+    "status": "基础可用，已接入可撤销修复",
+    "tool": null
+  },
+  {
+    "id": "fxTAction",
+    "name": "修复 T 接点",
+    "group": "检查与修复",
+    "kind": "命令／参数",
+    "source": "fxTAction",
+    "description": "源自 Oriedita 1.1.3；修复 T 接点把端点、T 接触和交叉切成真实独立小段，选择与删除不再误作用整条线。",
+    "status": "基础可用，已接入可撤销修复",
+    "tool": null
+  }
+]

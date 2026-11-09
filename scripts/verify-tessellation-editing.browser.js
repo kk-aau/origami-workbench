@@ -1,0 +1,55 @@
+async page=>{
+ const checks=[],check=(ok,message)=>{if(!ok)throw Error(message);checks.push(message);};
+ const button=name=>page.getByRole('button',{name,exact:true});
+ const ready=()=>page.waitForFunction(()=>document.querySelector('.tess-preview-status')?.getAttribute('data-pending')==='false');
+ const requests=[],record=r=>{if(r.url().endsWith('/api/tessellate'))requests.push(r.postDataJSON());};page.on('request',record);
+ const request=async action=>{const next=page.waitForResponse(r=>r.url().endsWith('/api/tessellate'));await action();const r=await next,body=await r.json();if(!r.ok())throw Error(JSON.stringify(body));await ready();return body;};
+ const cp=()=>page.locator('.tess-cp-pane [data-segment] line').evaluateAll(ps=>ps.map(p=>['x1','y1','x2','y2'].map(k=>p.getAttribute(k)).join(',')).join('|'));
+ const flatReady=()=>page.waitForFunction(()=>document.querySelector('.tess-flat-pane')?.getAttribute('data-current')==='true'&&document.querySelectorAll('[data-tess-flat-face]').length>0);
+ try{
+  for(const name of ['关闭窗口','保留当前工程'])if(await button(name).count())await button(name).click();
+  await page.setViewportSize({width:1000,height:720});
+  await button('镶嵌设计').click();await ready();await button('01 单元扭转').click();await ready();
+  await page.getByRole('button',{name:/编辑扭转轮廓/}).click();
+  const circle=page.getByLabel('编辑扭转轮廓画布',{exact:true}).locator('circle[data-point="0"]'),box=await circle.boundingBox();
+  await page.mouse.move(box.x+box.width/2,box.y+box.height/2);await page.mouse.down();await page.mouse.move(box.x+box.width/2+15,box.y+box.height/2);await page.mouse.up();
+  check(Number(await page.getByLabel('点 X',{exact:true}).inputValue())===1,'拖动轮廓边界不会写入越界坐标');
+  await request(()=>button('保存几何修改').click());check(true,'原先会失败的边界拖动现在保存成功');
+  let before=await cp();await request(()=>page.getByLabel('旋转角度',{exact:true}).fill('42'));check(await cp()!==before,'边界拖动保存后角度继续更新画布');
+  await page.getByRole('button',{name:/编辑扭转轮廓/}).click();
+  let count=requests.length;await page.getByLabel('点 X',{exact:true}).fill('1.1');await button('保存几何修改').click();
+  check(await page.getByRole('dialog').count()===1&&requests.length===count,'越界数字草稿阻止保存且不污染当前参数');
+  await page.getByLabel('点 X',{exact:true}).fill('-.4');await button('保存几何修改').click();
+  check(await page.getByRole('alert').filter({hasText:'凸多边形'}).count()===1&&requests.length===count,'凹轮廓在编辑窗口提示且保留草稿');
+  await page.getByLabel('点 X',{exact:true}).fill('.8');
+  const edited=await request(()=>button('保存几何修改').click());
+  check(edited.stats.parameters.polygon[0][0]===.8,'输入坐标后直接点击保存采用最新数值');
+  const polygon=JSON.stringify(edited.stats.parameters.polygon);
+  before=await cp();const rotated=await request(()=>page.getByLabel('旋转角度',{exact:true}).fill('48'));
+  check(JSON.stringify(rotated.stats.parameters.polygon)===polygon&&await cp()!==before,'自定义轮廓在后续旋转中保留并更新');
+  before=await cp();const scaled=await request(()=>page.getByLabel('内接半径比',{exact:true}).fill('.55'));
+  check(JSON.stringify(scaled.stats.parameters.polygon)===polygon&&await cp()!==before,'自定义轮廓在后续缩放中保留并更新');
+  await page.getByRole('button',{name:/编辑扭转轮廓/}).click();check(await page.getByLabel('点 X',{exact:true}).inputValue()==='0.8','再次打开形状保留保存坐标');await button('关闭镶嵌窗口').click();
+  await request(()=>button('06 自定义').click());await page.getByRole('button',{name:/拖动母结构顶点/}).click();
+  await page.getByLabel('选中点',{exact:true}).selectOption({value:'4'});await page.getByLabel('点 X',{exact:true}).fill('.55');
+  const mesh=await request(()=>button('保存几何修改').click());check(mesh.stats.parameters.vertices[4][0]===.55,'母结构顶点修改保存成功');
+  before=await cp();const meshRotated=await request(()=>page.getByLabel('旋转角度',{exact:true}).fill('42'));
+  check(meshRotated.stats.parameters.vertices[4][0]===.55&&await cp()!==before,'母结构保存后旋转更新且保留顶点');
+  await request(()=>button('02 周期拼接').click());await button('编辑对偶点').click();
+  const dx=Number(await page.getByLabel('点 X',{exact:true}).inputValue())+.04;await page.getByLabel('点 X',{exact:true}).fill(String(dx));
+  const dual=await request(()=>button('保存几何修改').click()),targets=JSON.stringify(dual.stats.parameters.dualTargets);
+  check(dual.stats.parameters.dualTargets[0][0]===dx,'对偶目标修改保存成功');
+  await button('计算平折').click();await flatReady();
+  const flat=()=>page.locator('[data-tess-flat-face]').evaluateAll(ps=>ps.map(p=>p.getAttribute('points')).join('|'));
+  let flatBefore=await flat();before=await cp();
+  const dualRotated=await request(()=>page.getByLabel('旋转角度',{exact:true}).fill('42'));await flatReady();
+  check(JSON.stringify(dualRotated.stats.parameters.dualTargets)===targets&&await cp()!==before,'对偶编辑后旋转不再清除修改且画布更新');
+  check(await flat()!==flatBefore,'保存形状后调参同步更新镶嵌平折图');
+  flatBefore=await flat();const dualScaled=await request(()=>page.getByLabel('缩放比例',{exact:true}).fill('.4'));await flatReady();
+  check(JSON.stringify(dualScaled.stats.parameters.dualTargets)===targets&&await flat()!==flatBefore,'对偶编辑后缩放保留修改且平折图更新');
+  await request(()=>button('清除对偶修改').click());check(!('dualTargets' in requests.at(-1)),'显式清除对偶修改仍然有效');
+  await request(()=>page.getByLabel('旋转角度',{exact:true}).fill('45'));check(true,'清除后仍可连续调参');
+  await page.screenshot({path:'output/playwright/tessellation-editing.png'});
+  return {passed:checks.length,checks};
+ }finally{page.off('request',record);}
+}

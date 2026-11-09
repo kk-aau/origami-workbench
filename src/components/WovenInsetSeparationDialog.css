@@ -1,0 +1,24 @@
+.tess-dialog:has(.woven-inset-dialog){width:min(760px,94vw);max-height:min(630px,90vh);overflow:hidden}
+.woven-inset-dialog{display:grid;gap:10px;padding-top:10px;color:var(--ink,#263b31)}
+.woven-inset-intro,.woven-inset-caveat{margin:0;font-size:11px;line-height:1.6;color:var(--muted,#637366)}
+.woven-inset-controls{display:grid;grid-template-columns:repeat(3,minmax(0,1fr)) auto;align-items:end;gap:8px}
+.woven-inset-controls label{display:grid;gap:4px;min-width:0;font-size:11px;font-weight:600}
+.woven-inset-controls input{width:100%;min-width:0;height:30px;padding:3px 7px;border:1px solid var(--line,#d3ded2);border-radius:3px;background:var(--paper,#fffefb);font:12px Consolas,monospace}
+.woven-inset-controls button{height:30px;min-height:30px;padding:3px 12px;font-size:11px}
+.woven-inset-plot{height:min(31vh,235px);min-height:160px;border:1px solid var(--line,#d3ded2);border-radius:3px;background:linear-gradient(180deg,var(--paper,#fffefb),var(--surface,#fafbf7));overflow:hidden}
+.woven-inset-curve{display:block;width:100%;height:100%;touch-action:none}
+.woven-inset-grid{stroke:var(--line,#d3ded2);stroke-width:1}.woven-inset-axis{stroke:var(--muted,#637366);stroke-width:1}
+.woven-inset-axis-text,.woven-inset-axis-title{fill:var(--muted,#637366);font:11px Consolas,monospace}
+.woven-inset-area{fill:color-mix(in srgb,var(--accent,#1e6550) 11%,transparent)}
+.woven-inset-line{fill:none;stroke:var(--accent,#1e6550);stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round;vector-effect:non-scaling-stroke}
+.woven-inset-collision{stroke:var(--danger,#a53e39);stroke-width:1.5;stroke-dasharray:5 4;vector-effect:non-scaling-stroke}.woven-inset-collision-dot{fill:var(--danger,#a53e39)}
+.woven-inset-hover line{stroke:var(--ink,#263b31);stroke-width:1;stroke-dasharray:2 3}.woven-inset-hover circle{fill:var(--paper,#fffefb);stroke:var(--accent,#1e6550);stroke-width:2}.woven-inset-hover text{fill:var(--ink,#263b31);font:11px Consolas,monospace;paint-order:stroke;stroke:var(--paper,#fffefb);stroke-width:4px}
+.woven-inset-placeholder{display:flex;align-items:center;justify-content:center;width:100%;height:100%;font-size:12px;color:var(--muted,#637366)}
+.woven-inset-readout{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.woven-inset-readout>div{display:grid;gap:2px;padding:7px 9px;border-left:3px solid var(--accent,#1e6550);background:var(--surface,#fafbf7)}
+.woven-inset-readout>div:first-child{border-left-color:var(--danger,#a53e39)}
+.woven-inset-readout span{font-size:10px;color:var(--muted,#637366)}.woven-inset-readout strong{font:600 13px/1.3 Consolas,"Microsoft YaHei UI",sans-serif}
+.woven-inset-error{margin:0;font-size:11px;color:var(--danger,#a53e39)}
+.woven-analysis-links{display:flex;align-items:center;gap:12px;min-width:0}.woven-analysis-links .text-button{min-width:0;min-height:23px;padding:1px 0!important;font-size:11px;white-space:nowrap}
+@media(max-width:620px){.woven-inset-controls{grid-template-columns:repeat(3,minmax(0,1fr))}.woven-inset-controls button{grid-column:1/-1}.woven-inset-readout{grid-template-columns:1fr}}
+@media(max-height:620px){.tess-dialog:has(.woven-inset-dialog){overflow:auto}.woven-inset-plot{height:160px}}

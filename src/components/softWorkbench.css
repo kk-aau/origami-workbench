@@ -1,0 +1,75 @@
+/* Approved v3: warm porcelain chrome, compact geometric tools, familiar docking. */
+:root:not([data-theme="dark"]){--ink:#34423d;--muted:#64716b;--surface:#f4f3ef;--paper:#fffefa;--line:#dedfd8;--accent:#416f5e;--tint:#e2ece5;--radius:6px;background:#f2f1ed;color:var(--ink)}
+.soft-workbench .app-header{height:48px;min-height:48px;padding:0 12px;gap:12px}
+.soft-workbench .brand{min-width:114px;gap:6px}.soft-workbench .brand>span{font-size:15px;letter-spacing:.3px}.soft-workbench .brand small{display:none}.soft-workbench .brand>svg{width:26px;height:26px}
+.soft-workbench .document-name{padding-left:10px;min-width:150px}.soft-workbench .document-name input{font-size:12px}.soft-workbench .document-name small{font-size:10px}
+.soft-workbench .header-actions{flex-wrap:wrap;gap:2px}.soft-workbench .header-actions button{font-size:11px;min-height:28px;padding:3px 6px}
+.soft-workbench .workspaces{height:38px;min-height:38px;padding:3px 10px;gap:5px}.soft-workbench .workspaces button{font-size:12px;min-height:28px;padding:3px 10px}.soft-workbench .workspace-no{display:none}
+.soft-workbench .context-toolbar{min-height:38px;padding:4px 10px;background:var(--surface);gap:4px;overflow-x:auto;flex-shrink:0}.soft-workbench .context-toolbar button{font-size:11px;min-height:28px;padding:3px 7px}
+.soft-workbench .canvas-heading{min-height:32px;height:32px;padding:3px 12px}.soft-workbench .canvas-heading h1{font-size:13px}.soft-workbench .canvas-heading .chip{font-size:10px}
+.soft-workbench .panel-divider{background:var(--surface);border-color:var(--line)}.soft-workbench .panel-divider>span{background:#a4b5aa}.soft-workbench .panel-divider:hover{background:var(--tint)}
+.soft-workbench .inspector-heading{height:34px;min-height:34px;padding:6px 10px}.soft-workbench .inspector-heading strong{font-size:12px}
+.soft-workbench .inspector section{padding:10px}.soft-workbench .inspector h2{font-size:12px;margin-bottom:7px}
+.soft-workbench .construction-parameters{padding:5px 10px;gap:7px}.soft-workbench .construction-parameters button{font-size:11px;min-height:27px;padding:3px 6px}
+.soft-workbench .legend{padding:4px 10px;min-height:26px;gap:12px;font-size:10px}.soft-workbench .workspace-hint{font-size:10px;padding:4px 10px}
+.soft-workbench .oriedita-rail{display:flex;flex-direction:column;padding:0;overflow:hidden;min-width:0;background:var(--surface);border:0}
+.dock-rail-header{display:flex;gap:4px;padding:6px;align-items:center;border-bottom:1px solid var(--line)}
+.dock-rail-header input{min-width:0;width:100%;padding:5px 6px;font-size:11px;background:var(--paper);border:1px solid var(--line);border-radius:5px}
+.dock-rail-header select{font-size:11px;min-height:27px;border:1px solid var(--line);border-radius:5px;background:var(--paper);padding:2px}.dock-rail-header button{min-height:27px;padding:3px}
+.dock-rail-scroll{flex:1;min-height:0;overflow:auto;padding:5px 6px;scrollbar-width:thin}
+.dock-tool-group,.soft-workbench .inspector .dock-tool-group{padding:3px 0 7px;border:0;border-bottom:1px solid var(--line);margin:0 0 3px}
+.dock-tool-group h2,.soft-workbench .inspector .dock-tool-group h2{font-size:10px;font-weight:500;color:var(--muted);margin:0 0 4px;line-height:1.5}
+.dock-tool-grid{display:grid;grid-template-columns:repeat(var(--dock-columns,4),minmax(0,1fr));gap:3px;max-width:300px}
+.dock-tool-grid button{display:flex;flex-direction:column;justify-content:center;gap:2px;min-height:46px;min-width:0;width:100%;max-width:72px;padding:4px 2px;border:1px solid var(--line);border-radius:6px;background:var(--paper);font-size:10px;line-height:1.25;white-space:normal;overflow-wrap:anywhere;box-shadow:0 1px 2px #27372d05}
+.dock-tool-grid button .icon{width:22px;height:22px;stroke-width:1.8}.dock-tool-grid button span{min-width:0;max-width:100%;text-align:center}
+.dock-tool-grid button:hover{background:var(--tint);border-color:#9db7a8}.dock-tool-grid button[aria-pressed=true]{background:var(--tint);border-color:#86a899;color:var(--accent);box-shadow:inset 0 0 0 1px #86a89940}
+.construction-rail{padding:5px 8px 10px;--dock-columns:3;border-bottom:1px solid var(--line)}
+.construction-rail .dock-tool-group:first-child{--dock-columns:2}.construction-rail .dock-tool-group:first-child button{max-width:110px}
+.dock-line-presets{padding-bottom:6px}.dock-line-presets .button-pair{margin-bottom:4px}.dock-line-presets button{font-size:11px;min-height:29px;padding:3px 4px;border:1px solid var(--line);background:var(--paper)}
+.dock-line-presets .type-buttons.compact{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:3px}.dock-line-presets .type-buttons button{display:flex;flex-direction:column;gap:2px;white-space:normal;max-width:72px}.dock-line-presets small{font-size:10px;color:var(--muted)}
+.left-dock-controls{padding:6px 0}.left-dock-controls section{padding:4px 0;border-bottom:1px solid var(--line)}.left-dock-controls h2{font-size:11px;margin-bottom:5px}.left-dock-controls .note{font-size:10px;line-height:1.5}.left-dock-controls button{font-size:11px;padding:3px 6px;min-height:28px}.left-dock-controls .checkbox{font-size:11px}.left-dock-controls .number-field{font-size:11px}.left-dock-controls .number-input{width:85px}
+.dock-more summary{font-size:11px;cursor:pointer;padding:7px 0;color:var(--accent)}.dock-rail-footer{display:flex;gap:4px;padding:4px 6px;border-top:1px solid var(--line)}.dock-rail-footer button{font-size:11px;min-height:28px;padding:3px 6px}
+.dock-line-presets .type-buttons.compact button{min-height:31px;flex-direction:row;font-size:10px;padding:3px 1px;gap:3px}
+:root:not([data-theme="dark"]) .soft-workbench .canvas-wrap{background:#fbfcfa;background-image:none}
+.soft-workbench .tool-guide{padding:6px 12px;font-size:10px;line-height:1.5}.soft-workbench .tool-guide-purpose{font-size:11px;margin-bottom:3px;line-height:1.5}.soft-workbench .tool-guide-cancel{font-size:10px}.soft-workbench .tool-guide-usage{font-size:10px}
+.fold-dock{display:flex;flex-wrap:wrap;flex-shrink:0;align-items:center;gap:5px;min-height:36px;padding:4px 9px;border-top:1px solid var(--line);background:var(--surface);overflow:visible}
+.fold-dock button,.fold-dock select{font-size:11px;min-height:27px;padding:3px 8px;border:1px solid var(--line);border-radius:5px;background:var(--paper)}.fold-dock label{display:flex;align-items:center;gap:5px;font-size:11px}.fold-dock select{max-width:160px}.fold-dock small{font-size:10px;color:var(--muted);white-space:nowrap}
+.fold-dock select[aria-label="活动折叠模型"]{width:110px}.fold-dock>small{width:205px;overflow:hidden;text-overflow:ellipsis}
+@media(max-width:1050px){.soft-workbench .app-header{height:auto;min-height:48px;flex-wrap:wrap;padding:5px 9px}.soft-workbench .header-actions{margin-left:0}.soft-workbench .document-name{flex:1}.soft-workbench .workspaces button{padding-left:6px;padding-right:6px}}
+
+/* Canvas guidance is paint-only: no reserved row and no blocked drawing area. */
+.soft-workbench .canvas-text-overlay{position:absolute;inset:10px 66px auto 12px;z-index:4;pointer-events:none;user-select:none;text-shadow:0 1px 2px var(--paper),0 -1px 2px var(--paper)}
+.soft-workbench .canvas-text-overlay *{pointer-events:none}
+.soft-workbench .canvas-workspace-label{font-size:11px;color:var(--muted);margin-bottom:8px}
+.soft-workbench .canvas-text-overlay .tool-guide{padding:0;border:0;background:none;box-shadow:none;max-width:780px}
+.soft-workbench .canvas-pane{position:relative}
+.soft-workbench .workspace-hint{height:43px;min-height:43px;flex:0 0 43px;overflow:auto;overscroll-behavior:contain}
+.soft-workbench .canvas-controls-overlay{position:absolute;inset:0 66px auto 0;z-index:4;pointer-events:none}
+.soft-workbench .canvas-parameter-panel{width:fit-content;max-width:min(780px,100%);max-height:min(26vh,180px);overflow:auto;overscroll-behavior:contain;pointer-events:auto;scrollbar-width:thin}
+.soft-workbench .canvas-pane:has(.canvas-fold-overlay) .canvas-controls-overlay{right:calc(40% + 12px)}
+.soft-workbench .canvas-parameter-panel:empty{display:none}
+.soft-workbench .canvas-parameter-panel>.construction-parameters{font-size:12px;line-height:1.5;flex-shrink:0}
+.soft-workbench .canvas-parameter-panel .construction-parameters[aria-label="圆编辑参数"]{max-height:none;overflow:visible}
+.soft-workbench .canvas-controls-overlay .canvas-text-overlay{position:relative;inset:auto;margin:10px 0 0 12px;max-height:min(32vh,220px);overflow:auto}
+.soft-workbench .canvas-tool-guide[open]{pointer-events:auto}
+.soft-workbench .canvas-tool-error{font-size:12px;line-height:1.5;color:var(--danger);background:var(--paper);padding:5px 8px;border:1px solid var(--danger);max-width:780px}
+.soft-workbench .canvas-pane:has(.canvas-fold-overlay) .canvas-workspace-label{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.soft-workbench .canvas-fold-overlay .flat-view.flat-workspace>.flat-result-label{position:absolute;top:8px;right:58px;left:auto;box-sizing:border-box;max-width:calc(40% - 70px);margin:0}
+.soft-workbench .import-status{background:var(--surface);color:var(--ink)}
+.import-status>span,.import-failure-filename{min-width:0;overflow-wrap:anywhere}
+.soft-workbench .canvas-layers{position:absolute;right:10px;top:10px;z-index:5;font-size:11px}
+.soft-workbench .canvas-layers summary{cursor:pointer;padding:4px 7px;border:1px solid var(--line);border-radius:5px;background:var(--paper);list-style:none}
+.soft-workbench .canvas-layers summary::marker{content:''}
+.soft-workbench .canvas-layer-options{position:absolute;right:0;top:calc(100% + 5px);width:174px;padding:10px;display:flex;flex-direction:column;gap:8px;background:var(--paper);border:1px solid var(--line);border-radius:6px;box-shadow:0 4px 14px #27372d18}
+.soft-workbench .canvas-layer-options label{display:flex;align-items:center;gap:6px}
+.soft-workbench .canvas-layer-options small{color:var(--muted);line-height:1.5}
+.soft-workbench .canvas-tag{top:auto;bottom:12px;pointer-events:none}
+.shared-fold-workspace{display:flex;flex:1;min-height:0;min-width:0;overflow:hidden}
+.editable-cp-pane{display:flex;flex:1;min-width:180px;min-height:0}
+.inspector-tabs{display:flex;align-items:center;gap:5px;padding:4px 8px;font-size:11px;border-bottom:1px solid var(--line);flex-shrink:0}
+.inspector-tabs button{font-size:11px;min-height:25px;padding:3px 6px}
+.embedded-model-controls{font-size:11px;flex-shrink:0;max-height:40%;overflow:auto;border-bottom:1px solid var(--line)}
+.embedded-model-controls summary{cursor:pointer;padding:5px 10px;color:var(--accent)}
+.embedded-model-controls>div{padding:5px 10px!important;gap:4px!important}
+.embedded-model-controls button,.embedded-model-controls select{font-size:11px;min-height:26px;padding:3px 6px}
+.standalone-model-controls>summary{display:none}

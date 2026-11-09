@@ -1,0 +1,24 @@
+import assert from 'node:assert/strict';
+import {mkdirSync,readFileSync,writeFileSync} from 'node:fs';
+import {resolve} from 'node:path';
+import {spawnSync} from 'node:child_process';
+import {exampleDoc} from '../src/app/state';
+import {exportDocument,importDocument} from '../src/core/formats';
+import {buildFold} from '../src/core/geometry';
+import {materialSlitFixture} from '../tests/fixtures/materialModel';
+import {mergeTwoHoleRing} from '../tests/fixtures/materialHoles';
+
+const jar=process.env.ZHEZHI_ORIGINAL_TOOL_JAR??resolve('../zhezhi/dist/zhezhi-studio-0.1.jar');
+const directory=resolve('output/fold-compatibility');mkdirSync(directory,{recursive:true});
+const validator=resolve('tests/fixtures/ValidateExportedFold.java');
+const run=(files:string[])=>spawnSync('java',['-cp',jar,validator,...files],{encoding:'utf8',timeout:30000,windowsHide:true});
+const legacy=resolve(directory,'old-export.fold');
+writeFileSync(legacy,JSON.stringify({...buildFold(exampleDoc()).graph,zhezhi_paper:{width:200,height:200}}));
+const rejected=run([legacy]);assert.ifError(rejected.error);assert.notEqual(rejected.status,0);assert.match(rejected.stderr,/Field "vertices_edges" not valid/);
+const angles=exampleDoc();angles.segments[4]={...angles.segments[4],angle:null};angles.segments[5]={...angles.segments[5],angle:0};angles.segments[6]={...angles.segments[6],assignment:'U',angle:null};
+const docs=[exampleDoc(),materialSlitFixture().source,mergeTwoHoleRing().result.doc,angles];
+for(const path of process.argv.slice(2))docs.push(importDocument(readFileSync(path,'utf8'),'ori',path).doc);
+const files=docs.map((doc,i)=>{const path=resolve(directory,`compatible-${i}.fold`);writeFileSync(path,exportDocument(doc,'fold').text);return path;});
+const imported=run(files);assert.ifError(imported.error);assert.equal(imported.status,0,imported.stderr);assert.match(imported.stdout,/FOLD_ORIGINAL_TOOL_IMPORT_OK/);
+console.log('旧导出已复现 vertices_edges 错误；修复后原版完整 FOLD 导入通过：');
+console.log(imported.stdout.trim());

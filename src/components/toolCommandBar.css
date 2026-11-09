@@ -1,0 +1,43 @@
+.tool-command-bar{position:relative;z-index:7;display:grid;grid-template-columns:minmax(0,max-content) minmax(0,1fr);align-items:center;gap:7px;flex:0 0 36px;height:36px;min-height:36px;min-width:0;padding:4px 8px;border-top:1px solid var(--line);background:var(--paper);color:var(--ink);font-size:11px;container:tool-command-bar/inline-size}
+.tool-command-current{display:flex;align-items:center;gap:6px;min-width:0;max-width:110px;overflow:hidden;white-space:nowrap}
+.tool-command-current code{flex-shrink:0;max-width:70px;overflow:hidden;text-overflow:ellipsis;color:var(--accent);font:600 11px/1.5 Consolas,"SFMono-Regular",monospace}
+.tool-command-current>span{overflow:hidden;text-overflow:ellipsis;color:var(--muted);font-size:11px}
+.tool-command-input-wrap{display:flex;align-items:center;gap:4px;min-width:0;height:26px;border:1px solid var(--line);border-radius:3px;background:var(--paper);padding:0 5px}
+.tool-command-input-wrap:focus-within{border-color:var(--accent);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--accent) 18%,transparent)}
+.tool-command-prompt{flex:none;color:var(--accent);font:600 18px/1 Consolas,monospace}
+.tool-command-input-wrap input{display:block;width:100%;min-width:0;height:24px;padding:1px 2px;border:0;border-radius:0;outline:none;background:transparent;color:var(--ink);font:12px/1.4 Consolas,"Microsoft YaHei UI",monospace}
+.tool-command-input-wrap input:focus-visible{outline:none}
+.tool-command-input-wrap input::placeholder{color:var(--muted);opacity:.8;font-size:11px}
+.tool-command-input-wrap:has(input[aria-invalid="true"]){border-color:var(--danger,#a53e39)}
+.tool-command-options,.tool-command-error{position:absolute;left:8px;right:8px;bottom:calc(100% + 4px);margin:0;border:1px solid var(--line);border-radius:4px;background:var(--paper);box-shadow:0 -4px 18px #122d2220;overflow:hidden}
+.tool-command-options{list-style:none;padding:3px;max-height:206px}
+.tool-command-options li{margin:0;padding:0;height:32px;min-width:0;border-radius:2px}
+.tool-command-options li+li{border-top:1px solid color-mix(in srgb,var(--line) 55%,transparent)}
+.tool-command-options li>button{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;height:31px;min-height:31px;padding:5px 8px;border:0;border-radius:2px;background:transparent;color:var(--ink);text-align:left;font-size:12px}
+.tool-command-options li>button>span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tool-command-options li>button>code{max-width:55%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted);font:11px/1.5 Consolas,monospace}
+.tool-command-options li>button:hover,.tool-command-options li[aria-selected="true"]>button{background:color-mix(in srgb,var(--accent) 12%,var(--paper))}
+.tool-command-options li[aria-selected="true"]>button{box-shadow:inset 2px 0 var(--accent)}
+.tool-command-options li[aria-selected="true"] code{color:var(--accent)}
+.tool-command-error{padding:7px 9px;color:var(--danger,#a53e39);font-size:12px;line-height:18px;white-space:nowrap;text-overflow:ellipsis}
+@container tool-command-bar (max-width:330px){.tool-command-current>span{display:none}.tool-command-current code{max-width:100%}}
+
+/* The editable pane is the sole containing block; no geometry or canvas handlers change. */
+.editable-cp-pane{position:relative}
+.tool-command-bar.tool-command-floating{position:absolute;z-index:12;display:grid;grid-template-columns:20px minmax(0,max-content) minmax(0,1fr);width:min(410px,calc(100% - 32px));height:40px;min-height:40px;padding:5px 7px;gap:6px;border:1px solid var(--line);border-radius:6px;background:var(--paper);box-shadow:0 4px 18px #122d2220;touch-action:auto}
+.tool-command-bar.tool-command-floating.tool-command-with-help{grid-template-columns:20px minmax(0,max-content) minmax(0,1fr) 24px}
+.tool-command-floating .tool-command-input-wrap{border-color:transparent;background:transparent;padding:0 2px}
+.tool-command-floating .tool-command-input-wrap:focus-within{border-color:var(--accent)}
+.tool-command-floating .tool-command-current{max-width:112px;padding-right:6px;border-right:1px solid var(--line)}
+.tool-command-grip,.tool-command-help-button{display:flex;align-items:center;justify-content:center;min-width:0;min-height:26px;height:26px;padding:3px;border:0;border-radius:3px;color:var(--muted)}
+.tool-command-grip{cursor:move;touch-action:none;user-select:none}
+.tool-command-grip svg{width:11px;height:18px;stroke:currentColor;stroke-width:2;stroke-linecap:round;fill:none}
+.tool-command-help-button svg{width:17px;height:17px;stroke:currentColor;stroke-width:1.5;fill:none;stroke-linecap:round}
+.tool-command-help-button[aria-expanded=true]{background:var(--tint);color:var(--accent)}
+.tool-command-help{position:absolute;left:0;right:0;bottom:calc(100% + 8px);padding:12px 14px;background:var(--paper);border:1px solid var(--line);border-radius:5px;box-shadow:0 4px 18px #122d2220;max-height:var(--tool-command-popup-height,260px);overflow:auto;overscroll-behavior:contain;color:var(--ink);font-size:12px;line-height:1.8;white-space:normal}
+.tool-command-help strong{display:block;margin-bottom:5px;font-size:12px}
+.tool-command-help small{display:block;margin-top:8px;color:var(--muted);font-size:11px}
+.tool-command-floating .tool-command-options{left:0;right:0;max-height:var(--tool-command-popup-height,206px);overflow:auto;overscroll-behavior:contain}
+.tool-command-floating .tool-command-error{left:0;right:0;max-height:var(--tool-command-popup-height,206px);overflow:auto;white-space:normal;overflow-wrap:anywhere}
+.tool-command-floating[data-popup-direction=down] .tool-command-options,.tool-command-floating[data-popup-direction=down] .tool-command-error,.tool-command-floating[data-popup-direction=down] .tool-command-help{bottom:auto;top:calc(100% + 8px)}
+@container tool-command-bar (max-width:260px){.tool-command-floating .tool-command-current{max-width:40px;padding-right:3px}.tool-command-floating .tool-command-current>span{display:none}.tool-command-floating{gap:4px}}

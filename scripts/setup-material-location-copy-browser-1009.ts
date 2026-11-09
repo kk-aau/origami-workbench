@@ -1,0 +1,11 @@
+import fs from 'node:fs';
+import type {Doc} from '../src/core/types';
+import {locationCopyCase,locationCopyRecipe} from '../tests/fixtures/materialLocationCopy';
+import {weakToolSheet,weakToolSource} from '../tests/fixtures/materialWeakTools';
+import {exportDocument,importDocument} from '../src/core/formats';
+import {inspectMaterialTopology} from '../src/core/materialTopology';
+import {constructMaterialCopy} from '../src/app/materialConstructionCopy';
+const save=(name:string,d:Doc)=>{d.name=`定位复制-${name}`;fs.writeFileSync(`output/playwright/material-location-copy-${name}-initial-1009.zhezhi.json`,exportDocument(d,'json').text);return d;};
+for(const name of ['source','translate','similarity','reflect','two'])save(name,locationCopyCase(name));save('hole',weakToolSheet(true));save('weak',weakToolSource('boundary'));save('original',importDocument(fs.readFileSync('output/playwright/material-topology-model-original-saved-1009.zhezhi.json','utf8'),'json').doc);
+const aux=locationCopyCase('source');aux.segments.push({id:'location-aux',a:[1,2],b:[3,4],assignment:'A',angle:null});save('aux',constructMaterialCopy(aux,{...locationCopyRecipe(aux),segmentIds:[...locationCopyRecipe(aux).segmentIds,'location-aux'],parametric:true}).doc);
+const load=(name:string)=>importDocument(fs.readFileSync(`output/playwright/material-location-copy-${name}-initial-1009.zhezhi.json`,'utf8'),'json').doc,recipes=[['translate','source','translate'],['similarity','source','similarity'],['reflect','source','reflect'],['hole','hole','reflect'],['weak','weak','similarity'],['original','original','similarity']].map(([name,source,kind])=>{const d=load(source),m=inspectMaterialTopology(d);if(!m.ok)throw Error(m.reason);return {name,source,recipe:{...locationCopyRecipe(d,kind as 'translate'|'similarity'|'reflect'),segmentIds:m.edgeSegmentIds}};});fs.writeFileSync('output/audits/material-location-copy-recipes-1009.json',JSON.stringify(recipes,null,2));console.log('Prepared three location modes, actual original/holed/weak material, downstream chord and auxiliaries.');

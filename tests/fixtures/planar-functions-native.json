@@ -1,0 +1,982 @@
+[
+  {
+    "name": "original-slot",
+    "query": {
+      "family": "planar-functions-native",
+      "mode": "planarize",
+      "input": {
+        "form": "slots",
+        "arity": 1,
+        "body": [
+          "Cos[#]",
+          "Sin[#]",
+          "Tan[#]"
+        ]
+      },
+      "arguments": [
+        [
+          0.0
+        ],
+        [
+          0.0625
+        ],
+        [
+          0.125
+        ],
+        [
+          0.1875
+        ],
+        [
+          0.25
+        ],
+        [
+          0.3125
+        ],
+        [
+          0.375
+        ],
+        [
+          0.4375
+        ],
+        [
+          0.5
+        ],
+        [
+          0.5625
+        ],
+        [
+          0.625
+        ],
+        [
+          0.6875
+        ],
+        [
+          0.75
+        ],
+        [
+          0.8125
+        ],
+        [
+          0.875
+        ],
+        [
+          0.9375
+        ],
+        [
+          1.0
+        ]
+      ]
+    },
+    "response": {
+      "family": "origamica-planar-functions",
+      "query": {
+        "family": "planar-functions-native",
+        "mode": "planarize",
+        "input": {
+          "form": "slots",
+          "arity": 1,
+          "body": [
+            "Cos[#]",
+            "Sin[#]",
+            "Tan[#]"
+          ]
+        },
+        "arguments": [
+          [
+            0.0
+          ],
+          [
+            0.0625
+          ],
+          [
+            0.125
+          ],
+          [
+            0.1875
+          ],
+          [
+            0.25
+          ],
+          [
+            0.3125
+          ],
+          [
+            0.375
+          ],
+          [
+            0.4375
+          ],
+          [
+            0.5
+          ],
+          [
+            0.5625
+          ],
+          [
+            0.625
+          ],
+          [
+            0.6875
+          ],
+          [
+            0.75
+          ],
+          [
+            0.8125
+          ],
+          [
+            0.875
+          ],
+          [
+            0.9375
+          ],
+          [
+            1.0
+          ]
+        ]
+      },
+      "source": {
+        "function": "Planarize",
+        "definitionCell": "In[3844]",
+        "definitionLines": [
+          307285,
+          307365
+        ],
+        "operation": "take-first-two-components",
+        "inputKind": "safe-function-body",
+        "originalDirectVectorOverload": false
+      },
+      "convertedFunction": {
+        "form": "slots",
+        "arity": 1,
+        "body": [
+          "Cos[#]",
+          "Sin[#]"
+        ]
+      },
+      "sample": {
+        "rows": [
+          {
+            "arguments": [
+              0.0
+            ],
+            "values": [
+              1.0,
+              0.0
+            ],
+            "error": null
+          },
+          {
+            "arguments": [
+              0.0625
+            ],
+            "values": [
+              0.9980475107000991,
+              0.0624593178423802
+            ],
+            "error": null
+          },
+          {
+            "arguments": [
+              0.125
+            ],
+            "values": [
+              0.992197667229329,
+              0.12467473338522769
+            ],
+            "error": null
+          },
+          {
+            "arguments": [
+              0.1875
+            ],
+            "values": [
+              0.9824733131012553,
+              0.18640329676226988
+            ],
+            "error": null
+          },
+          {
+            "arguments": [
+              0.25
+            ],
+            "values": [
+              0.9689124217106447,
+              0.24740395925452294
+            ],
+            "error": null
+          },
+          {
+            "arguments": [
+              0.3125
+            ],
+            "values": [
+              0.9515679480481722,
+              0.30743851458038085
+            ],
+            "error": null
+          },
+          {
+            "arguments": [
+              0.375
+            ],
+            "values": [
+              0.9305076219123143,
+              0.36627252908604757
+            ],
+            "error": null
+          },
+          {
+            "arguments": [
+              0.4375
+            ],
+            "values": [
+              0.9058136834259364,
+              0.42367625720393803
+            ],
+            "error": null
+          },
+          {
+            "arguments": [
+              0.5
+            ],
+            "values": [
+              0.8775825618903728,
+              0.479425538604203
+            ],
+            "error": null
+          },
+          {
+            "arguments": [
+              0.5625
+            ],
+            "values": [
+              0.8459244992310679,
+              0.5333026735360201
+            ],
+            "error": null
+          },
+          {
+            "arguments": [
+              0.625
+            ],
+            "values": [
+              0.8109631195052179,
+              0.5850972729404622
+            ],
+            "error": null
+          },
+          {
+            "arguments": [
+              0.6875
+            ],
+            "values": [
+              0.7728349461524715,
+              0.6346070800152693
+            ],
+            "error": null
+          },
+          {
+            "arguments": [
+              0.75
+            ],
+            "values": [
+              0.7316888688738209,
+              0.6816387600233341
+            ],
+            "error": null
+          },
+          {
+            "arguments": [
+              0.8125
+            ],
+            "values": [
+              0.6876855622205048,
+              0.7260086552607126
+            ],
+            "error": null
+          },
+          {
+            "arguments": [
+              0.875
+            ],
+            "values": [
+              0.6409968581633252,
+              0.7675435022360271
+            ],
+            "error": null
+          },
+          {
+            "arguments": [
+              0.9375
+            ],
+            "values": [
+              0.5918050750924775,
+              0.806081108260693
+            ],
+            "error": null
+          },
+          {
+            "arguments": [
+              1.0
+            ],
+            "values": [
+              0.5403023058681398,
+              0.8414709848078965
+            ],
+            "error": null
+          }
+        ]
+      },
+      "certification": {
+        "functionBodyTransformedExactly": true,
+        "retainedComponentsOnlyEvaluated": true,
+        "pointwiseValuesVerified": true,
+        "symbolicWolframFunctionObjectReproduced": false,
+        "interpolationObjectReproduced": false,
+        "continuousDomainCertified": false
+      }
+    }
+  },
+  {
+    "name": "discarded-pole",
+    "query": {
+      "family": "planar-functions-native",
+      "mode": "planarize",
+      "input": {
+        "form": "slots",
+        "arity": 1,
+        "body": [
+          "Cos[#]",
+          "Sin[#]",
+          "1/(#-#)"
+        ]
+      },
+      "arguments": [
+        [
+          0
+        ],
+        [
+          1.5707963267948966
+        ],
+        [
+          2
+        ]
+      ]
+    },
+    "response": {
+      "family": "origamica-planar-functions",
+      "query": {
+        "family": "planar-functions-native",
+        "mode": "planarize",
+        "input": {
+          "form": "slots",
+          "arity": 1,
+          "body": [
+            "Cos[#]",
+            "Sin[#]",
+            "1/(#-#)"
+          ]
+        },
+        "arguments": [
+          [
+            0.0
+          ],
+          [
+            1.5707963267948966
+          ],
+          [
+            2.0
+          ]
+        ]
+      },
+      "source": {
+        "function": "Planarize",
+        "definitionCell": "In[3844]",
+        "definitionLines": [
+          307285,
+          307365
+        ],
+        "operation": "take-first-two-components",
+        "inputKind": "safe-function-body",
+        "originalDirectVectorOverload": false
+      },
+      "convertedFunction": {
+        "form": "slots",
+        "arity": 1,
+        "body": [
+          "Cos[#]",
+          "Sin[#]"
+        ]
+      },
+      "sample": {
+        "rows": [
+          {
+            "arguments": [
+              0.0
+            ],
+            "values": [
+              1.0,
+              0.0
+            ],
+            "error": null
+          },
+          {
+            "arguments": [
+              1.5707963267948966
+            ],
+            "values": [
+              6.123233995736766e-17,
+              1.0
+            ],
+            "error": null
+          },
+          {
+            "arguments": [
+              2.0
+            ],
+            "values": [
+              -0.4161468365471424,
+              0.9092974268256817
+            ],
+            "error": null
+          }
+        ]
+      },
+      "certification": {
+        "functionBodyTransformedExactly": true,
+        "retainedComponentsOnlyEvaluated": true,
+        "pointwiseValuesVerified": true,
+        "symbolicWolframFunctionObjectReproduced": false,
+        "interpolationObjectReproduced": false,
+        "continuousDomainCertified": false
+      }
+    }
+  },
+  {
+    "name": "named-multi",
+    "query": {
+      "family": "planar-functions-native",
+      "mode": "planarize",
+      "input": {
+        "form": "parameters",
+        "parameters": [
+          "x",
+          "y"
+        ],
+        "body": [
+          "2 x+y",
+          "x^2-y",
+          "exp(1000)"
+        ]
+      },
+      "arguments": [
+        [
+          2,
+          3
+        ],
+        [
+          -1,
+          4
+        ]
+      ]
+    },
+    "response": {
+      "family": "origamica-planar-functions",
+      "query": {
+        "family": "planar-functions-native",
+        "mode": "planarize",
+        "input": {
+          "form": "parameters",
+          "parameters": [
+            "x",
+            "y"
+          ],
+          "body": [
+            "2 x+y",
+            "x^2-y",
+            "exp(1000)"
+          ]
+        },
+        "arguments": [
+          [
+            2.0,
+            3.0
+          ],
+          [
+            -1.0,
+            4.0
+          ]
+        ]
+      },
+      "source": {
+        "function": "Planarize",
+        "definitionCell": "In[3844]",
+        "definitionLines": [
+          307285,
+          307365
+        ],
+        "operation": "take-first-two-components",
+        "inputKind": "safe-function-body",
+        "originalDirectVectorOverload": false
+      },
+      "convertedFunction": {
+        "form": "parameters",
+        "parameters": [
+          "x",
+          "y"
+        ],
+        "body": [
+          "2 x+y",
+          "x^2-y"
+        ]
+      },
+      "sample": {
+        "rows": [
+          {
+            "arguments": [
+              2.0,
+              3.0
+            ],
+            "values": [
+              7.0,
+              1.0
+            ],
+            "error": null
+          },
+          {
+            "arguments": [
+              -1.0,
+              4.0
+            ],
+            "values": [
+              2.0,
+              -3.0
+            ],
+            "error": null
+          }
+        ]
+      },
+      "certification": {
+        "functionBodyTransformedExactly": true,
+        "retainedComponentsOnlyEvaluated": true,
+        "pointwiseValuesVerified": true,
+        "symbolicWolframFunctionObjectReproduced": false,
+        "interpolationObjectReproduced": false,
+        "continuousDomainCertified": false
+      }
+    }
+  },
+  {
+    "name": "slots-unplanarize",
+    "query": {
+      "family": "planar-functions-native",
+      "mode": "unplanarize",
+      "input": {
+        "form": "slots",
+        "arity": 2,
+        "body": [
+          "#2",
+          "#1+#2"
+        ]
+      },
+      "arguments": [
+        [
+          2,
+          3
+        ]
+      ]
+    },
+    "response": {
+      "family": "origamica-planar-functions",
+      "query": {
+        "family": "planar-functions-native",
+        "mode": "unplanarize",
+        "input": {
+          "form": "slots",
+          "arity": 2,
+          "body": [
+            "#2",
+            "#1+#2"
+          ]
+        },
+        "arguments": [
+          [
+            2.0,
+            3.0
+          ]
+        ]
+      },
+      "source": {
+        "function": "Unplanarize",
+        "definitionCell": "In[3849]",
+        "definitionLines": [
+          307500,
+          307578
+        ],
+        "operation": "append-zero-component",
+        "inputKind": "safe-function-body",
+        "originalDirectVectorOverload": false
+      },
+      "convertedFunction": {
+        "form": "slots",
+        "arity": 2,
+        "body": [
+          "#2",
+          "#1+#2",
+          "0"
+        ]
+      },
+      "sample": {
+        "rows": [
+          {
+            "arguments": [
+              2.0,
+              3.0
+            ],
+            "values": [
+              3.0,
+              5.0,
+              0.0
+            ],
+            "error": null
+          }
+        ]
+      },
+      "certification": {
+        "functionBodyTransformedExactly": true,
+        "retainedComponentsOnlyEvaluated": true,
+        "pointwiseValuesVerified": true,
+        "symbolicWolframFunctionObjectReproduced": false,
+        "interpolationObjectReproduced": false,
+        "continuousDomainCertified": false
+      }
+    }
+  },
+  {
+    "name": "named-unplanarize",
+    "query": {
+      "family": "planar-functions-native",
+      "mode": "unplanarize",
+      "input": {
+        "form": "parameters",
+        "parameters": [
+          "x"
+        ],
+        "body": [
+          "Cos[x]",
+          "Sin[x]"
+        ]
+      },
+      "arguments": [
+        [
+          0
+        ],
+        [
+          0.5
+        ],
+        [
+          1
+        ]
+      ]
+    },
+    "response": {
+      "family": "origamica-planar-functions",
+      "query": {
+        "family": "planar-functions-native",
+        "mode": "unplanarize",
+        "input": {
+          "form": "parameters",
+          "parameters": [
+            "x"
+          ],
+          "body": [
+            "Cos[x]",
+            "Sin[x]"
+          ]
+        },
+        "arguments": [
+          [
+            0.0
+          ],
+          [
+            0.5
+          ],
+          [
+            1.0
+          ]
+        ]
+      },
+      "source": {
+        "function": "Unplanarize",
+        "definitionCell": "In[3849]",
+        "definitionLines": [
+          307500,
+          307578
+        ],
+        "operation": "append-zero-component",
+        "inputKind": "safe-function-body",
+        "originalDirectVectorOverload": false
+      },
+      "convertedFunction": {
+        "form": "parameters",
+        "parameters": [
+          "x"
+        ],
+        "body": [
+          "Cos[x]",
+          "Sin[x]",
+          "0"
+        ]
+      },
+      "sample": {
+        "rows": [
+          {
+            "arguments": [
+              0.0
+            ],
+            "values": [
+              1.0,
+              0.0,
+              0.0
+            ],
+            "error": null
+          },
+          {
+            "arguments": [
+              0.5
+            ],
+            "values": [
+              0.8775825618903728,
+              0.479425538604203,
+              0.0
+            ],
+            "error": null
+          },
+          {
+            "arguments": [
+              1.0
+            ],
+            "values": [
+              0.5403023058681398,
+              0.8414709848078965,
+              0.0
+            ],
+            "error": null
+          }
+        ]
+      },
+      "certification": {
+        "functionBodyTransformedExactly": true,
+        "retainedComponentsOnlyEvaluated": true,
+        "pointwiseValuesVerified": true,
+        "symbolicWolframFunctionObjectReproduced": false,
+        "interpolationObjectReproduced": false,
+        "continuousDomainCertified": false
+      }
+    }
+  },
+  {
+    "name": "zero-argument",
+    "query": {
+      "family": "planar-functions-native",
+      "mode": "unplanarize",
+      "input": {
+        "form": "parameters",
+        "parameters": [],
+        "body": [
+          "0",
+          "sqrt(0)"
+        ]
+      },
+      "arguments": [
+        []
+      ]
+    },
+    "response": {
+      "family": "origamica-planar-functions",
+      "query": {
+        "family": "planar-functions-native",
+        "mode": "unplanarize",
+        "input": {
+          "form": "parameters",
+          "parameters": [],
+          "body": [
+            "0",
+            "sqrt(0)"
+          ]
+        },
+        "arguments": [
+          []
+        ]
+      },
+      "source": {
+        "function": "Unplanarize",
+        "definitionCell": "In[3849]",
+        "definitionLines": [
+          307500,
+          307578
+        ],
+        "operation": "append-zero-component",
+        "inputKind": "safe-function-body",
+        "originalDirectVectorOverload": false
+      },
+      "convertedFunction": {
+        "form": "parameters",
+        "parameters": [],
+        "body": [
+          "0",
+          "sqrt(0)",
+          "0"
+        ]
+      },
+      "sample": {
+        "rows": [
+          {
+            "arguments": [],
+            "values": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "error": null
+          }
+        ]
+      },
+      "certification": {
+        "functionBodyTransformedExactly": true,
+        "retainedComponentsOnlyEvaluated": true,
+        "pointwiseValuesVerified": true,
+        "symbolicWolframFunctionObjectReproduced": false,
+        "interpolationObjectReproduced": false,
+        "continuousDomainCertified": false
+      }
+    }
+  },
+  {
+    "name": "undefined-points",
+    "query": {
+      "family": "planar-functions-native",
+      "mode": "unplanarize",
+      "input": {
+        "form": "slots",
+        "arity": 1,
+        "body": [
+          "sqrt(#)",
+          "1/#"
+        ]
+      },
+      "arguments": [
+        [
+          -1
+        ],
+        [
+          0
+        ],
+        [
+          1
+        ],
+        [
+          4
+        ]
+      ]
+    },
+    "response": {
+      "family": "origamica-planar-functions",
+      "query": {
+        "family": "planar-functions-native",
+        "mode": "unplanarize",
+        "input": {
+          "form": "slots",
+          "arity": 1,
+          "body": [
+            "sqrt(#)",
+            "1/#"
+          ]
+        },
+        "arguments": [
+          [
+            -1.0
+          ],
+          [
+            0.0
+          ],
+          [
+            1.0
+          ],
+          [
+            4.0
+          ]
+        ]
+      },
+      "source": {
+        "function": "Unplanarize",
+        "definitionCell": "In[3849]",
+        "definitionLines": [
+          307500,
+          307578
+        ],
+        "operation": "append-zero-component",
+        "inputKind": "safe-function-body",
+        "originalDirectVectorOverload": false
+      },
+      "convertedFunction": {
+        "form": "slots",
+        "arity": 1,
+        "body": [
+          "sqrt(#)",
+          "1/#",
+          "0"
+        ]
+      },
+      "sample": {
+        "rows": [
+          {
+            "arguments": [
+              -1.0
+            ],
+            "values": null,
+            "error": "[point-domain] 当前参数点的保留分量不在有限实数域。"
+          },
+          {
+            "arguments": [
+              0.0
+            ],
+            "values": null,
+            "error": "[point-domain] 当前参数点的保留分量不在有限实数域。"
+          },
+          {
+            "arguments": [
+              1.0
+            ],
+            "values": [
+              1.0,
+              1.0,
+              0.0
+            ],
+            "error": null
+          },
+          {
+            "arguments": [
+              4.0
+            ],
+            "values": [
+              2.0,
+              0.25,
+              0.0
+            ],
+            "error": null
+          }
+        ]
+      },
+      "certification": {
+        "functionBodyTransformedExactly": true,
+        "retainedComponentsOnlyEvaluated": true,
+        "pointwiseValuesVerified": true,
+        "symbolicWolframFunctionObjectReproduced": false,
+        "interpolationObjectReproduced": false,
+        "continuousDomainCertified": false
+      }
+    }
+  }
+]

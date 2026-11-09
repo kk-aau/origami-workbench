@@ -1,0 +1,30 @@
+async page=>{
+  const checks=[],check=(ok,label)=>{if(!ok)throw Error(label);checks.push(label);};
+  const button=name=>page.getByRole('button',{name,exact:true});
+  const ready=()=>page.waitForFunction(()=>document.querySelector('.tess-preview-status')?.getAttribute('data-pending')==='false');
+  const response=()=>page.waitForResponse(r=>r.url().endsWith('/api/tessellate')&&r.request().postDataJSON()?.outerExpressions?.length);
+  await page.setViewportSize({width:1000,height:720});
+  await button('保存工程').click();await page.locator('.save-dot.saved').waitFor();
+  await button('镶嵌设计').click();await button('07 环状镶嵌').click();await ready();
+  await page.getByLabel('环形构造').selectOption('origamica');await ready();
+  await button('编辑解析公式').click();await button('填入双峰公式').click();
+  let wait=response();await button('采用公式').click();let r=await(await wait).json();await ready();
+  check(r.source.curveFamily==='analytic-polar'&&r.stats.checks.geometry.status==='passed'&&r.stats.checks.local.status==='passed','解析公式直接生成有效的原版环状折痕');
+  check(r.source.closureError<1e-8&&r.source.foldedForm.length===r.stats.vertices,'解析曲线的折后坐标保持闭合');
+  check(await page.locator('.inspector').evaluate(e=>e.scrollHeight<=e.clientHeight+1),'1000×720 公式模式侧栏无需滚动');
+  await button('编辑解析公式').click();
+  const text=page.getByLabel('极坐标公式 JSON');
+  const formulas=JSON.parse(await text.inputValue());formulas.creaseExpressions[0]='sqrt(-1)';
+  await text.fill(JSON.stringify(formulas));wait=response();await button('采用公式').click();
+  check((await wait).status()===422,'不可求值的公式由后端明确拒绝');
+  await page.waitForFunction(()=>document.querySelector('.tess-preview-status')?.textContent==='参数需调整');
+  check(await button('采用折痕副本 →').isDisabled(),'错误公式不能采用候选折痕');
+  await button('编辑解析公式').click();await button('填入双峰公式').click();
+  wait=response();await button('采用公式').click();r=await(await wait).json();await ready();
+  check(r.source.curveFamily==='analytic-polar'&&await button('采用折痕副本 →').isEnabled(),'恢复有效公式后重新得到可采用折痕');
+  await button('采用折痕副本 →').click();await button('保存工程').click();await page.locator('.save-dot.saved').waitFor();
+  await button('镶嵌设计').click();await button('01 单元扭转').click();
+  wait=response();await button('读取工程参数').click();r=await(await wait).json();await ready();
+  check(r.stats.parameters.outerExpressions?.length===3&&r.source.curveFamily==='analytic-polar','工程恢复保留解析公式');
+  return {passed:checks.length,checks};
+}

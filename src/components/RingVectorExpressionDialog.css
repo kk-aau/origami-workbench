@@ -1,0 +1,14 @@
+.tess-dialog[open]:has(>.ring-vector-formula-dialog){box-sizing:border-box;width:min(800px,calc(100vw - 24px));height:min(640px,calc(100dvh - 24px));max-height:none;display:flex;flex-direction:column;overflow:hidden;padding:14px 16px}
+.tess-dialog:has(>.ring-vector-formula-dialog)>header{flex:none;padding-bottom:8px}
+.ring-vector-formula-dialog{flex:1;min-height:0;display:flex;flex-direction:column;gap:8px}
+.ring-vector-formula-dialog>.tess-actions{flex:none;margin:0;display:grid;grid-template-columns:1fr 1fr}
+.ring-vector-formula-dialog>.note{flex:none;margin:0;font-size:12px;line-height:1.45}
+.ring-vector-formula-help{flex:none;font-size:11px;line-height:1.45;color:var(--muted,#637268)}
+.ring-vector-formula-help summary{cursor:pointer}
+.ring-vector-formula-help[open]{max-height:180px;overflow:auto}
+.ring-vector-formula-help p{margin:5px 0}
+.ring-vector-formula-dialog>.tess-json{flex:1;min-height:120px;height:auto;resize:none;margin:0;font-size:12px;line-height:1.55}
+.ring-vector-formula-dialog>[role=alert]{flex:none;margin:0;font-size:11px;color:#9b4335}
+.tess-dialog .ring-vector-formula-dialog>footer{flex:none;margin:0;padding-top:7px;border-top:1px solid var(--line,#d5ded8);display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px}
+.tess-dialog .ring-vector-formula-dialog>footer button{min-width:0;min-height:29px;padding:4px 5px;font-size:11px;white-space:normal}
+@media(max-width:500px){.tess-dialog[open]:has(>.ring-vector-formula-dialog){width:calc(100vw - 16px);height:calc(100dvh - 16px);padding:10px}.ring-vector-formula-dialog{gap:6px}.tess-dialog .ring-vector-formula-dialog>footer{grid-template-columns:repeat(2,minmax(0,1fr))}.ring-vector-formula-dialog>.tess-json{font-size:11px}.ring-vector-formula-help[open]{max-height:150px}}

@@ -1,0 +1,28 @@
+.diagram-full-animation.ui-dialog{width:min(1200px,96vw);height:min(900px,94vh);max-height:94vh;color:var(--ink);background:var(--paper)}
+.diagram-full-animation .diagram-full-heading{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:12px 20px;border-bottom:1px solid var(--line);background:var(--surface)}
+.diagram-full-heading strong{font-size:14px}.diagram-full-heading p{margin:4px 0 0;font-size:12px;color:var(--muted)}
+.diagram-full-heading .is-error{color:var(--danger)}.diagram-full-views{display:flex;gap:4px;flex-shrink:0}
+.diagram-full-animation button,.diagram-full-animation select{color:var(--ink);background:var(--paper);border-color:var(--line)}
+.diagram-full-animation button:hover:not(:disabled){background:var(--tint);border-color:var(--accent)}
+.diagram-full-animation :is(button,input,select):focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.diagram-full-animation .diagram-animation-controls{background:var(--paper);border-color:var(--line);padding:12px 20px 16px;max-height:42vh;overflow:auto}
+.diagram-full-animation .diagram-animation-loading{pointer-events:auto;background:var(--surface)}
+.diagram-full-animation .diagram-animation-loading p{color:var(--muted);padding:0 16px;text-align:center}
+.diagram-full-animation .diagram-animation-error{color:var(--ink);background:var(--paper);border-color:var(--warn)}
+.diagram-full-error-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}
+.diagram-full-failure{position:absolute;inset:0;background:var(--surface)}
+.diagram-full-description{margin:0 0 12px;font-size:12px;line-height:1.6;max-height:3.2em;overflow:auto;white-space:pre-wrap}
+.diagram-full-progress{display:flex;justify-content:space-between;font-size:12px;color:var(--muted)}
+.diagram-full-progress output{font-variant-numeric:tabular-nums;color:var(--ink)}
+.diagram-full-steps{display:flex;gap:4px;overflow-x:auto;padding:3px 3px 8px;margin-bottom:8px;scrollbar-color:var(--line) var(--surface)}
+.diagram-full-steps button{flex:1 0 32px;max-width:80px;min-height:30px;padding:4px 8px;font-variant-numeric:tabular-nums}
+.diagram-full-steps button[aria-current=step],.diagram-full-views button[aria-pressed=true]{background:var(--tint);border-color:var(--accent)}
+.diagram-full-playbar{display:flex;flex-wrap:wrap;align-items:center;gap:12px 18px}
+.diagram-full-playbar label{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted)}
+.diagram-full-playbar select{min-height:32px;padding:4px 6px}
+.diagram-full-start{margin-left:auto;display:flex;gap:6px;flex-wrap:wrap}
+.diagram-full-animation .diagram-animation-primary{background:var(--accent);border-color:var(--accent);color:var(--paper)}
+.diagram-full-animation .diagram-animation-primary:hover:not(:disabled){background:var(--accent);filter:brightness(.92)}
+.diagram-full-note{margin:10px 0 0;font-size:12px;color:var(--warn)}
+.diagram-full-animation .diagram-animation-warnings{color:var(--warn);border-color:var(--line)}
+@media(max-width:720px){.diagram-full-animation .diagram-full-heading{padding:10px 12px;align-items:flex-start}.diagram-full-heading strong{font-size:13px}.diagram-full-animation .diagram-animation-controls{padding:10px 12px}.diagram-full-start{margin-left:0}.diagram-full-playbar{gap:8px}.diagram-full-heading p{max-width:42ch}}

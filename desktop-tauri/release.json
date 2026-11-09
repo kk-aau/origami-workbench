@@ -1,0 +1,9 @@
+{
+  "candidate": "tauri.52",
+  "platform": "windows",
+  "arch": "x64",
+  "webview": "system-webview2",
+  "runtimeResources": "resources",
+  "portableDataDirectory": "Zhezhi-Tauri-Data",
+  "installedDataDirectory": "user-data"
+}

@@ -1,0 +1,6 @@
+import {requestStrainTQPreview,strainTQSourceMatches,validateStrainTQRecipe} from './strainTQDesignCP';
+import type {TQPreviewRequest,TQPreviewReply} from './strainTQPreview';
+const channel=globalThis as unknown as {onmessage:((event:{data:TQPreviewRequest})=>void)|null;postMessage:(result:TQPreviewReply)=>void};let generation=0,active:AbortController|null=null;
+channel.onmessage=event=>{const request=event.data,token=++generation;active?.abort();active=null;if(request.kind==='cancel')return;const controller=new AbortController();active=controller;const timeout=setTimeout(()=>controller.abort(Error('当前约束求解超时；可以调整约束后重试。')),120000);
+ void(async()=>{try{const recipe=validateStrainTQRecipe(request.recipe);if(JSON.stringify(recipe)!==request.key)throw Error('当前预览请求与原参数不一致。');const preview=await requestStrainTQPreview(recipe,controller.signal);if(!strainTQSourceMatches(preview.doc))throw Error('当前 TQ 原来源检查未通过。');if(token===generation&&!controller.signal.aborted)channel.postMessage({kind:'result',id:request.id,key:request.key,payload:{key:request.key,recipe:preview.recipe,doc:preview.doc,source:preview.source,summary:preview.summary}});}catch(e){if(token===generation)channel.postMessage({kind:'error',id:request.id,key:request.key,message:(e as Error).message});}finally{clearTimeout(timeout);if(token===generation)active=null;}})();
+};

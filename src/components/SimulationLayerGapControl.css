@@ -1,0 +1,16 @@
+.sim-layer-gap-control{min-width:0;color:#647d65;font-size:11px}
+.sim-layer-gap-settings{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.sim-layer-gap-settings>label{font-size:11px;white-space:nowrap;color:#496a50}
+.sim-layer-gap-number{display:flex;align-items:center;gap:4px}
+.sim-layer-gap-number input{box-sizing:border-box;width:83px;height:27px;min-height:27px;min-width:0;margin:0;padding:3px 5px;border:1px solid #cfddc9;border-radius:4px;background:#fffefa;color:#355c46;font:12px Consolas,'Microsoft YaHei',monospace;font-variant-numeric:tabular-nums}
+.sim-controls .sim-layer-gap-number input{margin:0}
+.sim-layer-gap-number>span{font-size:12px;color:#81917a}
+.sim-layer-gap-presets{display:flex;align-items:center;gap:3px}
+.sim-layer-gap-control .sim-layer-gap-settings button{min-height:25px;padding:3px 7px;border:1px solid #d8e2d0;border-radius:4px;background:#fffefa;color:#6c8268;font-family:inherit;font-size:11px;white-space:nowrap;cursor:pointer}
+.sim-layer-gap-control .sim-layer-gap-settings button[aria-pressed=true]{border-color:#a4bda5;background:#e6eee3;color:#355f48}
+.sim-layer-gap-control .sim-layer-gap-settings button:hover{border-color:#a7bea8;background:#edf3e8}
+.sim-layer-gap-control .sim-layer-gap-settings .sim-layer-gap-reset{margin-left:2px;border-color:transparent;background:transparent;color:#7e9076}
+.sim-layer-gap-help{margin:4px 0 0!important;font-size:10px!important;line-height:1.6!important;color:#87957d!important}
+.sim-layer-gap-help.is-error{color:#a46a4f!important}
+.sim-layer-gap-control :is(input,button):focus-visible{outline:2px solid #426f59;outline-offset:2px}
+@media(max-width:650px){.sim-layer-gap-settings{gap:5px}.sim-layer-gap-number input{width:75px}.sim-layer-gap-control .sim-layer-gap-settings button{padding:3px 6px}}

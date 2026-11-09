@@ -1,0 +1,10 @@
+import fs from 'node:fs';
+import type {Doc} from '../src/core/types';
+import {locationMoveCase,locationMoveRecipe} from '../tests/fixtures/materialLocationMoveModel';
+import {weakToolSheet,weakToolSource,weakToolMaterial as mat} from '../tests/fixtures/materialWeakTools';
+import {constructMaterialMove} from '../src/app/materialConstructionMove';
+import {cutMaterialSelection} from '../src/app/materialClipboard';
+import {exportDocument,importDocument} from '../src/core/formats';
+const save=(name:string,d:Doc)=>{d.name=`参数定位移动-${name}`;fs.writeFileSync(`output/playwright/material-location-move-model-${name}-initial-1009.zhezhi.json`,exportDocument(d,'json').text);};
+for(const name of ['source','translate','similarity','two'])save(name,locationMoveCase(name));save('hole',weakToolSheet(true));save('weak',weakToolSource('boundary'));save('original',importDocument(fs.readFileSync('output/playwright/material-topology-model-original-saved-1009.zhezhi.json','utf8'),'json').doc);
+const aux=weakToolSheet();aux.segments.push({id:'move-guide',a:[1,2],b:[3,4],assignment:'A',angle:0},{id:'unselected-guide',a:[5,6],b:[7,8],assignment:'A',angle:0});const r={...locationMoveRecipe(aux),segmentIds:[...mat(aux).edgeSegmentIds,'move-guide'],parametric:true};save('aux',constructMaterialMove(aux,r).doc);const moved=locationMoveCase('translate');save('empty-after',cutMaterialSelection(moved,{kind:'material-clipboard-cut',segmentIds:mat(moved).edgeSegmentIds,lockBoundary:false,parametric:true}).doc);console.log('Prepared two/four-point movement, downstream chord, original/holed/weak materials, auxiliaries and empty later cut.');

@@ -1,0 +1,23 @@
+.activity-log-panel.ui-dialog[data-ui-shell]{--ui-dialog-width:1060px;max-width:calc(100vw - 48px)}
+.activity-log-introduction{max-width:74ch;margin:0 0 22px;color:var(--ui-dialog-muted);font-size:13px;line-height:1.8}
+.activity-log-heading{display:flex;align-items:baseline;justify-content:space-between;gap:16px;margin:0 0 10px}
+.activity-log-heading h3{margin:0;color:var(--ui-dialog-ink);font-size:14px;font-weight:600}
+.activity-log-heading>span{color:var(--ui-dialog-muted);font-size:12px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.activity-log-table-scroll{max-height:52vh;overflow:auto;border:1px solid var(--ui-dialog-line);border-radius:5px;scrollbar-color:var(--ui-dialog-line) var(--ui-dialog-surface);scrollbar-width:thin}
+.activity-log-table-scroll table{width:100%;min-width:720px;border-collapse:collapse;table-layout:fixed;font-size:12px;line-height:1.7}
+.activity-log-table-scroll caption{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+.activity-log-time-column{width:174px}.activity-log-level-column{width:65px}.activity-log-action-column{width:158px}
+.activity-log-table-scroll th{position:sticky;top:0;z-index:1;padding:10px 12px;background:var(--ui-dialog-header);color:var(--ui-dialog-muted);text-align:left;font-weight:600;border-bottom:1px solid var(--ui-dialog-line)}
+.activity-log-table-scroll td{padding:12px;border-bottom:1px solid var(--ui-dialog-line);vertical-align:top;white-space:pre-wrap;overflow-wrap:anywhere;color:var(--ui-dialog-ink)}
+.activity-log-table-scroll tr:last-child td{border-bottom:0}.activity-log-table-scroll time{font-variant-numeric:tabular-nums;white-space:nowrap}
+.activity-log-table-scroll .activity-log-level{color:var(--ui-dialog-muted)}
+.activity-log-table-scroll .activity-log-level[data-level=error]{color:var(--ui-dialog-danger);font-weight:600}
+.activity-log-table-scroll .activity-log-level:is([data-level=warn],[data-level=warning]){font-weight:600}
+.activity-log-error{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:12px 14px;margin:0 0 16px;border:1px solid var(--ui-dialog-danger);border-radius:5px;color:var(--ui-dialog-danger);line-height:1.7;overflow-wrap:anywhere}
+.activity-log-error>span{min-width:0}.activity-log-error>button{flex-shrink:0}
+.activity-log-pending{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:12px 14px;margin:0 0 16px;border:1px solid var(--ui-dialog-line);border-radius:5px;background:var(--ui-dialog-header);color:var(--ui-dialog-ink);line-height:1.7}
+.activity-log-notice{margin:0 0 16px;padding:10px 0;color:var(--ui-dialog-ink);font-size:13px;line-height:1.8}
+.activity-log-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;min-height:190px;margin:0;padding:30px 16px;text-align:center;color:var(--ui-dialog-muted);border:1px solid var(--ui-dialog-line);border-radius:5px}
+.activity-log-empty strong{color:var(--ui-dialog-ink);font-weight:500;font-size:14px}.activity-log-empty p{margin:0}
+.activity-log-footnote{margin:12px 0 0;color:var(--ui-dialog-muted);font-size:12px;line-height:1.8;overflow-wrap:anywhere}.activity-log-footnote p{margin:4px 0}
+@media(max-width:700px){.activity-log-panel.ui-dialog[data-ui-shell]{--ui-dialog-width:calc(100vw - 24px);max-width:calc(100vw - 24px)}.activity-log-error,.activity-log-pending{align-items:flex-start;flex-direction:column;gap:10px}.activity-log-table-scroll{max-height:48vh}}

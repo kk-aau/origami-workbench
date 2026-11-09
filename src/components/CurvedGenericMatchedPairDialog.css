@@ -1,0 +1,49 @@
+.tess-dialog[open]:has(>.generic-matched-pair-dialog){width:min(1040px,calc(100vw - 24px));height:min(680px,calc(100dvh - 24px));overflow:hidden}
+.generic-matched-pair-dialog{grid-template-columns:310px minmax(0,1fr);gap:10px;margin-top:8px}
+.generic-matched-pair-dialog .csp-controls{overflow:visible;gap:4px;padding:9px}
+.generic-matched-pair-dialog .csp-field,.generic-matched-pair-dialog .csp-select{line-height:1.2;gap:2px}
+.generic-matched-pair-dialog .csp-field span{line-height:12px}
+.cmpg-expression-fields{display:grid;gap:4px}
+.cmpg-expression{display:grid;grid-template-columns:47px minmax(0,1fr);align-items:center;gap:5px;font:10px Consolas,monospace;color:#5f7569}
+.cmpg-expression input{box-sizing:border-box;width:100%;min-width:0;height:26px;padding:3px 6px;border:1px solid #cbd5c8;border-radius:4px;background:#fffef9;color:#263d34;font:10px Consolas,monospace}
+.cmpg-guide{margin:0!important;font-size:9px!important;line-height:1.4!important;color:#677a6f}
+.cmpg-signs{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.cmpg-ranges{display:grid;grid-template-columns:1fr 1fr;gap:4px 6px}
+.generic-matched-pair-dialog .csp-field input,.generic-matched-pair-dialog .csp-select select{height:26px;font-size:10px;padding:3px 5px}
+.generic-matched-pair-dialog .csp-status{height:48px;min-height:48px;padding:5px 7px;font-size:10px;line-height:1.3;overflow-wrap:anywhere}
+.cmpg-diagnostics{height:42px;flex:none;display:flex;flex-wrap:wrap;align-content:center;gap:2px 8px;padding:3px 6px;border:1px solid #d7ddd3;border-radius:4px;font:10px/1.35 Consolas,monospace;background:#fffdf8;color:#537365;box-sizing:border-box}
+.generic-matched-pair-dialog .csp-position{padding:4px 0 0}.generic-matched-pair-dialog .csp-position input{margin-top:3px;height:14px}
+.cmpg-storage,.cmpg-restore{display:flex;gap:5px}.cmpg-storage button,.cmpg-restore button{flex:1;min-width:0;min-height:25px;padding:3px 4px;font-size:10px;border:1px solid #cbd5c8;border-radius:4px;background:#fffdf8;color:#386b62;white-space:nowrap}
+.cmpg-import-error{display:block;height:13px;flex:none;font-size:9px;line-height:13px;color:#9a4436}
+:root[data-theme="dark"] .cmpg-expression,:root[data-theme="dark"] .cmpg-guide{color:#bbd1c3}
+:root[data-theme="dark"] .cmpg-expression input,:root[data-theme="dark"] .cmpg-storage button,:root[data-theme="dark"] .cmpg-restore button,:root[data-theme="dark"] .cmpg-diagnostics{background:#1c2c25;border-color:#536857;color:#eef5ea}
+@media(max-width:760px){.tess-dialog[open]:has(>.generic-matched-pair-dialog){padding:10px;overflow:hidden;height:calc(100dvh - 18px);width:calc(100vw - 18px)}
+ .generic-matched-pair-dialog{display:grid;grid-template-columns:280px minmax(0,1fr);overflow:visible;margin-top:5px;gap:8px}
+ .generic-matched-pair-dialog .csp-panels{min-height:0;grid-template-columns:1fr 1fr;gap:6px}.generic-matched-pair-dialog .csp-results{min-height:0;gap:6px}
+ .generic-matched-pair-dialog .csp-panel{min-height:0}.generic-matched-pair-dialog .csp-panel header{padding:5px 7px!important;min-height:28px;flex-direction:column;align-items:flex-start!important}
+ .generic-matched-pair-dialog .csp-topline strong{font-size:12px}.generic-matched-pair-dialog .csp-certification{padding:5px 7px;font-size:9px}
+ .generic-matched-pair-dialog .csp-panel p,.generic-matched-pair-dialog .csp-azimuth{padding:4px 6px;font-size:9px!important}}
+@media(max-width:550px){.tess-dialog[open]:has(>.generic-matched-pair-dialog){padding:7px}.tess-dialog:has(>.generic-matched-pair-dialog)>header{padding-bottom:5px}
+ .generic-matched-pair-dialog{grid-template-columns:1fr;grid-template-rows:auto minmax(0,1fr);margin-top:4px;gap:5px}
+ .generic-matched-pair-dialog .csp-controls{display:grid;grid-template-columns:1fr 1fr;gap:3px 6px;padding:6px}
+ .cmpg-mode{grid-row:1;grid-column:1}.cmpg-signs{grid-row:1;grid-column:2}
+ .cmpg-expression-fields{grid-row:2;grid-column:1/-1}.cmpg-guide{grid-row:3;grid-column:1/-1}.cmpg-ranges{grid-row:4;grid-column:1/-1}
+ .generic-matched-pair-dialog .csp-status{grid-row:5;grid-column:1}.cmpg-diagnostics{grid-row:5;grid-column:2}
+ .generic-matched-pair-dialog .csp-position{grid-row:6;grid-column:1}.cmpg-storage{grid-row:6;grid-column:2}.cmpg-restore{grid-row:7;grid-column:1/-1}
+ .cmpg-expression-fields{gap:2px}.cmpg-expression{grid-template-columns:45px minmax(0,1fr)}.cmpg-expression input{height:23px}
+ .cmpg-signs{gap:4px}.cmpg-ranges{grid-template-columns:repeat(6,minmax(0,1fr));gap:2px 4px}
+ .generic-matched-pair-dialog .csp-field,.generic-matched-pair-dialog .csp-select{font-size:9px;gap:1px;line-height:1.15}
+ .generic-matched-pair-dialog .csp-field span{line-height:10px}
+ .generic-matched-pair-dialog .csp-field input,.generic-matched-pair-dialog .csp-select select{height:23px;font-size:9px}
+ .generic-matched-pair-dialog .csp-status{height:42px;min-height:42px;font-size:9px;padding:4px 5px;line-height:1.2}
+ .cmpg-diagnostics{height:42px;font-size:9px;padding:3px 5px;gap:1px 5px}
+ .generic-matched-pair-dialog .csp-position{padding:3px 0 0;align-self:center}.generic-matched-pair-dialog .csp-position label{font-size:9px}
+ .cmpg-storage,.cmpg-restore{gap:3px}.cmpg-storage button,.cmpg-restore button{min-height:23px;font-size:9px;padding:2px}
+ .cmpg-import-error{height:10px;font-size:8px;line-height:10px}.generic-matched-pair-dialog .csp-results{gap:4px}
+ .generic-matched-pair-dialog .csp-topline{min-height:24px}.generic-matched-pair-dialog .csp-topline strong{font-size:11px}
+ .generic-matched-pair-dialog .csp-panel header{flex-direction:row;align-items:center!important;min-height:26px;padding:4px 6px!important;line-height:1.2}
+ .generic-matched-pair-dialog .csp-panel header strong{font-size:9px;line-height:1.2}.generic-matched-pair-dialog .csp-panel header span{font-size:8px;letter-spacing:.06em}
+ .generic-matched-pair-dialog .csp-panel p{font-size:8px!important;line-height:1.2!important;padding:3px 5px;min-height:21px}
+ .generic-matched-pair-dialog .csp-legend{min-height:15px;font-size:9px;gap:8px}.generic-matched-pair-dialog .csp-certification{padding:4px 6px;font-size:8px;line-height:1.3}
+ .generic-matched-pair-dialog .csp-certification strong{font-size:9px}.generic-matched-pair-dialog .csp-footer{min-height:25px;padding-top:3px;gap:4px}
+ .generic-matched-pair-dialog .csp-footer span{font-size:8px!important}.generic-matched-pair-dialog .csp-footer button{min-height:23px;font-size:9px;padding:2px 9px}}

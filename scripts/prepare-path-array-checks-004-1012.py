@@ -1,0 +1,12 @@
+from pathlib import Path
+root=Path.cwd();source=(root/'scripts/run-path-array-checks-1012.mjs').read_text(encoding='utf8')
+source=source.replace("const file='output/path-array-checks-1012.json',log='output/path-array-checks-1012.log';","const file='output/path-array-checks-004-1012.json',log='output/path-array-checks-004-1012.log';")
+source=source.replace("baseFile='output/processing-r12-checks-002-1011.json'","baseFile='output/path-array-checks-002-1012.json'")
+source=source.replace("['path-array-core-root-1012','semigeneral-source-delta-root-1012','path-array-ui-root-1012']","['path-array-units-delta-root-1012','linear-space-runtime-delta-root-1012']")
+source=source.replace('All existing server, backend, desktop, dependencies, processing and ordinary export inputs remain exact SHA-identical. New source mathematical helpers, dialogs, App routes and tests receive a fresh entire frontend suite plus TypeScript and Vite build.', 'Only explicit XYZ field layout and source arithmetic replay/its regression coverage changed. Existing server, backend, desktop, dependencies, processing and ordinary export inputs remain exact SHA-identical. Run the full frontend suite and TypeScript/Vite again; actual effective source edits and Chrome/Node export readback follow.')
+target=root/'scripts/run-path-array-checks-004-1012.mjs';assert not target.exists();target.write_text(source,encoding='utf8')
+source=(root/'scripts/capture-path-array-main-1012.py').read_text(encoding='utf8').replace('output/path-array-checks-1012.json','output/path-array-checks-004-1012.json').replace('path-array-main-root-1012','path-array-main-root-004-1012').replace('path-array-compiled-1012','path-array-compiled-004-1012')
+target=root/'scripts/capture-path-array-main-004-1012.py';assert not target.exists();target.write_text(source,encoding='utf8')
+source=(root/'scripts/start-path-array-main-1012.mjs').read_text(encoding='utf8').replace('path-array-main-server-1012','path-array-main-server-004-1012').replace('path-array-main-root-1012','path-array-main-root-004-1012').replace('path-array-main-pid-1012','path-array-main-pid-004-1012')
+target=root/'scripts/start-path-array-main-004-1012.mjs';assert not target.exists();target.write_text(source,encoding='utf8')
+print('Prepared next fresh suite and independent run 004 source/data locations; final delta not yet integrated.')

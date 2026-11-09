@@ -1,0 +1,10 @@
+.diagram-cp-legend{flex-shrink:0;padding:5px 10px;border-top:1px solid var(--diagram-line,#dde3d9);font-size:10px;color:var(--diagram-muted,#617365);min-width:0}
+.diagram-cp-legend>div{display:flex;gap:5px 12px;align-items:center;flex-wrap:wrap}
+.diagram-cp-legend span{display:inline-flex;align-items:center;gap:4px;white-space:nowrap}
+.diagram-cp-legend i{display:inline-block;width:14px;border-top:1.5px solid currentColor}
+.diagram-cp-legend i.is-new{border-top-width:2.5px;color:#526653}
+.diagram-cp-legend p{margin:4px 0 0;font-size:10px;line-height:1.5;overflow-wrap:anywhere}
+.diagram-cp-legend.is-compact{padding:4px 8px}
+.diagram-cp-legend.is-compact>div{gap:3px 8px}
+/* Hover/selection changes must not resize the flexible CP viewport. */
+.diagram-cp-legend.is-compact>p{height:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}

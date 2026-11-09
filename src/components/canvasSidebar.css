@@ -1,0 +1,32 @@
+.chrome-workbench .canvas-inspector{overflow-x:hidden;overflow-y:auto;min-height:0}
+.chrome-workbench .canvas-inspector>.inspector-heading{display:flex;position:sticky;top:0;z-index:1;background:var(--paper);padding:12px 14px;border-bottom:1px solid var(--line)}
+.chrome-workbench .canvas-inspector>*{flex-shrink:0}
+.tool-options{border-top:1px solid var(--line);font-size:11px}
+.tool-options>summary{padding:9px 8px;cursor:pointer;color:var(--muted)}
+.tool-options .tool-paper-settings{padding:8px;border:0}
+.tool-options .tool-paper-settings h2{font-size:11px;margin:0 0 8px}
+.tool-options .number-field{min-width:0;gap:4px}
+.tool-options .number-input{max-width:100px}
+.tool-selection-options{padding:8px;display:grid;gap:8px}
+.tool-options .dock-settings-actions{display:flex;flex-wrap:wrap;gap:4px}
+.tool-options .construction-rail{max-height:40vh;overflow:auto}
+.fold-model-tools{position:fixed;right:14px;bottom:72px;z-index:25;width:min(340px,calc(100vw - 28px));max-height:calc(100vh - 155px);overflow:auto;background:var(--paper);border:1px solid var(--line);border-radius:8px;color:var(--ink);font-size:12px}
+.fold-model-tools[hidden]{display:none}
+.fold-model-tools>header{position:sticky;top:0;display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--paper);border-bottom:1px solid var(--line);z-index:1}
+.fold-model-tools>header button{min-width:28px;padding:3px 6px}
+.fold-model-tools section{padding:12px;border-bottom:1px solid var(--line)}
+.fold-model-tools section[hidden]{display:none}
+.fold-model-tools h2{font-size:12px;margin:0 0 8px}
+.fold-model-tools .button-pair{margin-bottom:6px;gap:6px}
+.fold-model-tools .button-pair>*{min-width:0}
+.fold-model-tools .number-field{min-width:0;gap:6px}
+.fold-model-tools .number-input{max-width:120px}
+.fold-model-tools .readout{display:flex;gap:8px;justify-content:space-between}
+.canvas-inspector .tool-options>summary{padding:10px 12px;color:var(--ink);font-size:12px;font-weight:600}
+.canvas-inspector .tool-options .tool-paper-settings{padding:10px 12px}
+.canvas-inspector .tool-options .tool-paper-settings h2{margin-bottom:10px}
+.canvas-inspector .tool-options .tool-selection-options{padding:8px 12px;gap:10px}
+.canvas-inspector .tool-options .tool-selection-options label{margin:0;font-size:12px;display:flex;align-items:center;gap:7px}
+.canvas-inspector .tool-options .dock-settings-actions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));padding:8px 12px 4px}
+.canvas-inspector .tool-options .dock-settings-actions button{min-width:0;padding:4px;font-size:11px;white-space:normal}
+.canvas-inspector .tool-options .dock-mark-history{padding:4px 12px 10px}

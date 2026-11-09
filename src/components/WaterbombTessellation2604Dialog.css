@@ -1,0 +1,23 @@
+.tess-dialog[open]:has(>.waterbomb2604-cp){width:min(1080px,calc(100vw - 24px));height:min(680px,calc(100dvh - 24px));max-height:none;padding:14px 16px;box-sizing:border-box;display:flex;flex-direction:column;overflow:hidden}
+.tess-dialog:has(>.waterbomb2604-cp)>header{flex:none;margin:0;padding:0 0 9px}
+.waterbomb2604-cp{flex:1;min-height:0;display:flex;flex-direction:column;gap:5px;margin-top:5px}
+.waterbomb2604-workspace{flex:1;min-height:0;display:grid;grid-template-columns:340px minmax(0,1fr);gap:16px;align-items:start}
+.tess-dialog:has(>.waterbomb2604-cp) .waterbomb2604-controls{min-width:0;padding:10px;display:flex;flex-direction:column;gap:5px;border:1px solid var(--line,#d3ded2);border-radius:6px;background:var(--surface,#fafbf7)}
+.waterbomb2604-controls h2{font-size:18px;line-height:1.35;margin:0 0 3px}
+.tess-dialog:has(>.waterbomb2604-cp) .waterbomb2604-controls p,.tess-dialog:has(>.waterbomb2604-cp) .waterbomb2604-results>p{font-size:12px;line-height:1.5;margin:0;color:var(--muted,#637366)}
+.waterbomb2604-controls .waterbomb2604-kicker{font-size:11px;letter-spacing:.06em;color:#587460}
+.waterbomb2604-fields{display:grid;gap:5px;margin:4px 0}.waterbomb2604-field{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--ink,#253329)}
+.waterbomb2604-field>div{display:flex;align-items:center;gap:9px;height:30px}.waterbomb2604-field input[type=number]{height:30px;width:92px;min-width:0;box-sizing:border-box;font-size:13px}.waterbomb2604-field input[type=range]{height:30px;min-width:0;flex:1;margin:0;accent-color:#4a7c63}
+.tess-dialog:has(>.waterbomb2604-cp) .waterbomb2604-results{min-width:0;padding:0!important;display:flex;flex-direction:column;gap:5px}
+.waterbomb2604-status{height:58px;min-height:58px;padding:6px 10px;box-sizing:border-box;border-left:3px solid #819f8d;background:var(--surface,#fafbf7);overflow:auto}
+.tess-dialog:has(>.waterbomb2604-cp) .waterbomb2604-status p{font-size:12px;line-height:1.45;margin:0}.waterbomb2604-status[data-state=error]{border-color:#a53e39;color:#a53e39}
+.waterbomb2604-plot-slot{height:420px;min-height:420px;display:flex;flex-direction:column;overflow:hidden}.waterbomb2604-tabs{height:30px;flex:none;margin-bottom:4px;display:flex;gap:6px}
+.tess-dialog:has(>.waterbomb2604-cp) .waterbomb2604-tabs button{height:30px;min-height:30px;font-size:12px;padding:3px 10px}.waterbomb2604-tabs button[aria-pressed=true]{background:#426b55;color:white;border-color:#426b55}
+.waterbomb2604-placeholder{flex:1;min-height:0;display:grid;place-items:center;border:1px solid #d7e0d8;background:#f8faf7;font-size:14px;color:#526455}
+.waterbomb2604-figure{margin:0;min-height:0;flex:1}.waterbomb2604-figure svg{display:block;width:100%;height:330px;border:1px solid #d7e0d8;box-sizing:border-box;border-radius:6px;background:#f8faf7;touch-action:none}
+.waterbomb2604-figure figcaption{display:flex;justify-content:space-between;align-items:center;gap:6px;margin:4px 0;font-size:12px;color:#526455}
+.tess-dialog:has(>.waterbomb2604-cp) .waterbomb2604-figure figcaption button{min-height:26px;height:26px;font-size:12px;padding:2px 8px}
+.tess-dialog:has(>.waterbomb2604-cp) .waterbomb2604-figure p{font-size:12px;line-height:1.5;margin:0;color:#526455}
+.tess-dialog:has(>.waterbomb2604-cp) .waterbomb2604-cp>footer{display:flex;align-items:center;justify-content:flex-end;gap:10px;flex:none;padding-top:8px;margin:0;border-top:1px solid var(--line,#d3ded2)}.waterbomb2604-cp>footer>span{flex:1;font-size:12px;line-height:1.4;color:var(--muted,#637366)}
+@media(max-width:760px){.tess-dialog[open]:has(>.waterbomb2604-cp){width:calc(100vw - 18px);height:calc(100dvh - 18px);padding:10px;overflow:auto}.waterbomb2604-cp{flex:0 0 auto}.waterbomb2604-workspace{display:flex;flex-direction:column;flex:none;gap:12px}.waterbomb2604-controls,.waterbomb2604-results{width:100%;box-sizing:border-box}.waterbomb2604-cp>footer{position:sticky;bottom:-10px;background:var(--paper,#fffefb);flex-wrap:wrap;padding-bottom:8px}.waterbomb2604-cp>footer>span{flex-basis:100%}}
+@media(min-width:761px) and (max-height:720px){.tess-dialog[open]:has(>.waterbomb2604-cp){overflow:auto}.waterbomb2604-cp{flex:0 0 auto}}

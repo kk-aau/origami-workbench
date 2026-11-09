@@ -1,0 +1,33 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import {appendCircle,circleGeometry,circleThroughThree,circleSnapPoints,pickCircle,updateCircle} from '../../src/app/circleTools';
+import {nearestSnapPoint} from '../../src/app/snapPoints';
+import {objectsSVG} from '../../src/app/drawingObjects';
+import {buildFold} from '../../src/core/geometry';
+import {exportDocument,importDocument} from '../../src/core/formats';
+import type {Doc,Point} from '../../src/core/types';
+const doc:Doc={name:'circles',paper:{width:200,height:200},segments:[{id:'circle',a:[0,0],b:[200,0],assignment:'B',angle:0}]};
+test('two-point/radius circle validates and copies center',()=>{const p:Point=[5,8],c=circleGeometry(p,12);p[0]=9;assert.deepEqual(c,{center:[5,8],radius:12});});
+test('circle rejects zero negative excessive and nonfinite radius',()=>{for(const r of [0,-1,1e-8,1e6+1,NaN,Infinity])assert.throws(()=>circleGeometry([0,0],r));});
+test('circle rejects invalid center',()=>{for(const p of [[NaN,0],[Infinity,0],[1e6+1,0]] as Point[])assert.throws(()=>circleGeometry(p,1));});
+test('circumcircle matches all three points and both orientations',()=>{for(const points of [[[0,0],[100,0],[0,100]],[[0,100],[100,0],[0,0]]] as Point[][]){const c=circleThroughThree(points[0],points[1],points[2]);assert.deepEqual(c.center,[50,50]);for(const p of points)assert.ok(Math.abs(Math.hypot(p[0]-c.center[0],p[1]-c.center[1])-c.radius)<1e-8);}});
+test('circumcircle computes in translated coordinates for large locations',()=>{const c=circleThroughThree([999000,999000],[999002,999000],[999000,999002]);assert.deepEqual(c.center,[999001,999001]);assert.equal(c.radius,Math.SQRT2);});
+test('circumcircle rejects duplicate and collinear points in any ordering',()=>{for(const c of [[0,0],[50,0],[100,0],[200,0],[50,1e-10]] as Point[])assert.throws(()=>circleThroughThree([0,0],[100,0],c));});
+test('circumcircle rejects nonfinite input',()=>assert.throws(()=>circleThroughThree([0,0],[1,0],[0,NaN])));
+test('append avoids all object/segment ID collisions and leaves segments unchanged',()=>{const a=appendCircle(doc,circleGeometry([50,50],25)),b=appendCircle(a,circleGeometry([75,50],10));assert.equal(b.segments,doc.segments);assert.equal(doc.objects,undefined);assert.deepEqual(b.objects?.map(o=>o.id),['circle:2','circle:3']);});
+test('update changes only chosen circle and preserves its ID',()=>{const a=appendCircle(doc,circleGeometry([50,50],25)),b=appendCircle(a,circleGeometry([75,50],10)),next=updateCircle(b,'circle:2',{center:[40,30],radius:20,color:'#8052ad'});assert.equal(next.segments,b.segments);assert.equal(next.objects![1],b.objects![1]);assert.deepEqual(next.objects![0],{id:'circle:2',kind:'circle',center:[40,30],radius:20,color:'#8052ad'});assert.deepEqual(a.objects![0],b.objects![0]);});
+test('update rejects missing IDs invalid radius and unsafe color',()=>{const a=appendCircle(doc,circleGeometry([50,50],25));assert.throws(()=>updateCircle(a,'missing',{radius:5}));assert.throws(()=>updateCircle(a,'circle:2',{radius:0}));assert.throws(()=>updateCircle(a,'circle:2',{color:'url(evil)'}));});
+test('circle picking prefers circumference then center with finite tolerance',()=>{const a=appendCircle(appendCircle(doc,circleGeometry([50,50],25)),circleGeometry([75,50],5));assert.equal(pickCircle(a.objects!,[75,50],2)?.id,'circle:2');assert.equal(pickCircle(a.objects!,[50,51],2)?.id,'circle:2');assert.equal(pickCircle(a.objects!,[99,99],2),undefined);});
+test('circle picking resolves coincident circles deterministically',()=>{const a=appendCircle(appendCircle(doc,circleGeometry([50,50],25)),circleGeometry([50,50],25));assert.equal(pickCircle(a.objects!,[75,50],1)?.id,pickCircle([...a.objects!].reverse(),[75,50],1)?.id);});
+test('circle snapping produces center and cardinal anchors but no crease IDs',()=>{const a=appendCircle(doc,circleGeometry([50,50],25)),points=circleSnapPoints(a.objects!);assert.equal(points.length,5);assert.ok(points.every(p=>p.kind==='circle'&&p.segmentIds.length===0));assert.deepEqual(nearestSnapPoint(points,[74,51],2)?.point,[75,50]);assert.deepEqual(nearestSnapPoint(points,[50,50],2)?.point,[50,50]);});
+test('circle anchors omit coordinates outside the document input limit',()=>{const a=appendCircle(doc,circleGeometry([1e6,1e6],25));assert.ok(circleSnapPoints(a.objects!).every(p=>p.point.every(n=>Math.abs(n)<=1e6)));});
+test('circle exports as an SVG object without changing crease geometry',()=>{const a=appendCircle(doc,circleGeometry([50,50],25));assert.match(objectsSVG(a),/<circle/);assert.match(objectsSVG(a),/r="25"/);assert.equal(a.segments.length,1);});
+test('circles do not split or change the folding graph',()=>{
+  const square:Doc={...doc,segments:[...doc.segments,{...doc.segments[0],id:'r',a:[200,0],b:[200,200]},{...doc.segments[0],id:'b',a:[200,200],b:[0,200]},{...doc.segments[0],id:'l',a:[0,200],b:[0,0]}]};
+  const a=appendCircle(square,circleGeometry([100,100],150));assert.deepEqual(buildFold(a).graph,buildFold(square).graph);
+});
+test('native exchange preserves edited circle; CP warns about omitted objects',()=>{
+  const a=updateCircle(appendCircle(doc,circleGeometry([50,50],25)),'circle:2',{center:[55,65],color:'#8052ad'});
+  const native=exportDocument(a,'json');assert.deepEqual(importDocument(native.text,'json').doc.objects,a.objects);
+  assert.ok(exportDocument(a,'cp').warnings.some(w=>w.includes('不包含')&&w.includes('圆')));
+});

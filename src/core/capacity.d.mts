@@ -1,0 +1,1 @@
+export const MAX_DRAWING_OBJECTS: 1500;

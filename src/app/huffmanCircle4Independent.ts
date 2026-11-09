@@ -1,0 +1,22 @@
+/** Independent RK4 replay of the literal In[4070]/In[4058] angle/Darboux equations. */
+type V=number[];
+const add=(a:V,b:V,k=1)=>a.map((x,i)=>x+k*b[i]);
+const dot=(a:V,b:V)=>a.reduce((n,x,i)=>n+x*b[i],0);
+export const cross3=(a:V,b:V)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];
+export const normalize3=(p:V)=>{const n=Math.hypot(...p);if(!Number.isFinite(n)||n<=1e-10)throw Error('原镜面或枢轴方向退化。');return p.map(x=>x/n);};
+function rk4(f:(t:number,y:V)=>V,t:number,y:V,h:number){const a=f(t,y),b=f(t+h/2,add(y,a,h/2)),c=f(t+h/2,add(y,b,h/2)),d=f(t+h,add(y,c,h));const out=y.map((x,i)=>x+h*(a[i]+2*b[i]+2*c[i]+d[i])/6);if(out.some(x=>!Number.isFinite(x)||Math.abs(x)>1e10))throw Error('原方程在本输入遇到奇异值。');return out;}
+function grid(f:(t:number,y:V)=>V,start:number,end:number,y:V,n:number){const h=(end-start)/n,values=[y];for(let i=0;i<n;i++)values.push(rk4(f,start+i*h,values[i],h));return (t:number)=>{const p=Math.max(0,Math.min(n,(t-start)/h)),i=Math.min(n-1,Math.floor(p)),s=p-i;return values[i].map((x,k)=>x*(1-s)+values[i+1][k]*s);};}
+function replayHuffman(parametersDeg:number[],kind:'circle4'|'parabola'){
+ const [t1,t2,g1,g2]=parametersDeg.map(x=>x*Math.PI/180),end=Math.PI/2,initial=[0,g1,g2];
+ const rhs=(moving:boolean)=>(t:number,[q,a,b]:V)=>{
+  if(kind==='parabola'){const den=1-4*Math.cos(t-q)+Math.cos(q),factor=-4+Math.cos(t)+Math.cos(t-q);if(Math.abs(den)<=1e-9||Math.abs(factor)<=1e-9||Math.abs(Math.sin(b/2))<=1e-9||Math.abs(Math.cos(b/2))<=1e-9||Math.abs(Math.cos(a/2))<=1e-9)throw Error('原抛物线一致性方程遇到极点。');return [moving?-2*factor*Math.cos(q/2)/Math.tan(b/2)*Math.tan(a/2)/den:0,-4*Math.sin(t-q)*Math.tan(a/2)/den,2*Math.cos(q/2)*Math.sin(t-q)*Math.tan(a/2)/den];}
+  const den=1+2*Math.cos(t)-4*Math.cos(t-q);if(Math.abs(den)<=1e-9||Math.abs(Math.cos(q))<=1e-9||Math.abs(Math.sin(b/2))<=1e-9||Math.abs(Math.cos(a/2))<=1e-9)throw Error('原一致性方程遇到极点。');return [moving?(-4+Math.cos(t-q)+2*Math.cos(q))/Math.tan(b/2)*Math.tan(a/2)/(-den):0,(2*Math.sin(t)-4*Math.sin(t-q))*Math.tan(a/2)/den,(-Math.sin(t-2*q)-4*Math.sin(q)+2*Math.sin(2*q))*Math.tan(a/2)/(Math.cos(q)*(-den))];};
+ const before=grid(rhs(false),t1,0,initial,2048),middle=grid(rhs(true),t1,t2,initial,4096),after=grid(rhs(false),t2,end,middle(t2),2048),angles=(t:number)=>t<t1?before(t):t<=t2?middle(t):after(t);
+ const initialFrame=[1,0,0,0,0,1,-1,0,0,0,-1,0],frame=grid((t,y)=>{const a=angles(t)[1],T=y.slice(3,6),L=y.slice(6,9),U=y.slice(9,12),k=-Math.tan(a/2);return [...T,...add(L,U,k),...T.map(x=>-x),...T.map(x=>-k*x)];},0,end,initialFrame,8192);
+ const axesAt=(t:number)=>{const [q,g,h]=angles(t),theta=kind==='parabola'?q/2:q,y=frame(t),T=y.slice(3,6),L=y.slice(6,9),U=y.slice(9,12),LR=L.map((x,i)=>Math.cos(g)*x-Math.sin(g)*U[i]),UR=L.map((x,i)=>Math.sin(g)*x+Math.cos(g)*U[i]),Tflat=[-Math.sin(t),Math.cos(t)],Lflat=[-Math.cos(t),-Math.sin(t)],T2flat=[-Math.sin(theta),Math.cos(theta)],T2=normalize3(T.map((x,i)=>dot(T2flat,Tflat)*x+dot(T2flat,Lflat)*LR[i])),L2=normalize3(cross3(UR,T2)),L2R=L2.map((x,i)=>Math.cos(h)*x-Math.sin(h)*UR[i]);return normalize3(T2.map((x,i)=>-Math.sin(theta)*x-Math.cos(theta)*L2R[i]));};
+ const axis=axesAt((t1+t2)/2),at=(t:number)=>{const [q,g,h]=angles(t),y=frame(t),F=y.slice(0,3),T=y.slice(3,6),L=y.slice(6,9),U=y.slice(9,12),f0=[0,0],f1=[Math.cos(t),Math.sin(t)],f2=kind==='parabola'?[4/(1+Math.cos(q))*Math.cos(q),4/(1+Math.cos(q))*Math.sin(q)]:[4*Math.cos(q)-2,4*Math.sin(q)],f3=kind==='parabola'?[2,f2[1]]:[2,4*Math.sin(q)],delta=f2.map((x,i)=>x-f1[i]),tf=[-Math.sin(t),Math.cos(t)],lf=f1.map(x=>-x),LR=L.map((x,i)=>Math.cos(g)*x-Math.sin(g)*U[i]),ff2=F.map((x,i)=>x+dot(delta,tf)*T[i]+dot(delta,lf)*LR[i]),length=kind==='parabola'?f3[0]-f2[0]:4*(1-Math.cos(q)),ff3=ff2.map((x,i)=>x+(length+1e-6)*axis[i]);return {flat:[f0,f1,f2,f3],folded:[[0,0,0],F,ff2,ff3],angles:[q,g,h]};};
+ const first=at(0),last=at(end),yL=normalize3(cross3(last.folded[2].map((x,i)=>x-last.folded[1][i]),last.folded[1].map(x=>-x))),yR=axis,z=normalize3(cross3(yL,yR)),xL=cross3(yL,z),xR=cross3(yR,z),pv=normalize3(first.folded[2].map((x,i)=>x/2-first.folded[1][i])),rotated=yL.map((x,i)=>2*dot(pv,yL)*pv[i]-x),residuals=kind==='circle4'?[last.angles[0]-Math.PI/3,dot(yL,yR)-Math.cos(Math.PI/6),dot(rotated,z),dot(rotated,xR)]:[];
+ return {at,constants:{xL,xR,yL,yR,z,pv},residuals};
+}
+export function replayCircle4(parametersDeg:number[]){return replayHuffman(parametersDeg,'circle4');}
+export function replayParabola(parametersDeg:number[]){return replayHuffman(parametersDeg,'parabola');}

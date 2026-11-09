@@ -1,0 +1,26 @@
+.diagram-layer-solutions{flex-shrink:0;min-width:0;padding:9px 8px;border-top:1px solid #e1e8dc;color:#293d35;font-size:10px}
+.diagram-layer-solutions>header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:4px;min-width:0}
+.diagram-layer-solutions>header>span{font-size:9px;color:#526a5b;font-variant-numeric:tabular-nums}
+.diagram-layer-solutions:has([aria-pressed=true])>header{margin-bottom:7px}
+.diagram-layer-solutions-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px}
+.diagram-layer-stack .diagram-layer-solutions button{min-width:0;min-height:28px;padding:4px 6px;border:1px solid #c5d5bd;border-radius:4px;background:#f1f6ed;color:#42694f;font:inherit;line-height:1.4;cursor:pointer}
+.diagram-layer-stack .diagram-layer-solutions button:hover:not(:disabled){border-color:#6b9076;background:#e5eee2;color:#293d35}
+.diagram-layer-stack .diagram-layer-solutions-mode[aria-pressed=true]{border-color:#426f59;background:#426f59;color:#fffef9}
+.diagram-layer-stack .diagram-layer-solutions-mode[aria-pressed=true]:hover:not(:disabled){background:#365e49;color:#fffef9}
+.diagram-layer-solutions button:focus-visible{outline:2px solid #426f59;outline-offset:2px}
+.diagram-layer-solutions-selection{margin:0 0 7px;font-size:9px;line-height:1.7;overflow-wrap:anywhere;color:#526a5b}
+.diagram-layer-solutions-position{margin:0 0 7px;font-size:9px;line-height:1.7;color:#526a5b;font-variant-numeric:tabular-nums}
+.diagram-layer-solutions-help,.diagram-layer-solutions-error,.diagram-layer-solutions-feedback{margin:7px 0 0;font-size:9px;line-height:1.7;overflow-wrap:anywhere;color:#526a5b}
+.diagram-layer-solutions-error{color:#9a4935}
+.diagram-layer-solutions ::selection{background:#d4e4d8;color:#293d35}
+
+.diagram-relative-layers{margin-top:12px;padding-top:10px;border-top:1px solid #c5d5bd;min-width:0;color:#293d35}
+.diagram-relative-layers p{margin:5px 0 8px;color:#526354;font-size:9px;line-height:1.65;overflow-wrap:anywhere}
+.diagram-relative-layers-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;margin-bottom:8px}
+.diagram-relative-layers-fields label{display:flex;flex-direction:column;gap:4px;min-width:0}
+.diagram-relative-layers select{width:100%;min-width:0;min-height:28px;padding:4px;border:1px solid #b5c5af;border-radius:4px;background:#fffef9;color:#293d35;font:inherit;cursor:pointer}
+.diagram-relative-layers select:focus-visible{outline:2px solid #426f59;outline-offset:2px}
+.diagram-relative-layers ul{list-style:none;margin:10px 0 0;padding:0;display:flex;flex-direction:column;gap:5px}
+.diagram-relative-layers li{display:flex;align-items:center;justify-content:space-between;gap:5px;font-variant-numeric:tabular-nums}
+.diagram-relative-layers li span{min-width:0;overflow-wrap:anywhere}
+.diagram-relative-layers select:disabled{cursor:default;opacity:.55}

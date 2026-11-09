@@ -1,0 +1,157 @@
+async page=>{
+ const recipes=[
+  {
+    "name": "trace",
+    "recipe": {
+      "kind": "material-face-trace",
+      "component": 0,
+      "from": {
+        "edgeId": "material-edge-3",
+        "fraction": 0.7
+      },
+      "to": {
+        "edgeId": "material-edge-1",
+        "fraction": 0.3
+      },
+      "assignment": "F",
+      "fixedSide": "left",
+      "cpOnly": false
+    }
+  },
+  {
+    "name": "ray",
+    "recipe": {
+      "kind": "material-face-ray",
+      "component": 0,
+      "from": {
+        "edgeId": "material-edge-3",
+        "fraction": 0.7
+      },
+      "through": [
+        10,
+        30
+      ],
+      "assignment": "F",
+      "fixedSide": "left",
+      "cpOnly": false
+    }
+  },
+  {
+    "name": "batch",
+    "recipe": {
+      "kind": "material-face-traces",
+      "component": 0,
+      "lines": [
+        {
+          "from": {
+            "edgeId": "material-edge-3",
+            "fraction": 0.7
+          },
+          "to": {
+            "edgeId": "material-edge-1",
+            "fraction": 0.3
+          },
+          "assignment": "F"
+        }
+      ],
+      "fixedPoint": [
+        10,
+        10
+      ],
+      "cpOnly": false,
+      "overrides": []
+    }
+  },
+  {
+    "name": "hole",
+    "recipe": {
+      "kind": "material-face-ray",
+      "component": 0,
+      "from": {
+        "edgeId": "material-edge-3",
+        "fraction": 0.5
+      },
+      "through": [
+        10,
+        50
+      ],
+      "assignment": "F",
+      "fixedSide": "left",
+      "cpOnly": false
+    }
+  },
+  {
+    "name": "stale",
+    "recipe": {
+      "kind": "material-face-ray",
+      "component": 0,
+      "from": {
+        "edgeId": "material-edge-3",
+        "fraction": 0.8
+      },
+      "through": [
+        10,
+        20
+      ],
+      "assignment": "F",
+      "fixedSide": "left",
+      "cpOnly": false
+    }
+  },
+  {
+    "name": "network-ray",
+    "recipe": {
+      "kind": "material-face-ray",
+      "component": 0,
+      "from": {
+        "edgeId": "material-edge-3",
+        "fraction": 0.8
+      },
+      "through": [
+        10,
+        20
+      ],
+      "assignment": "F",
+      "fixedSide": "left",
+      "cpOnly": false
+    }
+  },
+  {
+    "name": "bank",
+    "recipe": {
+      "kind": "material-face-ray",
+      "component": "all",
+      "from": {
+        "edgeId": "material-edge-6",
+        "fraction": 0.5
+      },
+      "through": [
+        150,
+        99
+      ],
+      "assignment": "F",
+      "fixedSide": "left",
+      "cpOnly": false
+    }
+  }
+];
+ const checks=[],errors=[];page.on('pageerror',e=>errors.push(e.message));const check=(ok,label)=>{if(!ok)throw Error(label);checks.push(label);};await page.evaluate(()=>{window.confirm=()=>true;});await page.setViewportSize({width:1280,height:800});
+ const button=name=>['撤销','重做'].includes(name)?page.getByRole('complementary',{name:'绘图工具',exact:true}).getByRole('button',{name,exact:true}):page.getByRole('button',{name,exact:true}),closeProps=async()=>{if(await button('关闭工具设置').count())await button('关闭工具设置').click();};
+ const load=async name=>{await closeProps();await button('折痕编辑').click();await page.getByLabel('折痕工程文件',{exact:true}).setInputFiles(`output/playwright/material-topology-model-trace-regression-${name}-initial-1009.zhezhi.json`);await page.waitForFunction(n=>document.querySelector('[aria-label="工程名称"]')?.value===n,`参数轨迹-${name}`);};
+ const open=async title=>{await closeProps();await button('绘图工具').click();await page.getByRole('button',{name:/^(纸张属性|选区 \(\d+\))$/}).click();await button(title).click();return page.getByRole('dialog',{name:title,exact:true});};
+ const field=async(c,label,n)=>{await c.getByLabel(label,{exact:true}).fill(String(n));await c.getByLabel(label,{exact:true}).press('Enter');};
+ const title=k=>k==='material-face-ray'?'材料射线构造':k==='material-face-traces'?'批量材料构造':'编辑材料折痕',preview=k=>k==='material-face-ray'?'预览射线':k==='material-face-traces'?'预览批量构造':'预览材料编辑',apply=k=>k==='material-face-ray'?'应用射线':k==='material-face-traces'?'应用批量构造':'应用材料编辑';
+ const configure=async(c,r,editing=false)=>{if(r.kind==='material-face-ray'){await c.getByLabel('射线材料部件',{exact:true}).selectOption(String(r.component));await c.getByLabel('射线起点边',{exact:true}).selectOption(r.from.edgeId);await field(c,'射线起点比例',r.from.fraction);await field(c,'射线方向点 X',r.through[0]);await field(c,'射线方向点 Y',r.through[1]);await c.getByLabel('射线线型',{exact:true}).selectOption(r.assignment);await c.getByLabel('射线仅CP',{exact:true}).setChecked(r.cpOnly);}
+ else if(r.kind==='material-face-traces'){await c.getByLabel('批量起点材料边',{exact:true}).selectOption(r.lines[0].from.edgeId);await c.getByLabel('批量终点材料边',{exact:true}).selectOption(r.lines[0].to.edgeId);await field(c,'批量起点比例',r.lines[0].from.fraction*100);await field(c,'批量终点比例',r.lines[0].to.fraction*100);await field(c,'固定点 X',r.fixedPoint[0]);await field(c,'固定点 Y',r.fixedPoint[1]);}
+ else {if(!editing)await c.getByRole('button',{name:'跨面直线构造',exact:true}).click();await c.getByLabel('起点材料边',{exact:true}).selectOption(r.from.edgeId);await c.getByLabel('终点材料边',{exact:true}).selectOption(r.to.edgeId);await field(c,'起点沿边比例',r.from.fraction*100);await field(c,'终点沿边比例',r.to.fraction*100);}};
+ const calculate=async(c,k,label)=>{await c.getByRole('button',{name:preview(k),exact:true}).click();check(await c.getByRole('alert').count()===0,label+' 预览无异常');check(await c.getByRole('button',{name:apply(k),exact:true}).isEnabled(),label+' 实际结果可采用');};
+ const download=async name=>{await closeProps();for(const format of ['json','fold','dxf']){await button('导出作品').click();const d=page.getByRole('dialog',{name:'导出作品',exact:true});await d.getByRole('combobox').first().selectOption(format);const saving=page.waitForEvent('download');await d.getByRole('button',{name:'导出文件',exact:true}).click();await(await saving).saveAs(`output/playwright/material-topology-model-trace-regression-${name}-1009.${format==='json'?'zhezhi.json':format}`);await button('关闭窗口').click();}};
+ for(const {name,recipe:r}of recipes){await load(name);let c=await open(title(r.kind));await configure(c,r);const label=r.kind==='material-face-ray'?'射线保存参数':r.kind==='material-face-traces'?'批量保存参数':'直线保存参数';check(await c.getByLabel(label,{exact:true}).isChecked(),name+' 默认保存参数');if(name==='stale')check((await c.locator('.note').innerText()).includes('旧配方保留归档'),'失效旧模型归档说明可见');await calculate(c,r.kind,name);await c.getByRole('button',{name:apply(r.kind),exact:true}).click();await download(name+'-saved');let manager=await open('参数构造组');check(await manager.locator('tbody tr').count()===(name==='network-ray'?2:1),name+' 采用后参数组完整');await manager.getByLabel(`编辑参数组 ${name==='network-ray'?2:1}`,{exact:true}).click();c=page.getByRole('dialog',{name:title(r.kind),exact:true});check((await c.innerText()).includes('修改此组并重算后续构造'),name+' 编辑器回填原组');await calculate(c,r.kind,name+'重开');await c.getByRole('button',{name:'取消',exact:true}).click();await button('关闭镶嵌窗口').click();}
+ await load('three');let manager=await open('参数构造组');check((await manager.locator('tbody').innerText()).includes('射线')&&(await manager.locator('tbody').innerText()).includes('批量'),'三种参数构造类型显示');await manager.getByLabel('编辑参数组 1',{exact:true}).click();let c=page.getByRole('dialog',{name:'编辑材料折痕',exact:true});await field(c,'起点沿边比例',60);await field(c,'终点沿边比例',40);await calculate(c,'material-face-trace','前组改变分点');await page.screenshot({path:'output/playwright/material-topology-model-trace-regression-first-edit-1009.png'});await c.getByRole('button',{name:'取消',exact:true}).click();await button('关闭镶嵌窗口').click();await download('cancel');
+ manager=await open('参数构造组');await manager.getByLabel('编辑参数组 1',{exact:true}).click();c=page.getByRole('dialog',{name:'编辑材料折痕',exact:true});await field(c,'起点沿边比例',60);await field(c,'终点沿边比例',40);await calculate(c,'material-face-trace','前组编辑');await c.getByRole('button',{name:'应用材料编辑',exact:true}).click();await download('three-changed');await button('撤销').click();await download('undo');await button('重做').click();await download('redo');check(true,'三组重算一次撤销重做');
+ for(const ext of ['zhezhi.json','fold']){await page.getByLabel('折痕工程文件',{exact:true}).setInputFiles(`output/playwright/material-topology-model-trace-regression-three-changed-1009.${ext}`);manager=await open('参数构造组');await manager.getByLabel('编辑参数组 2',{exact:true}).click();c=page.getByRole('dialog',{name:'材料射线构造',exact:true});await field(c,'射线方向点 Y',65);await calculate(c,'material-face-ray',ext+'重开改后射线');await c.getByRole('button',{name:'应用射线',exact:true}).click();await download(ext==='fold'?'fold-reedited':'json-reedited');}
+ manager=await open('参数构造组');await manager.getByLabel('编辑参数组 3',{exact:true}).click();c=page.getByRole('dialog',{name:'批量材料构造',exact:true});check(Number(await c.getByLabel('固定点 X',{exact:true}).inputValue())===10,'批量固定点配方回填');await field(c,'批量起点比例',25);await field(c,'批量终点比例',75);await calculate(c,'material-face-traces','后批量编辑');await c.getByRole('button',{name:'应用批量构造',exact:true}).click();await download('batch-edited');manager=await open('参数构造组');await manager.getByLabel('预览删除参数组 1',{exact:true}).click();check(await manager.getByRole('button',{name:'应用删除',exact:true}).isEnabled(),'删除前组重算后组预览');await manager.getByRole('button',{name:'应用删除',exact:true}).click();await download('removed');
+ await load('two');manager=await open('参数构造组');await manager.getByLabel('编辑参数组 1',{exact:true}).click();c=page.getByRole('dialog',{name:'编辑材料折痕',exact:true});await field(c,'起点沿边比例',30);await field(c,'终点沿边比例',70);await c.getByRole('button',{name:'预览材料编辑',exact:true}).click();check(await c.getByRole('alert').count()===1&&await c.getByRole('button',{name:'应用材料编辑',exact:true}).isDisabled(),'后组重叠整次拒绝');await c.getByRole('button',{name:'取消',exact:true}).click();await button('关闭镶嵌窗口').click();await download('failure-cancel');
+ await load('eight');manager=await open('参数构造组');check(await manager.locator('tbody tr').count()===8,'八个直线射线组可见');for(const width of [1000,800,390]){await page.setViewportSize({width,height:720});check(await manager.evaluate(e=>e.scrollHeight<=e.clientHeight+1&&e.scrollWidth<=e.clientWidth+1),`${width} 八组管理无需窗口滚动`);}await manager.getByLabel('编辑参数组 1',{exact:true}).click();c=page.getByRole('dialog',{name:'材料射线构造',exact:true});for(const width of [1000,800,390]){await page.setViewportSize({width,height:720});check(await c.evaluate(e=>e.scrollHeight<=e.clientHeight+1&&e.scrollWidth<=e.clientWidth+1),`${width} 射线编辑无需窗口滚动`);}await page.screenshot({path:'output/playwright/material-topology-model-trace-regression-ray-390-1009.png'});await c.getByRole('button',{name:'取消',exact:true}).click();await button('关闭镶嵌窗口').click();await load('three');manager=await open('参数构造组');await manager.getByLabel('编辑参数组 3',{exact:true}).click();c=page.getByRole('dialog',{name:'批量材料构造',exact:true});for(const width of [1000,800,390]){await page.setViewportSize({width,height:720});check(await c.evaluate(e=>e.scrollHeight<=e.clientHeight+1&&e.scrollWidth<=e.clientWidth+1),`${width} 批量编辑无需窗口滚动`);}await c.getByRole('button',{name:'取消',exact:true}).click();await button('关闭镶嵌窗口').click();await page.setViewportSize({width:1280,height:800});
+ check(errors.length===0,'零页面异常');return {passed:checks.length,checks,errors};
+}

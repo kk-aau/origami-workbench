@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-desktop-cancel-startup"
+description = "Enables the desktop_cancel_startup command without any pre-configured scope."
+commands.allow = ["desktop_cancel_startup"]
+
+[[permission]]
+identifier = "deny-desktop-cancel-startup"
+description = "Denies the desktop_cancel_startup command without any pre-configured scope."
+commands.deny = ["desktop_cancel_startup"]

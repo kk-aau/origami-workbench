@@ -1,0 +1,4573 @@
+[
+  {
+    "name": "system",
+    "query": {
+      "family": "discretization-generic-native",
+      "mode": "system",
+      "rules": [
+        {
+          "key": "Curve2D",
+          "expression": [
+            "s",
+            "s**2"
+          ]
+        },
+        {
+          "key": "Curve2D",
+          "expression": "s+1"
+        }
+      ],
+      "parameters": [
+        0,
+        0.25,
+        0.5,
+        0.75,
+        1
+      ]
+    },
+    "response": {
+      "family": "origamica-generic-discretization",
+      "query": {
+        "family": "discretization-generic-native",
+        "mode": "system",
+        "rules": [
+          {
+            "key": "Curve2D",
+            "expression": [
+              "s",
+              "s**2"
+            ]
+          },
+          {
+            "key": "Curve2D",
+            "expression": "s+1"
+          }
+        ],
+        "parameters": [
+          0.0,
+          0.25,
+          0.5,
+          0.75,
+          1.0
+        ]
+      },
+      "source": {
+        "function": "DiscretizeSystem",
+        "definitionCell": "In[4087]",
+        "origin": "notebook-definition",
+        "wolframNumericOutAvailable": false,
+        "numericModel": "finite-real-binary64",
+        "chopDocumentation": null
+      },
+      "limits": {
+        "maximumRules": 64,
+        "maximumExpressionLeaves": 256,
+        "maximumNestingDepth": 4,
+        "maximumListEntries": 256,
+        "maximumStructureNodes": 2048,
+        "maximumParameters": 256,
+        "maximumCurveDimension": 64,
+        "maximumDivisions": 64,
+        "maximumFoldVertices": 512,
+        "maximumScalarEvaluations": 262144,
+        "maximumAstWeightedEvaluations": 8000000,
+        "maximumRootEvaluations": 4096,
+        "maximumOffsetProducts": 262144,
+        "maximumSourceAstNodes": 96,
+        "maximumSourceCharacters": 240,
+        "maximumParameterMagnitude": 1000000.0
+      },
+      "certification": {
+        "sourceFormulaEvaluated": true,
+        "allSampledValuesFinite": true,
+        "rootEquationNumericallyVerified": false,
+        "rootBranchEquivalentToWolfram": false,
+        "allRootsEnumerated": false,
+        "continuousDomainCertified": false,
+        "symbolicObjectsReproduced": false,
+        "wolframOptionsReproduced": false,
+        "integrationErrorIntervalCertified": false,
+        "adoptableCreasePattern": false,
+        "globalFoldingCertified": false
+      },
+      "sample": {
+        "parameters": [
+          0.0,
+          0.25,
+          0.5,
+          0.75,
+          1.0
+        ],
+        "rules": [
+          {
+            "key": "Curve2D",
+            "values": [
+              [
+                0.0,
+                0.0
+              ],
+              [
+                0.25,
+                0.0625
+              ],
+              [
+                0.5,
+                0.25
+              ],
+              [
+                0.75,
+                0.5625
+              ],
+              [
+                1.0,
+                1.0
+              ]
+            ]
+          },
+          {
+            "key": "Curve2D",
+            "values": [
+              1.0,
+              1.25,
+              1.5,
+              1.75,
+              2.0
+            ]
+          }
+        ],
+        "undefined": [],
+        "allSamplesFiniteReal": true,
+        "ruleOrderPreserved": true,
+        "parameterOrderPreserved": true,
+        "budget": {
+          "scalarEvaluations": 15,
+          "astWeightedEvaluations": 60,
+          "offsetProducts": 0
+        }
+      }
+    }
+  },
+  {
+    "name": "ragged",
+    "query": {
+      "family": "discretization-generic-native",
+      "mode": "system",
+      "rules": [
+        {
+          "key": "A",
+          "expression": "s+1"
+        },
+        {
+          "key": "A",
+          "expression": [
+            [
+              "s",
+              "s**2"
+            ],
+            [
+              "3"
+            ],
+            []
+          ]
+        },
+        {
+          "key": "B",
+          "expression": []
+        }
+      ],
+      "parameters": [
+        2,
+        -0.5,
+        2,
+        0
+      ]
+    },
+    "response": {
+      "family": "origamica-generic-discretization",
+      "query": {
+        "family": "discretization-generic-native",
+        "mode": "system",
+        "rules": [
+          {
+            "key": "A",
+            "expression": "s+1"
+          },
+          {
+            "key": "A",
+            "expression": [
+              [
+                "s",
+                "s**2"
+              ],
+              [
+                "3"
+              ],
+              []
+            ]
+          },
+          {
+            "key": "B",
+            "expression": []
+          }
+        ],
+        "parameters": [
+          2.0,
+          -0.5,
+          2.0,
+          0.0
+        ]
+      },
+      "source": {
+        "function": "DiscretizeSystem",
+        "definitionCell": "In[4087]",
+        "origin": "notebook-definition",
+        "wolframNumericOutAvailable": false,
+        "numericModel": "finite-real-binary64",
+        "chopDocumentation": null
+      },
+      "limits": {
+        "maximumRules": 64,
+        "maximumExpressionLeaves": 256,
+        "maximumNestingDepth": 4,
+        "maximumListEntries": 256,
+        "maximumStructureNodes": 2048,
+        "maximumParameters": 256,
+        "maximumCurveDimension": 64,
+        "maximumDivisions": 64,
+        "maximumFoldVertices": 512,
+        "maximumScalarEvaluations": 262144,
+        "maximumAstWeightedEvaluations": 8000000,
+        "maximumRootEvaluations": 4096,
+        "maximumOffsetProducts": 262144,
+        "maximumSourceAstNodes": 96,
+        "maximumSourceCharacters": 240,
+        "maximumParameterMagnitude": 1000000.0
+      },
+      "certification": {
+        "sourceFormulaEvaluated": true,
+        "allSampledValuesFinite": true,
+        "rootEquationNumericallyVerified": false,
+        "rootBranchEquivalentToWolfram": false,
+        "allRootsEnumerated": false,
+        "continuousDomainCertified": false,
+        "symbolicObjectsReproduced": false,
+        "wolframOptionsReproduced": false,
+        "integrationErrorIntervalCertified": false,
+        "adoptableCreasePattern": false,
+        "globalFoldingCertified": false
+      },
+      "sample": {
+        "parameters": [
+          2.0,
+          -0.5,
+          2.0,
+          0.0
+        ],
+        "rules": [
+          {
+            "key": "A",
+            "values": [
+              3.0,
+              0.5,
+              3.0,
+              1.0
+            ]
+          },
+          {
+            "key": "A",
+            "values": [
+              [
+                [
+                  2.0,
+                  4.0
+                ],
+                [
+                  3.0
+                ],
+                []
+              ],
+              [
+                [
+                  -0.5,
+                  0.25
+                ],
+                [
+                  3.0
+                ],
+                []
+              ],
+              [
+                [
+                  2.0,
+                  4.0
+                ],
+                [
+                  3.0
+                ],
+                []
+              ],
+              [
+                [
+                  0.0,
+                  0.0
+                ],
+                [
+                  3.0
+                ],
+                []
+              ]
+            ]
+          },
+          {
+            "key": "B",
+            "values": [
+              [],
+              [],
+              [],
+              []
+            ]
+          }
+        ],
+        "undefined": [],
+        "allSamplesFiniteReal": true,
+        "ruleOrderPreserved": true,
+        "parameterOrderPreserved": true,
+        "budget": {
+          "scalarEvaluations": 16,
+          "astWeightedEvaluations": 52,
+          "offsetProducts": 0
+        }
+      }
+    }
+  },
+  {
+    "name": "empty-system",
+    "query": {
+      "family": "discretization-generic-native",
+      "mode": "system",
+      "rules": [],
+      "parameters": [
+        1,
+        0
+      ]
+    },
+    "response": {
+      "family": "origamica-generic-discretization",
+      "query": {
+        "family": "discretization-generic-native",
+        "mode": "system",
+        "rules": [],
+        "parameters": [
+          1.0,
+          0.0
+        ]
+      },
+      "source": {
+        "function": "DiscretizeSystem",
+        "definitionCell": "In[4087]",
+        "origin": "notebook-definition",
+        "wolframNumericOutAvailable": false,
+        "numericModel": "finite-real-binary64",
+        "chopDocumentation": null
+      },
+      "limits": {
+        "maximumRules": 64,
+        "maximumExpressionLeaves": 256,
+        "maximumNestingDepth": 4,
+        "maximumListEntries": 256,
+        "maximumStructureNodes": 2048,
+        "maximumParameters": 256,
+        "maximumCurveDimension": 64,
+        "maximumDivisions": 64,
+        "maximumFoldVertices": 512,
+        "maximumScalarEvaluations": 262144,
+        "maximumAstWeightedEvaluations": 8000000,
+        "maximumRootEvaluations": 4096,
+        "maximumOffsetProducts": 262144,
+        "maximumSourceAstNodes": 96,
+        "maximumSourceCharacters": 240,
+        "maximumParameterMagnitude": 1000000.0
+      },
+      "certification": {
+        "sourceFormulaEvaluated": true,
+        "allSampledValuesFinite": true,
+        "rootEquationNumericallyVerified": false,
+        "rootBranchEquivalentToWolfram": false,
+        "allRootsEnumerated": false,
+        "continuousDomainCertified": false,
+        "symbolicObjectsReproduced": false,
+        "wolframOptionsReproduced": false,
+        "integrationErrorIntervalCertified": false,
+        "adoptableCreasePattern": false,
+        "globalFoldingCertified": false
+      },
+      "sample": {
+        "parameters": [
+          1.0,
+          0.0
+        ],
+        "rules": [],
+        "undefined": [],
+        "allSamplesFiniteReal": true,
+        "ruleOrderPreserved": true,
+        "parameterOrderPreserved": true,
+        "budget": {
+          "scalarEvaluations": 0,
+          "astWeightedEvaluations": 0,
+          "offsetProducts": 0
+        }
+      }
+    }
+  },
+  {
+    "name": "empty-samples",
+    "query": {
+      "family": "discretization-generic-native",
+      "mode": "system",
+      "rules": [
+        {
+          "key": "A",
+          "expression": "s"
+        }
+      ],
+      "parameters": []
+    },
+    "response": {
+      "family": "origamica-generic-discretization",
+      "query": {
+        "family": "discretization-generic-native",
+        "mode": "system",
+        "rules": [
+          {
+            "key": "A",
+            "expression": "s"
+          }
+        ],
+        "parameters": []
+      },
+      "source": {
+        "function": "DiscretizeSystem",
+        "definitionCell": "In[4087]",
+        "origin": "notebook-definition",
+        "wolframNumericOutAvailable": false,
+        "numericModel": "finite-real-binary64",
+        "chopDocumentation": null
+      },
+      "limits": {
+        "maximumRules": 64,
+        "maximumExpressionLeaves": 256,
+        "maximumNestingDepth": 4,
+        "maximumListEntries": 256,
+        "maximumStructureNodes": 2048,
+        "maximumParameters": 256,
+        "maximumCurveDimension": 64,
+        "maximumDivisions": 64,
+        "maximumFoldVertices": 512,
+        "maximumScalarEvaluations": 262144,
+        "maximumAstWeightedEvaluations": 8000000,
+        "maximumRootEvaluations": 4096,
+        "maximumOffsetProducts": 262144,
+        "maximumSourceAstNodes": 96,
+        "maximumSourceCharacters": 240,
+        "maximumParameterMagnitude": 1000000.0
+      },
+      "certification": {
+        "sourceFormulaEvaluated": true,
+        "allSampledValuesFinite": true,
+        "rootEquationNumericallyVerified": false,
+        "rootBranchEquivalentToWolfram": false,
+        "allRootsEnumerated": false,
+        "continuousDomainCertified": false,
+        "symbolicObjectsReproduced": false,
+        "wolframOptionsReproduced": false,
+        "integrationErrorIntervalCertified": false,
+        "adoptableCreasePattern": false,
+        "globalFoldingCertified": false
+      },
+      "sample": {
+        "parameters": [],
+        "rules": [
+          {
+            "key": "A",
+            "values": []
+          }
+        ],
+        "undefined": [],
+        "allSamplesFiniteReal": true,
+        "ruleOrderPreserved": true,
+        "parameterOrderPreserved": true,
+        "budget": {
+          "scalarEvaluations": 0,
+          "astWeightedEvaluations": 0,
+          "offsetProducts": 0
+        }
+      }
+    }
+  },
+  {
+    "name": "undefined",
+    "query": {
+      "family": "discretization-generic-native",
+      "mode": "system",
+      "rules": [
+        {
+          "key": "R",
+          "expression": [
+            "1/s",
+            "sqrt(s)"
+          ]
+        }
+      ],
+      "parameters": [
+        0,
+        -1,
+        1
+      ]
+    },
+    "response": {
+      "family": "origamica-generic-discretization",
+      "query": {
+        "family": "discretization-generic-native",
+        "mode": "system",
+        "rules": [
+          {
+            "key": "R",
+            "expression": [
+              "1/s",
+              "sqrt(s)"
+            ]
+          }
+        ],
+        "parameters": [
+          0.0,
+          -1.0,
+          1.0
+        ]
+      },
+      "source": {
+        "function": "DiscretizeSystem",
+        "definitionCell": "In[4087]",
+        "origin": "notebook-definition",
+        "wolframNumericOutAvailable": false,
+        "numericModel": "finite-real-binary64",
+        "chopDocumentation": null
+      },
+      "limits": {
+        "maximumRules": 64,
+        "maximumExpressionLeaves": 256,
+        "maximumNestingDepth": 4,
+        "maximumListEntries": 256,
+        "maximumStructureNodes": 2048,
+        "maximumParameters": 256,
+        "maximumCurveDimension": 64,
+        "maximumDivisions": 64,
+        "maximumFoldVertices": 512,
+        "maximumScalarEvaluations": 262144,
+        "maximumAstWeightedEvaluations": 8000000,
+        "maximumRootEvaluations": 4096,
+        "maximumOffsetProducts": 262144,
+        "maximumSourceAstNodes": 96,
+        "maximumSourceCharacters": 240,
+        "maximumParameterMagnitude": 1000000.0
+      },
+      "certification": {
+        "sourceFormulaEvaluated": true,
+        "allSampledValuesFinite": false,
+        "rootEquationNumericallyVerified": false,
+        "rootBranchEquivalentToWolfram": false,
+        "allRootsEnumerated": false,
+        "continuousDomainCertified": false,
+        "symbolicObjectsReproduced": false,
+        "wolframOptionsReproduced": false,
+        "integrationErrorIntervalCertified": false,
+        "adoptableCreasePattern": false,
+        "globalFoldingCertified": false
+      },
+      "sample": {
+        "parameters": [
+          0.0,
+          -1.0,
+          1.0
+        ],
+        "rules": [
+          {
+            "key": "R",
+            "values": [
+              [
+                null,
+                0.0
+              ],
+              [
+                -1.0,
+                null
+              ],
+              [
+                1.0,
+                1.0
+              ]
+            ]
+          }
+        ],
+        "undefined": [
+          {
+            "ruleIndex": 0,
+            "sampleIndex": 0,
+            "path": [
+              0
+            ],
+            "parameter": 0.0,
+            "state": "not-finite-real",
+            "code": "source-undefined"
+          },
+          {
+            "ruleIndex": 0,
+            "sampleIndex": 1,
+            "path": [
+              1
+            ],
+            "parameter": -1.0,
+            "state": "not-finite-real",
+            "code": "source-undefined"
+          }
+        ],
+        "allSamplesFiniteReal": false,
+        "ruleOrderPreserved": true,
+        "parameterOrderPreserved": true,
+        "budget": {
+          "scalarEvaluations": 6,
+          "astWeightedEvaluations": 30,
+          "offsetProducts": 0
+        }
+      }
+    }
+  },
+  {
+    "name": "math",
+    "query": {
+      "family": "discretization-generic-native",
+      "mode": "system",
+      "rules": [
+        {
+          "key": "f",
+          "expression": [
+            "sin(s)",
+            "cos(s)",
+            "tan(s)",
+            "atan(s)",
+            "exp(s)",
+            "log(s)",
+            "s**-2",
+            "Pi + E",
+            "(1e12+s)-1e12"
+          ]
+        }
+      ],
+      "parameters": [
+        0.2,
+        0.5,
+        1
+      ]
+    },
+    "response": {
+      "family": "origamica-generic-discretization",
+      "query": {
+        "family": "discretization-generic-native",
+        "mode": "system",
+        "rules": [
+          {
+            "key": "f",
+            "expression": [
+              "sin(s)",
+              "cos(s)",
+              "tan(s)",
+              "atan(s)",
+              "exp(s)",
+              "log(s)",
+              "s**-2",
+              "Pi + E",
+              "(1e12+s)-1e12"
+            ]
+          }
+        ],
+        "parameters": [
+          0.2,
+          0.5,
+          1.0
+        ]
+      },
+      "source": {
+        "function": "DiscretizeSystem",
+        "definitionCell": "In[4087]",
+        "origin": "notebook-definition",
+        "wolframNumericOutAvailable": false,
+        "numericModel": "finite-real-binary64",
+        "chopDocumentation": null
+      },
+      "limits": {
+        "maximumRules": 64,
+        "maximumExpressionLeaves": 256,
+        "maximumNestingDepth": 4,
+        "maximumListEntries": 256,
+        "maximumStructureNodes": 2048,
+        "maximumParameters": 256,
+        "maximumCurveDimension": 64,
+        "maximumDivisions": 64,
+        "maximumFoldVertices": 512,
+        "maximumScalarEvaluations": 262144,
+        "maximumAstWeightedEvaluations": 8000000,
+        "maximumRootEvaluations": 4096,
+        "maximumOffsetProducts": 262144,
+        "maximumSourceAstNodes": 96,
+        "maximumSourceCharacters": 240,
+        "maximumParameterMagnitude": 1000000.0
+      },
+      "certification": {
+        "sourceFormulaEvaluated": true,
+        "allSampledValuesFinite": true,
+        "rootEquationNumericallyVerified": false,
+        "rootBranchEquivalentToWolfram": false,
+        "allRootsEnumerated": false,
+        "continuousDomainCertified": false,
+        "symbolicObjectsReproduced": false,
+        "wolframOptionsReproduced": false,
+        "integrationErrorIntervalCertified": false,
+        "adoptableCreasePattern": false,
+        "globalFoldingCertified": false
+      },
+      "sample": {
+        "parameters": [
+          0.2,
+          0.5,
+          1.0
+        ],
+        "rules": [
+          {
+            "key": "f",
+            "values": [
+              [
+                0.19866933079506122,
+                0.9800665778412416,
+                0.2027100355086725,
+                0.19739555984988078,
+                1.2214027581601699,
+                -1.6094379124341003,
+                24.999999999999996,
+                5.859874482048838,
+                0.2
+              ],
+              [
+                0.479425538604203,
+                0.8775825618903728,
+                0.5463024898437905,
+                0.4636476090008061,
+                1.6487212707001282,
+                -0.6931471805599453,
+                4.0,
+                5.859874482048838,
+                0.5
+              ],
+              [
+                0.8414709848078965,
+                0.5403023058681398,
+                1.5574077246549023,
+                0.7853981633974483,
+                2.718281828459045,
+                0.0,
+                1.0,
+                5.859874482048838,
+                1.0
+              ]
+            ]
+          }
+        ],
+        "undefined": [],
+        "allSamplesFiniteReal": true,
+        "ruleOrderPreserved": true,
+        "parameterOrderPreserved": true,
+        "budget": {
+          "scalarEvaluations": 27,
+          "astWeightedEvaluations": 153,
+          "offsetProducts": 0
+        }
+      }
+    }
+  },
+  {
+    "name": "offset-product",
+    "query": {
+      "family": "discretization-generic-native",
+      "mode": "system",
+      "rules": [
+        {
+          "key": "p",
+          "expression": "((1+1+1+1)**4)**2"
+        }
+      ],
+      "parameters": [
+        0
+      ]
+    },
+    "response": {
+      "family": "origamica-generic-discretization",
+      "query": {
+        "family": "discretization-generic-native",
+        "mode": "system",
+        "rules": [
+          {
+            "key": "p",
+            "expression": "((1+1+1+1)**4)**2"
+          }
+        ],
+        "parameters": [
+          0.0
+        ]
+      },
+      "source": {
+        "function": "DiscretizeSystem",
+        "definitionCell": "In[4087]",
+        "origin": "notebook-definition",
+        "wolframNumericOutAvailable": false,
+        "numericModel": "finite-real-binary64",
+        "chopDocumentation": null
+      },
+      "limits": {
+        "maximumRules": 64,
+        "maximumExpressionLeaves": 256,
+        "maximumNestingDepth": 4,
+        "maximumListEntries": 256,
+        "maximumStructureNodes": 2048,
+        "maximumParameters": 256,
+        "maximumCurveDimension": 64,
+        "maximumDivisions": 64,
+        "maximumFoldVertices": 512,
+        "maximumScalarEvaluations": 262144,
+        "maximumAstWeightedEvaluations": 8000000,
+        "maximumRootEvaluations": 4096,
+        "maximumOffsetProducts": 262144,
+        "maximumSourceAstNodes": 96,
+        "maximumSourceCharacters": 240,
+        "maximumParameterMagnitude": 1000000.0
+      },
+      "certification": {
+        "sourceFormulaEvaluated": true,
+        "allSampledValuesFinite": true,
+        "rootEquationNumericallyVerified": false,
+        "rootBranchEquivalentToWolfram": false,
+        "allRootsEnumerated": false,
+        "continuousDomainCertified": false,
+        "symbolicObjectsReproduced": false,
+        "wolframOptionsReproduced": false,
+        "integrationErrorIntervalCertified": false,
+        "adoptableCreasePattern": false,
+        "globalFoldingCertified": false
+      },
+      "sample": {
+        "parameters": [
+          0.0
+        ],
+        "rules": [
+          {
+            "key": "p",
+            "values": [
+              65536.0
+            ]
+          }
+        ],
+        "undefined": [],
+        "allSamplesFiniteReal": true,
+        "ruleOrderPreserved": true,
+        "parameterOrderPreserved": true,
+        "budget": {
+          "scalarEvaluations": 1,
+          "astWeightedEvaluations": 16,
+          "offsetProducts": 66132
+        }
+      }
+    }
+  },
+  {
+    "name": "parabola",
+    "query": {
+      "family": "discretization-generic-native",
+      "mode": "uniform",
+      "curve": [
+        "-s**2",
+        "s"
+      ],
+      "divisions": 4,
+      "parameterStart": 0,
+      "parameterEnd": 1
+    },
+    "response": {
+      "family": "origamica-generic-discretization",
+      "query": {
+        "family": "discretization-generic-native",
+        "mode": "uniform",
+        "curve": [
+          "-s**2",
+          "s"
+        ],
+        "divisions": 4,
+        "parameterStart": 0.0,
+        "parameterEnd": 1.0
+      },
+      "source": {
+        "function": "DiscretizeCurveUniformly",
+        "definitionCell": "In[4089]",
+        "origin": "notebook-definition",
+        "wolframNumericOutAvailable": false,
+        "numericModel": "finite-real-binary64",
+        "chopDocumentation": null
+      },
+      "limits": {
+        "maximumRules": 64,
+        "maximumExpressionLeaves": 256,
+        "maximumNestingDepth": 4,
+        "maximumListEntries": 256,
+        "maximumStructureNodes": 2048,
+        "maximumParameters": 256,
+        "maximumCurveDimension": 64,
+        "maximumDivisions": 64,
+        "maximumFoldVertices": 512,
+        "maximumScalarEvaluations": 262144,
+        "maximumAstWeightedEvaluations": 8000000,
+        "maximumRootEvaluations": 4096,
+        "maximumOffsetProducts": 262144,
+        "maximumSourceAstNodes": 96,
+        "maximumSourceCharacters": 240,
+        "maximumParameterMagnitude": 1000000.0
+      },
+      "certification": {
+        "sourceFormulaEvaluated": true,
+        "allSampledValuesFinite": true,
+        "rootEquationNumericallyVerified": true,
+        "rootBranchEquivalentToWolfram": false,
+        "allRootsEnumerated": false,
+        "continuousDomainCertified": false,
+        "symbolicObjectsReproduced": false,
+        "wolframOptionsReproduced": false,
+        "integrationErrorIntervalCertified": false,
+        "adoptableCreasePattern": false,
+        "globalFoldingCertified": false
+      },
+      "sample": {
+        "parameters": [
+          0.0,
+          0.1833166695788194,
+          0.39127476686901363,
+          0.6518280204275423,
+          1.0
+        ],
+        "initialGuess": [
+          0.0,
+          0.25,
+          0.5,
+          0.75,
+          1.0
+        ],
+        "points": [
+          [
+            0.0,
+            0.0
+          ],
+          [
+            -0.03360500134547005,
+            0.1833166695788194
+          ],
+          [
+            -0.15309594318840097,
+            0.39127476686901363
+          ],
+          [
+            -0.4248797682144884,
+            0.6518280204275423
+          ],
+          [
+            -1.0,
+            1.0
+          ]
+        ],
+        "normalizedPoints": [
+          [
+            0.0,
+            0.0
+          ],
+          [
+            -0.023762324333164924,
+            0.12962446016371687
+          ],
+          [
+            -0.10825517960066874,
+            0.276673040960265
+          ],
+          [
+            -0.3004353652934333,
+            0.46091201341171856
+          ],
+          [
+            -0.7071067811865475,
+            0.7071067811865475
+          ]
+        ],
+        "normalization": {
+          "origin": [
+            0.0,
+            0.0
+          ],
+          "scale": 1.4142135623730951
+        },
+        "normalizedChordLengths": [
+          0.13178447833659904,
+          0.16959459810245814,
+          0.26622776478585575,
+          0.4753877408854925
+        ],
+        "equations": [
+          {
+            "vertex": 2,
+            "parameter": 0.1833166695788194,
+            "derivative": [
+              -0.3666333391576388,
+              1.0
+            ],
+            "equationResidualDividedByCommonScale": 1.942890293094024e-16,
+            "directionResidual": 2.5797423781511735e-16,
+            "stationaryDerivative": false
+          },
+          {
+            "vertex": 3,
+            "parameter": 0.39127476686901363,
+            "derivative": [
+              -0.7825495337380273,
+              1.0
+            ],
+            "equationResidualDividedByCommonScale": 4.996003610813204e-16,
+            "directionResidual": 5.564210251585598e-16,
+            "stationaryDerivative": false
+          },
+          {
+            "vertex": 4,
+            "parameter": 0.6518280204275423,
+            "derivative": [
+              -1.3036560408550846,
+              1.0
+            ],
+            "equationResidualDividedByCommonScale": -3.469446951953614e-16,
+            "directionResidual": -2.9862904760487517e-16,
+            "stationaryDerivative": false
+          }
+        ],
+        "maximumDirectionResidual": 5.564210251585598e-16,
+        "residualTolerance": 2e-10,
+        "strictlyOrderedAlongRequestedInterval": true,
+        "outsideRequestedInterval": [],
+        "stationaryVertices": [],
+        "unconstrainedParameters": true,
+        "solver": {
+          "method": "MINPACK-hybr-unconstrained-original-parameters",
+          "success": true,
+          "status": 1,
+          "nfev": 14
+        },
+        "equationEvaluations": 17,
+        "budget": {
+          "scalarEvaluations": 284,
+          "astWeightedEvaluations": 1380,
+          "offsetProducts": 0
+        }
+      }
+    }
+  },
+  {
+    "name": "oscillatory",
+    "query": {
+      "family": "discretization-generic-native",
+      "mode": "uniform",
+      "curve": [
+        "s",
+        "sin(12*s)"
+      ],
+      "divisions": 4,
+      "parameterStart": 0,
+      "parameterEnd": 1
+    },
+    "response": {
+      "family": "origamica-generic-discretization",
+      "query": {
+        "family": "discretization-generic-native",
+        "mode": "uniform",
+        "curve": [
+          "s",
+          "sin(12*s)"
+        ],
+        "divisions": 4,
+        "parameterStart": 0.0,
+        "parameterEnd": 1.0
+      },
+      "source": {
+        "function": "DiscretizeCurveUniformly",
+        "definitionCell": "In[4089]",
+        "origin": "notebook-definition",
+        "wolframNumericOutAvailable": false,
+        "numericModel": "finite-real-binary64",
+        "chopDocumentation": null
+      },
+      "limits": {
+        "maximumRules": 64,
+        "maximumExpressionLeaves": 256,
+        "maximumNestingDepth": 4,
+        "maximumListEntries": 256,
+        "maximumStructureNodes": 2048,
+        "maximumParameters": 256,
+        "maximumCurveDimension": 64,
+        "maximumDivisions": 64,
+        "maximumFoldVertices": 512,
+        "maximumScalarEvaluations": 262144,
+        "maximumAstWeightedEvaluations": 8000000,
+        "maximumRootEvaluations": 4096,
+        "maximumOffsetProducts": 262144,
+        "maximumSourceAstNodes": 96,
+        "maximumSourceCharacters": 240,
+        "maximumParameterMagnitude": 1000000.0
+      },
+      "certification": {
+        "sourceFormulaEvaluated": true,
+        "allSampledValuesFinite": true,
+        "rootEquationNumericallyVerified": true,
+        "rootBranchEquivalentToWolfram": false,
+        "allRootsEnumerated": false,
+        "continuousDomainCertified": false,
+        "symbolicObjectsReproduced": false,
+        "wolframOptionsReproduced": false,
+        "integrationErrorIntervalCertified": false,
+        "adoptableCreasePattern": false,
+        "globalFoldingCertified": false
+      },
+      "sample": {
+        "parameters": [
+          0.0,
+          0.1248490730735328,
+          1.1936040343459489,
+          0.5426336427499366,
+          1.0
+        ],
+        "initialGuess": [
+          0.0,
+          0.25,
+          0.5,
+          0.75,
+          1.0
+        ],
+        "points": [
+          [
+            0.0,
+            0.0
+          ],
+          [
+            0.1248490730735328,
+            0.997365236918283
+          ],
+          [
+            1.1936040343459489,
+            0.9827367430169449
+          ],
+          [
+            0.5426336427499366,
+            0.2264372939372555
+          ],
+          [
+            0.9999999999999999,
+            -0.5365729180004349
+          ]
+        ],
+        "normalizedPoints": [
+          [
+            0.0,
+            0.0
+          ],
+          [
+            0.11001261323113899,
+            0.8788431772709324
+          ],
+          [
+            1.051761905387067,
+            0.8659530628143025
+          ],
+          [
+            0.4781496858282091,
+            0.19952858139646043
+          ],
+          [
+            0.8811648378546189,
+            -0.472809188287033
+          ]
+        ],
+        "normalization": {
+          "origin": [
+            0.0,
+            0.0
+          ],
+          "scale": 1.1348614436712094
+        },
+        "normalizedChordLengths": [
+          0.8857020409288959,
+          0.9418375042048902,
+          0.8792909460811473,
+          0.7838745367122499
+        ],
+        "equations": [
+          {
+            "vertex": 2,
+            "parameter": 0.1248490730735328,
+            "derivative": [
+              1.0,
+              0.8705240507412437
+            ],
+            "equationResidualDividedByCommonScale": -6.727951529228449e-14,
+            "directionResidual": -5.758899076260319e-14,
+            "stationaryDerivative": false
+          },
+          {
+            "vertex": 3,
+            "parameter": 1.1936040343459489,
+            "derivative": [
+              1.0,
+              -2.2201133135766806
+            ],
+            "equationResidualDividedByCommonScale": -4.150013666048835e-13,
+            "directionResidual": -1.934216977834669e-13,
+            "stationaryDerivative": false
+          },
+          {
+            "vertex": 4,
+            "parameter": 0.5426336427499366,
+            "derivative": [
+              1.0,
+              11.688308939948058
+            ],
+            "equationResidualDividedByCommonScale": 4.548583731889266e-12,
+            "directionResidual": 4.400314089315074e-13,
+            "stationaryDerivative": false
+          }
+        ],
+        "maximumDirectionResidual": 4.400314089315074e-13,
+        "residualTolerance": 2e-10,
+        "strictlyOrderedAlongRequestedInterval": false,
+        "outsideRequestedInterval": [
+          2
+        ],
+        "stationaryVertices": [],
+        "unconstrainedParameters": true,
+        "solver": {
+          "method": "MINPACK-hybr-unconstrained-original-parameters",
+          "success": true,
+          "status": 1,
+          "nfev": 21
+        },
+        "equationEvaluations": 24,
+        "budget": {
+          "scalarEvaluations": 396,
+          "astWeightedEvaluations": 2124,
+          "offsetProducts": 0
+        }
+      }
+    }
+  },
+  {
+    "name": "reverse-5d",
+    "query": {
+      "family": "discretization-generic-native",
+      "mode": "uniform",
+      "curve": [
+        "cos(s)",
+        "sin(s)",
+        "s/3",
+        "2*s",
+        "0"
+      ],
+      "divisions": 6,
+      "parameterStart": 1.2,
+      "parameterEnd": -0.6
+    },
+    "response": {
+      "family": "origamica-generic-discretization",
+      "query": {
+        "family": "discretization-generic-native",
+        "mode": "uniform",
+        "curve": [
+          "cos(s)",
+          "sin(s)",
+          "s/3",
+          "2*s",
+          "0"
+        ],
+        "divisions": 6,
+        "parameterStart": 1.2,
+        "parameterEnd": -0.6
+      },
+      "source": {
+        "function": "DiscretizeCurveUniformly",
+        "definitionCell": "In[4089]",
+        "origin": "notebook-definition",
+        "wolframNumericOutAvailable": false,
+        "numericModel": "finite-real-binary64",
+        "chopDocumentation": null
+      },
+      "limits": {
+        "maximumRules": 64,
+        "maximumExpressionLeaves": 256,
+        "maximumNestingDepth": 4,
+        "maximumListEntries": 256,
+        "maximumStructureNodes": 2048,
+        "maximumParameters": 256,
+        "maximumCurveDimension": 64,
+        "maximumDivisions": 64,
+        "maximumFoldVertices": 512,
+        "maximumScalarEvaluations": 262144,
+        "maximumAstWeightedEvaluations": 8000000,
+        "maximumRootEvaluations": 4096,
+        "maximumOffsetProducts": 262144,
+        "maximumSourceAstNodes": 96,
+        "maximumSourceCharacters": 240,
+        "maximumParameterMagnitude": 1000000.0
+      },
+      "certification": {
+        "sourceFormulaEvaluated": true,
+        "allSampledValuesFinite": true,
+        "rootEquationNumericallyVerified": true,
+        "rootBranchEquivalentToWolfram": false,
+        "allRootsEnumerated": false,
+        "continuousDomainCertified": false,
+        "symbolicObjectsReproduced": false,
+        "wolframOptionsReproduced": false,
+        "integrationErrorIntervalCertified": false,
+        "adoptableCreasePattern": false,
+        "globalFoldingCertified": false
+      },
+      "sample": {
+        "parameters": [
+          1.2,
+          0.8999999999999999,
+          0.6,
+          0.30000000000000004,
+          0.0,
+          -0.30000000000000004,
+          -0.6
+        ],
+        "initialGuess": [
+          1.2,
+          0.8999999999999999,
+          0.6,
+          0.30000000000000004,
+          0.0,
+          -0.30000000000000004,
+          -0.6
+        ],
+        "points": [
+          [
+            0.3623577544766736,
+            0.9320390859672263,
+            0.39999999999999997,
+            2.4,
+            0.0
+          ],
+          [
+            0.6216099682706645,
+            0.7833269096274833,
+            0.3,
+            1.7999999999999998,
+            0.0
+          ],
+          [
+            0.8253356149096783,
+            0.5646424733950354,
+            0.19999999999999998,
+            1.2,
+            0.0
+          ],
+          [
+            0.955336489125606,
+            0.2955202066613396,
+            0.10000000000000003,
+            0.6000000000000001,
+            0.0
+          ],
+          [
+            1.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.955336489125606,
+            -0.2955202066613396,
+            -0.09999999999999998,
+            -0.6000000000000001,
+            0.0
+          ],
+          [
+            0.8253356149096783,
+            -0.5646424733950353,
+            -0.2,
+            -1.1999999999999997,
+            0.0
+          ]
+        ],
+        "normalizedPoints": [
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.06527486634974848,
+            -0.03744294906145157,
+            -0.0251781326741602,
+            -0.15106879604496126,
+            0.0
+          ],
+          [
+            0.1165691799518102,
+            -0.09250360655379658,
+            -0.050356265348320405,
+            -0.30213759208992247,
+            0.0
+          ],
+          [
+            0.1493009725394646,
+            -0.16026356792771382,
+            -0.0755343980224806,
+            -0.4532063881348836,
+            0.0
+          ],
+          [
+            0.16054641056435748,
+            -0.23467003763985833,
+            -0.10071253069664081,
+            -0.6042751841798449,
+            0.0
+          ],
+          [
+            0.1493009725394646,
+            -0.3090765073520028,
+            -0.12589066337080101,
+            -0.7553439802248061,
+            0.0
+          ],
+          [
+            0.1165691799518102,
+            -0.37683646872592,
+            -0.15106879604496123,
+            -0.9064127762697672,
+            0.0
+          ]
+        ],
+        "normalization": {
+          "origin": [
+            0.3623577544766736,
+            0.9320390859672263,
+            0.39999999999999997,
+            2.4,
+            0.0
+          ],
+          "scale": 3.9717004153619353
+        },
+        "normalizedChordLengths": [
+          0.1706414431339225,
+          0.17064144313392243,
+          0.17064144313392238,
+          0.17064144313392254,
+          0.17064144313392238,
+          0.17064144313392238
+        ],
+        "equations": [
+          {
+            "vertex": 2,
+            "parameter": 0.8999999999999999,
+            "derivative": [
+              -0.7833269096274833,
+              0.6216099682706645,
+              0.3333333333333333,
+              2.0,
+              0.0
+            ],
+            "equationResidualDividedByCommonScale": 2.780501736470159e-17,
+            "directionResidual": 4.884746066232124e-17,
+            "stationaryDerivative": false
+          },
+          {
+            "vertex": 3,
+            "parameter": 0.6,
+            "derivative": [
+              -0.5646424733950354,
+              0.8253356149096783,
+              0.3333333333333333,
+              2.0,
+              0.0
+            ],
+            "equationResidualDividedByCommonScale": -1.0803874848442259e-17,
+            "directionResidual": -1.8980094302328766e-17,
+            "stationaryDerivative": false
+          },
+          {
+            "vertex": 4,
+            "parameter": 0.30000000000000004,
+            "derivative": [
+              -0.2955202066613396,
+              0.955336489125606,
+              0.3333333333333333,
+              2.0,
+              0.0
+            ],
+            "equationResidualDividedByCommonScale": -3.781782422798102e-17,
+            "directionResidual": -6.643781793339324e-17,
+            "stationaryDerivative": false
+          },
+          {
+            "vertex": 5,
+            "parameter": 0.0,
+            "derivative": [
+              0.0,
+              1.0,
+              0.3333333333333333,
+              2.0,
+              0.0
+            ],
+            "equationResidualDividedByCommonScale": 2.5623897394259653e-17,
+            "directionResidual": 4.501569999270839e-17,
+            "stationaryDerivative": false
+          },
+          {
+            "vertex": 6,
+            "parameter": -0.30000000000000004,
+            "derivative": [
+              0.2955202066613396,
+              0.955336489125606,
+              0.3333333333333333,
+              2.0,
+              0.0
+            ],
+            "equationResidualDividedByCommonScale": -1.7297793010695394e-17,
+            "directionResidual": -3.038851774671376e-17,
+            "stationaryDerivative": false
+          }
+        ],
+        "maximumDirectionResidual": 6.643781793339324e-17,
+        "residualTolerance": 2e-10,
+        "strictlyOrderedAlongRequestedInterval": true,
+        "outsideRequestedInterval": [],
+        "stationaryVertices": [],
+        "unconstrainedParameters": true,
+        "solver": {
+          "method": "MINPACK-hybr-unconstrained-original-parameters",
+          "success": true,
+          "status": 1,
+          "nfev": 7
+        },
+        "equationEvaluations": 10,
+        "budget": {
+          "scalarEvaluations": 640,
+          "astWeightedEvaluations": 2838,
+          "offsetProducts": 100
+        }
+      }
+    }
+  },
+  {
+    "name": "line-1d",
+    "query": {
+      "family": "discretization-generic-native",
+      "mode": "uniform",
+      "curve": [
+        "s"
+      ],
+      "divisions": 3,
+      "parameterStart": 0,
+      "parameterEnd": 1
+    },
+    "response": {
+      "family": "origamica-generic-discretization",
+      "query": {
+        "family": "discretization-generic-native",
+        "mode": "uniform",
+        "curve": [
+          "s"
+        ],
+        "divisions": 3,
+        "parameterStart": 0.0,
+        "parameterEnd": 1.0
+      },
+      "source": {
+        "function": "DiscretizeCurveUniformly",
+        "definitionCell": "In[4089]",
+        "origin": "notebook-definition",
+        "wolframNumericOutAvailable": false,
+        "numericModel": "finite-real-binary64",
+        "chopDocumentation": null
+      },
+      "limits": {
+        "maximumRules": 64,
+        "maximumExpressionLeaves": 256,
+        "maximumNestingDepth": 4,
+        "maximumListEntries": 256,
+        "maximumStructureNodes": 2048,
+        "maximumParameters": 256,
+        "maximumCurveDimension": 64,
+        "maximumDivisions": 64,
+        "maximumFoldVertices": 512,
+        "maximumScalarEvaluations": 262144,
+        "maximumAstWeightedEvaluations": 8000000,
+        "maximumRootEvaluations": 4096,
+        "maximumOffsetProducts": 262144,
+        "maximumSourceAstNodes": 96,
+        "maximumSourceCharacters": 240,
+        "maximumParameterMagnitude": 1000000.0
+      },
+      "certification": {
+        "sourceFormulaEvaluated": true,
+        "allSampledValuesFinite": true,
+        "rootEquationNumericallyVerified": true,
+        "rootBranchEquivalentToWolfram": false,
+        "allRootsEnumerated": false,
+        "continuousDomainCertified": false,
+        "symbolicObjectsReproduced": false,
+        "wolframOptionsReproduced": false,
+        "integrationErrorIntervalCertified": false,
+        "adoptableCreasePattern": false,
+        "globalFoldingCertified": false
+      },
+      "sample": {
+        "parameters": [
+          0.0,
+          0.3333333333333333,
+          0.6666666666666666,
+          1.0
+        ],
+        "initialGuess": [
+          0.0,
+          0.3333333333333333,
+          0.6666666666666666,
+          1.0
+        ],
+        "points": [
+          [
+            0.0
+          ],
+          [
+            0.3333333333333333
+          ],
+          [
+            0.6666666666666666
+          ],
+          [
+            1.0
+          ]
+        ],
+        "normalizedPoints": [
+          [
+            0.0
+          ],
+          [
+            0.3333333333333333
+          ],
+          [
+            0.6666666666666666
+          ],
+          [
+            1.0
+          ]
+        ],
+        "normalization": {
+          "origin": [
+            0.0
+          ],
+          "scale": 1.0
+        },
+        "normalizedChordLengths": [
+          0.3333333333333333,
+          0.3333333333333333,
+          0.33333333333333337
+        ],
+        "equations": [
+          {
+            "vertex": 2,
+            "parameter": 0.3333333333333333,
+            "derivative": [
+              1.0
+            ],
+            "equationResidualDividedByCommonScale": 0.0,
+            "directionResidual": 0.0,
+            "stationaryDerivative": false
+          },
+          {
+            "vertex": 3,
+            "parameter": 0.6666666666666666,
+            "derivative": [
+              1.0
+            ],
+            "equationResidualDividedByCommonScale": 0.0,
+            "directionResidual": 0.0,
+            "stationaryDerivative": false
+          }
+        ],
+        "maximumDirectionResidual": 0.0,
+        "residualTolerance": 2e-10,
+        "strictlyOrderedAlongRequestedInterval": true,
+        "outsideRequestedInterval": [],
+        "stationaryVertices": [],
+        "unconstrainedParameters": true,
+        "solver": {
+          "method": "MINPACK-hybr-unconstrained-original-parameters",
+          "success": true,
+          "status": 1,
+          "nfev": 4
+        },
+        "equationEvaluations": 7,
+        "budget": {
+          "scalarEvaluations": 47,
+          "astWeightedEvaluations": 80,
+          "offsetProducts": 0
+        }
+      }
+    }
+  },
+  {
+    "name": "line-64d",
+    "query": {
+      "family": "discretization-generic-native",
+      "mode": "uniform",
+      "curve": [
+        "s",
+        "s",
+        "s",
+        "s",
+        "s",
+        "s",
+        "s",
+        "s",
+        "s",
+        "s",
+        "s",
+        "s",
+        "s",
+        "s",
+        "s",
+        "s",
+        "s",
+        "s",
+        "s",
+        "s",
+        "s",
+        "s",
+        "s",
+        "s",
+        "s",
+        "s",
+        "s",
+        "s",
+        "s",
+        "s",
+        "s",
+        "s",
+        "s",
+        "s",
+        "s",
+        "s",
+        "s",
+        "s",
+        "s",
+        "s",
+        "s",
+        "s",
+        "s",
+        "s",
+        "s",
+        "s",
+        "s",
+        "s",
+        "s",
+        "s",
+        "s",
+        "s",
+        "s",
+        "s",
+        "s",
+        "s",
+        "s",
+        "s",
+        "s",
+        "s",
+        "s",
+        "s",
+        "s",
+        "s"
+      ],
+      "divisions": 2,
+      "parameterStart": 0,
+      "parameterEnd": 1
+    },
+    "response": {
+      "family": "origamica-generic-discretization",
+      "query": {
+        "family": "discretization-generic-native",
+        "mode": "uniform",
+        "curve": [
+          "s",
+          "s",
+          "s",
+          "s",
+          "s",
+          "s",
+          "s",
+          "s",
+          "s",
+          "s",
+          "s",
+          "s",
+          "s",
+          "s",
+          "s",
+          "s",
+          "s",
+          "s",
+          "s",
+          "s",
+          "s",
+          "s",
+          "s",
+          "s",
+          "s",
+          "s",
+          "s",
+          "s",
+          "s",
+          "s",
+          "s",
+          "s",
+          "s",
+          "s",
+          "s",
+          "s",
+          "s",
+          "s",
+          "s",
+          "s",
+          "s",
+          "s",
+          "s",
+          "s",
+          "s",
+          "s",
+          "s",
+          "s",
+          "s",
+          "s",
+          "s",
+          "s",
+          "s",
+          "s",
+          "s",
+          "s",
+          "s",
+          "s",
+          "s",
+          "s",
+          "s",
+          "s",
+          "s",
+          "s"
+        ],
+        "divisions": 2,
+        "parameterStart": 0.0,
+        "parameterEnd": 1.0
+      },
+      "source": {
+        "function": "DiscretizeCurveUniformly",
+        "definitionCell": "In[4089]",
+        "origin": "notebook-definition",
+        "wolframNumericOutAvailable": false,
+        "numericModel": "finite-real-binary64",
+        "chopDocumentation": null
+      },
+      "limits": {
+        "maximumRules": 64,
+        "maximumExpressionLeaves": 256,
+        "maximumNestingDepth": 4,
+        "maximumListEntries": 256,
+        "maximumStructureNodes": 2048,
+        "maximumParameters": 256,
+        "maximumCurveDimension": 64,
+        "maximumDivisions": 64,
+        "maximumFoldVertices": 512,
+        "maximumScalarEvaluations": 262144,
+        "maximumAstWeightedEvaluations": 8000000,
+        "maximumRootEvaluations": 4096,
+        "maximumOffsetProducts": 262144,
+        "maximumSourceAstNodes": 96,
+        "maximumSourceCharacters": 240,
+        "maximumParameterMagnitude": 1000000.0
+      },
+      "certification": {
+        "sourceFormulaEvaluated": true,
+        "allSampledValuesFinite": true,
+        "rootEquationNumericallyVerified": true,
+        "rootBranchEquivalentToWolfram": false,
+        "allRootsEnumerated": false,
+        "continuousDomainCertified": false,
+        "symbolicObjectsReproduced": false,
+        "wolframOptionsReproduced": false,
+        "integrationErrorIntervalCertified": false,
+        "adoptableCreasePattern": false,
+        "globalFoldingCertified": false
+      },
+      "sample": {
+        "parameters": [
+          0.0,
+          0.5,
+          1.0
+        ],
+        "initialGuess": [
+          0.0,
+          0.5,
+          1.0
+        ],
+        "points": [
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ],
+          [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ]
+        ],
+        "normalizedPoints": [
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0625,
+            0.0625,
+            0.0625,
+            0.0625,
+            0.0625,
+            0.0625,
+            0.0625,
+            0.0625,
+            0.0625,
+            0.0625,
+            0.0625,
+            0.0625,
+            0.0625,
+            0.0625,
+            0.0625,
+            0.0625,
+            0.0625,
+            0.0625,
+            0.0625,
+            0.0625,
+            0.0625,
+            0.0625,
+            0.0625,
+            0.0625,
+            0.0625,
+            0.0625,
+            0.0625,
+            0.0625,
+            0.0625,
+            0.0625,
+            0.0625,
+            0.0625,
+            0.0625,
+            0.0625,
+            0.0625,
+            0.0625,
+            0.0625,
+            0.0625,
+            0.0625,
+            0.0625,
+            0.0625,
+            0.0625,
+            0.0625,
+            0.0625,
+            0.0625,
+            0.0625,
+            0.0625,
+            0.0625,
+            0.0625,
+            0.0625,
+            0.0625,
+            0.0625,
+            0.0625,
+            0.0625,
+            0.0625,
+            0.0625,
+            0.0625,
+            0.0625,
+            0.0625,
+            0.0625,
+            0.0625,
+            0.0625,
+            0.0625,
+            0.0625
+          ],
+          [
+            0.125,
+            0.125,
+            0.125,
+            0.125,
+            0.125,
+            0.125,
+            0.125,
+            0.125,
+            0.125,
+            0.125,
+            0.125,
+            0.125,
+            0.125,
+            0.125,
+            0.125,
+            0.125,
+            0.125,
+            0.125,
+            0.125,
+            0.125,
+            0.125,
+            0.125,
+            0.125,
+            0.125,
+            0.125,
+            0.125,
+            0.125,
+            0.125,
+            0.125,
+            0.125,
+            0.125,
+            0.125,
+            0.125,
+            0.125,
+            0.125,
+            0.125,
+            0.125,
+            0.125,
+            0.125,
+            0.125,
+            0.125,
+            0.125,
+            0.125,
+            0.125,
+            0.125,
+            0.125,
+            0.125,
+            0.125,
+            0.125,
+            0.125,
+            0.125,
+            0.125,
+            0.125,
+            0.125,
+            0.125,
+            0.125,
+            0.125,
+            0.125,
+            0.125,
+            0.125,
+            0.125,
+            0.125,
+            0.125,
+            0.125
+          ]
+        ],
+        "normalization": {
+          "origin": [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "scale": 8.0
+        },
+        "normalizedChordLengths": [
+          0.5,
+          0.5
+        ],
+        "equations": [
+          {
+            "vertex": 2,
+            "parameter": 0.5,
+            "derivative": [
+              1.0,
+              1.0,
+              1.0,
+              1.0,
+              1.0,
+              1.0,
+              1.0,
+              1.0,
+              1.0,
+              1.0,
+              1.0,
+              1.0,
+              1.0,
+              1.0,
+              1.0,
+              1.0,
+              1.0,
+              1.0,
+              1.0,
+              1.0,
+              1.0,
+              1.0,
+              1.0,
+              1.0,
+              1.0,
+              1.0,
+              1.0,
+              1.0,
+              1.0,
+              1.0,
+              1.0,
+              1.0,
+              1.0,
+              1.0,
+              1.0,
+              1.0,
+              1.0,
+              1.0,
+              1.0,
+              1.0,
+              1.0,
+              1.0,
+              1.0,
+              1.0,
+              1.0,
+              1.0,
+              1.0,
+              1.0,
+              1.0,
+              1.0,
+              1.0,
+              1.0,
+              1.0,
+              1.0,
+              1.0,
+              1.0,
+              1.0,
+              1.0,
+              1.0,
+              1.0,
+              1.0,
+              1.0,
+              1.0,
+              1.0
+            ],
+            "equationResidualDividedByCommonScale": 0.0,
+            "directionResidual": 0.0,
+            "stationaryDerivative": false
+          }
+        ],
+        "maximumDirectionResidual": 0.0,
+        "residualTolerance": 2e-10,
+        "strictlyOrderedAlongRequestedInterval": true,
+        "outsideRequestedInterval": [],
+        "stationaryVertices": [],
+        "unconstrainedParameters": true,
+        "solver": {
+          "method": "MINPACK-hybr-unconstrained-original-parameters",
+          "success": true,
+          "status": 1,
+          "nfev": 3
+        },
+        "equationEvaluations": 6,
+        "budget": {
+          "scalarEvaluations": 1792,
+          "astWeightedEvaluations": 3200,
+          "offsetProducts": 0
+        }
+      }
+    }
+  },
+  {
+    "name": "stationary",
+    "query": {
+      "family": "discretization-generic-native",
+      "mode": "uniform",
+      "curve": [
+        "s**3"
+      ],
+      "divisions": 2,
+      "parameterStart": -1,
+      "parameterEnd": 1
+    },
+    "response": {
+      "family": "origamica-generic-discretization",
+      "query": {
+        "family": "discretization-generic-native",
+        "mode": "uniform",
+        "curve": [
+          "s**3"
+        ],
+        "divisions": 2,
+        "parameterStart": -1.0,
+        "parameterEnd": 1.0
+      },
+      "source": {
+        "function": "DiscretizeCurveUniformly",
+        "definitionCell": "In[4089]",
+        "origin": "notebook-definition",
+        "wolframNumericOutAvailable": false,
+        "numericModel": "finite-real-binary64",
+        "chopDocumentation": null
+      },
+      "limits": {
+        "maximumRules": 64,
+        "maximumExpressionLeaves": 256,
+        "maximumNestingDepth": 4,
+        "maximumListEntries": 256,
+        "maximumStructureNodes": 2048,
+        "maximumParameters": 256,
+        "maximumCurveDimension": 64,
+        "maximumDivisions": 64,
+        "maximumFoldVertices": 512,
+        "maximumScalarEvaluations": 262144,
+        "maximumAstWeightedEvaluations": 8000000,
+        "maximumRootEvaluations": 4096,
+        "maximumOffsetProducts": 262144,
+        "maximumSourceAstNodes": 96,
+        "maximumSourceCharacters": 240,
+        "maximumParameterMagnitude": 1000000.0
+      },
+      "certification": {
+        "sourceFormulaEvaluated": true,
+        "allSampledValuesFinite": true,
+        "rootEquationNumericallyVerified": true,
+        "rootBranchEquivalentToWolfram": false,
+        "allRootsEnumerated": false,
+        "continuousDomainCertified": false,
+        "symbolicObjectsReproduced": false,
+        "wolframOptionsReproduced": false,
+        "integrationErrorIntervalCertified": false,
+        "adoptableCreasePattern": false,
+        "globalFoldingCertified": false
+      },
+      "sample": {
+        "parameters": [
+          -1.0,
+          0.0,
+          1.0
+        ],
+        "initialGuess": [
+          -1.0,
+          0.0,
+          1.0
+        ],
+        "points": [
+          [
+            -1.0
+          ],
+          [
+            0.0
+          ],
+          [
+            1.0
+          ]
+        ],
+        "normalizedPoints": [
+          [
+            0.0
+          ],
+          [
+            0.5
+          ],
+          [
+            1.0
+          ]
+        ],
+        "normalization": {
+          "origin": [
+            -1.0
+          ],
+          "scale": 2.0
+        },
+        "normalizedChordLengths": [
+          0.5,
+          0.5
+        ],
+        "equations": [
+          {
+            "vertex": 2,
+            "parameter": 0.0,
+            "derivative": [
+              0.0
+            ],
+            "equationResidualDividedByCommonScale": 0.0,
+            "directionResidual": 0.0,
+            "stationaryDerivative": true
+          }
+        ],
+        "maximumDirectionResidual": 0.0,
+        "residualTolerance": 2e-10,
+        "strictlyOrderedAlongRequestedInterval": true,
+        "outsideRequestedInterval": [],
+        "stationaryVertices": [
+          2
+        ],
+        "unconstrainedParameters": true,
+        "solver": {
+          "method": "MINPACK-hybr-unconstrained-original-parameters",
+          "success": true,
+          "status": 1,
+          "nfev": 3
+        },
+        "equationEvaluations": 6,
+        "budget": {
+          "scalarEvaluations": 28,
+          "astWeightedEvaluations": 158,
+          "offsetProducts": 0
+        }
+      }
+    }
+  },
+  {
+    "name": "sqrt-endpoint",
+    "query": {
+      "family": "discretization-generic-native",
+      "mode": "uniform",
+      "curve": [
+        "sqrt(s)",
+        "0"
+      ],
+      "divisions": 1,
+      "parameterStart": 0,
+      "parameterEnd": 1
+    },
+    "response": {
+      "family": "origamica-generic-discretization",
+      "query": {
+        "family": "discretization-generic-native",
+        "mode": "uniform",
+        "curve": [
+          "sqrt(s)",
+          "0"
+        ],
+        "divisions": 1,
+        "parameterStart": 0.0,
+        "parameterEnd": 1.0
+      },
+      "source": {
+        "function": "DiscretizeCurveUniformly",
+        "definitionCell": "In[4089]",
+        "origin": "notebook-definition",
+        "wolframNumericOutAvailable": false,
+        "numericModel": "finite-real-binary64",
+        "chopDocumentation": null
+      },
+      "limits": {
+        "maximumRules": 64,
+        "maximumExpressionLeaves": 256,
+        "maximumNestingDepth": 4,
+        "maximumListEntries": 256,
+        "maximumStructureNodes": 2048,
+        "maximumParameters": 256,
+        "maximumCurveDimension": 64,
+        "maximumDivisions": 64,
+        "maximumFoldVertices": 512,
+        "maximumScalarEvaluations": 262144,
+        "maximumAstWeightedEvaluations": 8000000,
+        "maximumRootEvaluations": 4096,
+        "maximumOffsetProducts": 262144,
+        "maximumSourceAstNodes": 96,
+        "maximumSourceCharacters": 240,
+        "maximumParameterMagnitude": 1000000.0
+      },
+      "certification": {
+        "sourceFormulaEvaluated": true,
+        "allSampledValuesFinite": true,
+        "rootEquationNumericallyVerified": true,
+        "rootBranchEquivalentToWolfram": false,
+        "allRootsEnumerated": false,
+        "continuousDomainCertified": false,
+        "symbolicObjectsReproduced": false,
+        "wolframOptionsReproduced": false,
+        "integrationErrorIntervalCertified": false,
+        "adoptableCreasePattern": false,
+        "globalFoldingCertified": false
+      },
+      "sample": {
+        "parameters": [
+          0.0,
+          1.0
+        ],
+        "initialGuess": [
+          0.0,
+          1.0
+        ],
+        "points": [
+          [
+            0.0,
+            0.0
+          ],
+          [
+            1.0,
+            0.0
+          ]
+        ],
+        "normalizedPoints": [
+          [
+            0.0,
+            0.0
+          ],
+          [
+            1.0,
+            0.0
+          ]
+        ],
+        "normalization": {
+          "origin": [
+            0.0,
+            0.0
+          ],
+          "scale": 1.0
+        },
+        "normalizedChordLengths": [
+          1.0
+        ],
+        "equations": [],
+        "maximumDirectionResidual": 0.0,
+        "residualTolerance": 2e-10,
+        "strictlyOrderedAlongRequestedInterval": true,
+        "outsideRequestedInterval": [],
+        "stationaryVertices": [],
+        "unconstrainedParameters": true,
+        "solver": {
+          "method": "fixed-endpoints-no-interior-equations",
+          "success": true,
+          "status": 0,
+          "nfev": 0
+        },
+        "equationEvaluations": 1,
+        "budget": {
+          "scalarEvaluations": 10,
+          "astWeightedEvaluations": 30,
+          "offsetProducts": 0
+        }
+      }
+    }
+  },
+  {
+    "name": "constant",
+    "query": {
+      "family": "discretization-generic-native",
+      "mode": "uniform",
+      "curve": [
+        "3",
+        "3"
+      ],
+      "divisions": 1,
+      "parameterStart": 0,
+      "parameterEnd": 1
+    },
+    "response": {
+      "family": "origamica-generic-discretization",
+      "query": {
+        "family": "discretization-generic-native",
+        "mode": "uniform",
+        "curve": [
+          "3",
+          "3"
+        ],
+        "divisions": 1,
+        "parameterStart": 0.0,
+        "parameterEnd": 1.0
+      },
+      "source": {
+        "function": "DiscretizeCurveUniformly",
+        "definitionCell": "In[4089]",
+        "origin": "notebook-definition",
+        "wolframNumericOutAvailable": false,
+        "numericModel": "finite-real-binary64",
+        "chopDocumentation": null
+      },
+      "limits": {
+        "maximumRules": 64,
+        "maximumExpressionLeaves": 256,
+        "maximumNestingDepth": 4,
+        "maximumListEntries": 256,
+        "maximumStructureNodes": 2048,
+        "maximumParameters": 256,
+        "maximumCurveDimension": 64,
+        "maximumDivisions": 64,
+        "maximumFoldVertices": 512,
+        "maximumScalarEvaluations": 262144,
+        "maximumAstWeightedEvaluations": 8000000,
+        "maximumRootEvaluations": 4096,
+        "maximumOffsetProducts": 262144,
+        "maximumSourceAstNodes": 96,
+        "maximumSourceCharacters": 240,
+        "maximumParameterMagnitude": 1000000.0
+      },
+      "certification": {
+        "sourceFormulaEvaluated": true,
+        "allSampledValuesFinite": true,
+        "rootEquationNumericallyVerified": true,
+        "rootBranchEquivalentToWolfram": false,
+        "allRootsEnumerated": false,
+        "continuousDomainCertified": false,
+        "symbolicObjectsReproduced": false,
+        "wolframOptionsReproduced": false,
+        "integrationErrorIntervalCertified": false,
+        "adoptableCreasePattern": false,
+        "globalFoldingCertified": false
+      },
+      "sample": {
+        "parameters": [
+          0.0,
+          1.0
+        ],
+        "initialGuess": [
+          0.0,
+          1.0
+        ],
+        "points": [
+          [
+            3.0,
+            3.0
+          ],
+          [
+            3.0,
+            3.0
+          ]
+        ],
+        "normalizedPoints": [
+          [
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0
+          ]
+        ],
+        "normalization": {
+          "origin": [
+            3.0,
+            3.0
+          ],
+          "scale": 1.0
+        },
+        "normalizedChordLengths": [
+          0.0
+        ],
+        "equations": [],
+        "maximumDirectionResidual": 0.0,
+        "residualTolerance": 2e-10,
+        "strictlyOrderedAlongRequestedInterval": true,
+        "outsideRequestedInterval": [],
+        "stationaryVertices": [],
+        "unconstrainedParameters": true,
+        "solver": {
+          "method": "fixed-endpoints-no-interior-equations",
+          "success": true,
+          "status": 0,
+          "nfev": 0
+        },
+        "equationEvaluations": 1,
+        "budget": {
+          "scalarEvaluations": 10,
+          "astWeightedEvaluations": 10,
+          "offsetProducts": 0
+        }
+      }
+    }
+  },
+  {
+    "name": "tiny",
+    "query": {
+      "family": "discretization-generic-native",
+      "mode": "uniform",
+      "curve": [
+        "1000000000-1e-8*s**2",
+        "1000000000+1e-8*s"
+      ],
+      "divisions": 4,
+      "parameterStart": 0,
+      "parameterEnd": 1
+    },
+    "response": {
+      "family": "origamica-generic-discretization",
+      "query": {
+        "family": "discretization-generic-native",
+        "mode": "uniform",
+        "curve": [
+          "1000000000-1e-8*s**2",
+          "1000000000+1e-8*s"
+        ],
+        "divisions": 4,
+        "parameterStart": 0.0,
+        "parameterEnd": 1.0
+      },
+      "source": {
+        "function": "DiscretizeCurveUniformly",
+        "definitionCell": "In[4089]",
+        "origin": "notebook-definition",
+        "wolframNumericOutAvailable": false,
+        "numericModel": "finite-real-binary64",
+        "chopDocumentation": null
+      },
+      "limits": {
+        "maximumRules": 64,
+        "maximumExpressionLeaves": 256,
+        "maximumNestingDepth": 4,
+        "maximumListEntries": 256,
+        "maximumStructureNodes": 2048,
+        "maximumParameters": 256,
+        "maximumCurveDimension": 64,
+        "maximumDivisions": 64,
+        "maximumFoldVertices": 512,
+        "maximumScalarEvaluations": 262144,
+        "maximumAstWeightedEvaluations": 8000000,
+        "maximumRootEvaluations": 4096,
+        "maximumOffsetProducts": 262144,
+        "maximumSourceAstNodes": 96,
+        "maximumSourceCharacters": 240,
+        "maximumParameterMagnitude": 1000000.0
+      },
+      "certification": {
+        "sourceFormulaEvaluated": true,
+        "allSampledValuesFinite": true,
+        "rootEquationNumericallyVerified": true,
+        "rootBranchEquivalentToWolfram": false,
+        "allRootsEnumerated": false,
+        "continuousDomainCertified": false,
+        "symbolicObjectsReproduced": false,
+        "wolframOptionsReproduced": false,
+        "integrationErrorIntervalCertified": false,
+        "adoptableCreasePattern": false,
+        "globalFoldingCertified": false
+      },
+      "sample": {
+        "parameters": [
+          0.0,
+          0.18331666957881934,
+          0.39127476686901347,
+          0.6518280204275433,
+          1.0
+        ],
+        "initialGuess": [
+          0.0,
+          0.25,
+          0.5,
+          0.75,
+          1.0
+        ],
+        "points": [
+          [
+            1000000000.0,
+            1000000000.0
+          ],
+          [
+            1000000000.0,
+            1000000000.0
+          ],
+          [
+            1000000000.0,
+            1000000000.0
+          ],
+          [
+            1000000000.0,
+            1000000000.0
+          ],
+          [
+            1000000000.0,
+            1000000000.0
+          ]
+        ],
+        "normalizedPoints": [
+          [
+            0.0,
+            0.0
+          ],
+          [
+            -0.023762324333164914,
+            0.12962446016371684
+          ],
+          [
+            -0.10825517960066867,
+            0.2766730409602649
+          ],
+          [
+            -0.3004353652934343,
+            0.4609120134117193
+          ],
+          [
+            -0.7071067811865476,
+            0.7071067811865476
+          ]
+        ],
+        "normalization": {
+          "origin": [
+            1000000000.0,
+            1000000000.0
+          ],
+          "scale": 1.414213562373095e-08
+        },
+        "normalizedChordLengths": [
+          0.131784478336599,
+          0.16959459810245803,
+          0.2662277647858571,
+          0.47538774088549146
+        ],
+        "equations": [
+          {
+            "vertex": 2,
+            "parameter": 0.18331666957881934,
+            "derivative": [
+              -3.6663333915763867e-09,
+              1e-08
+            ],
+            "equationResidualDividedByCommonScale": 2.0816681711721685e-16,
+            "directionResidual": 2.764009690876257e-16,
+            "stationaryDerivative": false
+          },
+          {
+            "vertex": 3,
+            "parameter": 0.39127476686901347,
+            "derivative": [
+              -7.82549533738027e-09,
+              1e-08
+            ],
+            "equationResidualDividedByCommonScale": 5.134781488891349e-16,
+            "directionResidual": 5.718771647462978e-16,
+            "stationaryDerivative": false
+          },
+          {
+            "vertex": 4,
+            "parameter": 0.6518280204275433,
+            "derivative": [
+              -1.3036560408550865e-08,
+              1e-08
+            ],
+            "equationResidualDividedByCommonScale": -1.8041124150158794e-16,
+            "directionResidual": -1.552871047545349e-16,
+            "stationaryDerivative": false
+          }
+        ],
+        "maximumDirectionResidual": 5.718771647462978e-16,
+        "residualTolerance": 2e-10,
+        "strictlyOrderedAlongRequestedInterval": true,
+        "outsideRequestedInterval": [],
+        "stationaryVertices": [],
+        "unconstrainedParameters": true,
+        "solver": {
+          "method": "MINPACK-hybr-unconstrained-original-parameters",
+          "success": true,
+          "status": 1,
+          "nfev": 14
+        },
+        "equationEvaluations": 17,
+        "budget": {
+          "scalarEvaluations": 284,
+          "astWeightedEvaluations": 2494,
+          "offsetProducts": 0
+        }
+      }
+    }
+  },
+  {
+    "name": "constant-radical",
+    "query": {
+      "family": "discretization-generic-native",
+      "mode": "uniform",
+      "curve": [
+        "s+sqrt(0)",
+        "s"
+      ],
+      "divisions": 4,
+      "parameterStart": 0,
+      "parameterEnd": 1
+    },
+    "response": {
+      "family": "origamica-generic-discretization",
+      "query": {
+        "family": "discretization-generic-native",
+        "mode": "uniform",
+        "curve": [
+          "s+sqrt(0)",
+          "s"
+        ],
+        "divisions": 4,
+        "parameterStart": 0.0,
+        "parameterEnd": 1.0
+      },
+      "source": {
+        "function": "DiscretizeCurveUniformly",
+        "definitionCell": "In[4089]",
+        "origin": "notebook-definition",
+        "wolframNumericOutAvailable": false,
+        "numericModel": "finite-real-binary64",
+        "chopDocumentation": null
+      },
+      "limits": {
+        "maximumRules": 64,
+        "maximumExpressionLeaves": 256,
+        "maximumNestingDepth": 4,
+        "maximumListEntries": 256,
+        "maximumStructureNodes": 2048,
+        "maximumParameters": 256,
+        "maximumCurveDimension": 64,
+        "maximumDivisions": 64,
+        "maximumFoldVertices": 512,
+        "maximumScalarEvaluations": 262144,
+        "maximumAstWeightedEvaluations": 8000000,
+        "maximumRootEvaluations": 4096,
+        "maximumOffsetProducts": 262144,
+        "maximumSourceAstNodes": 96,
+        "maximumSourceCharacters": 240,
+        "maximumParameterMagnitude": 1000000.0
+      },
+      "certification": {
+        "sourceFormulaEvaluated": true,
+        "allSampledValuesFinite": true,
+        "rootEquationNumericallyVerified": true,
+        "rootBranchEquivalentToWolfram": false,
+        "allRootsEnumerated": false,
+        "continuousDomainCertified": false,
+        "symbolicObjectsReproduced": false,
+        "wolframOptionsReproduced": false,
+        "integrationErrorIntervalCertified": false,
+        "adoptableCreasePattern": false,
+        "globalFoldingCertified": false
+      },
+      "sample": {
+        "parameters": [
+          0.0,
+          0.25,
+          0.5,
+          0.75,
+          1.0
+        ],
+        "initialGuess": [
+          0.0,
+          0.25,
+          0.5,
+          0.75,
+          1.0
+        ],
+        "points": [
+          [
+            0.0,
+            0.0
+          ],
+          [
+            0.25,
+            0.25
+          ],
+          [
+            0.5,
+            0.5
+          ],
+          [
+            0.75,
+            0.75
+          ],
+          [
+            1.0,
+            1.0
+          ]
+        ],
+        "normalizedPoints": [
+          [
+            0.0,
+            0.0
+          ],
+          [
+            0.17677669529663687,
+            0.17677669529663687
+          ],
+          [
+            0.35355339059327373,
+            0.35355339059327373
+          ],
+          [
+            0.5303300858899106,
+            0.5303300858899106
+          ],
+          [
+            0.7071067811865475,
+            0.7071067811865475
+          ]
+        ],
+        "normalization": {
+          "origin": [
+            0.0,
+            0.0
+          ],
+          "scale": 1.4142135623730951
+        },
+        "normalizedChordLengths": [
+          0.24999999999999997,
+          0.24999999999999997,
+          0.24999999999999997,
+          0.24999999999999997
+        ],
+        "equations": [
+          {
+            "vertex": 2,
+            "parameter": 0.25,
+            "derivative": [
+              1.0,
+              1.0
+            ],
+            "equationResidualDividedByCommonScale": 0.0,
+            "directionResidual": 0.0,
+            "stationaryDerivative": false
+          },
+          {
+            "vertex": 3,
+            "parameter": 0.5,
+            "derivative": [
+              1.0,
+              1.0
+            ],
+            "equationResidualDividedByCommonScale": 0.0,
+            "directionResidual": 0.0,
+            "stationaryDerivative": false
+          },
+          {
+            "vertex": 4,
+            "parameter": 0.75,
+            "derivative": [
+              1.0,
+              1.0
+            ],
+            "equationResidualDividedByCommonScale": 0.0,
+            "directionResidual": 0.0,
+            "stationaryDerivative": false
+          }
+        ],
+        "maximumDirectionResidual": 0.0,
+        "residualTolerance": 2e-10,
+        "strictlyOrderedAlongRequestedInterval": true,
+        "outsideRequestedInterval": [],
+        "stationaryVertices": [],
+        "unconstrainedParameters": true,
+        "solver": {
+          "method": "MINPACK-hybr-unconstrained-original-parameters",
+          "success": true,
+          "status": 1,
+          "nfev": 5
+        },
+        "equationEvaluations": 8,
+        "budget": {
+          "scalarEvaluations": 141,
+          "astWeightedEvaluations": 512,
+          "offsetProducts": 0
+        }
+      }
+    }
+  },
+  {
+    "name": "overflowing-origin-norm",
+    "query": {
+      "family": "discretization-generic-native",
+      "mode": "uniform",
+      "curve": [
+        "1e12**8*1e12**8*1e12**8*1e10**2+1e-8*s",
+        "1e12**8*1e12**8*1e12**8*1e10**2+1e-8*s",
+        "1e12**8*1e12**8*1e12**8*1e10**2+1e-8*s",
+        "1e12**8*1e12**8*1e12**8*1e10**2+1e-8*s"
+      ],
+      "divisions": 2,
+      "parameterStart": 0,
+      "parameterEnd": 1
+    },
+    "response": {
+      "family": "origamica-generic-discretization",
+      "query": {
+        "family": "discretization-generic-native",
+        "mode": "uniform",
+        "curve": [
+          "1e12**8*1e12**8*1e12**8*1e10**2+1e-8*s",
+          "1e12**8*1e12**8*1e12**8*1e10**2+1e-8*s",
+          "1e12**8*1e12**8*1e12**8*1e10**2+1e-8*s",
+          "1e12**8*1e12**8*1e12**8*1e10**2+1e-8*s"
+        ],
+        "divisions": 2,
+        "parameterStart": 0.0,
+        "parameterEnd": 1.0
+      },
+      "source": {
+        "function": "DiscretizeCurveUniformly",
+        "definitionCell": "In[4089]",
+        "origin": "notebook-definition",
+        "wolframNumericOutAvailable": false,
+        "numericModel": "finite-real-binary64",
+        "chopDocumentation": null
+      },
+      "limits": {
+        "maximumRules": 64,
+        "maximumExpressionLeaves": 256,
+        "maximumNestingDepth": 4,
+        "maximumListEntries": 256,
+        "maximumStructureNodes": 2048,
+        "maximumParameters": 256,
+        "maximumCurveDimension": 64,
+        "maximumDivisions": 64,
+        "maximumFoldVertices": 512,
+        "maximumScalarEvaluations": 262144,
+        "maximumAstWeightedEvaluations": 8000000,
+        "maximumRootEvaluations": 4096,
+        "maximumOffsetProducts": 262144,
+        "maximumSourceAstNodes": 96,
+        "maximumSourceCharacters": 240,
+        "maximumParameterMagnitude": 1000000.0
+      },
+      "certification": {
+        "sourceFormulaEvaluated": true,
+        "allSampledValuesFinite": true,
+        "rootEquationNumericallyVerified": true,
+        "rootBranchEquivalentToWolfram": false,
+        "allRootsEnumerated": false,
+        "continuousDomainCertified": false,
+        "symbolicObjectsReproduced": false,
+        "wolframOptionsReproduced": false,
+        "integrationErrorIntervalCertified": false,
+        "adoptableCreasePattern": false,
+        "globalFoldingCertified": false
+      },
+      "sample": {
+        "parameters": [
+          0.0,
+          0.5,
+          1.0
+        ],
+        "initialGuess": [
+          0.0,
+          0.5,
+          1.0
+        ],
+        "points": [
+          [
+            1.0000000000000002e+308,
+            1.0000000000000002e+308,
+            1.0000000000000002e+308,
+            1.0000000000000002e+308
+          ],
+          [
+            1.0000000000000002e+308,
+            1.0000000000000002e+308,
+            1.0000000000000002e+308,
+            1.0000000000000002e+308
+          ],
+          [
+            1.0000000000000002e+308,
+            1.0000000000000002e+308,
+            1.0000000000000002e+308,
+            1.0000000000000002e+308
+          ]
+        ],
+        "normalizedPoints": [
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.25,
+            0.25,
+            0.25,
+            0.25
+          ],
+          [
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        ],
+        "normalization": {
+          "origin": [
+            1.0000000000000002e+308,
+            1.0000000000000002e+308,
+            1.0000000000000002e+308,
+            1.0000000000000002e+308
+          ],
+          "scale": 2e-08
+        },
+        "normalizedChordLengths": [
+          0.5,
+          0.5
+        ],
+        "equations": [
+          {
+            "vertex": 2,
+            "parameter": 0.5,
+            "derivative": [
+              1e-08,
+              1e-08,
+              1e-08,
+              1e-08
+            ],
+            "equationResidualDividedByCommonScale": 0.0,
+            "directionResidual": 0.0,
+            "stationaryDerivative": false
+          }
+        ],
+        "maximumDirectionResidual": 0.0,
+        "residualTolerance": 2e-10,
+        "strictlyOrderedAlongRequestedInterval": true,
+        "outsideRequestedInterval": [],
+        "stationaryVertices": [],
+        "unconstrainedParameters": true,
+        "solver": {
+          "method": "MINPACK-hybr-unconstrained-original-parameters",
+          "success": true,
+          "status": 1,
+          "nfev": 3
+        },
+        "equationEvaluations": 6,
+        "budget": {
+          "scalarEvaluations": 116,
+          "astWeightedEvaluations": 2664,
+          "offsetProducts": 2668
+        }
+      }
+    }
+  },
+  {
+    "name": "multipliers",
+    "query": {
+      "family": "discretization-generic-native",
+      "mode": "multipliers",
+      "foldPoints": [
+        [
+          -0.9396926207859084,
+          0.3420201433256687
+        ],
+        [
+          0.0,
+          0.0
+        ],
+        [
+          0.9396926207859084,
+          0.3420201433256687
+        ]
+      ],
+      "leftRulings": [
+        [
+          -0.17364817766693036,
+          0.984807753012208
+        ],
+        [
+          -0.17364817766693036,
+          0.984807753012208
+        ],
+        [
+          -0.17364817766693036,
+          0.984807753012208
+        ]
+      ],
+      "rightRulings": [
+        [
+          -0.17364817766693036,
+          -0.984807753012208
+        ],
+        [
+          -0.17364817766693036,
+          -0.984807753012208
+        ],
+        [
+          -0.17364817766693036,
+          -0.984807753012208
+        ]
+      ]
+    },
+    "response": {
+      "family": "origamica-generic-discretization",
+      "query": {
+        "family": "discretization-generic-native",
+        "mode": "multipliers",
+        "foldPoints": [
+          [
+            -0.9396926207859084,
+            0.3420201433256687
+          ],
+          [
+            0.0,
+            0.0
+          ],
+          [
+            0.9396926207859084,
+            0.3420201433256687
+          ]
+        ],
+        "leftRulings": [
+          [
+            -0.17364817766693036,
+            0.984807753012208
+          ],
+          [
+            -0.17364817766693036,
+            0.984807753012208
+          ],
+          [
+            -0.17364817766693036,
+            0.984807753012208
+          ]
+        ],
+        "rightRulings": [
+          [
+            -0.17364817766693036,
+            -0.984807753012208
+          ],
+          [
+            -0.17364817766693036,
+            -0.984807753012208
+          ],
+          [
+            -0.17364817766693036,
+            -0.984807753012208
+          ]
+        ]
+      },
+      "source": {
+        "function": "FoldAngleMultipliers2D",
+        "definitionCell": "In[4092]",
+        "origin": "notebook-definition",
+        "wolframNumericOutAvailable": false,
+        "numericModel": "finite-real-binary64",
+        "chopDocumentation": "https://reference.wolfram.com/language/ref/Chop.html"
+      },
+      "limits": {
+        "maximumRules": 64,
+        "maximumExpressionLeaves": 256,
+        "maximumNestingDepth": 4,
+        "maximumListEntries": 256,
+        "maximumStructureNodes": 2048,
+        "maximumParameters": 256,
+        "maximumCurveDimension": 64,
+        "maximumDivisions": 64,
+        "maximumFoldVertices": 512,
+        "maximumScalarEvaluations": 262144,
+        "maximumAstWeightedEvaluations": 8000000,
+        "maximumRootEvaluations": 4096,
+        "maximumOffsetProducts": 262144,
+        "maximumSourceAstNodes": 96,
+        "maximumSourceCharacters": 240,
+        "maximumParameterMagnitude": 1000000.0
+      },
+      "certification": {
+        "sourceFormulaEvaluated": true,
+        "allSampledValuesFinite": true,
+        "rootEquationNumericallyVerified": false,
+        "rootBranchEquivalentToWolfram": false,
+        "allRootsEnumerated": false,
+        "continuousDomainCertified": false,
+        "symbolicObjectsReproduced": false,
+        "wolframOptionsReproduced": false,
+        "integrationErrorIntervalCertified": false,
+        "adoptableCreasePattern": false,
+        "globalFoldingCertified": false
+      },
+      "sample": {
+        "foldPoints": [
+          [
+            -0.9396926207859084,
+            0.3420201433256687
+          ],
+          [
+            0.0,
+            0.0
+          ],
+          [
+            0.9396926207859084,
+            0.3420201433256687
+          ]
+        ],
+        "leftRulings": [
+          [
+            -0.17364817766693036,
+            0.984807753012208
+          ],
+          [
+            -0.17364817766693036,
+            0.984807753012208
+          ],
+          [
+            -0.17364817766693036,
+            0.984807753012208
+          ]
+        ],
+        "rightRulings": [
+          [
+            -0.17364817766693036,
+            -0.984807753012208
+          ],
+          [
+            -0.17364817766693036,
+            -0.984807753012208
+          ],
+          [
+            -0.17364817766693036,
+            -0.984807753012208
+          ]
+        ],
+        "sectors": [
+          {
+            "vertex": 1,
+            "a1": null,
+            "a2": null,
+            "a3": 1.3962634015954636,
+            "a4": 2.0943951023931957
+          },
+          {
+            "vertex": 2,
+            "a1": 1.0471975511965979,
+            "a2": 1.7453292519943295,
+            "a3": 2.0943951023931957,
+            "a4": 1.3962634015954636
+          },
+          {
+            "vertex": 3,
+            "a1": 1.7453292519943295,
+            "a2": 1.0471975511965979,
+            "a3": null,
+            "a4": null
+          }
+        ],
+        "kawasaki": [
+          {
+            "vertex": 2,
+            "alternatingAngle": 4.440892098500626e-16,
+            "choppedAngle": 0.0
+          }
+        ],
+        "chopTolerance": 1e-10,
+        "chopComparison": "abs(approximate-real-angle) < 1e-10",
+        "chopAppliedToDenominator": false,
+        "multipliers": [
+          2.8793852415718155,
+          -2.8793852415718177,
+          2.8793852415718177
+        ],
+        "quotients": [
+          {
+            "vertex": 1,
+            "numerator": 0.984807753012208,
+            "denominator": 0.3420201433256689,
+            "value": 2.8793852415718155,
+            "state": "finite",
+            "originalDenominatorNonzero": true
+          },
+          {
+            "vertex": 2,
+            "numerator": 0.9848077530122081,
+            "denominator": -0.34202014332566866,
+            "value": -2.8793852415718177,
+            "state": "finite",
+            "originalDenominatorNonzero": true
+          },
+          {
+            "vertex": 3,
+            "numerator": 0.9848077530122081,
+            "denominator": 0.34202014332566866,
+            "value": 2.8793852415718177,
+            "state": "finite",
+            "originalDenominatorNonzero": true
+          }
+        ],
+        "allMultipliersFinite": true,
+        "rawDirectionsPreserved": true
+      }
+    }
+  },
+  {
+    "name": "multipliers-large",
+    "query": {
+      "family": "discretization-generic-native",
+      "mode": "multipliers",
+      "foldPoints": [
+        [
+          -0.9396926207859084,
+          0.3420201433256687
+        ],
+        [
+          0.0,
+          0.0
+        ],
+        [
+          0.9396926207859084,
+          0.3420201433256687
+        ]
+      ],
+      "leftRulings": [
+        [
+          -1.7364817766693037e+99,
+          9.848077530122081e+99
+        ],
+        [
+          -1.7364817766693037e+99,
+          9.848077530122081e+99
+        ],
+        [
+          -1.7364817766693037e+99,
+          9.848077530122081e+99
+        ]
+      ],
+      "rightRulings": [
+        [
+          -1.7364817766693037e+99,
+          -9.848077530122081e+99
+        ],
+        [
+          -1.7364817766693037e+99,
+          -9.848077530122081e+99
+        ],
+        [
+          -1.7364817766693037e+99,
+          -9.848077530122081e+99
+        ]
+      ]
+    },
+    "response": {
+      "family": "origamica-generic-discretization",
+      "query": {
+        "family": "discretization-generic-native",
+        "mode": "multipliers",
+        "foldPoints": [
+          [
+            -0.9396926207859084,
+            0.3420201433256687
+          ],
+          [
+            0.0,
+            0.0
+          ],
+          [
+            0.9396926207859084,
+            0.3420201433256687
+          ]
+        ],
+        "leftRulings": [
+          [
+            -1.7364817766693037e+99,
+            9.848077530122081e+99
+          ],
+          [
+            -1.7364817766693037e+99,
+            9.848077530122081e+99
+          ],
+          [
+            -1.7364817766693037e+99,
+            9.848077530122081e+99
+          ]
+        ],
+        "rightRulings": [
+          [
+            -1.7364817766693037e+99,
+            -9.848077530122081e+99
+          ],
+          [
+            -1.7364817766693037e+99,
+            -9.848077530122081e+99
+          ],
+          [
+            -1.7364817766693037e+99,
+            -9.848077530122081e+99
+          ]
+        ]
+      },
+      "source": {
+        "function": "FoldAngleMultipliers2D",
+        "definitionCell": "In[4092]",
+        "origin": "notebook-definition",
+        "wolframNumericOutAvailable": false,
+        "numericModel": "finite-real-binary64",
+        "chopDocumentation": "https://reference.wolfram.com/language/ref/Chop.html"
+      },
+      "limits": {
+        "maximumRules": 64,
+        "maximumExpressionLeaves": 256,
+        "maximumNestingDepth": 4,
+        "maximumListEntries": 256,
+        "maximumStructureNodes": 2048,
+        "maximumParameters": 256,
+        "maximumCurveDimension": 64,
+        "maximumDivisions": 64,
+        "maximumFoldVertices": 512,
+        "maximumScalarEvaluations": 262144,
+        "maximumAstWeightedEvaluations": 8000000,
+        "maximumRootEvaluations": 4096,
+        "maximumOffsetProducts": 262144,
+        "maximumSourceAstNodes": 96,
+        "maximumSourceCharacters": 240,
+        "maximumParameterMagnitude": 1000000.0
+      },
+      "certification": {
+        "sourceFormulaEvaluated": true,
+        "allSampledValuesFinite": true,
+        "rootEquationNumericallyVerified": false,
+        "rootBranchEquivalentToWolfram": false,
+        "allRootsEnumerated": false,
+        "continuousDomainCertified": false,
+        "symbolicObjectsReproduced": false,
+        "wolframOptionsReproduced": false,
+        "integrationErrorIntervalCertified": false,
+        "adoptableCreasePattern": false,
+        "globalFoldingCertified": false
+      },
+      "sample": {
+        "foldPoints": [
+          [
+            -0.9396926207859084,
+            0.3420201433256687
+          ],
+          [
+            0.0,
+            0.0
+          ],
+          [
+            0.9396926207859084,
+            0.3420201433256687
+          ]
+        ],
+        "leftRulings": [
+          [
+            -1.7364817766693037e+99,
+            9.848077530122081e+99
+          ],
+          [
+            -1.7364817766693037e+99,
+            9.848077530122081e+99
+          ],
+          [
+            -1.7364817766693037e+99,
+            9.848077530122081e+99
+          ]
+        ],
+        "rightRulings": [
+          [
+            -1.7364817766693037e+99,
+            -9.848077530122081e+99
+          ],
+          [
+            -1.7364817766693037e+99,
+            -9.848077530122081e+99
+          ],
+          [
+            -1.7364817766693037e+99,
+            -9.848077530122081e+99
+          ]
+        ],
+        "sectors": [
+          {
+            "vertex": 1,
+            "a1": null,
+            "a2": null,
+            "a3": 1.3962634015954636,
+            "a4": 2.0943951023931957
+          },
+          {
+            "vertex": 2,
+            "a1": 1.0471975511965979,
+            "a2": 1.7453292519943295,
+            "a3": 2.0943951023931957,
+            "a4": 1.3962634015954636
+          },
+          {
+            "vertex": 3,
+            "a1": 1.7453292519943295,
+            "a2": 1.0471975511965979,
+            "a3": null,
+            "a4": null
+          }
+        ],
+        "kawasaki": [
+          {
+            "vertex": 2,
+            "alternatingAngle": 4.440892098500626e-16,
+            "choppedAngle": 0.0
+          }
+        ],
+        "chopTolerance": 1e-10,
+        "chopComparison": "abs(approximate-real-angle) < 1e-10",
+        "chopAppliedToDenominator": false,
+        "multipliers": [
+          2.8793852415718155,
+          -2.8793852415718177,
+          2.8793852415718177
+        ],
+        "quotients": [
+          {
+            "vertex": 1,
+            "numerator": 0.984807753012208,
+            "denominator": 0.3420201433256689,
+            "value": 2.8793852415718155,
+            "state": "finite",
+            "originalDenominatorNonzero": true
+          },
+          {
+            "vertex": 2,
+            "numerator": 0.9848077530122081,
+            "denominator": -0.34202014332566866,
+            "value": -2.8793852415718177,
+            "state": "finite",
+            "originalDenominatorNonzero": true
+          },
+          {
+            "vertex": 3,
+            "numerator": 0.9848077530122081,
+            "denominator": 0.34202014332566866,
+            "value": 2.8793852415718177,
+            "state": "finite",
+            "originalDenominatorNonzero": true
+          }
+        ],
+        "allMultipliersFinite": true,
+        "rawDirectionsPreserved": true
+      }
+    }
+  },
+  {
+    "name": "multipliers-small",
+    "query": {
+      "family": "discretization-generic-native",
+      "mode": "multipliers",
+      "foldPoints": [
+        [
+          -0.9396926207859084,
+          0.3420201433256687
+        ],
+        [
+          0.0,
+          0.0
+        ],
+        [
+          0.9396926207859084,
+          0.3420201433256687
+        ]
+      ],
+      "leftRulings": [
+        [
+          -1.7364817766693037e-101,
+          9.84807753012208e-101
+        ],
+        [
+          -1.7364817766693037e-101,
+          9.84807753012208e-101
+        ],
+        [
+          -1.7364817766693037e-101,
+          9.84807753012208e-101
+        ]
+      ],
+      "rightRulings": [
+        [
+          -1.7364817766693037e-101,
+          -9.84807753012208e-101
+        ],
+        [
+          -1.7364817766693037e-101,
+          -9.84807753012208e-101
+        ],
+        [
+          -1.7364817766693037e-101,
+          -9.84807753012208e-101
+        ]
+      ]
+    },
+    "response": {
+      "family": "origamica-generic-discretization",
+      "query": {
+        "family": "discretization-generic-native",
+        "mode": "multipliers",
+        "foldPoints": [
+          [
+            -0.9396926207859084,
+            0.3420201433256687
+          ],
+          [
+            0.0,
+            0.0
+          ],
+          [
+            0.9396926207859084,
+            0.3420201433256687
+          ]
+        ],
+        "leftRulings": [
+          [
+            -1.7364817766693037e-101,
+            9.84807753012208e-101
+          ],
+          [
+            -1.7364817766693037e-101,
+            9.84807753012208e-101
+          ],
+          [
+            -1.7364817766693037e-101,
+            9.84807753012208e-101
+          ]
+        ],
+        "rightRulings": [
+          [
+            -1.7364817766693037e-101,
+            -9.84807753012208e-101
+          ],
+          [
+            -1.7364817766693037e-101,
+            -9.84807753012208e-101
+          ],
+          [
+            -1.7364817766693037e-101,
+            -9.84807753012208e-101
+          ]
+        ]
+      },
+      "source": {
+        "function": "FoldAngleMultipliers2D",
+        "definitionCell": "In[4092]",
+        "origin": "notebook-definition",
+        "wolframNumericOutAvailable": false,
+        "numericModel": "finite-real-binary64",
+        "chopDocumentation": "https://reference.wolfram.com/language/ref/Chop.html"
+      },
+      "limits": {
+        "maximumRules": 64,
+        "maximumExpressionLeaves": 256,
+        "maximumNestingDepth": 4,
+        "maximumListEntries": 256,
+        "maximumStructureNodes": 2048,
+        "maximumParameters": 256,
+        "maximumCurveDimension": 64,
+        "maximumDivisions": 64,
+        "maximumFoldVertices": 512,
+        "maximumScalarEvaluations": 262144,
+        "maximumAstWeightedEvaluations": 8000000,
+        "maximumRootEvaluations": 4096,
+        "maximumOffsetProducts": 262144,
+        "maximumSourceAstNodes": 96,
+        "maximumSourceCharacters": 240,
+        "maximumParameterMagnitude": 1000000.0
+      },
+      "certification": {
+        "sourceFormulaEvaluated": true,
+        "allSampledValuesFinite": true,
+        "rootEquationNumericallyVerified": false,
+        "rootBranchEquivalentToWolfram": false,
+        "allRootsEnumerated": false,
+        "continuousDomainCertified": false,
+        "symbolicObjectsReproduced": false,
+        "wolframOptionsReproduced": false,
+        "integrationErrorIntervalCertified": false,
+        "adoptableCreasePattern": false,
+        "globalFoldingCertified": false
+      },
+      "sample": {
+        "foldPoints": [
+          [
+            -0.9396926207859084,
+            0.3420201433256687
+          ],
+          [
+            0.0,
+            0.0
+          ],
+          [
+            0.9396926207859084,
+            0.3420201433256687
+          ]
+        ],
+        "leftRulings": [
+          [
+            -1.7364817766693037e-101,
+            9.84807753012208e-101
+          ],
+          [
+            -1.7364817766693037e-101,
+            9.84807753012208e-101
+          ],
+          [
+            -1.7364817766693037e-101,
+            9.84807753012208e-101
+          ]
+        ],
+        "rightRulings": [
+          [
+            -1.7364817766693037e-101,
+            -9.84807753012208e-101
+          ],
+          [
+            -1.7364817766693037e-101,
+            -9.84807753012208e-101
+          ],
+          [
+            -1.7364817766693037e-101,
+            -9.84807753012208e-101
+          ]
+        ],
+        "sectors": [
+          {
+            "vertex": 1,
+            "a1": null,
+            "a2": null,
+            "a3": 1.3962634015954636,
+            "a4": 2.0943951023931957
+          },
+          {
+            "vertex": 2,
+            "a1": 1.0471975511965979,
+            "a2": 1.7453292519943295,
+            "a3": 2.0943951023931957,
+            "a4": 1.3962634015954636
+          },
+          {
+            "vertex": 3,
+            "a1": 1.7453292519943295,
+            "a2": 1.0471975511965979,
+            "a3": null,
+            "a4": null
+          }
+        ],
+        "kawasaki": [
+          {
+            "vertex": 2,
+            "alternatingAngle": 4.440892098500626e-16,
+            "choppedAngle": 0.0
+          }
+        ],
+        "chopTolerance": 1e-10,
+        "chopComparison": "abs(approximate-real-angle) < 1e-10",
+        "chopAppliedToDenominator": false,
+        "multipliers": [
+          2.8793852415718155,
+          -2.8793852415718177,
+          2.8793852415718177
+        ],
+        "quotients": [
+          {
+            "vertex": 1,
+            "numerator": 0.984807753012208,
+            "denominator": 0.3420201433256689,
+            "value": 2.8793852415718155,
+            "state": "finite",
+            "originalDenominatorNonzero": true
+          },
+          {
+            "vertex": 2,
+            "numerator": 0.9848077530122081,
+            "denominator": -0.34202014332566866,
+            "value": -2.8793852415718177,
+            "state": "finite",
+            "originalDenominatorNonzero": true
+          },
+          {
+            "vertex": 3,
+            "numerator": 0.9848077530122081,
+            "denominator": 0.34202014332566866,
+            "value": 2.8793852415718177,
+            "state": "finite",
+            "originalDenominatorNonzero": true
+          }
+        ],
+        "allMultipliersFinite": true,
+        "rawDirectionsPreserved": true
+      }
+    }
+  },
+  {
+    "name": "zero-denominator",
+    "query": {
+      "family": "discretization-generic-native",
+      "mode": "multipliers",
+      "foldPoints": [
+        [
+          0,
+          0
+        ],
+        [
+          1,
+          0
+        ]
+      ],
+      "leftRulings": [
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          1
+        ]
+      ],
+      "rightRulings": [
+        [
+          0,
+          -1
+        ],
+        [
+          0,
+          -1
+        ]
+      ]
+    },
+    "response": {
+      "family": "origamica-generic-discretization",
+      "query": {
+        "family": "discretization-generic-native",
+        "mode": "multipliers",
+        "foldPoints": [
+          [
+            0.0,
+            0.0
+          ],
+          [
+            1.0,
+            0.0
+          ]
+        ],
+        "leftRulings": [
+          [
+            0.0,
+            1.0
+          ],
+          [
+            0.0,
+            1.0
+          ]
+        ],
+        "rightRulings": [
+          [
+            0.0,
+            -1.0
+          ],
+          [
+            0.0,
+            -1.0
+          ]
+        ]
+      },
+      "source": {
+        "function": "FoldAngleMultipliers2D",
+        "definitionCell": "In[4092]",
+        "origin": "notebook-definition",
+        "wolframNumericOutAvailable": false,
+        "numericModel": "finite-real-binary64",
+        "chopDocumentation": "https://reference.wolfram.com/language/ref/Chop.html"
+      },
+      "limits": {
+        "maximumRules": 64,
+        "maximumExpressionLeaves": 256,
+        "maximumNestingDepth": 4,
+        "maximumListEntries": 256,
+        "maximumStructureNodes": 2048,
+        "maximumParameters": 256,
+        "maximumCurveDimension": 64,
+        "maximumDivisions": 64,
+        "maximumFoldVertices": 512,
+        "maximumScalarEvaluations": 262144,
+        "maximumAstWeightedEvaluations": 8000000,
+        "maximumRootEvaluations": 4096,
+        "maximumOffsetProducts": 262144,
+        "maximumSourceAstNodes": 96,
+        "maximumSourceCharacters": 240,
+        "maximumParameterMagnitude": 1000000.0
+      },
+      "certification": {
+        "sourceFormulaEvaluated": true,
+        "allSampledValuesFinite": false,
+        "rootEquationNumericallyVerified": false,
+        "rootBranchEquivalentToWolfram": false,
+        "allRootsEnumerated": false,
+        "continuousDomainCertified": false,
+        "symbolicObjectsReproduced": false,
+        "wolframOptionsReproduced": false,
+        "integrationErrorIntervalCertified": false,
+        "adoptableCreasePattern": false,
+        "globalFoldingCertified": false
+      },
+      "sample": {
+        "foldPoints": [
+          [
+            0.0,
+            0.0
+          ],
+          [
+            1.0,
+            0.0
+          ]
+        ],
+        "leftRulings": [
+          [
+            0.0,
+            1.0
+          ],
+          [
+            0.0,
+            1.0
+          ]
+        ],
+        "rightRulings": [
+          [
+            0.0,
+            -1.0
+          ],
+          [
+            0.0,
+            -1.0
+          ]
+        ],
+        "sectors": [
+          {
+            "vertex": 1,
+            "a1": null,
+            "a2": null,
+            "a3": 1.5707963267948966,
+            "a4": 1.5707963267948966
+          },
+          {
+            "vertex": 2,
+            "a1": 1.5707963267948966,
+            "a2": 1.5707963267948966,
+            "a3": null,
+            "a4": null
+          }
+        ],
+        "kawasaki": [],
+        "chopTolerance": 1e-10,
+        "chopComparison": "abs(approximate-real-angle) < 1e-10",
+        "chopAppliedToDenominator": false,
+        "multipliers": [
+          null,
+          null
+        ],
+        "quotients": [
+          {
+            "vertex": 1,
+            "numerator": 1.0,
+            "denominator": 0.0,
+            "value": null,
+            "state": "original-zero-denominator",
+            "originalDenominatorNonzero": false
+          },
+          {
+            "vertex": 2,
+            "numerator": 1.0,
+            "denominator": 0.0,
+            "value": null,
+            "state": "original-zero-denominator",
+            "originalDenominatorNonzero": false
+          }
+        ],
+        "allMultipliersFinite": false,
+        "rawDirectionsPreserved": true
+      }
+    }
+  },
+  {
+    "name": "small-denominator",
+    "query": {
+      "family": "discretization-generic-native",
+      "mode": "multipliers",
+      "foldPoints": [
+        [
+          0,
+          0
+        ],
+        [
+          1,
+          0
+        ]
+      ],
+      "leftRulings": [
+        [
+          -9.985883987630672e-14,
+          1.0
+        ],
+        [
+          0,
+          1
+        ]
+      ],
+      "rightRulings": [
+        [
+          0,
+          -1
+        ],
+        [
+          0,
+          -1
+        ]
+      ]
+    },
+    "response": {
+      "family": "origamica-generic-discretization",
+      "query": {
+        "family": "discretization-generic-native",
+        "mode": "multipliers",
+        "foldPoints": [
+          [
+            0.0,
+            0.0
+          ],
+          [
+            1.0,
+            0.0
+          ]
+        ],
+        "leftRulings": [
+          [
+            -9.985883987630672e-14,
+            1.0
+          ],
+          [
+            0.0,
+            1.0
+          ]
+        ],
+        "rightRulings": [
+          [
+            0.0,
+            -1.0
+          ],
+          [
+            0.0,
+            -1.0
+          ]
+        ]
+      },
+      "source": {
+        "function": "FoldAngleMultipliers2D",
+        "definitionCell": "In[4092]",
+        "origin": "notebook-definition",
+        "wolframNumericOutAvailable": false,
+        "numericModel": "finite-real-binary64",
+        "chopDocumentation": "https://reference.wolfram.com/language/ref/Chop.html"
+      },
+      "limits": {
+        "maximumRules": 64,
+        "maximumExpressionLeaves": 256,
+        "maximumNestingDepth": 4,
+        "maximumListEntries": 256,
+        "maximumStructureNodes": 2048,
+        "maximumParameters": 256,
+        "maximumCurveDimension": 64,
+        "maximumDivisions": 64,
+        "maximumFoldVertices": 512,
+        "maximumScalarEvaluations": 262144,
+        "maximumAstWeightedEvaluations": 8000000,
+        "maximumRootEvaluations": 4096,
+        "maximumOffsetProducts": 262144,
+        "maximumSourceAstNodes": 96,
+        "maximumSourceCharacters": 240,
+        "maximumParameterMagnitude": 1000000.0
+      },
+      "certification": {
+        "sourceFormulaEvaluated": true,
+        "allSampledValuesFinite": false,
+        "rootEquationNumericallyVerified": false,
+        "rootBranchEquivalentToWolfram": false,
+        "allRootsEnumerated": false,
+        "continuousDomainCertified": false,
+        "symbolicObjectsReproduced": false,
+        "wolframOptionsReproduced": false,
+        "integrationErrorIntervalCertified": false,
+        "adoptableCreasePattern": false,
+        "globalFoldingCertified": false
+      },
+      "sample": {
+        "foldPoints": [
+          [
+            0.0,
+            0.0
+          ],
+          [
+            1.0,
+            0.0
+          ]
+        ],
+        "leftRulings": [
+          [
+            -9.985883987630672e-14,
+            1.0
+          ],
+          [
+            0.0,
+            1.0
+          ]
+        ],
+        "rightRulings": [
+          [
+            0.0,
+            -1.0
+          ],
+          [
+            0.0,
+            -1.0
+          ]
+        ],
+        "sectors": [
+          {
+            "vertex": 1,
+            "a1": null,
+            "a2": null,
+            "a3": 1.5707963267948966,
+            "a4": 1.5707963267949965
+          },
+          {
+            "vertex": 2,
+            "a1": 1.5707963267948966,
+            "a2": 1.5707963267948966,
+            "a3": null,
+            "a4": null
+          }
+        ],
+        "kawasaki": [],
+        "chopTolerance": 1e-10,
+        "chopComparison": "abs(approximate-real-angle) < 1e-10",
+        "chopAppliedToDenominator": false,
+        "multipliers": [
+          20015998343868.87,
+          null
+        ],
+        "quotients": [
+          {
+            "vertex": 1,
+            "numerator": 1.0,
+            "denominator": 4.9960036108132044e-14,
+            "value": 20015998343868.87,
+            "state": "finite",
+            "originalDenominatorNonzero": true
+          },
+          {
+            "vertex": 2,
+            "numerator": 1.0,
+            "denominator": 0.0,
+            "value": null,
+            "state": "original-zero-denominator",
+            "originalDenominatorNonzero": false
+          }
+        ],
+        "allMultipliersFinite": false,
+        "rawDirectionsPreserved": true
+      }
+    }
+  }
+]

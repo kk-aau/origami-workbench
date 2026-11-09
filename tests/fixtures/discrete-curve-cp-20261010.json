@@ -1,0 +1,3138 @@
+{
+  "cases": [
+    {
+      "name": "unspecified",
+      "params": {
+        "family": "discrete-curve-cp",
+        "source": {
+          "family": "discretization-generic-native",
+          "mode": "multipliers",
+          "foldPoints": [
+            [
+              -0.9396926207859084,
+              0.3420201433256687
+            ],
+            [
+              0.0,
+              0.0
+            ],
+            [
+              0.9396926207859084,
+              0.3420201433256687
+            ]
+          ],
+          "leftRulings": [
+            [
+              -0.1736481776669303,
+              0.984807753012208
+            ],
+            [
+              -0.1736481776669303,
+              0.984807753012208
+            ],
+            [
+              -0.1736481776669303,
+              0.984807753012208
+            ]
+          ],
+          "rightRulings": [
+            [
+              -0.17364817766693033,
+              -0.984807753012208
+            ],
+            [
+              -0.17364817766693033,
+              -0.984807753012208
+            ],
+            [
+              -0.17364817766693033,
+              -0.984807753012208
+            ]
+          ]
+        },
+        "leftWidth": 0.4,
+        "rightWidth": 0.4,
+        "assignments": [
+          "U",
+          "U",
+          "U",
+          "U"
+        ]
+      },
+      "response": {
+        "preview": null,
+        "fold": {
+          "file_spec": 1.2,
+          "file_classes": [
+            "singleModel"
+          ],
+          "frame_classes": [
+            "creasePattern"
+          ],
+          "frame_attributes": [
+            "2D"
+          ],
+          "vertices_coords": [
+            [
+              -0.9396926207859084,
+              0.3420201433256687
+            ],
+            [
+              0.0,
+              0.0
+            ],
+            [
+              0.9396926207859084,
+              0.3420201433256687
+            ],
+            [
+              -1.0091518918526805,
+              0.7359432445305519
+            ],
+            [
+              -0.06945927106677212,
+              0.3939231012048832
+            ],
+            [
+              0.8702333497191364,
+              0.7359432445305519
+            ],
+            [
+              -1.0091518918526805,
+              -0.051902957879214506
+            ],
+            [
+              -0.06945927106677213,
+              -0.3939231012048832
+            ],
+            [
+              0.8702333497191364,
+              -0.051902957879214506
+            ]
+          ],
+          "edges_vertices": [
+            [
+              0,
+              1
+            ],
+            [
+              0,
+              3
+            ],
+            [
+              0,
+              6
+            ],
+            [
+              1,
+              2
+            ],
+            [
+              1,
+              4
+            ],
+            [
+              1,
+              7
+            ],
+            [
+              2,
+              5
+            ],
+            [
+              2,
+              8
+            ],
+            [
+              3,
+              4
+            ],
+            [
+              4,
+              5
+            ],
+            [
+              6,
+              7
+            ],
+            [
+              7,
+              8
+            ]
+          ],
+          "edges_assignment": [
+            "U",
+            "B",
+            "B",
+            "U",
+            "U",
+            "U",
+            "B",
+            "B",
+            "B",
+            "B",
+            "B",
+            "B"
+          ],
+          "edges_foldAngle": [
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
+          ],
+          "faces_vertices": [
+            [
+              1,
+              4,
+              3,
+              0
+            ],
+            [
+              2,
+              5,
+              4,
+              1
+            ],
+            [
+              6,
+              7,
+              1,
+              0
+            ],
+            [
+              7,
+              8,
+              2,
+              1
+            ]
+          ],
+          "faces_edges": [
+            [
+              4,
+              8,
+              1,
+              0
+            ],
+            [
+              6,
+              9,
+              4,
+              3
+            ],
+            [
+              10,
+              5,
+              0,
+              2
+            ],
+            [
+              11,
+              7,
+              3,
+              5
+            ]
+          ],
+          "edges_faces": [
+            [
+              0,
+              2
+            ],
+            [
+              0
+            ],
+            [
+              2
+            ],
+            [
+              1,
+              3
+            ],
+            [
+              0,
+              1
+            ],
+            [
+              2,
+              3
+            ],
+            [
+              1
+            ],
+            [
+              3
+            ],
+            [
+              0
+            ],
+            [
+              1
+            ],
+            [
+              2
+            ],
+            [
+              3
+            ]
+          ],
+          "faces_faces": [
+            [
+              1,
+              null,
+              null,
+              2
+            ],
+            [
+              null,
+              null,
+              0,
+              3
+            ],
+            [
+              null,
+              3,
+              0,
+              null
+            ],
+            [
+              null,
+              null,
+              1,
+              2
+            ]
+          ],
+          "file_creator": "折纸工作台 / Origamica finite discrete curve CP bridge",
+          "frame_description": "原有限三点与母线的闭合二维纸带；边界宽度为本地输入，未指定山谷时仅CP。"
+        },
+        "mother": null,
+        "dual": null,
+        "stats": {
+          "vertices": 9,
+          "edges": 12,
+          "faces": 4,
+          "tiles": 4,
+          "mountainEdges": 0,
+          "valleyEdges": 0,
+          "boundaryEdges": 8,
+          "unassignedEdges": 4,
+          "elapsedMs": 1,
+          "parameters": {
+            "family": "discrete-curve-cp",
+            "source": {
+              "family": "discretization-generic-native",
+              "mode": "multipliers",
+              "foldPoints": [
+                [
+                  -0.9396926207859084,
+                  0.3420201433256687
+                ],
+                [
+                  0.0,
+                  0.0
+                ],
+                [
+                  0.9396926207859084,
+                  0.3420201433256687
+                ]
+              ],
+              "leftRulings": [
+                [
+                  -0.1736481776669303,
+                  0.984807753012208
+                ],
+                [
+                  -0.1736481776669303,
+                  0.984807753012208
+                ],
+                [
+                  -0.1736481776669303,
+                  0.984807753012208
+                ]
+              ],
+              "rightRulings": [
+                [
+                  -0.17364817766693033,
+                  -0.984807753012208
+                ],
+                [
+                  -0.17364817766693033,
+                  -0.984807753012208
+                ],
+                [
+                  -0.17364817766693033,
+                  -0.984807753012208
+                ]
+              ]
+            },
+            "leftWidth": 0.4,
+            "rightWidth": 0.4,
+            "assignments": [
+              "U",
+              "U",
+              "U",
+              "U"
+            ]
+          },
+          "checks": {
+            "geometry": {
+              "status": "passed",
+              "zeroLengthEdges": [],
+              "duplicateEdges": [],
+              "crossingCount": 0,
+              "crossingPairs": [],
+              "crossingPairsTruncated": false,
+              "tolerance": 1.948844512638589e-08
+            },
+            "local": {
+              "status": "incomplete",
+              "interiorVertices": 1,
+              "oddDegreeVertices": [],
+              "kawasakiViolations": [],
+              "maekawaViolations": [],
+              "unknownAssignmentVertices": [
+                1
+              ],
+              "maxKawasakiErrorDeg": 0.0,
+              "toleranceDeg": 0.001
+            },
+            "lff": {
+              "status": "incomplete",
+              "scope": "Origamica degree-four local M/V constraints; no global layer order or fold-path proof",
+              "interiorVertices": 1,
+              "checkedVertices": 1,
+              "toleranceDeg": 0.001,
+              "graphVertices": [
+                [
+                  -0.4698463103929542,
+                  0.17101007166283436
+                ],
+                [
+                  -0.9744222563192945,
+                  0.5389816939281104
+                ],
+                [
+                  -0.9744222563192945,
+                  0.1450585927232271
+                ],
+                [
+                  0.4698463103929542,
+                  0.17101007166283436
+                ],
+                [
+                  -0.03472963553338606,
+                  0.1969615506024416
+                ],
+                [
+                  -0.034729635533386066,
+                  -0.1969615506024416
+                ],
+                [
+                  0.9049629852525224,
+                  0.5389816939281104
+                ],
+                [
+                  0.9049629852525224,
+                  0.1450585927232271
+                ],
+                [
+                  -0.5393055814597263,
+                  0.5649331728677176
+                ],
+                [
+                  0.40038703932618214,
+                  0.5649331728677176
+                ],
+                [
+                  -0.5393055814597263,
+                  -0.22291302954204886
+                ],
+                [
+                  0.40038703932618214,
+                  -0.22291302954204886
+                ]
+              ],
+              "graphEdges": [
+                [
+                  4,
+                  0
+                ],
+                [
+                  5,
+                  3
+                ]
+              ],
+              "edgeTypes": [
+                -1,
+                1
+              ],
+              "constraintVertices": [
+                1,
+                1
+              ],
+              "assignmentViolations": [],
+              "unassignedConstraints": [
+                0,
+                1
+              ]
+            },
+            "layerOrder": {
+              "status": "not_checked"
+            }
+          },
+          "foldability": "candidate",
+          "kind": "discrete-curve-cp"
+        },
+        "warnings": [
+          "原函数提供有序点、母线与倍率；纸边宽度、封边和四面装配是明确的本地构造。",
+          "原倍率不唯一指定山谷；U 保持未指定，M/V 仅来自显式用户输入。",
+          "普通采用仍须局部及整片层序通过；仅CP不会载入折后位置或层序证书。",
+          "这是有限三点折线纸带，不是连续曲线、原保存数值 Out 或三维/运动/碰撞认证。"
+        ],
+        "source": {
+          "name": "折纸工作台",
+          "license": "GPL-3.0-only",
+          "algorithm": "Origamica discrete curve CP bridge",
+          "version": 1,
+          "output": "crease-pattern",
+          "parameters": {
+            "family": "discrete-curve-cp",
+            "source": {
+              "family": "discretization-generic-native",
+              "mode": "multipliers",
+              "foldPoints": [
+                [
+                  -0.9396926207859084,
+                  0.3420201433256687
+                ],
+                [
+                  0.0,
+                  0.0
+                ],
+                [
+                  0.9396926207859084,
+                  0.3420201433256687
+                ]
+              ],
+              "leftRulings": [
+                [
+                  -0.1736481776669303,
+                  0.984807753012208
+                ],
+                [
+                  -0.1736481776669303,
+                  0.984807753012208
+                ],
+                [
+                  -0.1736481776669303,
+                  0.984807753012208
+                ]
+              ],
+              "rightRulings": [
+                [
+                  -0.17364817766693033,
+                  -0.984807753012208
+                ],
+                [
+                  -0.17364817766693033,
+                  -0.984807753012208
+                ],
+                [
+                  -0.17364817766693033,
+                  -0.984807753012208
+                ]
+              ]
+            },
+            "leftWidth": 0.4,
+            "rightWidth": 0.4,
+            "assignments": [
+              "U",
+              "U",
+              "U",
+              "U"
+            ]
+          },
+          "nativeDiscretization": {
+            "family": "origamica-generic-discretization",
+            "query": {
+              "family": "discretization-generic-native",
+              "mode": "multipliers",
+              "foldPoints": [
+                [
+                  -0.9396926207859084,
+                  0.3420201433256687
+                ],
+                [
+                  0.0,
+                  0.0
+                ],
+                [
+                  0.9396926207859084,
+                  0.3420201433256687
+                ]
+              ],
+              "leftRulings": [
+                [
+                  -0.1736481776669303,
+                  0.984807753012208
+                ],
+                [
+                  -0.1736481776669303,
+                  0.984807753012208
+                ],
+                [
+                  -0.1736481776669303,
+                  0.984807753012208
+                ]
+              ],
+              "rightRulings": [
+                [
+                  -0.17364817766693033,
+                  -0.984807753012208
+                ],
+                [
+                  -0.17364817766693033,
+                  -0.984807753012208
+                ],
+                [
+                  -0.17364817766693033,
+                  -0.984807753012208
+                ]
+              ]
+            },
+            "source": {
+              "function": "FoldAngleMultipliers2D",
+              "definitionCell": "In[4092]",
+              "origin": "notebook-definition",
+              "wolframNumericOutAvailable": false,
+              "numericModel": "finite-real-binary64",
+              "chopDocumentation": "https://reference.wolfram.com/language/ref/Chop.html"
+            },
+            "limits": {
+              "maximumRules": 64,
+              "maximumExpressionLeaves": 256,
+              "maximumNestingDepth": 4,
+              "maximumListEntries": 256,
+              "maximumStructureNodes": 2048,
+              "maximumParameters": 256,
+              "maximumCurveDimension": 64,
+              "maximumDivisions": 64,
+              "maximumFoldVertices": 512,
+              "maximumScalarEvaluations": 262144,
+              "maximumAstWeightedEvaluations": 8000000,
+              "maximumRootEvaluations": 4096,
+              "maximumOffsetProducts": 262144,
+              "maximumSourceAstNodes": 96,
+              "maximumSourceCharacters": 240,
+              "maximumParameterMagnitude": 1000000.0
+            },
+            "certification": {
+              "sourceFormulaEvaluated": true,
+              "allSampledValuesFinite": true,
+              "rootEquationNumericallyVerified": false,
+              "rootBranchEquivalentToWolfram": false,
+              "allRootsEnumerated": false,
+              "continuousDomainCertified": false,
+              "symbolicObjectsReproduced": false,
+              "wolframOptionsReproduced": false,
+              "integrationErrorIntervalCertified": false,
+              "adoptableCreasePattern": false,
+              "globalFoldingCertified": false
+            },
+            "sample": {
+              "foldPoints": [
+                [
+                  -0.9396926207859084,
+                  0.3420201433256687
+                ],
+                [
+                  0.0,
+                  0.0
+                ],
+                [
+                  0.9396926207859084,
+                  0.3420201433256687
+                ]
+              ],
+              "leftRulings": [
+                [
+                  -0.1736481776669303,
+                  0.984807753012208
+                ],
+                [
+                  -0.1736481776669303,
+                  0.984807753012208
+                ],
+                [
+                  -0.1736481776669303,
+                  0.984807753012208
+                ]
+              ],
+              "rightRulings": [
+                [
+                  -0.17364817766693033,
+                  -0.984807753012208
+                ],
+                [
+                  -0.17364817766693033,
+                  -0.984807753012208
+                ],
+                [
+                  -0.17364817766693033,
+                  -0.984807753012208
+                ]
+              ],
+              "sectors": [
+                {
+                  "vertex": 1,
+                  "a1": null,
+                  "a2": null,
+                  "a3": 1.3962634015954636,
+                  "a4": 2.0943951023931957
+                },
+                {
+                  "vertex": 2,
+                  "a1": 1.0471975511965979,
+                  "a2": 1.7453292519943295,
+                  "a3": 2.0943951023931957,
+                  "a4": 1.3962634015954636
+                },
+                {
+                  "vertex": 3,
+                  "a1": 1.7453292519943295,
+                  "a2": 1.0471975511965979,
+                  "a3": null,
+                  "a4": null
+                }
+              ],
+              "kawasaki": [
+                {
+                  "vertex": 2,
+                  "alternatingAngle": 4.440892098500626e-16,
+                  "choppedAngle": 0.0
+                }
+              ],
+              "chopTolerance": 1e-10,
+              "chopComparison": "abs(approximate-real-angle) < 1e-10",
+              "chopAppliedToDenominator": false,
+              "multipliers": [
+                2.8793852415718155,
+                -2.8793852415718177,
+                2.8793852415718177
+              ],
+              "quotients": [
+                {
+                  "vertex": 1,
+                  "numerator": 0.984807753012208,
+                  "denominator": 0.3420201433256689,
+                  "value": 2.8793852415718155,
+                  "state": "finite",
+                  "originalDenominatorNonzero": true
+                },
+                {
+                  "vertex": 2,
+                  "numerator": 0.9848077530122081,
+                  "denominator": -0.34202014332566866,
+                  "value": -2.8793852415718177,
+                  "state": "finite",
+                  "originalDenominatorNonzero": true
+                },
+                {
+                  "vertex": 3,
+                  "numerator": 0.9848077530122081,
+                  "denominator": 0.34202014332566866,
+                  "value": 2.8793852415718177,
+                  "state": "finite",
+                  "originalDenominatorNonzero": true
+                }
+              ],
+              "allMultipliersFinite": true,
+              "rawDirectionsPreserved": true
+            }
+          },
+          "assembly": "three-point-two-sided-strip-v1",
+          "localBoundaryWidths": true,
+          "internalEdgeOrder": [
+            [
+              0,
+              1
+            ],
+            [
+              1,
+              2
+            ],
+            [
+              1,
+              4
+            ],
+            [
+              1,
+              7
+            ]
+          ],
+          "assignmentOrigin": "unspecified",
+          "staticGlobalIsometryChecked": false,
+          "continuousRigidPathChecked": false,
+          "selfCollisionChecked": false,
+          "wolframExecuted": false,
+          "continuousCurveEquivalent": false
+        }
+      }
+    },
+    {
+      "name": "explicit-valid-assignments",
+      "params": {
+        "family": "discrete-curve-cp",
+        "source": {
+          "family": "discretization-generic-native",
+          "mode": "multipliers",
+          "foldPoints": [
+            [
+              -0.9396926207859084,
+              0.3420201433256687
+            ],
+            [
+              0.0,
+              0.0
+            ],
+            [
+              0.9396926207859084,
+              0.3420201433256687
+            ]
+          ],
+          "leftRulings": [
+            [
+              -0.1736481776669303,
+              0.984807753012208
+            ],
+            [
+              -0.1736481776669303,
+              0.984807753012208
+            ],
+            [
+              -0.1736481776669303,
+              0.984807753012208
+            ]
+          ],
+          "rightRulings": [
+            [
+              -0.17364817766693033,
+              -0.984807753012208
+            ],
+            [
+              -0.17364817766693033,
+              -0.984807753012208
+            ],
+            [
+              -0.17364817766693033,
+              -0.984807753012208
+            ]
+          ]
+        },
+        "leftWidth": 0.4,
+        "rightWidth": 0.4,
+        "assignments": [
+          "M",
+          "M",
+          "V",
+          "M"
+        ]
+      },
+      "response": {
+        "preview": null,
+        "fold": {
+          "file_spec": 1.2,
+          "file_classes": [
+            "singleModel"
+          ],
+          "frame_classes": [
+            "creasePattern"
+          ],
+          "frame_attributes": [
+            "2D"
+          ],
+          "vertices_coords": [
+            [
+              -0.9396926207859084,
+              0.3420201433256687
+            ],
+            [
+              0.0,
+              0.0
+            ],
+            [
+              0.9396926207859084,
+              0.3420201433256687
+            ],
+            [
+              -1.0091518918526805,
+              0.7359432445305519
+            ],
+            [
+              -0.06945927106677212,
+              0.3939231012048832
+            ],
+            [
+              0.8702333497191364,
+              0.7359432445305519
+            ],
+            [
+              -1.0091518918526805,
+              -0.051902957879214506
+            ],
+            [
+              -0.06945927106677213,
+              -0.3939231012048832
+            ],
+            [
+              0.8702333497191364,
+              -0.051902957879214506
+            ]
+          ],
+          "edges_vertices": [
+            [
+              0,
+              1
+            ],
+            [
+              0,
+              3
+            ],
+            [
+              0,
+              6
+            ],
+            [
+              1,
+              2
+            ],
+            [
+              1,
+              4
+            ],
+            [
+              1,
+              7
+            ],
+            [
+              2,
+              5
+            ],
+            [
+              2,
+              8
+            ],
+            [
+              3,
+              4
+            ],
+            [
+              4,
+              5
+            ],
+            [
+              6,
+              7
+            ],
+            [
+              7,
+              8
+            ]
+          ],
+          "edges_assignment": [
+            "M",
+            "B",
+            "B",
+            "M",
+            "V",
+            "M",
+            "B",
+            "B",
+            "B",
+            "B",
+            "B",
+            "B"
+          ],
+          "edges_foldAngle": [
+            -180,
+            null,
+            null,
+            -180,
+            180,
+            -180,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
+          ],
+          "faces_vertices": [
+            [
+              1,
+              4,
+              3,
+              0
+            ],
+            [
+              2,
+              5,
+              4,
+              1
+            ],
+            [
+              6,
+              7,
+              1,
+              0
+            ],
+            [
+              7,
+              8,
+              2,
+              1
+            ]
+          ],
+          "faces_edges": [
+            [
+              4,
+              8,
+              1,
+              0
+            ],
+            [
+              6,
+              9,
+              4,
+              3
+            ],
+            [
+              10,
+              5,
+              0,
+              2
+            ],
+            [
+              11,
+              7,
+              3,
+              5
+            ]
+          ],
+          "edges_faces": [
+            [
+              0,
+              2
+            ],
+            [
+              0
+            ],
+            [
+              2
+            ],
+            [
+              1,
+              3
+            ],
+            [
+              0,
+              1
+            ],
+            [
+              2,
+              3
+            ],
+            [
+              1
+            ],
+            [
+              3
+            ],
+            [
+              0
+            ],
+            [
+              1
+            ],
+            [
+              2
+            ],
+            [
+              3
+            ]
+          ],
+          "faces_faces": [
+            [
+              1,
+              null,
+              null,
+              2
+            ],
+            [
+              null,
+              null,
+              0,
+              3
+            ],
+            [
+              null,
+              3,
+              0,
+              null
+            ],
+            [
+              null,
+              null,
+              1,
+              2
+            ]
+          ],
+          "file_creator": "折纸工作台 / Origamica finite discrete curve CP bridge",
+          "frame_description": "原有限三点与母线的闭合二维纸带；边界宽度为本地输入，未指定山谷时仅CP。"
+        },
+        "mother": null,
+        "dual": null,
+        "stats": {
+          "vertices": 9,
+          "edges": 12,
+          "faces": 4,
+          "tiles": 4,
+          "mountainEdges": 3,
+          "valleyEdges": 1,
+          "boundaryEdges": 8,
+          "unassignedEdges": 0,
+          "elapsedMs": 0,
+          "parameters": {
+            "family": "discrete-curve-cp",
+            "source": {
+              "family": "discretization-generic-native",
+              "mode": "multipliers",
+              "foldPoints": [
+                [
+                  -0.9396926207859084,
+                  0.3420201433256687
+                ],
+                [
+                  0.0,
+                  0.0
+                ],
+                [
+                  0.9396926207859084,
+                  0.3420201433256687
+                ]
+              ],
+              "leftRulings": [
+                [
+                  -0.1736481776669303,
+                  0.984807753012208
+                ],
+                [
+                  -0.1736481776669303,
+                  0.984807753012208
+                ],
+                [
+                  -0.1736481776669303,
+                  0.984807753012208
+                ]
+              ],
+              "rightRulings": [
+                [
+                  -0.17364817766693033,
+                  -0.984807753012208
+                ],
+                [
+                  -0.17364817766693033,
+                  -0.984807753012208
+                ],
+                [
+                  -0.17364817766693033,
+                  -0.984807753012208
+                ]
+              ]
+            },
+            "leftWidth": 0.4,
+            "rightWidth": 0.4,
+            "assignments": [
+              "M",
+              "M",
+              "V",
+              "M"
+            ]
+          },
+          "checks": {
+            "geometry": {
+              "status": "passed",
+              "zeroLengthEdges": [],
+              "duplicateEdges": [],
+              "crossingCount": 0,
+              "crossingPairs": [],
+              "crossingPairsTruncated": false,
+              "tolerance": 1.948844512638589e-08
+            },
+            "local": {
+              "status": "passed",
+              "interiorVertices": 1,
+              "oddDegreeVertices": [],
+              "kawasakiViolations": [],
+              "maekawaViolations": [],
+              "unknownAssignmentVertices": [],
+              "maxKawasakiErrorDeg": 0.0,
+              "toleranceDeg": 0.001
+            },
+            "lff": {
+              "status": "passed",
+              "scope": "Origamica degree-four local M/V constraints; no global layer order or fold-path proof",
+              "interiorVertices": 1,
+              "checkedVertices": 1,
+              "toleranceDeg": 0.001,
+              "graphVertices": [
+                [
+                  -0.4698463103929542,
+                  0.17101007166283436
+                ],
+                [
+                  -0.9744222563192945,
+                  0.5389816939281104
+                ],
+                [
+                  -0.9744222563192945,
+                  0.1450585927232271
+                ],
+                [
+                  0.4698463103929542,
+                  0.17101007166283436
+                ],
+                [
+                  -0.03472963553338606,
+                  0.1969615506024416
+                ],
+                [
+                  -0.034729635533386066,
+                  -0.1969615506024416
+                ],
+                [
+                  0.9049629852525224,
+                  0.5389816939281104
+                ],
+                [
+                  0.9049629852525224,
+                  0.1450585927232271
+                ],
+                [
+                  -0.5393055814597263,
+                  0.5649331728677176
+                ],
+                [
+                  0.40038703932618214,
+                  0.5649331728677176
+                ],
+                [
+                  -0.5393055814597263,
+                  -0.22291302954204886
+                ],
+                [
+                  0.40038703932618214,
+                  -0.22291302954204886
+                ]
+              ],
+              "graphEdges": [
+                [
+                  4,
+                  0
+                ],
+                [
+                  5,
+                  3
+                ]
+              ],
+              "edgeTypes": [
+                -1,
+                1
+              ],
+              "constraintVertices": [
+                1,
+                1
+              ],
+              "assignmentViolations": [],
+              "unassignedConstraints": []
+            },
+            "layerOrder": {
+              "status": "not_checked"
+            }
+          },
+          "foldability": "candidate",
+          "kind": "discrete-curve-cp"
+        },
+        "warnings": [
+          "原函数提供有序点、母线与倍率；纸边宽度、封边和四面装配是明确的本地构造。",
+          "原倍率不唯一指定山谷；U 保持未指定，M/V 仅来自显式用户输入。",
+          "普通采用仍须局部及整片层序通过；仅CP不会载入折后位置或层序证书。",
+          "这是有限三点折线纸带，不是连续曲线、原保存数值 Out 或三维/运动/碰撞认证。"
+        ],
+        "source": {
+          "name": "折纸工作台",
+          "license": "GPL-3.0-only",
+          "algorithm": "Origamica discrete curve CP bridge",
+          "version": 1,
+          "output": "crease-pattern",
+          "parameters": {
+            "family": "discrete-curve-cp",
+            "source": {
+              "family": "discretization-generic-native",
+              "mode": "multipliers",
+              "foldPoints": [
+                [
+                  -0.9396926207859084,
+                  0.3420201433256687
+                ],
+                [
+                  0.0,
+                  0.0
+                ],
+                [
+                  0.9396926207859084,
+                  0.3420201433256687
+                ]
+              ],
+              "leftRulings": [
+                [
+                  -0.1736481776669303,
+                  0.984807753012208
+                ],
+                [
+                  -0.1736481776669303,
+                  0.984807753012208
+                ],
+                [
+                  -0.1736481776669303,
+                  0.984807753012208
+                ]
+              ],
+              "rightRulings": [
+                [
+                  -0.17364817766693033,
+                  -0.984807753012208
+                ],
+                [
+                  -0.17364817766693033,
+                  -0.984807753012208
+                ],
+                [
+                  -0.17364817766693033,
+                  -0.984807753012208
+                ]
+              ]
+            },
+            "leftWidth": 0.4,
+            "rightWidth": 0.4,
+            "assignments": [
+              "M",
+              "M",
+              "V",
+              "M"
+            ]
+          },
+          "nativeDiscretization": {
+            "family": "origamica-generic-discretization",
+            "query": {
+              "family": "discretization-generic-native",
+              "mode": "multipliers",
+              "foldPoints": [
+                [
+                  -0.9396926207859084,
+                  0.3420201433256687
+                ],
+                [
+                  0.0,
+                  0.0
+                ],
+                [
+                  0.9396926207859084,
+                  0.3420201433256687
+                ]
+              ],
+              "leftRulings": [
+                [
+                  -0.1736481776669303,
+                  0.984807753012208
+                ],
+                [
+                  -0.1736481776669303,
+                  0.984807753012208
+                ],
+                [
+                  -0.1736481776669303,
+                  0.984807753012208
+                ]
+              ],
+              "rightRulings": [
+                [
+                  -0.17364817766693033,
+                  -0.984807753012208
+                ],
+                [
+                  -0.17364817766693033,
+                  -0.984807753012208
+                ],
+                [
+                  -0.17364817766693033,
+                  -0.984807753012208
+                ]
+              ]
+            },
+            "source": {
+              "function": "FoldAngleMultipliers2D",
+              "definitionCell": "In[4092]",
+              "origin": "notebook-definition",
+              "wolframNumericOutAvailable": false,
+              "numericModel": "finite-real-binary64",
+              "chopDocumentation": "https://reference.wolfram.com/language/ref/Chop.html"
+            },
+            "limits": {
+              "maximumRules": 64,
+              "maximumExpressionLeaves": 256,
+              "maximumNestingDepth": 4,
+              "maximumListEntries": 256,
+              "maximumStructureNodes": 2048,
+              "maximumParameters": 256,
+              "maximumCurveDimension": 64,
+              "maximumDivisions": 64,
+              "maximumFoldVertices": 512,
+              "maximumScalarEvaluations": 262144,
+              "maximumAstWeightedEvaluations": 8000000,
+              "maximumRootEvaluations": 4096,
+              "maximumOffsetProducts": 262144,
+              "maximumSourceAstNodes": 96,
+              "maximumSourceCharacters": 240,
+              "maximumParameterMagnitude": 1000000.0
+            },
+            "certification": {
+              "sourceFormulaEvaluated": true,
+              "allSampledValuesFinite": true,
+              "rootEquationNumericallyVerified": false,
+              "rootBranchEquivalentToWolfram": false,
+              "allRootsEnumerated": false,
+              "continuousDomainCertified": false,
+              "symbolicObjectsReproduced": false,
+              "wolframOptionsReproduced": false,
+              "integrationErrorIntervalCertified": false,
+              "adoptableCreasePattern": false,
+              "globalFoldingCertified": false
+            },
+            "sample": {
+              "foldPoints": [
+                [
+                  -0.9396926207859084,
+                  0.3420201433256687
+                ],
+                [
+                  0.0,
+                  0.0
+                ],
+                [
+                  0.9396926207859084,
+                  0.3420201433256687
+                ]
+              ],
+              "leftRulings": [
+                [
+                  -0.1736481776669303,
+                  0.984807753012208
+                ],
+                [
+                  -0.1736481776669303,
+                  0.984807753012208
+                ],
+                [
+                  -0.1736481776669303,
+                  0.984807753012208
+                ]
+              ],
+              "rightRulings": [
+                [
+                  -0.17364817766693033,
+                  -0.984807753012208
+                ],
+                [
+                  -0.17364817766693033,
+                  -0.984807753012208
+                ],
+                [
+                  -0.17364817766693033,
+                  -0.984807753012208
+                ]
+              ],
+              "sectors": [
+                {
+                  "vertex": 1,
+                  "a1": null,
+                  "a2": null,
+                  "a3": 1.3962634015954636,
+                  "a4": 2.0943951023931957
+                },
+                {
+                  "vertex": 2,
+                  "a1": 1.0471975511965979,
+                  "a2": 1.7453292519943295,
+                  "a3": 2.0943951023931957,
+                  "a4": 1.3962634015954636
+                },
+                {
+                  "vertex": 3,
+                  "a1": 1.7453292519943295,
+                  "a2": 1.0471975511965979,
+                  "a3": null,
+                  "a4": null
+                }
+              ],
+              "kawasaki": [
+                {
+                  "vertex": 2,
+                  "alternatingAngle": 4.440892098500626e-16,
+                  "choppedAngle": 0.0
+                }
+              ],
+              "chopTolerance": 1e-10,
+              "chopComparison": "abs(approximate-real-angle) < 1e-10",
+              "chopAppliedToDenominator": false,
+              "multipliers": [
+                2.8793852415718155,
+                -2.8793852415718177,
+                2.8793852415718177
+              ],
+              "quotients": [
+                {
+                  "vertex": 1,
+                  "numerator": 0.984807753012208,
+                  "denominator": 0.3420201433256689,
+                  "value": 2.8793852415718155,
+                  "state": "finite",
+                  "originalDenominatorNonzero": true
+                },
+                {
+                  "vertex": 2,
+                  "numerator": 0.9848077530122081,
+                  "denominator": -0.34202014332566866,
+                  "value": -2.8793852415718177,
+                  "state": "finite",
+                  "originalDenominatorNonzero": true
+                },
+                {
+                  "vertex": 3,
+                  "numerator": 0.9848077530122081,
+                  "denominator": 0.34202014332566866,
+                  "value": 2.8793852415718177,
+                  "state": "finite",
+                  "originalDenominatorNonzero": true
+                }
+              ],
+              "allMultipliersFinite": true,
+              "rawDirectionsPreserved": true
+            }
+          },
+          "assembly": "three-point-two-sided-strip-v1",
+          "localBoundaryWidths": true,
+          "internalEdgeOrder": [
+            [
+              0,
+              1
+            ],
+            [
+              1,
+              2
+            ],
+            [
+              1,
+              4
+            ],
+            [
+              1,
+              7
+            ]
+          ],
+          "assignmentOrigin": "explicit-user",
+          "staticGlobalIsometryChecked": false,
+          "continuousRigidPathChecked": false,
+          "selfCollisionChecked": false,
+          "wolframExecuted": false,
+          "continuousCurveEquivalent": false
+        }
+      }
+    },
+    {
+      "name": "local-passed-lff-failed",
+      "params": {
+        "family": "discrete-curve-cp",
+        "source": {
+          "family": "discretization-generic-native",
+          "mode": "multipliers",
+          "foldPoints": [
+            [
+              -0.9396926207859084,
+              0.3420201433256687
+            ],
+            [
+              0.0,
+              0.0
+            ],
+            [
+              0.9396926207859084,
+              0.3420201433256687
+            ]
+          ],
+          "leftRulings": [
+            [
+              -0.1736481776669303,
+              0.984807753012208
+            ],
+            [
+              -0.1736481776669303,
+              0.984807753012208
+            ],
+            [
+              -0.1736481776669303,
+              0.984807753012208
+            ]
+          ],
+          "rightRulings": [
+            [
+              -0.17364817766693033,
+              -0.984807753012208
+            ],
+            [
+              -0.17364817766693033,
+              -0.984807753012208
+            ],
+            [
+              -0.17364817766693033,
+              -0.984807753012208
+            ]
+          ]
+        },
+        "leftWidth": 0.4,
+        "rightWidth": 0.4,
+        "assignments": [
+          "M",
+          "M",
+          "M",
+          "V"
+        ]
+      },
+      "response": {
+        "preview": null,
+        "fold": {
+          "file_spec": 1.2,
+          "file_classes": [
+            "singleModel"
+          ],
+          "frame_classes": [
+            "creasePattern"
+          ],
+          "frame_attributes": [
+            "2D"
+          ],
+          "vertices_coords": [
+            [
+              -0.9396926207859084,
+              0.3420201433256687
+            ],
+            [
+              0.0,
+              0.0
+            ],
+            [
+              0.9396926207859084,
+              0.3420201433256687
+            ],
+            [
+              -1.0091518918526805,
+              0.7359432445305519
+            ],
+            [
+              -0.06945927106677212,
+              0.3939231012048832
+            ],
+            [
+              0.8702333497191364,
+              0.7359432445305519
+            ],
+            [
+              -1.0091518918526805,
+              -0.051902957879214506
+            ],
+            [
+              -0.06945927106677213,
+              -0.3939231012048832
+            ],
+            [
+              0.8702333497191364,
+              -0.051902957879214506
+            ]
+          ],
+          "edges_vertices": [
+            [
+              0,
+              1
+            ],
+            [
+              0,
+              3
+            ],
+            [
+              0,
+              6
+            ],
+            [
+              1,
+              2
+            ],
+            [
+              1,
+              4
+            ],
+            [
+              1,
+              7
+            ],
+            [
+              2,
+              5
+            ],
+            [
+              2,
+              8
+            ],
+            [
+              3,
+              4
+            ],
+            [
+              4,
+              5
+            ],
+            [
+              6,
+              7
+            ],
+            [
+              7,
+              8
+            ]
+          ],
+          "edges_assignment": [
+            "M",
+            "B",
+            "B",
+            "M",
+            "M",
+            "V",
+            "B",
+            "B",
+            "B",
+            "B",
+            "B",
+            "B"
+          ],
+          "edges_foldAngle": [
+            -180,
+            null,
+            null,
+            -180,
+            -180,
+            180,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
+          ],
+          "faces_vertices": [
+            [
+              1,
+              4,
+              3,
+              0
+            ],
+            [
+              2,
+              5,
+              4,
+              1
+            ],
+            [
+              6,
+              7,
+              1,
+              0
+            ],
+            [
+              7,
+              8,
+              2,
+              1
+            ]
+          ],
+          "faces_edges": [
+            [
+              4,
+              8,
+              1,
+              0
+            ],
+            [
+              6,
+              9,
+              4,
+              3
+            ],
+            [
+              10,
+              5,
+              0,
+              2
+            ],
+            [
+              11,
+              7,
+              3,
+              5
+            ]
+          ],
+          "edges_faces": [
+            [
+              0,
+              2
+            ],
+            [
+              0
+            ],
+            [
+              2
+            ],
+            [
+              1,
+              3
+            ],
+            [
+              0,
+              1
+            ],
+            [
+              2,
+              3
+            ],
+            [
+              1
+            ],
+            [
+              3
+            ],
+            [
+              0
+            ],
+            [
+              1
+            ],
+            [
+              2
+            ],
+            [
+              3
+            ]
+          ],
+          "faces_faces": [
+            [
+              1,
+              null,
+              null,
+              2
+            ],
+            [
+              null,
+              null,
+              0,
+              3
+            ],
+            [
+              null,
+              3,
+              0,
+              null
+            ],
+            [
+              null,
+              null,
+              1,
+              2
+            ]
+          ],
+          "file_creator": "折纸工作台 / Origamica finite discrete curve CP bridge",
+          "frame_description": "原有限三点与母线的闭合二维纸带；边界宽度为本地输入，未指定山谷时仅CP。"
+        },
+        "mother": null,
+        "dual": null,
+        "stats": {
+          "vertices": 9,
+          "edges": 12,
+          "faces": 4,
+          "tiles": 4,
+          "mountainEdges": 3,
+          "valleyEdges": 1,
+          "boundaryEdges": 8,
+          "unassignedEdges": 0,
+          "elapsedMs": 0,
+          "parameters": {
+            "family": "discrete-curve-cp",
+            "source": {
+              "family": "discretization-generic-native",
+              "mode": "multipliers",
+              "foldPoints": [
+                [
+                  -0.9396926207859084,
+                  0.3420201433256687
+                ],
+                [
+                  0.0,
+                  0.0
+                ],
+                [
+                  0.9396926207859084,
+                  0.3420201433256687
+                ]
+              ],
+              "leftRulings": [
+                [
+                  -0.1736481776669303,
+                  0.984807753012208
+                ],
+                [
+                  -0.1736481776669303,
+                  0.984807753012208
+                ],
+                [
+                  -0.1736481776669303,
+                  0.984807753012208
+                ]
+              ],
+              "rightRulings": [
+                [
+                  -0.17364817766693033,
+                  -0.984807753012208
+                ],
+                [
+                  -0.17364817766693033,
+                  -0.984807753012208
+                ],
+                [
+                  -0.17364817766693033,
+                  -0.984807753012208
+                ]
+              ]
+            },
+            "leftWidth": 0.4,
+            "rightWidth": 0.4,
+            "assignments": [
+              "M",
+              "M",
+              "M",
+              "V"
+            ]
+          },
+          "checks": {
+            "geometry": {
+              "status": "passed",
+              "zeroLengthEdges": [],
+              "duplicateEdges": [],
+              "crossingCount": 0,
+              "crossingPairs": [],
+              "crossingPairsTruncated": false,
+              "tolerance": 1.948844512638589e-08
+            },
+            "local": {
+              "status": "passed",
+              "interiorVertices": 1,
+              "oddDegreeVertices": [],
+              "kawasakiViolations": [],
+              "maekawaViolations": [],
+              "unknownAssignmentVertices": [],
+              "maxKawasakiErrorDeg": 0.0,
+              "toleranceDeg": 0.001
+            },
+            "lff": {
+              "status": "failed",
+              "scope": "Origamica degree-four local M/V constraints; no global layer order or fold-path proof",
+              "interiorVertices": 1,
+              "checkedVertices": 1,
+              "toleranceDeg": 0.001,
+              "graphVertices": [
+                [
+                  -0.4698463103929542,
+                  0.17101007166283436
+                ],
+                [
+                  -0.9744222563192945,
+                  0.5389816939281104
+                ],
+                [
+                  -0.9744222563192945,
+                  0.1450585927232271
+                ],
+                [
+                  0.4698463103929542,
+                  0.17101007166283436
+                ],
+                [
+                  -0.03472963553338606,
+                  0.1969615506024416
+                ],
+                [
+                  -0.034729635533386066,
+                  -0.1969615506024416
+                ],
+                [
+                  0.9049629852525224,
+                  0.5389816939281104
+                ],
+                [
+                  0.9049629852525224,
+                  0.1450585927232271
+                ],
+                [
+                  -0.5393055814597263,
+                  0.5649331728677176
+                ],
+                [
+                  0.40038703932618214,
+                  0.5649331728677176
+                ],
+                [
+                  -0.5393055814597263,
+                  -0.22291302954204886
+                ],
+                [
+                  0.40038703932618214,
+                  -0.22291302954204886
+                ]
+              ],
+              "graphEdges": [
+                [
+                  4,
+                  0
+                ],
+                [
+                  5,
+                  3
+                ]
+              ],
+              "edgeTypes": [
+                -1,
+                1
+              ],
+              "constraintVertices": [
+                1,
+                1
+              ],
+              "assignmentViolations": [
+                0,
+                1
+              ],
+              "unassignedConstraints": [],
+              "reason": "necessary_condition_conflict"
+            },
+            "layerOrder": {
+              "status": "not_checked"
+            }
+          },
+          "foldability": "candidate",
+          "kind": "discrete-curve-cp"
+        },
+        "warnings": [
+          "原函数提供有序点、母线与倍率；纸边宽度、封边和四面装配是明确的本地构造。",
+          "原倍率不唯一指定山谷；U 保持未指定，M/V 仅来自显式用户输入。",
+          "普通采用仍须局部及整片层序通过；仅CP不会载入折后位置或层序证书。",
+          "这是有限三点折线纸带，不是连续曲线、原保存数值 Out 或三维/运动/碰撞认证。"
+        ],
+        "source": {
+          "name": "折纸工作台",
+          "license": "GPL-3.0-only",
+          "algorithm": "Origamica discrete curve CP bridge",
+          "version": 1,
+          "output": "crease-pattern",
+          "parameters": {
+            "family": "discrete-curve-cp",
+            "source": {
+              "family": "discretization-generic-native",
+              "mode": "multipliers",
+              "foldPoints": [
+                [
+                  -0.9396926207859084,
+                  0.3420201433256687
+                ],
+                [
+                  0.0,
+                  0.0
+                ],
+                [
+                  0.9396926207859084,
+                  0.3420201433256687
+                ]
+              ],
+              "leftRulings": [
+                [
+                  -0.1736481776669303,
+                  0.984807753012208
+                ],
+                [
+                  -0.1736481776669303,
+                  0.984807753012208
+                ],
+                [
+                  -0.1736481776669303,
+                  0.984807753012208
+                ]
+              ],
+              "rightRulings": [
+                [
+                  -0.17364817766693033,
+                  -0.984807753012208
+                ],
+                [
+                  -0.17364817766693033,
+                  -0.984807753012208
+                ],
+                [
+                  -0.17364817766693033,
+                  -0.984807753012208
+                ]
+              ]
+            },
+            "leftWidth": 0.4,
+            "rightWidth": 0.4,
+            "assignments": [
+              "M",
+              "M",
+              "M",
+              "V"
+            ]
+          },
+          "nativeDiscretization": {
+            "family": "origamica-generic-discretization",
+            "query": {
+              "family": "discretization-generic-native",
+              "mode": "multipliers",
+              "foldPoints": [
+                [
+                  -0.9396926207859084,
+                  0.3420201433256687
+                ],
+                [
+                  0.0,
+                  0.0
+                ],
+                [
+                  0.9396926207859084,
+                  0.3420201433256687
+                ]
+              ],
+              "leftRulings": [
+                [
+                  -0.1736481776669303,
+                  0.984807753012208
+                ],
+                [
+                  -0.1736481776669303,
+                  0.984807753012208
+                ],
+                [
+                  -0.1736481776669303,
+                  0.984807753012208
+                ]
+              ],
+              "rightRulings": [
+                [
+                  -0.17364817766693033,
+                  -0.984807753012208
+                ],
+                [
+                  -0.17364817766693033,
+                  -0.984807753012208
+                ],
+                [
+                  -0.17364817766693033,
+                  -0.984807753012208
+                ]
+              ]
+            },
+            "source": {
+              "function": "FoldAngleMultipliers2D",
+              "definitionCell": "In[4092]",
+              "origin": "notebook-definition",
+              "wolframNumericOutAvailable": false,
+              "numericModel": "finite-real-binary64",
+              "chopDocumentation": "https://reference.wolfram.com/language/ref/Chop.html"
+            },
+            "limits": {
+              "maximumRules": 64,
+              "maximumExpressionLeaves": 256,
+              "maximumNestingDepth": 4,
+              "maximumListEntries": 256,
+              "maximumStructureNodes": 2048,
+              "maximumParameters": 256,
+              "maximumCurveDimension": 64,
+              "maximumDivisions": 64,
+              "maximumFoldVertices": 512,
+              "maximumScalarEvaluations": 262144,
+              "maximumAstWeightedEvaluations": 8000000,
+              "maximumRootEvaluations": 4096,
+              "maximumOffsetProducts": 262144,
+              "maximumSourceAstNodes": 96,
+              "maximumSourceCharacters": 240,
+              "maximumParameterMagnitude": 1000000.0
+            },
+            "certification": {
+              "sourceFormulaEvaluated": true,
+              "allSampledValuesFinite": true,
+              "rootEquationNumericallyVerified": false,
+              "rootBranchEquivalentToWolfram": false,
+              "allRootsEnumerated": false,
+              "continuousDomainCertified": false,
+              "symbolicObjectsReproduced": false,
+              "wolframOptionsReproduced": false,
+              "integrationErrorIntervalCertified": false,
+              "adoptableCreasePattern": false,
+              "globalFoldingCertified": false
+            },
+            "sample": {
+              "foldPoints": [
+                [
+                  -0.9396926207859084,
+                  0.3420201433256687
+                ],
+                [
+                  0.0,
+                  0.0
+                ],
+                [
+                  0.9396926207859084,
+                  0.3420201433256687
+                ]
+              ],
+              "leftRulings": [
+                [
+                  -0.1736481776669303,
+                  0.984807753012208
+                ],
+                [
+                  -0.1736481776669303,
+                  0.984807753012208
+                ],
+                [
+                  -0.1736481776669303,
+                  0.984807753012208
+                ]
+              ],
+              "rightRulings": [
+                [
+                  -0.17364817766693033,
+                  -0.984807753012208
+                ],
+                [
+                  -0.17364817766693033,
+                  -0.984807753012208
+                ],
+                [
+                  -0.17364817766693033,
+                  -0.984807753012208
+                ]
+              ],
+              "sectors": [
+                {
+                  "vertex": 1,
+                  "a1": null,
+                  "a2": null,
+                  "a3": 1.3962634015954636,
+                  "a4": 2.0943951023931957
+                },
+                {
+                  "vertex": 2,
+                  "a1": 1.0471975511965979,
+                  "a2": 1.7453292519943295,
+                  "a3": 2.0943951023931957,
+                  "a4": 1.3962634015954636
+                },
+                {
+                  "vertex": 3,
+                  "a1": 1.7453292519943295,
+                  "a2": 1.0471975511965979,
+                  "a3": null,
+                  "a4": null
+                }
+              ],
+              "kawasaki": [
+                {
+                  "vertex": 2,
+                  "alternatingAngle": 4.440892098500626e-16,
+                  "choppedAngle": 0.0
+                }
+              ],
+              "chopTolerance": 1e-10,
+              "chopComparison": "abs(approximate-real-angle) < 1e-10",
+              "chopAppliedToDenominator": false,
+              "multipliers": [
+                2.8793852415718155,
+                -2.8793852415718177,
+                2.8793852415718177
+              ],
+              "quotients": [
+                {
+                  "vertex": 1,
+                  "numerator": 0.984807753012208,
+                  "denominator": 0.3420201433256689,
+                  "value": 2.8793852415718155,
+                  "state": "finite",
+                  "originalDenominatorNonzero": true
+                },
+                {
+                  "vertex": 2,
+                  "numerator": 0.9848077530122081,
+                  "denominator": -0.34202014332566866,
+                  "value": -2.8793852415718177,
+                  "state": "finite",
+                  "originalDenominatorNonzero": true
+                },
+                {
+                  "vertex": 3,
+                  "numerator": 0.9848077530122081,
+                  "denominator": 0.34202014332566866,
+                  "value": 2.8793852415718177,
+                  "state": "finite",
+                  "originalDenominatorNonzero": true
+                }
+              ],
+              "allMultipliersFinite": true,
+              "rawDirectionsPreserved": true
+            }
+          },
+          "assembly": "three-point-two-sided-strip-v1",
+          "localBoundaryWidths": true,
+          "internalEdgeOrder": [
+            [
+              0,
+              1
+            ],
+            [
+              1,
+              2
+            ],
+            [
+              1,
+              4
+            ],
+            [
+              1,
+              7
+            ]
+          ],
+          "assignmentOrigin": "explicit-user",
+          "staticGlobalIsometryChecked": false,
+          "continuousRigidPathChecked": false,
+          "selfCollisionChecked": false,
+          "wolframExecuted": false,
+          "continuousCurveEquivalent": false
+        }
+      }
+    },
+    {
+      "name": "maekawa-failed",
+      "params": {
+        "family": "discrete-curve-cp",
+        "source": {
+          "family": "discretization-generic-native",
+          "mode": "multipliers",
+          "foldPoints": [
+            [
+              -0.9396926207859084,
+              0.3420201433256687
+            ],
+            [
+              0.0,
+              0.0
+            ],
+            [
+              0.9396926207859084,
+              0.3420201433256687
+            ]
+          ],
+          "leftRulings": [
+            [
+              -0.1736481776669303,
+              0.984807753012208
+            ],
+            [
+              -0.1736481776669303,
+              0.984807753012208
+            ],
+            [
+              -0.1736481776669303,
+              0.984807753012208
+            ]
+          ],
+          "rightRulings": [
+            [
+              -0.17364817766693033,
+              -0.984807753012208
+            ],
+            [
+              -0.17364817766693033,
+              -0.984807753012208
+            ],
+            [
+              -0.17364817766693033,
+              -0.984807753012208
+            ]
+          ]
+        },
+        "leftWidth": 0.4,
+        "rightWidth": 0.4,
+        "assignments": [
+          "M",
+          "M",
+          "M",
+          "M"
+        ]
+      },
+      "response": {
+        "preview": null,
+        "fold": {
+          "file_spec": 1.2,
+          "file_classes": [
+            "singleModel"
+          ],
+          "frame_classes": [
+            "creasePattern"
+          ],
+          "frame_attributes": [
+            "2D"
+          ],
+          "vertices_coords": [
+            [
+              -0.9396926207859084,
+              0.3420201433256687
+            ],
+            [
+              0.0,
+              0.0
+            ],
+            [
+              0.9396926207859084,
+              0.3420201433256687
+            ],
+            [
+              -1.0091518918526805,
+              0.7359432445305519
+            ],
+            [
+              -0.06945927106677212,
+              0.3939231012048832
+            ],
+            [
+              0.8702333497191364,
+              0.7359432445305519
+            ],
+            [
+              -1.0091518918526805,
+              -0.051902957879214506
+            ],
+            [
+              -0.06945927106677213,
+              -0.3939231012048832
+            ],
+            [
+              0.8702333497191364,
+              -0.051902957879214506
+            ]
+          ],
+          "edges_vertices": [
+            [
+              0,
+              1
+            ],
+            [
+              0,
+              3
+            ],
+            [
+              0,
+              6
+            ],
+            [
+              1,
+              2
+            ],
+            [
+              1,
+              4
+            ],
+            [
+              1,
+              7
+            ],
+            [
+              2,
+              5
+            ],
+            [
+              2,
+              8
+            ],
+            [
+              3,
+              4
+            ],
+            [
+              4,
+              5
+            ],
+            [
+              6,
+              7
+            ],
+            [
+              7,
+              8
+            ]
+          ],
+          "edges_assignment": [
+            "M",
+            "B",
+            "B",
+            "M",
+            "M",
+            "M",
+            "B",
+            "B",
+            "B",
+            "B",
+            "B",
+            "B"
+          ],
+          "edges_foldAngle": [
+            -180,
+            null,
+            null,
+            -180,
+            -180,
+            -180,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
+          ],
+          "faces_vertices": [
+            [
+              1,
+              4,
+              3,
+              0
+            ],
+            [
+              2,
+              5,
+              4,
+              1
+            ],
+            [
+              6,
+              7,
+              1,
+              0
+            ],
+            [
+              7,
+              8,
+              2,
+              1
+            ]
+          ],
+          "faces_edges": [
+            [
+              4,
+              8,
+              1,
+              0
+            ],
+            [
+              6,
+              9,
+              4,
+              3
+            ],
+            [
+              10,
+              5,
+              0,
+              2
+            ],
+            [
+              11,
+              7,
+              3,
+              5
+            ]
+          ],
+          "edges_faces": [
+            [
+              0,
+              2
+            ],
+            [
+              0
+            ],
+            [
+              2
+            ],
+            [
+              1,
+              3
+            ],
+            [
+              0,
+              1
+            ],
+            [
+              2,
+              3
+            ],
+            [
+              1
+            ],
+            [
+              3
+            ],
+            [
+              0
+            ],
+            [
+              1
+            ],
+            [
+              2
+            ],
+            [
+              3
+            ]
+          ],
+          "faces_faces": [
+            [
+              1,
+              null,
+              null,
+              2
+            ],
+            [
+              null,
+              null,
+              0,
+              3
+            ],
+            [
+              null,
+              3,
+              0,
+              null
+            ],
+            [
+              null,
+              null,
+              1,
+              2
+            ]
+          ],
+          "file_creator": "折纸工作台 / Origamica finite discrete curve CP bridge",
+          "frame_description": "原有限三点与母线的闭合二维纸带；边界宽度为本地输入，未指定山谷时仅CP。"
+        },
+        "mother": null,
+        "dual": null,
+        "stats": {
+          "vertices": 9,
+          "edges": 12,
+          "faces": 4,
+          "tiles": 4,
+          "mountainEdges": 4,
+          "valleyEdges": 0,
+          "boundaryEdges": 8,
+          "unassignedEdges": 0,
+          "elapsedMs": 0,
+          "parameters": {
+            "family": "discrete-curve-cp",
+            "source": {
+              "family": "discretization-generic-native",
+              "mode": "multipliers",
+              "foldPoints": [
+                [
+                  -0.9396926207859084,
+                  0.3420201433256687
+                ],
+                [
+                  0.0,
+                  0.0
+                ],
+                [
+                  0.9396926207859084,
+                  0.3420201433256687
+                ]
+              ],
+              "leftRulings": [
+                [
+                  -0.1736481776669303,
+                  0.984807753012208
+                ],
+                [
+                  -0.1736481776669303,
+                  0.984807753012208
+                ],
+                [
+                  -0.1736481776669303,
+                  0.984807753012208
+                ]
+              ],
+              "rightRulings": [
+                [
+                  -0.17364817766693033,
+                  -0.984807753012208
+                ],
+                [
+                  -0.17364817766693033,
+                  -0.984807753012208
+                ],
+                [
+                  -0.17364817766693033,
+                  -0.984807753012208
+                ]
+              ]
+            },
+            "leftWidth": 0.4,
+            "rightWidth": 0.4,
+            "assignments": [
+              "M",
+              "M",
+              "M",
+              "M"
+            ]
+          },
+          "checks": {
+            "geometry": {
+              "status": "passed",
+              "zeroLengthEdges": [],
+              "duplicateEdges": [],
+              "crossingCount": 0,
+              "crossingPairs": [],
+              "crossingPairsTruncated": false,
+              "tolerance": 1.948844512638589e-08
+            },
+            "local": {
+              "status": "failed",
+              "interiorVertices": 1,
+              "oddDegreeVertices": [],
+              "kawasakiViolations": [],
+              "maekawaViolations": [
+                1
+              ],
+              "unknownAssignmentVertices": [],
+              "maxKawasakiErrorDeg": 0.0,
+              "toleranceDeg": 0.001
+            },
+            "lff": {
+              "status": "failed",
+              "scope": "Origamica degree-four local M/V constraints; no global layer order or fold-path proof",
+              "interiorVertices": 1,
+              "checkedVertices": 1,
+              "toleranceDeg": 0.001,
+              "graphVertices": [
+                [
+                  -0.4698463103929542,
+                  0.17101007166283436
+                ],
+                [
+                  -0.9744222563192945,
+                  0.5389816939281104
+                ],
+                [
+                  -0.9744222563192945,
+                  0.1450585927232271
+                ],
+                [
+                  0.4698463103929542,
+                  0.17101007166283436
+                ],
+                [
+                  -0.03472963553338606,
+                  0.1969615506024416
+                ],
+                [
+                  -0.034729635533386066,
+                  -0.1969615506024416
+                ],
+                [
+                  0.9049629852525224,
+                  0.5389816939281104
+                ],
+                [
+                  0.9049629852525224,
+                  0.1450585927232271
+                ],
+                [
+                  -0.5393055814597263,
+                  0.5649331728677176
+                ],
+                [
+                  0.40038703932618214,
+                  0.5649331728677176
+                ],
+                [
+                  -0.5393055814597263,
+                  -0.22291302954204886
+                ],
+                [
+                  0.40038703932618214,
+                  -0.22291302954204886
+                ]
+              ],
+              "graphEdges": [
+                [
+                  4,
+                  0
+                ],
+                [
+                  5,
+                  3
+                ]
+              ],
+              "edgeTypes": [
+                -1,
+                1
+              ],
+              "constraintVertices": [
+                1,
+                1
+              ],
+              "assignmentViolations": [
+                0
+              ],
+              "unassignedConstraints": [],
+              "reason": "necessary_condition_conflict"
+            },
+            "layerOrder": {
+              "status": "not_checked"
+            }
+          },
+          "foldability": "candidate",
+          "kind": "discrete-curve-cp"
+        },
+        "warnings": [
+          "原函数提供有序点、母线与倍率；纸边宽度、封边和四面装配是明确的本地构造。",
+          "原倍率不唯一指定山谷；U 保持未指定，M/V 仅来自显式用户输入。",
+          "普通采用仍须局部及整片层序通过；仅CP不会载入折后位置或层序证书。",
+          "这是有限三点折线纸带，不是连续曲线、原保存数值 Out 或三维/运动/碰撞认证。"
+        ],
+        "source": {
+          "name": "折纸工作台",
+          "license": "GPL-3.0-only",
+          "algorithm": "Origamica discrete curve CP bridge",
+          "version": 1,
+          "output": "crease-pattern",
+          "parameters": {
+            "family": "discrete-curve-cp",
+            "source": {
+              "family": "discretization-generic-native",
+              "mode": "multipliers",
+              "foldPoints": [
+                [
+                  -0.9396926207859084,
+                  0.3420201433256687
+                ],
+                [
+                  0.0,
+                  0.0
+                ],
+                [
+                  0.9396926207859084,
+                  0.3420201433256687
+                ]
+              ],
+              "leftRulings": [
+                [
+                  -0.1736481776669303,
+                  0.984807753012208
+                ],
+                [
+                  -0.1736481776669303,
+                  0.984807753012208
+                ],
+                [
+                  -0.1736481776669303,
+                  0.984807753012208
+                ]
+              ],
+              "rightRulings": [
+                [
+                  -0.17364817766693033,
+                  -0.984807753012208
+                ],
+                [
+                  -0.17364817766693033,
+                  -0.984807753012208
+                ],
+                [
+                  -0.17364817766693033,
+                  -0.984807753012208
+                ]
+              ]
+            },
+            "leftWidth": 0.4,
+            "rightWidth": 0.4,
+            "assignments": [
+              "M",
+              "M",
+              "M",
+              "M"
+            ]
+          },
+          "nativeDiscretization": {
+            "family": "origamica-generic-discretization",
+            "query": {
+              "family": "discretization-generic-native",
+              "mode": "multipliers",
+              "foldPoints": [
+                [
+                  -0.9396926207859084,
+                  0.3420201433256687
+                ],
+                [
+                  0.0,
+                  0.0
+                ],
+                [
+                  0.9396926207859084,
+                  0.3420201433256687
+                ]
+              ],
+              "leftRulings": [
+                [
+                  -0.1736481776669303,
+                  0.984807753012208
+                ],
+                [
+                  -0.1736481776669303,
+                  0.984807753012208
+                ],
+                [
+                  -0.1736481776669303,
+                  0.984807753012208
+                ]
+              ],
+              "rightRulings": [
+                [
+                  -0.17364817766693033,
+                  -0.984807753012208
+                ],
+                [
+                  -0.17364817766693033,
+                  -0.984807753012208
+                ],
+                [
+                  -0.17364817766693033,
+                  -0.984807753012208
+                ]
+              ]
+            },
+            "source": {
+              "function": "FoldAngleMultipliers2D",
+              "definitionCell": "In[4092]",
+              "origin": "notebook-definition",
+              "wolframNumericOutAvailable": false,
+              "numericModel": "finite-real-binary64",
+              "chopDocumentation": "https://reference.wolfram.com/language/ref/Chop.html"
+            },
+            "limits": {
+              "maximumRules": 64,
+              "maximumExpressionLeaves": 256,
+              "maximumNestingDepth": 4,
+              "maximumListEntries": 256,
+              "maximumStructureNodes": 2048,
+              "maximumParameters": 256,
+              "maximumCurveDimension": 64,
+              "maximumDivisions": 64,
+              "maximumFoldVertices": 512,
+              "maximumScalarEvaluations": 262144,
+              "maximumAstWeightedEvaluations": 8000000,
+              "maximumRootEvaluations": 4096,
+              "maximumOffsetProducts": 262144,
+              "maximumSourceAstNodes": 96,
+              "maximumSourceCharacters": 240,
+              "maximumParameterMagnitude": 1000000.0
+            },
+            "certification": {
+              "sourceFormulaEvaluated": true,
+              "allSampledValuesFinite": true,
+              "rootEquationNumericallyVerified": false,
+              "rootBranchEquivalentToWolfram": false,
+              "allRootsEnumerated": false,
+              "continuousDomainCertified": false,
+              "symbolicObjectsReproduced": false,
+              "wolframOptionsReproduced": false,
+              "integrationErrorIntervalCertified": false,
+              "adoptableCreasePattern": false,
+              "globalFoldingCertified": false
+            },
+            "sample": {
+              "foldPoints": [
+                [
+                  -0.9396926207859084,
+                  0.3420201433256687
+                ],
+                [
+                  0.0,
+                  0.0
+                ],
+                [
+                  0.9396926207859084,
+                  0.3420201433256687
+                ]
+              ],
+              "leftRulings": [
+                [
+                  -0.1736481776669303,
+                  0.984807753012208
+                ],
+                [
+                  -0.1736481776669303,
+                  0.984807753012208
+                ],
+                [
+                  -0.1736481776669303,
+                  0.984807753012208
+                ]
+              ],
+              "rightRulings": [
+                [
+                  -0.17364817766693033,
+                  -0.984807753012208
+                ],
+                [
+                  -0.17364817766693033,
+                  -0.984807753012208
+                ],
+                [
+                  -0.17364817766693033,
+                  -0.984807753012208
+                ]
+              ],
+              "sectors": [
+                {
+                  "vertex": 1,
+                  "a1": null,
+                  "a2": null,
+                  "a3": 1.3962634015954636,
+                  "a4": 2.0943951023931957
+                },
+                {
+                  "vertex": 2,
+                  "a1": 1.0471975511965979,
+                  "a2": 1.7453292519943295,
+                  "a3": 2.0943951023931957,
+                  "a4": 1.3962634015954636
+                },
+                {
+                  "vertex": 3,
+                  "a1": 1.7453292519943295,
+                  "a2": 1.0471975511965979,
+                  "a3": null,
+                  "a4": null
+                }
+              ],
+              "kawasaki": [
+                {
+                  "vertex": 2,
+                  "alternatingAngle": 4.440892098500626e-16,
+                  "choppedAngle": 0.0
+                }
+              ],
+              "chopTolerance": 1e-10,
+              "chopComparison": "abs(approximate-real-angle) < 1e-10",
+              "chopAppliedToDenominator": false,
+              "multipliers": [
+                2.8793852415718155,
+                -2.8793852415718177,
+                2.8793852415718177
+              ],
+              "quotients": [
+                {
+                  "vertex": 1,
+                  "numerator": 0.984807753012208,
+                  "denominator": 0.3420201433256689,
+                  "value": 2.8793852415718155,
+                  "state": "finite",
+                  "originalDenominatorNonzero": true
+                },
+                {
+                  "vertex": 2,
+                  "numerator": 0.9848077530122081,
+                  "denominator": -0.34202014332566866,
+                  "value": -2.8793852415718177,
+                  "state": "finite",
+                  "originalDenominatorNonzero": true
+                },
+                {
+                  "vertex": 3,
+                  "numerator": 0.9848077530122081,
+                  "denominator": 0.34202014332566866,
+                  "value": 2.8793852415718177,
+                  "state": "finite",
+                  "originalDenominatorNonzero": true
+                }
+              ],
+              "allMultipliersFinite": true,
+              "rawDirectionsPreserved": true
+            }
+          },
+          "assembly": "three-point-two-sided-strip-v1",
+          "localBoundaryWidths": true,
+          "internalEdgeOrder": [
+            [
+              0,
+              1
+            ],
+            [
+              1,
+              2
+            ],
+            [
+              1,
+              4
+            ],
+            [
+              1,
+              7
+            ]
+          ],
+          "assignmentOrigin": "explicit-user",
+          "staticGlobalIsometryChecked": false,
+          "continuousRigidPathChecked": false,
+          "selfCollisionChecked": false,
+          "wolframExecuted": false,
+          "continuousCurveEquivalent": false
+        }
+      }
+    }
+  ]
+}

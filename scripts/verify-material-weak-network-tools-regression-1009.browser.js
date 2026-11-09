@@ -1,0 +1,241 @@
+async page=>{
+ const recipes=[
+  {
+    "name": "trace-interior",
+    "intent": {
+      "kind": "material-face-trace",
+      "component": 0,
+      "from": {
+        "edgeId": "material-edge-0",
+        "fraction": 0.5
+      },
+      "to": {
+        "edgeId": "material-edge-2",
+        "fraction": 0.5
+      },
+      "assignment": "M",
+      "fixedSide": "left",
+      "cpOnly": false
+    },
+    "solved": true,
+    "expectedPieces": 2
+  },
+  {
+    "name": "trace-boundary",
+    "intent": {
+      "kind": "material-face-trace",
+      "component": 0,
+      "from": {
+        "edgeId": "material-edge-0",
+        "fraction": 0.2
+      },
+      "to": {
+        "edgeId": "material-edge-2",
+        "fraction": 0.8
+      },
+      "assignment": "F",
+      "fixedSide": "left",
+      "cpOnly": false
+    },
+    "solved": true,
+    "expectedPieces": 2
+  },
+  {
+    "name": "trace-cross",
+    "intent": {
+      "kind": "material-face-trace",
+      "component": 0,
+      "from": {
+        "edgeId": "material-edge-0",
+        "fraction": 0.4
+      },
+      "to": {
+        "edgeId": "material-edge-2",
+        "fraction": 0.6
+      },
+      "assignment": "F",
+      "fixedSide": "left",
+      "cpOnly": false
+    },
+    "solved": true,
+    "expectedPieces": 2
+  },
+  {
+    "name": "trace-hole",
+    "intent": {
+      "kind": "material-face-trace",
+      "component": 0,
+      "from": {
+        "edgeId": "material-edge-0",
+        "fraction": 0.2
+      },
+      "to": {
+        "edgeId": "material-edge-2",
+        "fraction": 0.8
+      },
+      "assignment": "F",
+      "fixedSide": "left",
+      "cpOnly": false
+    },
+    "solved": true,
+    "expectedPieces": 2
+  },
+  {
+    "name": "insert-cross",
+    "intent": {
+      "kind": "material-face-insert",
+      "face": 0,
+      "from": {
+        "edgeId": "material-edge-3",
+        "fraction": 0.75
+      },
+      "to": {
+        "edgeId": "material-edge-1",
+        "fraction": 0.25
+      },
+      "assignment": "F",
+      "fixedPart": 0,
+      "cpOnly": false
+    },
+    "solved": true,
+    "expectedPieces": 2
+  },
+  {
+    "name": "insert-bridge-M",
+    "intent": {
+      "kind": "material-face-insert",
+      "face": 0,
+      "from": {
+        "edgeId": "material-edge-3",
+        "fraction": 0.5
+      },
+      "to": {
+        "edgeId": "material-edge-7",
+        "fraction": 0.5
+      },
+      "assignment": "M",
+      "fixedPart": 0,
+      "cpOnly": true
+    },
+    "solved": false,
+    "expectedPieces": 1
+  },
+  {
+    "name": "ray-bank",
+    "intent": {
+      "kind": "material-face-ray",
+      "component": 0,
+      "from": {
+        "edgeId": "curve-group-1::crease-0::cut-bank-1",
+        "fraction": 0.5
+      },
+      "through": [
+        50,
+        49
+      ],
+      "assignment": "F",
+      "fixedSide": "left",
+      "cpOnly": false
+    },
+    "solved": true,
+    "expectedPieces": 1
+  },
+  {
+    "name": "ray-junction",
+    "intent": {
+      "kind": "material-face-ray",
+      "component": 0,
+      "from": {
+        "edgeId": "material-edge-0",
+        "fraction": 0
+      },
+      "through": [
+        1,
+        1
+      ],
+      "assignment": "F",
+      "fixedSide": "left",
+      "cpOnly": false
+    },
+    "solved": true,
+    "expectedPieces": 2
+  },
+  {
+    "name": "batch-two",
+    "intent": {
+      "kind": "material-face-traces",
+      "component": 0,
+      "lines": [
+        {
+          "from": {
+            "edgeId": "material-edge-0",
+            "fraction": 0.4
+          },
+          "to": {
+            "edgeId": "material-edge-2",
+            "fraction": 0.6
+          },
+          "assignment": "F"
+        },
+        {
+          "from": {
+            "edgeId": "material-edge-0",
+            "fraction": 0.6
+          },
+          "to": {
+            "edgeId": "material-edge-2",
+            "fraction": 0.4
+          },
+          "assignment": "F"
+        }
+      ],
+      "fixedPoint": [
+        10,
+        10
+      ],
+      "cpOnly": true,
+      "overrides": []
+    },
+    "solved": true,
+    "expectedPieces": 4
+  },
+  {
+    "name": "trace-preserve-FF",
+    "intent": {
+      "kind": "material-face-trace",
+      "component": 0,
+      "from": {
+        "edgeId": "material-edge-0",
+        "fraction": 0.5
+      },
+      "to": {
+        "edgeId": "material-edge-2",
+        "fraction": 0.5
+      },
+      "assignment": "F",
+      "fixedSide": "left",
+      "cpOnly": false
+    },
+    "solved": true,
+    "expectedPieces": 2
+  }
+];
+ const checks=[],errors=[];page.on('pageerror',e=>errors.push(e.message));const check=(ok,label)=>{if(!ok)throw Error(label);checks.push(label);};await page.evaluate(()=>{window.confirm=()=>true;});await page.setViewportSize({width:1280,height:800});
+ const button=name=>['撤销','重做'].includes(name)?page.getByRole('complementary',{name:'绘图工具',exact:true}).getByRole('button',{name,exact:true}):page.getByRole('button',{name,exact:true}),closeProps=async()=>{if(await button('关闭工具设置').count())await button('关闭工具设置').click();};
+ const download=async(name,format)=>{await closeProps();await button('导出作品').click();const d=page.getByRole('dialog',{name:'导出作品',exact:true});await d.getByRole('combobox').first().selectOption(format);const saving=page.waitForEvent('download');await d.getByRole('button',{name:'导出文件',exact:true}).click();await(await saving).saveAs(`output/playwright/material-weak-network-tools-regression-${name}-1009.${format==='json'?'zhezhi.json':format}`);await button('关闭窗口').click();};
+ const field=async(c,label,n)=>{await c.getByLabel(label,{exact:true}).fill(String(n));await c.getByLabel(label,{exact:true}).press('Enter');};
+ const open=async recipe=>{await closeProps();await button('绘图工具').click();await page.getByRole('button',{name:/^(纸张属性|选区 \(\d+\))$/}).click();const kind=recipe.intent.kind,title=kind==='material-face-ray'?'材料射线构造':kind==='material-face-traces'?'批量材料构造':'编辑材料折痕';await button(title).click();return page.getByRole('dialog',{name:title,exact:true});};
+ const configure=async(c,r)=>{const i=r.intent;if(i.kind==='material-face-ray'){await c.getByLabel('射线起点边',{exact:true}).selectOption(i.from.edgeId);await field(c,'射线起点比例',i.from.fraction);await field(c,'射线方向点 X',i.through[0]);await field(c,'射线方向点 Y',i.through[1]);await c.getByLabel('射线线型',{exact:true}).selectOption(i.assignment);await c.getByLabel('射线仅CP',{exact:true}).setChecked(i.cpOnly);}
+ else if(i.kind==='material-face-traces'){for(let k=0;k<i.lines.length;k++){if(k)await c.getByRole('button',{name:'添加直线',exact:true}).click();const l=i.lines[k];await c.getByLabel('批量起点材料边',{exact:true}).selectOption(l.from.edgeId);await c.getByLabel('批量终点材料边',{exact:true}).selectOption(l.to.edgeId);await field(c,'批量起点比例',100*l.from.fraction);await field(c,'批量终点比例',100*l.to.fraction);await c.getByLabel('批量直线类型',{exact:true}).selectOption(l.assignment);}await field(c,'固定点 X',i.fixedPoint[0]);await field(c,'固定点 Y',i.fixedPoint[1]);await c.getByRole('checkbox',{name:/仅生成CP/}).setChecked(i.cpOnly);}
+ else {if(i.kind==='material-face-trace')await c.getByRole('button',{name:'跨面直线构造',exact:true}).click();await c.getByLabel('起点材料边',{exact:true}).selectOption(i.from.edgeId);await c.getByLabel('终点材料边',{exact:true}).selectOption(i.to.edgeId);await field(c,'起点沿边比例',100*i.from.fraction);await field(c,'终点沿边比例',100*i.to.fraction);await c.getByLabel('细分折痕线型',{exact:true}).selectOption(i.assignment);await c.getByLabel('材料直线仅CP',{exact:true}).setChecked(i.cpOnly);}};
+ for(const r of recipes){await closeProps();await button('折痕编辑').click();await page.getByLabel('折痕工程文件',{exact:true}).setInputFiles(`output/playwright/material-weak-network-tools-regression-${r.name}-initial-1009.zhezhi.json`);await page.waitForFunction(n=>document.querySelector('[aria-label="工程名称"]')?.value===n,`弱材料工具-${r.name}`);let c=await open(r);await configure(c,r);const ray=r.intent.kind==='material-face-ray',batch=r.intent.kind==='material-face-traces',preview=ray?'预览射线':batch?'预览批量构造':'预览材料编辑',apply=ray?'应用射线':batch?'应用批量构造':'应用材料编辑';
+  check(await c.getByRole('button',{name:apply,exact:true}).isDisabled(),`${r.name} 未预览不可采用`);await c.getByRole('button',{name:preview,exact:true}).click();check(await c.getByRole('alert').count()===0,`${r.name} 实际预览通过`);check(await c.getByRole('button',{name:apply,exact:true}).isEnabled(),`${r.name} 实际构造可采用`);check(await c.locator('[data-trace-piece]').count()===r.expectedPieces,`${r.name} 青色实际分段完整`);check(await c.locator('svg text').filter({hasText:'mm'}).count()>0,`${r.name} 有毫米刻度`);
+  if(r.name==='trace-interior'){await c.getByRole('button',{name:'取消',exact:true}).click();await download('trace-interior-cancel','json');c=await open(r);await configure(c,r);await c.getByRole('button',{name:preview,exact:true}).click();check(true,'取消后重新构造');}
+  if(r.name==='insert-bridge-M'){await c.getByLabel('材料直线仅CP',{exact:true}).uncheck();check(await c.getByRole('button',{name:apply,exact:true}).isDisabled(),'CP设置修改使旧预览失效');await c.getByRole('button',{name:preview,exact:true}).click();check(await c.getByRole('alert').count()===1,'单桥山折不伪造刚性FF');await c.getByLabel('材料直线仅CP',{exact:true}).check();await c.getByRole('button',{name:preview,exact:true}).click();}
+  await page.screenshot({path:`output/playwright/material-weak-network-tools-regression-${r.name}-preview-1009.png`});await c.getByRole('button',{name:apply,exact:true}).click();await c.waitFor({state:'detached'});for(const f of ['json','fold','dxf'])await download(r.name,f);
+  if(r.name==='trace-interior'){await button('撤销').click();await download('trace-interior-undo','json');await button('重做').click();await download('trace-interior-redo','json');check(true,'直线构造一次撤销重做');}
+  if(r.solved){await button('计算平折').click();await page.waitForFunction(()=>document.querySelector('.flat-result-label')?.textContent?.includes('已找到层序解'));for(const side of ['背面','正面'])await button(side).click();check(true,`${r.name} 当前CP真实平折和正背显示`);}else{await button('计算平折').click();await page.waitForFunction(()=>document.querySelector('.empty-workspace')?.textContent?.includes('当前仅CP'));check(true,'单桥山折仍明确拒绝刚性平折');}
+  await button('三维模拟').click();await page.waitForFunction(()=>{const c=document.querySelector('iframe[title="三维折叠模拟画布"]')?.contentDocument?.querySelector('#simulation');return c?.dataset.backend==='webgl2'&&['loaded','running','paused'].includes(c.dataset.status);},null,{timeout:30000});await button('展开复位').click();if(await page.locator('.sim-advanced').getAttribute('open')===null)await page.locator('.sim-advanced > summary').click();const saving=page.waitForEvent('download');await button('导出三维 FOLD').click();await(await saving).saveAs(`output/playwright/material-weak-network-tools-regression-${r.name}-mesh-1009.fold`);check(true,`${r.name} 实际三维网格完整载入并下载`);await button('折痕编辑').click();await download(r.name+'-after-sim','json');
+ }
+ check(errors.length===0,'零页面异常');return {passed:checks.length,checks,errors};
+}

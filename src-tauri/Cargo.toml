@@ -1,0 +1,70 @@
+[package]
+name = "zhezhi-workbench-tauri"
+version = "0.13.53"
+description = "折纸工坊独立 Tauri / Rust 迁移版"
+edition = "2021"
+license = "GPL-3.0-only"
+default-run = "zhezhi-workbench-tauri"
+
+[lib]
+name = "zhezhi_runtime"
+path = "src/lib.rs"
+crate-type = ["rlib", "cdylib", "staticlib"]
+
+[[bin]]
+name = "zhezhi-workbench-tauri"
+path = "src/main.rs"
+required-features = ["desktop"]
+
+[[bin]]
+name = "zhezhi-server"
+path = "src/bin/server.rs"
+
+[features]
+default = ["desktop"]
+desktop = ["dep:tauri", "dep:tauri-build", "dep:rfd"]
+
+[dependencies]
+tauri = { version = "2", optional = true, features = ["devtools"] }
+axum = { version = "0.8", features = ["json", "http1", "tokio"] }
+tokio = { version = "1", features = ["full"] }
+tower-http = { version = "0.6", features = ["fs", "cors", "trace"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = { version = "1", features = ["float_roundtrip", "preserve_order", "raw_value"] }
+uuid = { version = "1", features = ["v4", "serde"] }
+sha2 = "0.10"
+hex = "0.4"
+chrono = { version = "0.4", features = ["clock", "serde"] }
+dirs = "6"
+walkdir = "2"
+mime_guess = "2"
+percent-encoding = "2"
+url = "2"
+regex = "1"
+rfd = { version = "0.15", optional = true }
+svg2pdf = "=0.13.0"
+roxmltree = "0.20"
+# svg2pdf decodes WebP via image but does not enable that codec itself.
+# Reuse the same image crate and preserve imported WebP artwork.
+image = { version = "=0.25.10", default-features = false, features = ["webp"] }
+tokio-util = "0.7"
+treemaker-core = { path = "../vendor/design/ori-studio/crates/treemaker-core" }
+oristudio-bp = { path = "../vendor/design/ori-studio/crates/oristudio-bp" }
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_System_JobObjects", "Win32_System_Threading", "Win32_Security", "Win32_UI_WindowsAndMessaging"] }
+
+[build-dependencies]
+tauri-build = { version = "2", optional = true, features = [] }
+
+[dev-dependencies]
+tempfile = "3"
+tower = { version = "0.5", features = ["util"] }
+http-body-util = "0.1"
+
+[profile.release]
+codegen-units = 1
+lto = "thin"
+strip = true
+opt-level = "s"
+panic = "unwind"

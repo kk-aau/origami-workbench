@@ -1,0 +1,10 @@
+import fs from 'node:fs';
+import {weakNetworkCase as fixture} from '../tests/fixtures/materialWeakNetworks';
+import {editMaterialFaces} from '../src/core/materialFaceEdit';
+import {exportDocument} from '../src/core/formats';
+import {computeFlatFold} from '../src/core/flatFold';
+const names=['strict-interior','strict-boundary','strict-cross','strict-hole','clip-interior','clip-boundary','clip-cross','clip-hole','preserve-FF','independent-all','independent-face','component-grid','mixed-CP','joined-loops'];
+const recipes=names.map(name=>{const {doc,intent}=fixture(name);doc.name=`弱材料线网-${name}`;const r=editMaterialFaces(doc,intent),flat=computeFlatFold(r.doc);fs.writeFileSync(`output/playwright/material-weak-network-${name}-initial-1009.zhezhi.json`,exportDocument(doc,'json').text);return {name,intent,solved:flat.layers.status==='solved',pieces:r.network!.segments,length:r.network!.clipping?.materialLength,blank:r.network!.clipping?.blankLength};});
+fs.writeFileSync('output/audits/material-weak-network-recipes-1009.json',JSON.stringify(recipes,null,2));
+fs.writeFileSync('output/playwright/material-weak-network-run-1009.browser.js',fs.readFileSync('scripts/verify-material-weak-network-1009.browser.js','utf8').replace('const recipes=[];','const recipes='+JSON.stringify(recipes)+';'));
+console.log(JSON.stringify(recipes.map(({name,solved,pieces,length,blank})=>({name,solved,pieces,length,blank}))));

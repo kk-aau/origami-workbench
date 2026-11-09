@@ -1,0 +1,228 @@
+Ori Studio — Third-Party Notices
+================================
+
+This product is distributed as a whole under the GNU General Public License,
+version 2 or (at your option) any later version (GPL-2.0-or-later), because it
+incorporates a Rust/WASM port of Robert J. Lang's TreeMaker and bundles a
+WebAssembly build of ReferenceFinder, Lang's C++ as extended by Mu-Tsun Tsai and
+Omri Shavit. See LICENSE.txt for the GPL text and LICENSING.md for the full
+licensing posture, including the open question about the GPL version of the
+ReferenceFinder modifications.
+
+The whole bundles two GPL works — TreeMaker (section 1) and ReferenceFinder
+(section 9) — together with the permissively licensed, GPL-compatible works
+listed between them, except section 7. Section 7 is fonts under the SIL Open
+Font License, distributed alongside the program rather than combined with it
+under the GPL: they keep their own licence, which travels with every copy.
+Copyright and permission notices are reproduced here to satisfy their
+attribution requirements. Nothing in this file narrows the GPL obligations
+that govern the combined distribution.
+
+The last section is different in kind: it records a third-party *service* the
+product calls rather than a work it bundles. It grants nothing and requires
+nothing, and is here so that the list of outside parties Ori Studio depends on
+is complete in one place.
+
+--------------------------------------------------------------------------------
+1. TreeMaker 5.0.1 — Robert J. Lang
+--------------------------------------------------------------------------------
+License:  GNU GPL, version 2 or later
+Upstream: https://langorigami.com/article/treemaker/
+Ported into: crates/treemaker-core, crates/treemaker-cli, crates/treemaker-wasm
+Vendored source: third_party/treemaker-5.0.1 (see its LICENSE.txt). The wnlib
+             directory within it is distributable with no restrictions per the
+             bundled TreeMaker license notice.
+
+--------------------------------------------------------------------------------
+2. Box Pleating Studio — Mu-Tsun Tsai
+--------------------------------------------------------------------------------
+License:  MIT
+Upstream: https://github.com/MuTsunTsai/box-pleating-studio
+Ported into: crates/oristudio-bp, crates/oristudio-bp-wasm
+
+  Copyright (c) 2020-PRESENT Mu-Tsun Tsai
+
+  Permission is hereby granted, free of charge, to any person obtaining a copy
+  of this software and associated documentation files (the "Software"), to deal
+  in the Software without restriction, including without limitation the rights
+  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+  copies of the Software, and to permit persons to whom the Software is
+  furnished to do so, subject to the following conditions:
+
+  The above copyright notice and this permission notice shall be included in
+  all copies or substantial portions of the Software.
+
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+  IMPLIED. See the crate LICENSE (crates/oristudio-bp/LICENSE) for the full
+  MIT text.
+
+--------------------------------------------------------------------------------
+3. Oriedita (a fork of Orihime オリヒメ by @meguro77)
+--------------------------------------------------------------------------------
+License:  MIT
+Upstream: https://github.com/oriedita/oriedita
+Ported into: crates/oristudio-cp, crates/oristudio-cp-wasm
+
+  Copyright (c) 2021 Oriedita contributors
+
+  Permission is hereby granted, free of charge, to any person obtaining a copy
+  of this software and associated documentation files (the "Software"), to deal
+  in the Software without restriction, subject to the condition that the above
+  copyright notice and this permission notice be included in all copies or
+  substantial portions of the Software. See the crate LICENSE
+  (crates/oristudio-cp/LICENSE) for the full MIT text.
+
+  Oriedita is a fork of Orihime, whose author (@meguro77) placed it under
+  unrestricted terms. third_party/oriedita/LICENSE.md preserves that history.
+
+--------------------------------------------------------------------------------
+4. Flat-Folder — Jason S. Ku (origamimagiro)
+--------------------------------------------------------------------------------
+License:  MIT
+Upstream: https://github.com/origamimagiro/flat-folder
+Ported into: crates/treemaker-flatfold
+Also bundled unchanged: its JavaScript, as Step-Folder carries it (section 5)
+
+  Copyright (c) 2022 Jason S. Ku (origamimagiro)
+
+  Permission is hereby granted, free of charge, to any person obtaining a copy
+  of this software and associated documentation files (the "Software"), to deal
+  in the Software without restriction, subject to the condition that the above
+  copyright notice and this permission notice be included in all copies or
+  substantial portions of the Software. See the crate LICENSE-MIT
+  (crates/treemaker-flatfold/LICENSE-MIT) for the full MIT text. The Rust port
+  is additionally offered under Apache-2.0 (LICENSE-APACHE) for the port's own
+  contributions.
+
+--------------------------------------------------------------------------------
+5. Step-Folder / DEFOX — Kei Morisue; origamimagiro (Jason S. Ku)
+--------------------------------------------------------------------------------
+License:  MIT
+Upstream: https://github.com/kei-morisue/step-folder
+Pinned at: 63e08215297f4edc5e4a50a7b12f3e2249f18d55. The pin is maintained in
+          upstream-sync.json, which is authoritative.
+Bundled unchanged, not ported: apps/web/src/diagram/import/defoxRenderer.js
+          runs it in the Defox import worker (workers/defoxImportWorker.ts)
+Vendored source: third_party/step-folder (see its LICENSE and
+          README.ori-studio.md)
+
+  Copyright (c) 2022 origamimagiro (third_party/step-folder/LICENSE, which
+  covers the DEFOX modules under src/defox/: they carry no copyright line of
+  their own)
+  Copyright (c) 2022 Jason S. Ku (origamimagiro) (src/flatfolder/LICENSE)
+  Copyright (c) 2022 origamimagiro (src/linefolder/LICENSE.txt)
+
+  Flat-Folder's JavaScript (section 4) ships through it too: the DEFOX modules
+  import src/flatfolder/math.js, conversion.js and svg.js, and through them
+  avl.js, constraints.js, io.js, note.js, parallel.js and solver.js;
+  src/linefolder/linear.js ships the same way. These are Step-Folder's
+  unchanged copies, under the copyright lines above.
+
+  Permission is hereby granted, free of charge, to any person obtaining a copy
+  of this software and associated documentation files (the "Software"), to deal
+  in the Software without restriction, subject to the condition that the above
+  copyright notice and this permission notice be included in all copies or
+  substantial portions of the Software. See third_party/step-folder/LICENSE
+  for the full MIT text.
+
+--------------------------------------------------------------------------------
+6. Origami Simulator — Amanda Ghassaei
+--------------------------------------------------------------------------------
+License:  MIT
+Upstream: https://github.com/amandaghassaei/OrigamiSimulator
+Ported into: packages/origami-simulator (@treemaker/origami-simulator)
+
+  Copyright (c) 2018 Amanda Ghassaei
+
+  See packages/origami-simulator/LICENSE and packages/origami-simulator/NOTICE
+  for the full MIT text and the list of upstream source files used.
+
+--------------------------------------------------------------------------------
+7. Noto Sans, Noto Sans SC, TC, JP and KR — the Noto Project Authors; Adobe
+--------------------------------------------------------------------------------
+License:  SIL Open Font License, Version 1.1
+Upstream: https://github.com/google/fonts (pinned in
+             scripts/diagram-fonts/sources.json)
+Bundled as: apps/web/src/diagram/fonts/NotoSans-{Regular,Bold}.ttf, and the
+             CJK files scripts/diagram-fonts/build_fonts.py writes, served
+             beside the app; subsets of them are embedded in the diagram pages
+             and PDFs the app writes.
+
+  Static Regular and Bold instances, cut to a character set and with their
+  layout features and hinting removed. They keep the "Noto Sans …" names; the
+  CJK fonts' Reserved Font Name "Source" is not used. Each family's OFL.txt
+  travels with its files (OFL-NotoSans.txt, OFL-NotoSansSC.txt and the rest).
+
+  Copyright 2022 The Noto Project Authors
+  (https://github.com/notofonts/latin-greek-cyrillic)
+  Copyright 2014-2021 Adobe (http://www.adobe.com/), with Reserved Font Name
+  'Source'
+
+--------------------------------------------------------------------------------
+8. HarfBuzz subsetter (harfbuzzjs) — the HarfBuzz and harfbuzzjs authors
+--------------------------------------------------------------------------------
+License:  MIT (harfbuzzjs); HarfBuzz's own "Old MIT" licence
+Upstream: https://github.com/harfbuzz/harfbuzzjs
+Bundled as: harfbuzz-subset.wasm, which cuts each diagram page's fonts
+
+  Copyright (c) 2019-2026 The harfbuzzjs project authors
+  HarfBuzz: Copyright © the HarfBuzz authors, under the licence in its COPYING
+
+--------------------------------------------------------------------------------
+9. ReferenceFinder — Robert J. Lang (original); Mu-Tsun Tsai and Omri Shavit
+   (web/Emscripten build and modifications)
+--------------------------------------------------------------------------------
+License:  GNU GPL, version 2. Lang's original distribution grants version 2 or
+          (at your option) any later version; the fork's LICENSE says only
+          "GNU GPL" over the version 2 text and its package.json states
+          GPL-2.0, so the Tsai/Shavit modifications carry no confirmed
+          or-later grant — see LICENSING.md.
+Upstream: https://github.com/MuTsunTsai/reference-finder (the C++ core derives
+          from Lang's ReferenceFinder 4,
+          https://langorigami.com/article/referencefinder/)
+Pinned at: e2163f0cb483592f757520647e7df192b6570386 (v4.8.1, 2026-08-20). The
+          pin is maintained in upstream-sync.json, which is authoritative.
+Compiled into: apps/web/src/generated/reference-finder (Emscripten build of the
+          vendored C++, run as a Web Worker; not a Rust port)
+Vendored source: third_party/reference-finder (see its LICENSE)
+
+  Copyright (c) 1999-2006 Robert J. Lang; (c) 2024-2025 Mu-Tsun Tsai;
+  (c) 2024-2025 Omri Shavit. All rights reserved.
+
+  Like Step-Folder (section 5) and unlike the other works above, this one is
+  not ported: the shipped .wasm is the upstream C++ itself, compiled by
+  scripts/build-reference-finder.mjs. The
+  GPL's corresponding-source obligation for it is met by the vendored source
+  together with that build script and the toolchain pin in
+  scripts/reference-finder-emsdk.json.
+
+--------------------------------------------------------------------------------
+10. ExplOri 22.5 — Brandon Wong (theplantpsychologist)
+--------------------------------------------------------------------------------
+Service, not a port. Nothing from ExplOri is vendored, ported, or bundled, so
+this section carries no license grant to reproduce — it is here because the
+Search 22.5° design method does not work without someone else's server, and a
+reader of this file should know that.
+
+Upstream service: https://225.designorigami.net (built on
+             https://github.com/theplantpsychologist/SEARCH-22.5)
+Consumed by: apps/web/src/explori/ (client) and
+             apps/web/functions/api/explori/ + functions/_lib/explori.ts (the
+             Cloudflare Pages Function that proxies it; the browser cannot call
+             upstream directly, since it sends no CORS headers)
+
+  The Search 22.5° design kind sends a user's drawn tree to that service and
+  displays the crease patterns it returns from a precomputed archive of 22.5°
+  tilings. There is no optimizer and no local archive: every result is upstream
+  data, fetched per query and not redistributed by us.
+
+  Permission to build the integration was given by theplantpsychologist; see
+  implementation-plans/explori-design-type.md. The service's own terms are not
+  published, and the archive contents carry no stated license — so results are
+  treated as the service's to give, and the only copy of any of it in this
+  repository is the single captured response used as a test fixture
+  (apps/web/src/explori/__fixtures__/queryResponse.json).
+
+  Upstream logs the query tree, the caller's IP, and request headers. The app
+  tells users their tree leaves the machine; that notice is a feature notice and
+  is deliberately not gated on the analytics opt-out.

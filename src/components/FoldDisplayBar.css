@@ -1,0 +1,42 @@
+.canvas-fold-overlay{position:absolute;inset:0;pointer-events:none;z-index:3;min-width:0;min-height:0;background:transparent}
+/* The middle-button target is independent of the inspector's focus. */
+.canvas-fold-overlay[data-navigation-active=false] .flat-view>svg *{pointer-events:none!important}
+.canvas-fold-overlay .flat-view[data-model-targeted=false]>svg *{pointer-events:none!important}
+.canvas-fold-overlay .flat-view[data-model-targeted=false]>svg{cursor:default!important}
+.canvas-navigation-target{align-self:center;padding:0 7px;font-size:11px;color:var(--ink);white-space:nowrap}
+.fold-display-bar{position:relative;display:flex;flex-wrap:wrap;align-items:center;gap:1px;min-height:28px;padding:1px 3px;background:var(--paper);border:1px solid var(--line);pointer-events:auto;z-index:8;white-space:nowrap}
+.fold-display-bar button{font-size:11px;min-height:24px;min-width:23px;padding:3px 5px;border:1px solid transparent;border-radius:0}
+.fold-display-bar button[aria-pressed=true]{background:var(--active,#e0ede5);border-color:var(--accent,#729986)}
+.fold-display-bar label{display:flex;align-items:center;gap:2px;font:10px Consolas,monospace;padding:0 3px;cursor:pointer}
+.fold-display-bar input[type=color]{display:block;width:17px;height:18px;padding:0;border:1px solid var(--line);background:transparent;cursor:pointer}
+.fold-display-bar input[type=color]::-webkit-color-swatch-wrapper{padding:2px}.fold-display-bar input[type=color]::-webkit-color-swatch{border:0}
+.fold-bar-divider{width:1px;height:18px;margin:0 3px;background:var(--line)}
+.fold-display-bar details{position:relative;font-size:11px}.fold-display-bar summary{cursor:pointer;padding:4px 6px;list-style:none}
+.fold-display-bar .fold-extra-controls{position:absolute;bottom:32px;right:0;min-width:180px;padding:8px;background:var(--paper);border:1px solid var(--line);display:flex;gap:6px;align-items:center;flex-wrap:wrap;box-shadow:0 3px 12px #0002}
+.fold-display-bar select{font-size:11px;padding:3px;min-width:0}
+.canvas-fold-overlay .flat-view.flat-workspace{position:absolute;inset:0;background:transparent!important;min-height:0;padding:0;overflow:visible;pointer-events:none;display:block}
+.canvas-fold-overlay .flat-view>svg{position:absolute;inset:0;width:100%!important;height:100%!important;margin:0!important;min-height:0!important;pointer-events:none}
+.canvas-fold-overlay .flat-view>svg [data-face-id],.canvas-fold-overlay .flat-view>svg [data-region-status],.canvas-fold-overlay .flat-view>svg [data-folded-vertex]{pointer-events:auto}
+.canvas-fold-overlay .flat-result-label{position:absolute;top:8px;right:8px;left:auto;max-width:60%;margin:0;padding:4px 6px;font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.canvas-fold-overlay .flat-footer{display:none}
+.canvas-fold-overlay .embedded-model-controls{position:absolute;right:8px;bottom:40px;max-width:min(440px,95%);max-height:65%;overflow:auto;background:var(--paper);border:1px solid var(--line);pointer-events:auto;z-index:7}
+.canvas-fold-overlay .embedded-model-controls:not([open]){display:none}
+.canvas-fold-overlay .embedded-model-controls>summary[hidden]{display:none}
+.canvas-fold-overlay [data-model-draft] polygon,.canvas-fold-overlay [data-model-overlap-preview] polygon{pointer-events:none!important}
+.canvas-fold-overlay .face-map{pointer-events:auto;bottom:78px}
+.canvas-fold-overlay>.empty-workspace{position:absolute;right:12px;top:56px;width:360px;max-width:calc(100% - 24px);box-sizing:border-box;padding:12px;min-height:0;background:var(--paper);pointer-events:auto;border:1px solid var(--line)}
+.canvas-fold-overlay .empty-workspace .flat-emblem,.canvas-fold-overlay .empty-workspace .eyebrow{display:none}
+.canvas-fold-overlay .empty-workspace h2{font-size:14px;letter-spacing:0}.canvas-fold-overlay .empty-workspace p{font-size:11px}
+.canvas-fold-overlay .empty-workspace button{font-size:11px}
+.canvas-fold-overlay .model-board{pointer-events:auto}
+.canvas-fold-overlay [aria-label="模型组合工作区"]{position:absolute;inset:40px 0 80px;pointer-events:auto}
+/* Comparison panes occupy the canvas; CP guidance must not cover their headers. */
+.canvas-pane:has(.canvas-fold-overlay [aria-label="模型组合工作区"]) .canvas-controls-overlay{display:none}
+/* Keep the transparent CP guide's hit box out of the calculation status card. */
+.canvas-pane:has(.canvas-fold-overlay .flat-computation-status) .canvas-text-overlay .canvas-tool-guide{width:fit-content}
+.canvas-fold-job-status{position:absolute;top:56px;right:12px;width:360px;max-width:calc(100% - 24px);z-index:9;pointer-events:auto}
+.canvas-fold-job-status>.flat-result-label.flat-computation-status{position:relative;inset:auto;width:auto;max-width:none;margin:0;box-sizing:border-box;white-space:normal;overflow:visible}
+.canvas-model-ready-status{position:absolute;left:12px;bottom:114px;z-index:6;max-width:calc(100% - 24px);padding:4px 7px;border:1px solid var(--line,#cbd7c6);background:var(--paper,#fffefb);color:var(--ink,#304536);font-size:11px;pointer-events:auto}
+.canvas-model-ready-status>summary{display:flex;align-items:center;gap:12px;cursor:pointer;list-style:none}
+.canvas-model-ready-status>summary>span:last-child{color:var(--muted,#627362);font-size:10px}
+.canvas-model-ready-status>p{max-width:320px;margin:5px 0 1px;line-height:1.5}

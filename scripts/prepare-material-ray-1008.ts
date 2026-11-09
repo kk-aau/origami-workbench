@@ -1,0 +1,18 @@
+import fs from 'node:fs';
+import type {Doc,Point,FoldGraph} from '../src/core/types';
+import {materialDoc,materialSlitFixture} from '../tests/fixtures/materialModel';
+import {inspectMaterialTopology} from '../src/core/materialTopology';
+import {joinMaterialEdges} from '../src/core/materialJoin';
+import {exportDocument} from '../src/core/formats';
+import type {MaterialFaceRayIntent} from '../src/core/materialFaceEdit';
+import {materialCanonical} from '../src/core/materialFaceCommon';
+const slit=materialSlitFixture(),m=inspectMaterialTopology(slit.source);if(!m.ok)throw Error(m.reason);
+const grid=joinMaterialEdges(slit.source,{kind:'material-join',pairs:[{first:m.edgeSegmentIds[slit.banks[0]],second:m.edgeSegmentIds[slit.banks[1]],assignment:'F'}]}).doc;grid.name='射线网格源';
+const vertices:Point[]=[[0,0],[100,0],[100,100],[0,100],[300,0],[400,0],[400,100],[300,100]],graph:FoldGraph={vertices_coords:vertices,edges_vertices:[[0,1],[1,2],[2,3],[3,0],[4,5],[5,6],[6,7],[7,4]],edges_assignment:Array(8).fill('B'),edges_foldAngle:Array(8).fill(null),faces_vertices:[[0,1,2,3],[4,5,6,7]],faces_edges:[[0,1,2,3],[4,5,6,7]],edges_faces:Array.from({length:8},(_,e)=>[Math.floor(e/4)]),faces_faces:[[null,null,null,null],[null,null,null,null]] as unknown as number[][]};
+const gap=materialDoc(graph,vertices);gap.name='射线间隙源';
+const hp:Point[]=[[0,0],[100,0],[100,100],[0,100],[40,40],[60,40],[60,60],[40,60]],hole=materialDoc(materialCanonical(hp,[[0,1],[1,2],[2,3],[3,0],[4,5],[5,6],[6,7],[7,4]],Array(8).fill('B'),Array(8).fill(null),[[0,1,2,3]],[[0,1,2,3]],[[[4,7,6,5]]],[[[7,6,5,4]]]),hp);hole.name='射线带孔源';
+const request=(doc:Doc,x:number,assignment:'F'|'M'='F',cpOnly=false):MaterialFaceRayIntent=>{const a=inspectMaterialTopology(doc);if(!a.ok)throw Error(a.reason);const e=a.graph.edges_vertices.findIndex(([v,w])=>a.graph.vertices_coords[v][0]===x&&a.graph.vertices_coords[w][0]===x&&Math.min(a.graph.vertices_coords[v][1],a.graph.vertices_coords[w][1])<50&&Math.max(a.graph.vertices_coords[v][1],a.graph.vertices_coords[w][1])>50),[v,w]=a.graph.edges_vertices[e].map(i=>a.graph.vertices_coords[i]);return {kind:'material-face-ray',component:'all',from:{edgeId:a.edgeSegmentIds[e],fraction:(50-v[1])/(w[1]-v[1])},through:[x+1,50],assignment,fixedSide:'left',cpOnly};};
+const holeIntent:MaterialFaceRayIntent={kind:'material-face-ray',component:'all',from:{edgeId:'material-edge-0',fraction:.5},through:[50,1],assignment:'M',fixedSide:'left',cpOnly:false};
+const cases=[{name:'partial',source:'grid',intent:request(grid,100)},{name:'full-m',source:'grid',intent:request(grid,0,'M')},{name:'cp-only',source:'grid',intent:request(grid,100,'M',true)},{name:'gap',source:'gap',intent:request(gap,0)},{name:'hole',source:'hole',intent:holeIntent}];
+for(const [name,doc] of [['grid',grid],['gap',gap],['hole',hole]] as const)fs.writeFileSync(`output/playwright/material-ray-${name}-source-1008.zhezhi.json`,exportDocument(doc,'json').text);
+fs.writeFileSync('output/playwright/material-ray-cases-1008.json',JSON.stringify(cases,null,2));console.log('Prepared exact ray geometry and edge identity cases.');

@@ -1,0 +1,9 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "startup-local",
+  "description": "Only the startup window may cancel startup or open logs. Windows IPC carries the HTTP Origin without a page path; Rust additionally checks the actual window label and exact local service origin.",
+  "windows": ["startup"],
+  "remote": { "urls": ["http://127.0.0.1:*/"] },
+  "local": false,
+  "permissions": ["allow-desktop-cancel-startup", "allow-desktop-open-logs"]
+}

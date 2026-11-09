@@ -1,0 +1,22 @@
+.tess-dialog.nested-mother-editor{width:min(1120px,96vw);height:min(700px,calc(100dvh - 28px));max-height:calc(100dvh - 28px);padding:12px;display:flex;flex-direction:column;overflow:hidden}
+.nested-mother-editor header{flex:0 0 auto;padding-bottom:8px}
+.nested-mother-body{flex:1;min-height:0;display:grid;grid-template-columns:350px minmax(0,1fr);gap:12px;margin-top:8px}
+.nested-mother-controls{min-height:0;overflow:auto;border:1px solid var(--line,#ccd3ce);border-radius:4px}
+.nested-mother-controls .tess-controls{height:auto;overflow:visible;background:transparent}
+.nested-mother-controls .tess-controls .select-field,.nested-mother-controls .tess-number,.nested-mother-controls .tess-controls .text-button,.nested-mother-controls .tess-controls .tess-actions button{font-size:12px}
+.nested-mother-controls .select-field select{max-width:200px;width:200px;font-size:12px}
+.nested-mother-controls .tess-controls .note{font-size:12px;line-height:1.4}
+.nested-mother-preview{display:flex;flex-direction:column;min-height:0;min-width:0}
+.nested-mother-legend{display:flex;justify-content:space-between;gap:8px;font-size:12px;padding:3px 0 8px}
+.nested-mother-preview .woven-graph-plot{display:flex;flex:1;min-height:0;flex-direction:column}
+.nested-mother-preview .woven-graph-plot-viewport{flex:1;min-height:0;height:auto;border:1px solid var(--line,#ccd3ce);background:var(--surface,#f6f8f6)}
+.nested-mother-preview .woven-graph-plot-viewport svg{display:block;width:100%;height:100%}
+.nested-mother-preview .woven-graph-navigation{display:flex;flex-wrap:wrap;gap:5px;align-items:center;margin:0 0 5px;font-size:12px}
+.nested-mother-preview .woven-inspect-edge{stroke:#263c35;stroke-width:1.2;fill:none}
+.nested-mother-preview .woven-inspect-hit{stroke:transparent;stroke-width:9;fill:none}
+.nested-mother-empty{flex:1;display:grid;place-items:center;background:var(--surface,#f6f8f6);font-size:13px}
+.nested-mother-status{flex:0 0 34px;display:flex;align-items:center;padding:4px 0;font-size:12px;overflow-wrap:anywhere}
+.nested-mother-status[data-error=true]{color:#a33c31}
+.nested-mother-editor footer{flex:0 0 auto;gap:8px;margin-top:8px}
+.nested-mother-editor footer span{max-width:70%;line-height:1.4;font-size:12px}
+@media(max-width:800px){.nested-mother-body{grid-template-columns:290px minmax(0,1fr)}.nested-mother-controls .select-field select{width:160px}.nested-mother-editor footer span{max-width:60%}}

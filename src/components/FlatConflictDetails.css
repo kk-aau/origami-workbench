@@ -1,0 +1,18 @@
+.flat-conflict-details{margin-top:9px;padding-top:8px;border-top:1px solid var(--line,#cbd7c6);color:var(--ink,#293d35);font-size:11px;line-height:1.55}
+.flat-conflict-heading{display:flex;align-items:center;flex-wrap:wrap;gap:6px 8px}
+.flat-conflict-heading>strong{font-size:11px;font-weight:600;flex:1;min-width:80px}
+.flat-conflict-heading select{min-width:0;max-width:100%;flex:1 1 140px;font-size:11px;padding:3px 5px}
+.flat-conflict-heading button{font-size:11px;padding:3px 7px;white-space:nowrap}
+.flat-conflict-details p{margin:6px 0 0;font-size:11px;line-height:1.55;overflow-wrap:anywhere}
+.flat-conflict-details .flat-conflict-note{font-size:10px;color:color-mix(in srgb,var(--ink,#293d35) 85%,var(--paper,#fffefb))}
+.flat-conflict-relations{margin-top:6px}.flat-conflict-relations summary{cursor:pointer}.flat-conflict-relations ul{margin:5px 0 0;padding-left:20px}
+.flat-conflict-details :is(button,select):focus-visible{outline:2px solid var(--accent,#32634c);outline-offset:2px}
+.flat-conflict-overlay{--flat-conflict-color:#b45031}
+.flat-conflict-face,.flat-conflict-vertex{fill:color-mix(in srgb,var(--flat-conflict-color) 20%,transparent);stroke:var(--flat-conflict-color)}
+.flat-conflict-overlap{fill:color-mix(in srgb,var(--flat-conflict-color) 58%,transparent);stroke:var(--flat-conflict-color);stroke-linejoin:round}
+.flat-conflict-edge{stroke:var(--flat-conflict-color)}
+[data-theme="dark"] .flat-conflict-overlay{--flat-conflict-color:#f2ac8b}
+/* The source CP paper stays light in both application themes. */
+.crease-canvas .flat-conflict-overlay{--flat-conflict-color:#b45031}
+.model-comparison-status:has(.flat-conflict-details){height:auto;max-height:240px;overflow:auto}
+.canvas-fold-overlay .flat-computation-status:has(.flat-conflict-details){max-height:calc(100% - 68px);overflow:auto!important}

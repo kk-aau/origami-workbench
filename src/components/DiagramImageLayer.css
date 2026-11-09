@@ -1,0 +1,4 @@
+.diagram-model-svg.diagram-tool-select [data-diagram-image]{cursor:var(--diagram-move-cursor)}
+.diagram-model-svg.diagram-tool-select [data-diagram-image] .diagram-image-resize-nw{cursor:nwse-resize}
+.diagram-model-svg.diagram-tool-select [data-diagram-image] .diagram-image-resize-ne{cursor:nesw-resize}
+.diagram-model-svg[data-diagram-disabled="true"] [data-diagram-image]{cursor:default}

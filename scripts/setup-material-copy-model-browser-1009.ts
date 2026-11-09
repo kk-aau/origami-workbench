@@ -1,0 +1,13 @@
+import fs from 'node:fs';
+import {copyModelCase,copyModelRecipe} from '../tests/fixtures/materialCopyModel';
+import {copyMaterialComponents} from '../src/core/materialCopy';
+import {weakToolSheet} from '../tests/fixtures/materialWeakTools';
+import {topologyModelCase} from '../tests/fixtures/materialTopologyModel';
+import {importDocument,exportDocument} from '../src/core/formats';
+import {inspectMaterialTopology} from '../src/core/materialTopology';
+const save=(name:string,doc:ReturnType<typeof copyModelCase>)=>{doc.name=`参数复制-${name}`;fs.writeFileSync(`output/playwright/material-copy-model-${name}-initial-1009.zhezhi.json`,exportDocument(doc,'json').text);};
+for(const name of ['source','copied','transformed','ray'])save(name,copyModelCase(name));
+save('hole',weakToolSheet(true));save('cut',topologyModelCase('cut'));
+const aux=copyModelCase('source');aux.segments.push({id:'copy-source-aux',a:[5,7],b:[15,19],assignment:'A',angle:null});save('aux',copyMaterialComponents(aux,{...copyModelRecipe(aux),segmentIds:[...copyModelRecipe(aux).segmentIds,'copy-source-aux'],parametric:true}).doc);
+const original=importDocument(fs.readFileSync('output/playwright/material-topology-model-original-saved-1009.zhezhi.json','utf8'),'json').doc;save('original',original);
+const recipes=['source','hole','cut','original'].map(name=>{const doc=importDocument(fs.readFileSync(`output/playwright/material-copy-model-${name}-initial-1009.zhezhi.json`,'utf8'),'json').doc,m=inspectMaterialTopology(doc);if(!m.ok)throw Error(m.reason);return {name,recipe:{...copyModelRecipe(doc,150,2,{rotation:25,scale:.75,mirror:'x'}),placements:copyModelRecipe(doc,150,2,{rotation:25,scale:.75,mirror:'x'}).placements.map((p,i)=>({...p,dy:(i+1)*10})),segmentIds:m.edgeSegmentIds}};});fs.writeFileSync('output/audits/material-copy-model-recipes-1009.json',JSON.stringify(recipes,null,2));console.log('Prepared actual copy/holes/cut/original, mixed copy-transform/ray and auxiliary replay fixtures.');

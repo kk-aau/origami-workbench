@@ -1,0 +1,123 @@
+import fs from 'node:fs';
+import assert from 'node:assert/strict';
+import crypto from 'node:crypto';
+
+const json = file => JSON.parse(fs.readFileSync(file, 'utf8'));
+const sha = file => crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex');
+const run = json('output/original-planar-ruled-checks-1011.json');
+assert.equal(run.exitCode, 0);
+assert.equal(run.inputsUnchanged, true);
+assert.equal(run.backendInputsUnchanged, true);
+assert.equal(run.stages.length, 8);
+assert.ok(run.stages.every(stage => stage.exitCode === 0));
+const readback = json('output/original-planar-ruled-readback-verified-1011.json');
+const layout = json('output/original-noncircle-compact-main-verified-1011.json');
+const bundle = json('output/original-planar-ruled-bundle-verified-1011.json');
+const preservation = json('output/original-planar-ruled-preservation-1011.json');
+const previous = json('output/audits/original-conic-noncircle-final-1011.json');
+const stop = json('output/original-planar-ruled-service-stopped-1011.json');
+for (const report of [readback, layout, bundle, preservation, stop]) assert.equal(report.verified, true);
+assert.equal(readback.bundle, bundle.bundle);
+assert.equal(layout.bundle, bundle.bundle);
+assert.equal(layout.noRootProjectWrites, true);
+assert.equal(layout.actualUserExports, 0);
+assert.equal(layout.usedActualAPI, true);
+assert.equal(readback.actualUserDownloads, 31);
+assert.equal(preservation.previousArchiveFilesVerified, 3494);
+assert.equal(preservation.mappedFiles, 9);
+const integrations = preservation.integrationReports.map(json);
+const sourceChanges = [...new Map(integrations.flatMap(report => report.files).map(row => [row.file, row])).values()];
+assert.equal(sourceChanges.length, 9);
+const modificationRows = sourceChanges.map(row => `| [${row.file}](D:/codex/折纸工具/workbench/${row.file}) | ${row.before === null ? '新增' : '修改'} |`).join('\n');
+const document = 'docs/P58-原直纹三面CP与参数布局统一验收-20261011.md';
+assert.ok(!fs.existsSync(document));
+const text = `# 原直纹三面 CP 与参数布局统一验收（2026-10-11）
+
+源码版已接入原 In[4040] 圆柱直纹纸面的有限二维 CP，以及原非圆截线 CP 的紧凑参数界面。构造、采用、保存、普通导出、优化导出和重新修改原参数已实际操作验收；完整 Origamica 目标继续推进，免安装包未更新。
+
+| 体验入口 | 实际行为 |
+| --- | --- |
+| 镶嵌设计 → 空间构造 → 原式工具与参考示例 → 原直纹三面 CP · In[4040] | 使用原圆柱及两个镜面的三阶段原数值链，显示二维毫米纸面；可以调整起终参数和分段数，生成后仅采用 CP。 |
+| 采用后 → 修改原直纹纸面参数 | 配方和完整原数值结果持久保存；修改参数后保工程名称和 UUID，重新生成真实三面材料。 |
+| 原非圆截线 · 有限二维 CP | 桌面改为参数与预览两列，保持 420px 预览槽；参数、状态和底部采用按钮同屏，有效/生成/非法状态不改变弹窗高度。 |
+
+原 Notebook 固定输入是圆柱 b=(cos u,sin u,0)、d=(0,0,1)，镜面点(1,0,1)/(2,0,1)，法向量均(-1,0,1)/sqrt(2)，ComposeReflections=false。原切距为 cos u 与 1+cos u；二维参数化 b=(0,u)、d=(1,0)，Y=(v,u)，保留原 Jacobian=-1，不按三维投影生成 CP。两外边 v=0/3 及端封边属于本地有限材料选择。原数值母线用于来源诊断，预览的采样母线不作为实际加工边。
+
+本次可编辑有限范围是原[-π/4,π/4]的闭子区间、跨度至少0.1弧度、分段数16–128。内部曲线用有限弦，误差上界Δu²/8，端封和两外边误差为0；原单位未指定，当前材料明确采用1原坐标单位=1毫米，无再缩放/镜像/翻转。默认16段生成V68/E70/F3、U32/B38；实际修改为24段及u∈[-0.6,0.7]，生成V100/E102/F3、U48/B54。三面拓扑、无交叉、连续覆盖及单纸边检查均通过，不将有限弦 CP 宣称为连续曲折或平折解。
+
+| 最终验证 | 结果 |
+| --- | --- |
+| 项目八阶段 | 前端${run.tests.frontend}、桌面${run.tests.desktop}、服务/worker${run.tests.serverWorker}；平面脚本、层序专项、类型与构建全部通过。 |
+| 后端回归 | ${run.tests.backend}项既有完整结果沿用；所有Python与既有数值样例/后端输入逐SHA相同。本次原二维链与新增前端桥接另以真实API、独立公式和文件核对验证。 |
+| 最终构建 | ${run.tests.buildModules}模块，${bundle.bundle}；主界面及紧凑布局使用同一最终bundle，26个构建文件SHA保持。 |
+| 根实际构造界面 | 88项；默认/修改、采用、源重编辑、取消、工程名称和UUID、真实API、JSON/FOLD文件重开与工程库精确UUID GET。 |
+| 根用户按钮文件 | 31件：23JSON/FOLD、6DXF、2优化报告；API/POST/UUID捕获另列，不计作用户文件。 |
+| 根独立回读 | ${readback.independentPythonChecks}项独立公式/图/身份/保存链检查，${readback.coreChecks}项当前核心检查，23次JSON/FOLD导入和2个优化LINE回读；31文件SHA未变。 |
+| 优化实际条数 | 默认70条源边→36条LINE；修改102→52。每条源边一次，覆盖精确；长度分别保持12.54874935240598mm、11.36162862955378mm（IEEE舍入），真实报告/界面统计与完整重算一致。 |
+| 根紧凑布局 | ${layout.passed}项真实界面检查；1420×960和1920×1080，TessPanel入口及采用后App参数重编辑两种祖先；实际API、有效/生成/非法状态；未导出或写根工程。 |
+| 本地构造交付 | 10聚焦测试、24独立组件界面、4465程序格式、113密度/6域、2Chrome→Node；不计作根用户31文件。 |
+| 本地布局交付 | 18静态不变量、93独立Chrome布局及93真实祖先样式补验，31项同行审查；本地零HTTP/零服务/零根用户导出，与根真实API验收分列。 |
+| 原工作保护 | 上批3494件冻结逐SHA保持，9目标精确before/after、1825既有生产输入未变；11项明确原数值/几何/普通DXF/优化DXF核心不变。 |
+
+本轮手工赋型实际改变两条相邻内部段：索引36/37、in4040-curve-1-12与in4040-curve-1-13，U/null→M/-180。原界面脚本关于“一条/仅目标”的叙述不足以证明单段选择；独立审计以实际两段及其文件SHA为准，singleEdgeUISelectionProven=false。五份手改JSON/FOLD/重开/工程库文档来源匹配为false，几何与配方保持；显式源重建后恢复U且来源匹配true。旧88界面记录、旧11件准备证据和85件构造交付保持；新修订审计及最小before/after审计补丁另存16件，没有为通过审计更改生产或用户文件。
+
+另一个准备审计缺陷是把优化报告当作完整内部plan，缺失baselinePaths。修订以真实源Doc及报告options重算完整plan，再逐字段绑定options/before/after/analysis/groups/paths，最后用既有LINE verifier和预览统计检查；没有编造baseline或改导出格式。
+
+原直纹 CP 默认未知U、折角null；没有Doc.flatFold、foldedVertices、startingFace或应用的平折/三维证书。实际默认例核心平折诊断为geometry.invalid（Kawasaki交替角和183.10°），修改/手改/恢复例为182.09°、layers.unknown。这是实际输入的诊断，不把CP-only统一解释为必定invalid；这些三面有限弦材料仅允许采用CP。原数值曲折结果、局部正则性和二维无交叉也不充当整片层序或连续无碰撞证明。
+
+| 修改文件 | 状态 |
+| --- | --- |
+${modificationRows}
+
+| 未完成或未验证 | 状态 |
+| --- | --- |
+| 全原版范围 | 完整任意解析/符号/默认求解与全数值域仍未完成，继续按原定义和实际构造验收推进，不发布无依据的完成百分比。 |
+| 连续曲折与空间 | 本批是有限二维CP，无原连续曲线等价、整片平折层序、三维初值/运动、碰撞或纸厚认证。 |
+| 计算环境 | 未执行Wolfram，未宣称原保存Out或Wolfram插值对象等价。 |
+| 包与设备 | 未更新免安装包、未发布、未第三方刻字软件导入或机器试压，不操作设备，不承诺实机提速。 |
+
+主检查：output/original-planar-ruled-checks-1011.json及同名log；实际31用户文件：output/playwright/original-planar-ruled-main-1011；独立回读与审计修订：output/parallel/original-planar-ruled-main-auditor-fix-1011；紧凑布局主验收：${layout.evidenceDirectory}。P57及此前冻结保持。
+`;
+
+const backup = 'output/original-planar-ruled-docs-before-1011';
+assert.ok(!fs.existsSync(backup));
+fs.mkdirSync(backup);
+const docChanges = [];
+for (const file of ['README.md', 'docs/Origamica当前剩余范围-20261009.md']) {
+  assert.equal(sha(file), previous.snapshots.find(row => row.file === file).sha256, file);
+  const bytes = fs.readFileSync(file);
+  const saved = `${backup}/${file}`;
+  fs.mkdirSync(saved.slice(0, saved.lastIndexOf('/')), { recursive: true });
+  fs.writeFileSync(saved, bytes, { flag: 'wx' });
+  let content = bytes.toString('utf8');
+  if (file === 'README.md') {
+    const heading = content.match(/^# [^\r\n]+\r?\n(?:\r?\n)+/);
+    assert.ok(heading);
+    content = content.slice(0, heading[0].length) + `原直纹三面CP与参数布局（2026-10-11，未重打包）：原In[4040]有限二维CP已接构造、毫米预览、采用、保存和源再建；原非圆参数桌面同屏。${run.tests.frontend}前端检查、88实际构造界面、31件用户文件回读与真实布局验收通过，见[入口与验收](${document})。完整目标继续推进。\n\n` + content.slice(heading[0].length);
+  } else {
+    const lines = content.split(/\r?\n/);
+    const index = lines.findIndex(line => line.startsWith('最新已验收：'));
+    assert.ok(index >= 0);
+    lines[index] = '最新已验收：原In[4040]圆柱直纹三面有限二维CP、原数值来源/三面材料/毫米参数预览、采用保存/源再建，以及原非圆截线桌面紧凑布局；见P58-原直纹三面CP与参数布局统一验收-20261011.md。P57/P56及此前冻结保持；完整曲线、符号/默认求解和全数值域目标仍未完成。';
+    content = lines.join(content.includes('\r\n') ? '\r\n' : '\n');
+  }
+  const before = sha(file);
+  fs.writeFileSync(file, content);
+  docChanges.push({ file, before, after: sha(file) });
+}
+fs.writeFileSync(document, text, { flag: 'wx' });
+docChanges.push({ file: document, before: null, after: sha(document) });
+const output = 'output/original-planar-ruled-report-1011.json';
+assert.ok(!fs.existsSync(output));
+fs.writeFileSync(output, JSON.stringify({
+  verified: true, document, docChanges, sourceChanges,
+  tests: run.tests, bundle: bundle.bundle,
+  mainAppChecks: 88, userButtonExportFiles: 31,
+  independentDownloadChecks: readback.independentPythonChecks,
+  actualCoreChecks: readback.coreChecks, coreImports: 23,
+  layoutChecks: layout.passed, layout,
+  actualHandMCount: 2, singleEdgeUISelectionProven: false,
+  preservation, completeOrigamicaGoal: false,
+  packed: false, published: false, machineVerified: false,
+}, null, 2), { flag: 'wx' });
+console.log(JSON.stringify({ document, mainAppChecks: 88, userFiles: 31, layoutChecks: layout.passed, completeOrigamicaGoal: false }));

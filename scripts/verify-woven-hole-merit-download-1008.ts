@@ -1,0 +1,21 @@
+import fs from 'node:fs';
+import assert from 'node:assert/strict';
+import {prepareTessResult} from '../src/app/tessellation';
+import {readWovenMeritReport} from '../src/app/wovenMeritReport';
+import {inspectWovenCutTopology} from '../src/app/wovenCutTopology';
+import {wovenMaterialDocument} from '../src/app/wovenMaterialDocument';
+import {importDocument} from '../src/core/formats';
+import {inspectMaterialTopology} from '../src/core/materialTopology';
+import {computeFlatFold} from '../src/core/flatFold';
+import {exportDXF,DXF_LAYERS} from '../src/core/dxf';
+const legacy=process.argv[2]==='legacy',prefix=legacy?'woven-mother-holes':'woven-hole-merit';
+const read=(f:string)=>fs.readFileSync(f,'utf8'),log=read(`output/audits/woven-hole-merit-${legacy?'holes-regression':'browser-final'}-1008.log`);assert.ok(!log.includes('### Error'));const browser=JSON.parse(log.split(/\r?\n/)[1]);assert.deepEqual(browser.errors,[]);
+const native=importDocument(read(`output/playwright/${prefix}-adopted-1008.zhezhi.json`),'json').doc,params=(native.metadata!.tessellation as any).parameters;
+assert.equal(params.optimization,legacy?undefined:'origamica-merit');assert.equal(params.width,legacy?.08:.06);assert.deepEqual(params.graph.holeFaces,[4]);assert.equal(params.graph.vertices[0][0],-2.01);
+const result=prepareTessResult(browser.response,params),inspection=inspectWovenCutTopology(result,params);assert.ok(inspection.ok,inspection.ok?'':inspection.reason);const q=readWovenMeritReport(result.source);if(!legacy){assert.ok(q);assert.equal(q.holeClosureEquationCount,64);}else assert.equal(q,null);
+const expected=inspectMaterialTopology(wovenMaterialDocument(result,params)),actual=inspectMaterialTopology(native);assert.ok(expected.ok,expected.ok?'':expected.reason);assert.ok(actual.ok,actual.ok?'':actual.reason);assert.deepEqual(actual.graph,expected.graph);assert.deepEqual(actual.foldedVertices,expected.foldedVertices);
+const fold=importDocument(read(`output/playwright/${prefix}-adopted-1008.fold`),'fold').doc,reopened=inspectMaterialTopology(fold);assert.ok(reopened.ok,reopened.ok?'':reopened.reason);assert.deepEqual(reopened.graph,actual.graph);assert.deepEqual(reopened.foldedVertices,actual.foldedVertices);for(const doc of [native,fold])assert.equal(computeFlatFold(doc).layers.status,'solved');
+const dxf=read(`output/playwright/${prefix}-adopted-1008.dxf`);assert.equal(dxf,exportDXF(native).text);const tokens=dxf.trim().split(/\r?\n/),entities:Map<number,string>[]=[];let entity:Map<number,string>|null=null;
+for(let i=0;i<tokens.length;i+=2){const code=Number(tokens[i]),value=tokens[i+1];if(code===0){if(entity)entities.push(entity);entity=value==='LINE'?new Map():null;}else if(entity)entity.set(code,value);}
+assert.equal(entities.length,native.segments.length);native.segments.forEach((s,i)=>{const e=entities[i];assert.equal(e.get(8),DXF_LAYERS[s.assignment].name);for(const [code,value] of [[10,s.a[0]],[20,-s.a[1]],[11,s.b[0]],[21,-s.b[1]]] as const)assert.ok(Number(e.get(code))===value);});
+const report={verified:true,browser:browser.passed,exactNativeAndFOLDGeometry:true,exactNativeAndFOLDFoldedPositions:true,ordinaryDXFLinesMillimetersExact:true,originalMeritAndGlobalClosure:!legacy,layers:'solved',dxfLines:entities.length,closureError:result.source.closureError,merit:q?.merit,holeRows:q?.holeClosureEquationCount,independentRows:q?.independentEquationCount};fs.writeFileSync(`output/audits/woven-hole-merit-${legacy?'holes-':''}download-1008.json`,JSON.stringify(report,null,2));console.log(JSON.stringify(report));

@@ -1,0 +1,10 @@
+import fs from 'node:fs';
+import {importDocument} from '../src/core/formats';
+import {readTessParams} from '../src/app/tessellation';
+const base='output/playwright/original-min-budget-final-1010/min-total';
+const doc=importDocument(fs.readFileSync(`${base}/base.json`,'utf8'),'json').doc;
+const api=JSON.parse(fs.readFileSync(`${base}/base-response.json`,'utf8'));
+const saved=readTessParams(doc.metadata!.tessellation.parameters)!,actual=readTessParams(api.stats.parameters)!;
+const differences=[...new Set([...Object.keys(saved),...Object.keys(actual)])].filter(key=>JSON.stringify((saved as any)[key])!==JSON.stringify((actual as any)[key])).map(key=>({key,saved:(saved as any)[key],actual:(actual as any)[key]}));
+fs.writeFileSync(`${base}/recipe-difference.json`,JSON.stringify({saved,actual,differences},null,2),{flag:'wx'});
+console.log(JSON.stringify(differences));

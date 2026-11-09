@@ -1,0 +1,8 @@
+.desktop-window-controls{display:flex;align-self:stretch;flex-shrink:0;border-left:1px solid var(--line);margin-left:8px;position:relative;user-select:none}
+.desktop-window-controls>button{width:40px;min-width:32px;height:100%;min-height:34px;border:0;border-radius:0;padding:0;background:transparent;color:var(--ink);flex-shrink:0}
+.desktop-window-controls>button:hover{background:var(--tint)}
+.desktop-window-controls>button.desktop-window-close:hover{background:#c43d36;color:#fff}
+.desktop-window-controls>button:focus-visible{outline-offset:-3px}
+.desktop-window-controls svg{width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:1;stroke-linecap:square;flex-shrink:0}
+.desktop-window-error{position:absolute;right:8px;top:calc(100% + 8px);width:250px;padding:10px 12px;white-space:normal;font-size:12px;line-height:1.6;color:var(--danger);background:var(--paper);border:1px solid var(--line);border-radius:5px;z-index:30}
+@media(max-width:1390px){.desktop-window-controls{margin-left:4px}.desktop-window-controls>button{width:34px}}

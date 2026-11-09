@@ -1,0 +1,7 @@
+.tess-dialog[open]:has(>.curved-helix-refold-dialog){width:min(1100px,calc(100vw - 24px));height:min(670px,calc(100dvh - 24px))}
+.curved-helix-refold-dialog{grid-template-columns:250px minmax(0,1fr)}
+.curved-helix-refold-dialog .curved-helix-panels{grid-template-columns:repeat(3,minmax(0,1fr))}
+.curved-helix-refold-dialog .curved-helix-legend{gap:8px}
+.curved-helix-refold-dialog .curved-helix-legend .curved-helix-azimuth{margin-left:auto;min-width:165px;width:190px;border:0;padding:0;color:#536d62;min-height:0}
+@media(max-width:760px){.curved-helix-refold-dialog .curved-helix-panels{min-height:570px}}
+@media(max-width:650px){.curved-helix-refold-dialog .curved-helix-panels{grid-template-columns:1fr;min-height:780px}.curved-helix-refold-dialog .curved-helix-panel{min-height:230px}.curved-helix-refold-dialog .curved-helix-legend .curved-helix-azimuth{width:100%;margin-left:0}}

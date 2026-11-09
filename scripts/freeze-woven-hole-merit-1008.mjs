@@ -1,0 +1,31 @@
+import fs from 'node:fs';
+import path from 'node:path';
+import crypto from 'node:crypto';
+import assert from 'node:assert/strict';
+const read=f=>fs.readFileSync(f,'utf8'),hash=f=>crypto.createHash('sha256').update(fs.readFileSync(f)).digest('hex');
+const full=read('output/audits/woven-hole-merit-full-tests-1008.log');
+for(const pass of [2168,7,63])assert.match(full,new RegExp(`ℹ pass ${pass}\\r?\\n`));
+assert.match(full,/Ran 1088 tests/);assert.match(full,/\r?\nOK\r?\n/);assert.ok(!full.includes('✖')&&!full.includes('FAILED ('));
+const build=read('output/audits/woven-hole-merit-build-1008.log');assert.match(build,/929 modules/);assert.match(build,/built in/);
+for(const [file,count] of [['python',6],['original-regression',8]]){const log=read(`output/audits/woven-hole-merit-${file}-1008.log`);assert.match(log,new RegExp(`Ran ${count} tests`));assert.match(log,/\r?\nOK\r?\n/);}
+const browser=[['browser-final',23],['holes-regression',27],['visual-regression',60],['independent-regression',93],['original-ui-regression',29],['period-ui-regression',28]].map(([name,passed])=>{
+ const file=`output/audits/woven-hole-merit-${name}-1008.log`,log=read(file);assert.match(log,/^### Result\r?\n/);assert.ok(!log.includes('### Error'));const result=JSON.parse(log.split(/\r?\n/)[1]);assert.equal(result.passed,passed);assert.deepEqual(result.errors,[]);return {file,passed};
+});
+const downloads=JSON.parse(read('output/audits/woven-hole-merit-download-1008.json'));
+for(const key of ['verified','exactNativeAndFOLDGeometry','exactNativeAndFOLDFoldedPositions','ordinaryDXFLinesMillimetersExact','originalMeritAndGlobalClosure'])assert.equal(downloads[key],true);
+assert.equal(downloads.dxfLines,56);assert.equal(downloads.holeRows,64);assert.equal(downloads.independentRows,3);assert.ok(downloads.closureError<1e-8);
+const legacy=JSON.parse(read('output/audits/woven-hole-merit-holes-download-1008.json'));assert.equal(legacy.verified,true);assert.equal(legacy.originalMeritAndGlobalClosure,false);
+for(const name of ['independent','original','period','visual'])assert.match(read(`output/audits/woven-hole-merit-${name}-download-1008.log`),/verified/i);
+const cases=JSON.parse(read('output/audits/woven-hole-merit-cases-verified-1008.json'));assert.equal(cases.verified,true);assert.equal(cases.cases.length,8);assert.ok(cases.cases.every(c=>c.layers==='solved'&&c.closureError<1e-7));assert.equal(cases.cases.find(c=>c.name==='independent-other-root').holeRows,128);
+const changedProduction=new Set(['backend/tessellation_woven.py','backend/tessellation_woven_merit.py','src/app/wovenMeritReport.ts','src/app/wovenParams.ts','src/components/WovenControls.tsx']);
+const previous=JSON.parse(read('output/audits/woven-mother-holes-final-1008.json')),preserved=[];
+for(const record of previous.snapshots){
+ if(!['src/','tests/','backend/'].some(p=>record.file.startsWith(p))&&!['package.json','package-lock.json','tsconfig.json','vite.config.ts','server.mjs'].includes(record.file))continue;
+ if(changedProduction.has(record.file)){assert.notEqual(hash(record.file),record.sha256);continue;}
+ assert.equal(hash(record.file),record.sha256,`Unexpected source change: ${record.file}`);preserved.push(record);
+}
+const all=dir=>fs.readdirSync(dir,{recursive:true}).map(f=>path.join(dir,f).replaceAll('\\','/')).filter(f=>fs.statSync(f).isFile()&&!f.includes('__pycache__'));
+const files=new Set([...all('src'),...all('tests'),...all('backend'),...all('dist'),...fs.readdirSync('scripts').filter(f=>f.includes('1008')&&(f.includes('woven-hole-merit')||f.includes('woven-mother-hole')||f.includes('woven-visual')||f.includes('woven-independent'))).map(f=>'scripts/'+f),...fs.readdirSync('output/audits').filter(f=>f.startsWith('woven-hole-merit-')&&/\.(json|log)$/.test(f)&&f!=='woven-hole-merit-final-1008.json').map(f=>'output/audits/'+f),...fs.readdirSync('output/playwright').filter(f=>(f.startsWith('woven-hole-merit-')||f.startsWith('woven-mother-holes-')||f.startsWith('woven-visual-')||f.startsWith('woven-independent-'))&&f.includes('1008')).map(f=>'output/playwright/'+f),'README.md','docs/Origamica稳定构造逐项差异-20260927.md','docs/P42-孔洞原目标全局闭合与解析导数-20261008.md','package.json','package-lock.json','tsconfig.json','vite.config.ts','server.mjs']);
+const archive='output/audits/woven-hole-merit-artifacts-1008',manifest='output/audits/woven-hole-merit-final-1008.json';assert.ok(!fs.existsSync(archive)&&!fs.existsSync(manifest),'Never overwrite frozen history');fs.mkdirSync(archive,{recursive:true});const snapshots=[];
+for(const file of [...files].sort()){const target=path.join(archive,file);fs.mkdirSync(path.dirname(target),{recursive:true});fs.copyFileSync(file,target,fs.constants.COPYFILE_EXCL);assert.equal(hash(target),hash(file));snapshots.push({file,sha256:hash(file),bytes:fs.statSync(file).size});}
+const report={verified:true,status:'goal-active',scope:'Full unfold closure in the original square-sum woven-hole objective, analytic transform Jacobians, fixed numerical equality basis and full final residual/KKT verification',tests:{frontend:2168,backend:1088,desktop:7,serverWorker:63,newUnit:3,newBackend:6,buildModules:929,browser:260},browser,downloads,legacyHoleDownloads:legacy,cases,changedProduction:[...changedProduction],addedProduction:['backend/tessellation_woven_holonomy.py'],preservedSourceAndTests:preserved,archive,snapshots,remaining:['Arbitrary multi-ring mother faces or nested independent contours','Valid degree >=10 weaving','Arbitrary hole/period/full-inset combinations or winding branches and nonlinear rank changes','Original material free endpoints, rays, closed networks and curved batches','Repeated-corner slit merges and outer-to-hole bridges','Original arbitrary non-flat editing','Full Wolfram symbolic/options/interpolation and unproven domains'],notVerified:['Maximum-scale performance','Actual Wolfram/global numerical equivalence or global optimality','Portable EXE/native pointer and confirmation bridge; release unchanged','External FOLD/engraving import or machine outcomes','Continuous collision-free physical folding']};fs.writeFileSync(manifest,JSON.stringify(report,null,2),{flag:'wx'});console.log(`Frozen ${snapshots.length} files, 260 UI checks, 8 public domains and ${preserved.length} preserved source/test hashes. Full goal remains active.`);

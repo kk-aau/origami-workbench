@@ -1,0 +1,31 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "折纸工坊迁移版",
+  "version": "0.13.53",
+  "identifier": "dev.zhezhi.workbench.tauri",
+  "build": {
+    "frontendDist": "./bootstrap"
+  },
+  "app": {
+    "withGlobalTauri": true,
+    "windows": [],
+    "security": {
+      "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; worker-src 'self' blob:; connect-src 'self' ipc: http://ipc.localhost; object-src 'none'; base-uri 'none'; frame-src 'self'",
+      "capabilities": [
+        "main-local",
+        "startup-local"
+      ]
+    }
+  },
+  "bundle": {
+    "active": false,
+    "icon": [
+      "../build/icons/workbench.ico"
+    ],
+    "windows": {
+      "webviewInstallMode": {
+        "type": "skip"
+      }
+    }
+  }
+}

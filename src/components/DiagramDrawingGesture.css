@@ -1,0 +1,45 @@
+/* Use an explicit movement image for the gesture, including pointer capture
+   outside the SVG. This avoids platform-dependent grab/grabbing cursors. */
+:root{--diagram-move-cursor:url('/cursors/diagram-move.svg') 16 16,move}
+html[data-diagram-pointer-gesture="move"],
+html[data-diagram-pointer-gesture="move"] *,
+.diagram-model-svg[data-diagram-model][data-diagram-dragging="grabbing"],
+.diagram-model-svg[data-diagram-model][data-diagram-dragging="grabbing"] *,
+.diagram-model-svg[data-diagram-model] [data-model-edit-overlay][data-model-dragging="true"] [data-folded-vertex],
+.diagram-model-svg.diagram-tool-pan[data-diagram-model],
+.diagram-model-svg[data-diagram-model] [data-symbol-native-grip="rotate"]{cursor:var(--diagram-move-cursor)!important}
+.diagram-model-svg[data-diagram-model]:not([data-diagram-disabled="true"]) [data-folded-vertex],
+.diagram-model-svg.diagram-tool-select[data-diagram-model]:not([data-diagram-disabled="true"]) [data-diagram-movable="true"],
+.diagram-model-svg.diagram-tool-select[data-diagram-model]:not([data-diagram-disabled="true"]) [data-diagram-movable="true"] *,
+.diagram-model-svg.diagram-tool-select[data-diagram-model]:not([data-diagram-disabled="true"]) [data-diagram-line-handle],
+.diagram-model-svg.diagram-tool-select[data-diagram-model]:not([data-diagram-disabled="true"]) [data-symbol-native-grip],
+.diagram-model-svg.diagram-tool-select[data-diagram-model]:not([data-diagram-disabled="true"]) [data-symbol-native-grip] *{cursor:var(--diagram-move-cursor)!important}
+.diagram-model-svg[data-diagram-disabled="true"] [data-symbol-native-grip],
+.diagram-model-svg[data-diagram-disabled="true"] [data-symbol-native-grip] *,
+.diagram-model-svg[data-diagram-disabled="true"] [data-folded-vertex],
+.diagram-model-svg[data-diagram-disabled="true"] [data-diagram-line-handle],
+.diagram-model-svg[data-diagram-disabled="true"] [data-diagram-annotation],
+.diagram-model-svg[data-diagram-disabled="true"] [data-diagram-annotation] *{cursor:default!important}
+.diagram-model-svg,.diagram-model-svg *{-webkit-user-drag:none}
+/* Coordinates must not intercept a pointer when the readout appears above the
+   buttons; otherwise paper-corner snapping flickers under this floating panel. */
+.diagram-canvas-controls{pointer-events:none}
+.diagram-canvas-actions{pointer-events:auto}
+.diagram-symbol-placement-thumbnail{position:fixed;width:56px;height:56px;padding:5px;z-index:70;border:1px solid #b7cbb4;border-radius:4px;background:#fffefbe8;box-shadow:0 2px 8px #293d351c;opacity:.75;pointer-events:none;user-select:none}
+.diagram-symbol-placement-thumbnail svg{width:100%;height:100%;pointer-events:none}
+.diagram-mirror-actions{position:absolute;z-index:4;top:12px;left:12px;right:12px;display:flex;align-items:center;gap:7px;flex-wrap:wrap;padding:9px 11px;border:1px solid #c7d4c5;border-radius:5px;background:#fffefaf5;box-shadow:0 2px 8px #293d3514;color:#365344;font-size:11px}
+.diagram-mirror-actions>span{flex:1 1 220px;line-height:1.5}
+.diagram-mirror-actions small{display:block;color:#768775;font-size:10px}
+.diagram-mirror-actions button{min-height:30px;padding:5px 10px;border:1px solid #c7d4c5;border-radius:4px;background:#fffefa;color:#365344;font:inherit;cursor:pointer}
+.diagram-mirror-actions button:hover:enabled{background:#edf3eb}
+.diagram-mirror-actions button:focus-visible{outline:2px solid #7663a2;outline-offset:2px}
+.diagram-mirror-actions .diagram-mirror-confirm{background:#426f59;color:#fff;border-color:#426f59}
+.diagram-mirror-actions .diagram-mirror-confirm:hover:enabled{background:#365e4b}
+.diagram-mirror-actions button:disabled{opacity:.45;cursor:default}
+.diagram-main>.tool-command-bar{--line:var(--diagram-line);--paper:var(--diagram-sheet);--ink:var(--diagram-ink);--accent:var(--diagram-accent);--muted:var(--diagram-muted)}
+.diagram-document-heading{display:flex;align-items:center;gap:9px;min-width:0;flex-shrink:0;padding:6px 12px;border-bottom:1px solid var(--diagram-line);font-size:11px}
+.diagram-document-heading>span{color:var(--diagram-muted);font-size:10px;flex-shrink:0}
+.diagram-document-heading>strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}
+.diagram-document-heading>button{font-size:10px;min-height:24px;padding:3px 8px;flex-shrink:0}
+.diagram-rename-dialog>label{display:block;color:var(--diagram-muted);font-size:12px;margin:16px 0}
+.diagram-rename-dialog>label>input{display:block;width:100%;margin-top:7px;padding:8px 10px;border:1px solid var(--diagram-line);border-radius:4px;background:var(--diagram-sheet);color:var(--diagram-ink)}

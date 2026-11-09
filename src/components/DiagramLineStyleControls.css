@@ -1,0 +1,22 @@
+.diagram-line-style-controls{display:flex;align-items:center;flex-wrap:wrap;column-gap:14px;row-gap:7px;min-width:0;color:var(--diagram-ink,#293d35)}
+.diagram-line-category-controls{display:flex;align-items:center;flex-wrap:wrap;gap:3px}
+.diagram-workspace .diagram-line-category-controls button{display:flex;align-items:center;gap:5px;min-height:30px;padding:5px 7px;font-size:11px;white-space:nowrap}
+.diagram-line-category-controls svg{display:block;width:26px;height:12px;flex-shrink:0;overflow:visible}
+.diagram-line-category-controls button[aria-pressed=true]{font-weight:600}
+.diagram-adaptive-line-control{display:flex;align-items:center;gap:5px;margin:0;font-size:11px;white-space:nowrap}
+.diagram-adaptive-line-control input{accent-color:var(--diagram-accent,#426f59)}
+.diagram-line-appearance{display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin:0;padding:0;border:0;min-width:0;color:var(--diagram-ink,#293d35)}
+.diagram-line-appearance>label{display:flex;align-items:center;gap:5px;margin:0;font-size:11px;white-space:nowrap}
+.diagram-line-appearance>label>span{color:#526a5b}
+.diagram-line-appearance input,.diagram-line-appearance select{height:28px;min-width:0;border:1px solid var(--diagram-line,#dce4db);border-radius:4px;background:var(--diagram-sheet,#fffefa);color:var(--diagram-ink,#293d35);font:inherit;font-variant-numeric:tabular-nums;caret-color:var(--diagram-accent,#426f59)}
+.diagram-line-appearance input[type=color]{width:30px;padding:3px;cursor:pointer}
+.diagram-line-appearance input[type=color]::-webkit-color-swatch-wrapper{padding:0}
+.diagram-line-appearance input[type=color]::-webkit-color-swatch{border:0;border-radius:2px}
+.diagram-line-appearance input[type=number]{width:57px;padding:3px 4px}
+.diagram-line-appearance select{width:77px;padding:3px 5px;cursor:pointer}
+.diagram-line-appearance small{font-size:10px;color:#526a5b}
+.diagram-line-appearance input:focus-visible,.diagram-line-appearance select:focus-visible{outline:2px solid var(--diagram-accent,#426f59);outline-offset:2px}
+.diagram-line-appearance:disabled{opacity:.45}
+.diagram-line-appearance:disabled input,.diagram-line-appearance:disabled select{cursor:default}
+.diagram-line-appearance ::selection{background:#d4e4d8;color:#293d35}
+@media(max-width:1280px){.diagram-line-style-controls{column-gap:9px}.diagram-workspace .diagram-line-category-controls button{gap:3px;padding:4px 5px;font-size:10px}.diagram-line-category-controls svg{width:21px}.diagram-line-appearance{gap:7px}.diagram-line-appearance>label{font-size:10px}}

@@ -1,0 +1,15 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import {toggleMirrorSelection,mirrorEnvelope,inMirrorRegion} from '../../src/app/mirror';
+import {segmentsInBox,segmentsInEraseBox} from '../../src/app/erase';
+import type {Doc,Segment,Point} from '../../src/core/types';
+const s=(id:string,a:Point,b:Point,assignment:Segment['assignment']='M'):Segment=>({id,a,b,assignment,angle:assignment==='M'?-180:0});
+const doc:Doc={name:'框选',paper:{width:200,height:200},segments:[s('a',[0,50],[100,50]),s('b',[25,0],[25,100]),s('edge',[0,0],[100,0],'B')]};
+test('toggle selection handles both deselection and addition without mutating input',()=>{const initial=new Set(['a','old']);assert.deepEqual([...toggleMirrorSelection(initial,['a','b','b'])],['old','b']);assert.deepEqual([...initial],['a','old']);});
+test('touching selection is identical in all four drag directions',()=>{for(const [a,b] of [[[20,40],[40,60]],[[40,60],[20,40]],[[20,60],[40,40]],[[40,40],[20,60]]] as [Point,Point][]){assert.deepEqual([...segmentsInBox(doc,a,b,false,'touching')],['a','b']);}});
+test('box toggles each touched segment once, including already selected ones',()=>{const hits=segmentsInBox(doc,[20,40],[40,60],false,'touching');assert.deepEqual([...toggleMirrorSelection(new Set(['a']),hits)],['b']);});
+test('touching includes corner and edge contact and respects boundary lock',()=>{assert.ok(segmentsInBox(doc,[100,0],[110,10],false,'touching').has('edge'));assert.ok(!segmentsInBox(doc,[100,0],[110,10],true,'touching').has('edge'));});
+test('rightward erase still requires containment after sharing rectangle geometry',()=>{assert.equal(segmentsInEraseBox(doc,[20,40],[40,60],false).size,0);assert.equal(segmentsInEraseBox(doc,[40,60],[20,40],false).size,2);});
+test('mirror region is convex envelope and excludes bounding box corners outside hull',()=>{const lines=[s('a',[175,25],[175,75]),s('b',[125,125],[150,125])];assert.equal(mirrorEnvelope(lines).length,4);assert.equal(inMirrorRegion([160,90],lines,1),true);assert.equal(inMirrorRegion([126,26],lines,1),false);assert.equal(inMirrorRegion([110,90],lines,1),false);});
+test('single-line region accepts near line but not arbitrary bounding box interior',()=>{const lines=[s('a',[0,0],[100,100])];assert.equal(mirrorEnvelope(lines).length,2);assert.equal(inMirrorRegion([50,51],lines,2),true);assert.equal(inMirrorRegion([10,90],lines,2),false);});
+test('envelope removes duplicated and collinear points and handles empty result',()=>{const lines=[s('a',[0,0],[50,0]),s('b',[50,0],[100,0])];assert.equal(mirrorEnvelope(lines).length,2);assert.equal(inMirrorRegion([25,1],lines,2),true);assert.equal(inMirrorRegion([0,0],[],2),false);});

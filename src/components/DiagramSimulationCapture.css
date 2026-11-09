@@ -1,0 +1,17 @@
+.diagram-simulation-capture.ui-dialog{height:min(900px,calc(100dvh - 48px))}
+.diagram-simulation-capture .diagram-simulation-capture-body{display:flex;flex-direction:column;min-width:0;padding:0;overflow:hidden}
+.diagram-simulation-capture-source{display:flex;align-items:center;flex-wrap:wrap;gap:10px 18px;flex-shrink:0;padding:10px 18px;border-bottom:1px solid var(--ui-dialog-line);color:var(--ui-dialog-muted);font-size:12px}
+.diagram-simulation-capture-source>label{display:flex;align-items:center;gap:9px;color:var(--ui-dialog-ink)}
+.diagram-simulation-capture-source select{min-height:32px;padding:4px 28px 4px 10px;font:inherit}
+.diagram-simulation-capture-source>span{margin-left:auto}
+.diagram-simulation-capture-source .ui-button{min-height:30px;padding:4px 10px;font-size:12px}
+.diagram-simulation-capture-stage{position:relative;flex:1;min-height:160px;overflow:hidden;background:var(--ui-dialog-header)}
+.diagram-simulation-capture-stage iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+.diagram-simulation-capture-loading{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:var(--ui-dialog-header);color:var(--ui-dialog-muted);font-size:12px;pointer-events:none}
+.diagram-simulation-capture-controls{position:relative;flex-shrink:0;min-width:0;border-top:1px solid var(--ui-dialog-line);background:var(--ui-dialog-surface)}
+.diagram-simulation-capture-controls .sim-controls{position:relative;left:auto;right:auto;bottom:auto;margin:0;border:0;border-radius:0;box-shadow:none;background:var(--ui-dialog-surface)}
+.diagram-simulation-capture-controls .sim-advanced-panel{max-height:min(400px,calc(100dvh - 250px))}
+.diagram-simulation-capture-error{flex-shrink:0;max-height:85px;overflow:auto;padding:9px 18px;border-top:1px solid var(--ui-dialog-line);color:var(--ui-dialog-danger);font-size:12px;line-height:1.6}
+.diagram-simulation-capture-transparent{display:inline-flex;align-items:center;gap:6px;color:var(--ui-dialog-ink);font-size:12px;white-space:nowrap;cursor:pointer}
+.diagram-simulation-capture-transparent input{margin:0}
+@media(max-width:650px){.diagram-simulation-capture.ui-dialog{height:calc(100dvh - 24px)}.diagram-simulation-capture-source{gap:8px 12px;padding:8px 12px}.diagram-simulation-capture-source>span{order:3;flex-basis:100%;margin:0}.diagram-simulation-capture-source>.ui-button{margin-left:auto}.diagram-simulation-capture .ui-dialog-footer>span{flex-basis:100%;font-size:11px}}

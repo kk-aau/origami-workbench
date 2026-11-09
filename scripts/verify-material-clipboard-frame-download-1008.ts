@@ -1,0 +1,14 @@
+import fs from 'node:fs';
+import assert from 'node:assert/strict';
+import {importDocument} from '../src/core/formats';
+import {importFoldInterchange} from '../src/core/foldInterchange';
+import {copyMaterialSelection,pasteMaterialSelection} from '../src/app/materialClipboard';
+import {inspectMaterialTopology} from '../src/core/materialTopology';
+import {importModelSnapshot} from '../src/core/modelSnapshot';
+import {computeMaterialFlatGeometry} from '../src/core/materialFlatGeometry';
+import {resolveStartingFace} from '../src/app/flatFoldSettings';
+const read=(name:string)=>importDocument(fs.readFileSync(`output/playwright/material-clipboard-${name}-1008.zhezhi.json`,'utf8'),'json').doc,target=read('frame-target'),source=read('source'),m=inspectMaterialTopology(source);assert.ok(m.ok);const clip=copyMaterialSelection(source,m.edgeSegmentIds),expected=pasteMaterialSelection(target,{kind:'material-clipboard-paste',clipboard:clip,offset:[400,0],cpOnly:false,splitTarget:false}).doc,final=read('frame-final');assert.deepEqual(final,expected);
+const snapshot=(name:string)=>importModelSnapshot(fs.readFileSync(`output/playwright/material-clipboard-frame-${name}-1008.model.json`,'utf8')).result.geometry,before=snapshot('before'),after=snapshot('after');assert.equal(before.startingFace,3);assert.equal(after.startingFace,3);assert.deepEqual(after.vertices.slice(0,14),before.vertices);assert.deepEqual(before.vertices,computeMaterialFlatGeometry(target,3).geometry.vertices);assert.deepEqual(after.vertices,computeMaterialFlatGeometry(final,3).geometry.vertices);
+for(const name of ['json-reopened','fold-reopened'])assert.deepEqual(snapshot(name).vertices,after.vertices);
+const raw=importFoldInterchange(JSON.parse(fs.readFileSync('output/playwright/material-clipboard-frame-final-1008.fold','utf8'))) as any;assert.equal(raw.zhezhi_material_topology.startingFace,4);assert.equal(raw.zhezhi_flat_fold.materialFace,3);const fold=importDocument(JSON.stringify(raw),'fold').doc,fm=inspectMaterialTopology(fold);assert.ok(fm.ok);assert.deepEqual(resolveStartingFace(fold,fm.graph),{face:3,stale:false});assert.deepEqual(computeMaterialFlatGeometry(fold,3).geometry.vertices,after.vertices);
+fs.writeFileSync('output/audits/material-clipboard-frame-download-1008.json',JSON.stringify({verified:true,actualWorkerModelsBeforeAfterAndBothReopeningsVerified:true,originalVisibleVerticesBitwiseEqualAfterPaste:true,referenceFace:4,activeFace:3,foldReferenceAndActiveFaceSeparate:true,originalVisibleMaximumDisplacement:0,verticesBefore:14,verticesAfter:28},null,2));console.log('Verified actual worker model snapshots: original displayed target unchanged, both reopens exact, separate FOLD reference=4 and active=3.');

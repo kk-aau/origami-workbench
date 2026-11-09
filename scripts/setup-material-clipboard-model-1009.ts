@@ -1,0 +1,13 @@
+import fs from 'node:fs';
+import type {Doc} from '../src/core/types';
+import {weakToolSheet,weakToolSource,weakToolMaterial as mat} from '../tests/fixtures/materialWeakTools';
+import {faceIdentityRecipe} from '../tests/fixtures/materialFaceIdentity';
+import {copyMaterialSelection,pasteMaterialSelection} from '../src/app/materialClipboard';
+import {editMaterialFaces} from '../src/core/materialFaceEdit';
+import {importDocument,exportDocument} from '../src/core/formats';
+import {blankDoc,exampleDoc} from '../src/app/state';
+const save=(name:string,d:Doc)=>{d.name=`参数剪贴板-${name}`;fs.writeFileSync(`output/playwright/material-clipboard-model-${name}-initial-1009.zhezhi.json`,exportDocument(d,'json').text);};
+const source=weakToolSheet(),req={kind:'material-clipboard-paste' as const,clipboard:copyMaterialSelection(source,mat(source).edgeSegmentIds),offset:[200,20] as [number,number],cpOnly:false,splitTarget:false,parametric:true},p=pasteMaterialSelection(source,req).doc;
+save('source',source);save('target',weakToolSheet());save('empty',{name:'',paper:{width:300,height:300},segments:[],metadata:{keep:true}});save('plain',blankDoc());save('accordion',exampleDoc());save('pasted',p);save('two',editMaterialFaces(p,{...faceIdentityRecipe(p,1),parametric:true}).doc);save('hole',weakToolSheet(true));save('weak',weakToolSource('boundary'));
+const noFF=weakToolSheet();delete (noFF.metadata!.materialTopology as {foldedVertices?:unknown}).foldedVertices;save('noff',noFF);save('original',importDocument(fs.readFileSync('output/playwright/material-topology-model-original-saved-1009.zhezhi.json','utf8'),'json').doc);
+console.log('Prepared independent source, ordinary/empty/split/mixed FF targets, later face operation, hole and weak bank.');

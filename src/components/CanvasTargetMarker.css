@@ -1,0 +1,4 @@
+.canvas-target-marker{pointer-events:none;stroke:none;opacity:.6}
+.canvas-target-marker *{pointer-events:none!important}
+.canvas-target-marker-crease .canvas-target-marker-cross{fill:#205e45}
+.canvas-target-marker-fold .canvas-target-marker-cross{fill:#b55b1b}

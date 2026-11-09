@@ -1,0 +1,3315 @@
+{
+  "schema": "origamica-three-cycle-fixtures-v1",
+  "cases": [
+    {
+      "name": "halfplane-0-true",
+      "query": {
+        "family": "three-cycle-critical-native",
+        "edges": [
+          [
+            [
+              0,
+              -1
+            ],
+            [
+              0,
+              3
+            ]
+          ],
+          [
+            [
+              -3,
+              0
+            ],
+            [
+              0,
+              -3
+            ]
+          ],
+          [
+            [
+              -3,
+              2
+            ],
+            [
+              0,
+              2
+            ]
+          ]
+        ],
+        "checkHalfPlane": true
+      },
+      "response": {
+        "schema": "origamica-three-cycle-critical-v1",
+        "query": {
+          "family": "three-cycle-critical-native",
+          "edges": [
+            [
+              [
+                0.0,
+                -1.0
+              ],
+              [
+                0.0,
+                3.0
+              ]
+            ],
+            [
+              [
+                -3.0,
+                0.0
+              ],
+              [
+                0.0,
+                -3.0
+              ]
+            ],
+            [
+              [
+                -3.0,
+                2.0
+              ],
+              [
+                0.0,
+                2.0
+              ]
+            ]
+          ],
+          "checkHalfPlane": true
+        },
+        "source": {
+          "function": "ThreeCycleCriticalTwistAngles",
+          "definitionCell": "In[2700]",
+          "counterclockwiseCell": "In[2696]",
+          "clockwiseCell": "In[2698]",
+          "defaultOptionsCell": "In[2695]",
+          "sameHalfPlaneCell": "In[2691]",
+          "definitionLines": [
+            200504,
+            200536
+          ],
+          "checkHalfPlaneDefault": true,
+          "originalArcTanRatio": true,
+          "originalReversedEdgeCW": true,
+          "wolframExecuted": false,
+          "symbolicExpressionRuntime": false,
+          "paperCertification": false
+        },
+        "data": {
+          "status": "evaluated",
+          "anglesRad": [
+            1.5707963267948966,
+            4.71238898038469
+          ],
+          "anglesDeg": [
+            90.0,
+            270.0
+          ],
+          "evaluations": [
+            {
+              "sameHalfPlane": true,
+              "halfPlaneEarlyReturnUsed": true,
+              "route": "half-plane-return",
+              "angleRad": 1.5707963267948966,
+              "intersections": [
+                null,
+                null
+              ],
+              "u2": null,
+              "numerator": null,
+              "denominator": null,
+              "reason": null
+            },
+            {
+              "sameHalfPlane": true,
+              "halfPlaneEarlyReturnUsed": true,
+              "route": "half-plane-return",
+              "angleRad": 1.5707963267948966,
+              "intersections": [
+                null,
+                null
+              ],
+              "u2": null,
+              "numerator": null,
+              "denominator": null,
+              "reason": null
+            }
+          ],
+          "noMathematicalInfeasibilityClaim": true
+        }
+      }
+    },
+    {
+      "name": "halfplane-0-false",
+      "query": {
+        "family": "three-cycle-critical-native",
+        "edges": [
+          [
+            [
+              0,
+              -1
+            ],
+            [
+              0,
+              3
+            ]
+          ],
+          [
+            [
+              -3,
+              0
+            ],
+            [
+              0,
+              -3
+            ]
+          ],
+          [
+            [
+              -3,
+              2
+            ],
+            [
+              0,
+              2
+            ]
+          ]
+        ],
+        "checkHalfPlane": false
+      },
+      "response": {
+        "schema": "origamica-three-cycle-critical-v1",
+        "query": {
+          "family": "three-cycle-critical-native",
+          "edges": [
+            [
+              [
+                0.0,
+                -1.0
+              ],
+              [
+                0.0,
+                3.0
+              ]
+            ],
+            [
+              [
+                -3.0,
+                0.0
+              ],
+              [
+                0.0,
+                -3.0
+              ]
+            ],
+            [
+              [
+                -3.0,
+                2.0
+              ],
+              [
+                0.0,
+                2.0
+              ]
+            ]
+          ],
+          "checkHalfPlane": false
+        },
+        "source": {
+          "function": "ThreeCycleCriticalTwistAngles",
+          "definitionCell": "In[2700]",
+          "counterclockwiseCell": "In[2696]",
+          "clockwiseCell": "In[2698]",
+          "defaultOptionsCell": "In[2695]",
+          "sameHalfPlaneCell": "In[2691]",
+          "definitionLines": [
+            200504,
+            200536
+          ],
+          "checkHalfPlaneDefault": true,
+          "originalArcTanRatio": true,
+          "originalReversedEdgeCW": true,
+          "wolframExecuted": false,
+          "symbolicExpressionRuntime": false,
+          "paperCertification": false
+        },
+        "data": {
+          "status": "evaluated",
+          "anglesRad": [
+            0.6947382761967033,
+            1.7681918866447772
+          ],
+          "anglesDeg": [
+            39.8055710922652,
+            101.3099324740202
+          ],
+          "evaluations": [
+            {
+              "sameHalfPlane": true,
+              "halfPlaneEarlyReturnUsed": false,
+              "route": "original-line-intersections",
+              "angleRad": 0.6947382761967033,
+              "intersections": [
+                [
+                  3.0,
+                  0.0
+                ],
+                [
+                  -2.5,
+                  -0.5
+                ]
+              ],
+              "u2": [
+                0.5,
+                -5.5
+              ],
+              "numerator": 15.0,
+              "denominator": 18.0,
+              "reason": null
+            },
+            {
+              "sameHalfPlane": true,
+              "halfPlaneEarlyReturnUsed": false,
+              "route": "original-line-intersections",
+              "angleRad": -1.373400766945016,
+              "intersections": [
+                [
+                  -2.0,
+                  -2.0
+                ],
+                [
+                  -4.0,
+                  1.0
+                ]
+              ],
+              "u2": [
+                -3.0,
+                -2.0
+              ],
+              "numerator": -15.0,
+              "denominator": 3.0,
+              "reason": null
+            }
+          ],
+          "noMathematicalInfeasibilityClaim": true
+        }
+      }
+    },
+    {
+      "name": "halfplane-1-true",
+      "query": {
+        "family": "three-cycle-critical-native",
+        "edges": [
+          [
+            [
+              -3,
+              1
+            ],
+            [
+              -1,
+              3
+            ]
+          ],
+          [
+            [
+              3,
+              1
+            ],
+            [
+              -2,
+              0
+            ]
+          ],
+          [
+            [
+              -2,
+              0
+            ],
+            [
+              -2,
+              3
+            ]
+          ]
+        ],
+        "checkHalfPlane": true
+      },
+      "response": {
+        "schema": "origamica-three-cycle-critical-v1",
+        "query": {
+          "family": "three-cycle-critical-native",
+          "edges": [
+            [
+              [
+                -3.0,
+                1.0
+              ],
+              [
+                -1.0,
+                3.0
+              ]
+            ],
+            [
+              [
+                3.0,
+                1.0
+              ],
+              [
+                -2.0,
+                0.0
+              ]
+            ],
+            [
+              [
+                -2.0,
+                0.0
+              ],
+              [
+                -2.0,
+                3.0
+              ]
+            ]
+          ],
+          "checkHalfPlane": true
+        },
+        "source": {
+          "function": "ThreeCycleCriticalTwistAngles",
+          "definitionCell": "In[2700]",
+          "counterclockwiseCell": "In[2696]",
+          "clockwiseCell": "In[2698]",
+          "defaultOptionsCell": "In[2695]",
+          "sameHalfPlaneCell": "In[2691]",
+          "definitionLines": [
+            200504,
+            200536
+          ],
+          "checkHalfPlaneDefault": true,
+          "originalArcTanRatio": true,
+          "originalReversedEdgeCW": true,
+          "wolframExecuted": false,
+          "symbolicExpressionRuntime": false,
+          "paperCertification": false
+        },
+        "data": {
+          "status": "evaluated",
+          "anglesRad": [
+            1.5707963267948966,
+            4.71238898038469
+          ],
+          "anglesDeg": [
+            90.0,
+            270.0
+          ],
+          "evaluations": [
+            {
+              "sameHalfPlane": true,
+              "halfPlaneEarlyReturnUsed": true,
+              "route": "half-plane-return",
+              "angleRad": 1.5707963267948966,
+              "intersections": [
+                null,
+                null
+              ],
+              "u2": null,
+              "numerator": null,
+              "denominator": null,
+              "reason": null
+            },
+            {
+              "sameHalfPlane": true,
+              "halfPlaneEarlyReturnUsed": true,
+              "route": "half-plane-return",
+              "angleRad": 1.5707963267948966,
+              "intersections": [
+                null,
+                null
+              ],
+              "u2": null,
+              "numerator": null,
+              "denominator": null,
+              "reason": null
+            }
+          ],
+          "noMathematicalInfeasibilityClaim": true
+        }
+      }
+    },
+    {
+      "name": "halfplane-1-false",
+      "query": {
+        "family": "three-cycle-critical-native",
+        "edges": [
+          [
+            [
+              -3,
+              1
+            ],
+            [
+              -1,
+              3
+            ]
+          ],
+          [
+            [
+              3,
+              1
+            ],
+            [
+              -2,
+              0
+            ]
+          ],
+          [
+            [
+              -2,
+              0
+            ],
+            [
+              -2,
+              3
+            ]
+          ]
+        ],
+        "checkHalfPlane": false
+      },
+      "response": {
+        "schema": "origamica-three-cycle-critical-v1",
+        "query": {
+          "family": "three-cycle-critical-native",
+          "edges": [
+            [
+              [
+                -3.0,
+                1.0
+              ],
+              [
+                -1.0,
+                3.0
+              ]
+            ],
+            [
+              [
+                3.0,
+                1.0
+              ],
+              [
+                -2.0,
+                0.0
+              ]
+            ],
+            [
+              [
+                -2.0,
+                0.0
+              ],
+              [
+                -2.0,
+                3.0
+              ]
+            ]
+          ],
+          "checkHalfPlane": false
+        },
+        "source": {
+          "function": "ThreeCycleCriticalTwistAngles",
+          "definitionCell": "In[2700]",
+          "counterclockwiseCell": "In[2696]",
+          "clockwiseCell": "In[2698]",
+          "defaultOptionsCell": "In[2695]",
+          "sameHalfPlaneCell": "In[2691]",
+          "definitionLines": [
+            200504,
+            200536
+          ],
+          "checkHalfPlaneDefault": true,
+          "originalArcTanRatio": true,
+          "originalReversedEdgeCW": true,
+          "wolframExecuted": false,
+          "symbolicExpressionRuntime": false,
+          "paperCertification": false
+        },
+        "data": {
+          "status": "evaluated",
+          "anglesRad": [
+            -0.896055384571344,
+            3.5087664874080122
+          ],
+          "anglesDeg": [
+            -51.34019174590991,
+            201.03751102542182
+          ],
+          "evaluations": [
+            {
+              "sameHalfPlane": true,
+              "halfPlaneEarlyReturnUsed": false,
+              "route": "original-line-intersections",
+              "angleRad": -0.896055384571344,
+              "intersections": [
+                [
+                  -3.75,
+                  2.25
+                ],
+                [
+                  -2.3,
+                  1.5
+                ]
+              ],
+              "u2": [
+                0.75,
+                1.4500000000000002
+              ],
+              "numerator": 6.500000000000001,
+              "denominator": -5.2,
+              "reason": null
+            },
+            {
+              "sameHalfPlane": true,
+              "halfPlaneEarlyReturnUsed": false,
+              "route": "original-line-intersections",
+              "angleRad": 0.3671738338182192,
+              "intersections": [
+                [
+                  0.0,
+                  -3.5
+                ],
+                [
+                  0.6000000000000001,
+                  0.0
+                ]
+              ],
+              "u2": [
+                -3.5,
+                0.6000000000000001
+              ],
+              "numerator": -6.5,
+              "denominator": -16.9,
+              "reason": null
+            }
+          ],
+          "noMathematicalInfeasibilityClaim": true
+        }
+      }
+    },
+    {
+      "name": "halfplane-2-true",
+      "query": {
+        "family": "three-cycle-critical-native",
+        "edges": [
+          [
+            [
+              0,
+              -1
+            ],
+            [
+              2,
+              -3
+            ]
+          ],
+          [
+            [
+              -1,
+              0
+            ],
+            [
+              -3,
+              1
+            ]
+          ],
+          [
+            [
+              3,
+              0
+            ],
+            [
+              2,
+              0
+            ]
+          ]
+        ],
+        "checkHalfPlane": true
+      },
+      "response": {
+        "schema": "origamica-three-cycle-critical-v1",
+        "query": {
+          "family": "three-cycle-critical-native",
+          "edges": [
+            [
+              [
+                0.0,
+                -1.0
+              ],
+              [
+                2.0,
+                -3.0
+              ]
+            ],
+            [
+              [
+                -1.0,
+                0.0
+              ],
+              [
+                -3.0,
+                1.0
+              ]
+            ],
+            [
+              [
+                3.0,
+                0.0
+              ],
+              [
+                2.0,
+                0.0
+              ]
+            ]
+          ],
+          "checkHalfPlane": true
+        },
+        "source": {
+          "function": "ThreeCycleCriticalTwistAngles",
+          "definitionCell": "In[2700]",
+          "counterclockwiseCell": "In[2696]",
+          "clockwiseCell": "In[2698]",
+          "defaultOptionsCell": "In[2695]",
+          "sameHalfPlaneCell": "In[2691]",
+          "definitionLines": [
+            200504,
+            200536
+          ],
+          "checkHalfPlaneDefault": true,
+          "originalArcTanRatio": true,
+          "originalReversedEdgeCW": true,
+          "wolframExecuted": false,
+          "symbolicExpressionRuntime": false,
+          "paperCertification": false
+        },
+        "data": {
+          "status": "evaluated",
+          "anglesRad": [
+            1.5707963267948966,
+            4.71238898038469
+          ],
+          "anglesDeg": [
+            90.0,
+            270.0
+          ],
+          "evaluations": [
+            {
+              "sameHalfPlane": true,
+              "halfPlaneEarlyReturnUsed": true,
+              "route": "half-plane-return",
+              "angleRad": 1.5707963267948966,
+              "intersections": [
+                null,
+                null
+              ],
+              "u2": null,
+              "numerator": null,
+              "denominator": null,
+              "reason": null
+            },
+            {
+              "sameHalfPlane": true,
+              "halfPlaneEarlyReturnUsed": true,
+              "route": "half-plane-return",
+              "angleRad": 1.5707963267948966,
+              "intersections": [
+                null,
+                null
+              ],
+              "u2": null,
+              "numerator": null,
+              "denominator": null,
+              "reason": null
+            }
+          ],
+          "noMathematicalInfeasibilityClaim": true
+        }
+      }
+    },
+    {
+      "name": "halfplane-2-false",
+      "query": {
+        "family": "three-cycle-critical-native",
+        "edges": [
+          [
+            [
+              0,
+              -1
+            ],
+            [
+              2,
+              -3
+            ]
+          ],
+          [
+            [
+              -1,
+              0
+            ],
+            [
+              -3,
+              1
+            ]
+          ],
+          [
+            [
+              3,
+              0
+            ],
+            [
+              2,
+              0
+            ]
+          ]
+        ],
+        "checkHalfPlane": false
+      },
+      "response": {
+        "schema": "origamica-three-cycle-critical-v1",
+        "query": {
+          "family": "three-cycle-critical-native",
+          "edges": [
+            [
+              [
+                0.0,
+                -1.0
+              ],
+              [
+                2.0,
+                -3.0
+              ]
+            ],
+            [
+              [
+                -1.0,
+                0.0
+              ],
+              [
+                -3.0,
+                1.0
+              ]
+            ],
+            [
+              [
+                3.0,
+                0.0
+              ],
+              [
+                2.0,
+                0.0
+              ]
+            ]
+          ],
+          "checkHalfPlane": false
+        },
+        "source": {
+          "function": "ThreeCycleCriticalTwistAngles",
+          "definitionCell": "In[2700]",
+          "counterclockwiseCell": "In[2696]",
+          "clockwiseCell": "In[2698]",
+          "defaultOptionsCell": "In[2695]",
+          "sameHalfPlaneCell": "In[2691]",
+          "definitionLines": [
+            200504,
+            200536
+          ],
+          "checkHalfPlaneDefault": true,
+          "originalArcTanRatio": true,
+          "originalReversedEdgeCW": true,
+          "wolframExecuted": false,
+          "symbolicExpressionRuntime": false,
+          "paperCertification": false
+        },
+        "data": {
+          "status": "evaluated",
+          "anglesRad": [
+            0.0,
+            3.141592653589793
+          ],
+          "anglesDeg": [
+            0.0,
+            180.0
+          ],
+          "evaluations": [
+            {
+              "sameHalfPlane": true,
+              "halfPlaneEarlyReturnUsed": false,
+              "route": "original-line-intersections",
+              "angleRad": 0.0,
+              "intersections": [
+                [
+                  -6.5,
+                  -8.5
+                ],
+                [
+                  0.5,
+                  5.5
+                ]
+              ],
+              "u2": [
+                -14.0,
+                7.0
+              ],
+              "numerator": 0.0,
+              "denominator": 35.0,
+              "reason": null
+            },
+            {
+              "sameHalfPlane": true,
+              "halfPlaneEarlyReturnUsed": false,
+              "route": "original-line-intersections",
+              "angleRad": -0.0,
+              "intersections": [
+                [
+                  -2.0,
+                  -2.0
+                ],
+                [
+                  1.0,
+                  4.0
+                ]
+              ],
+              "u2": [
+                -6.0,
+                3.0
+              ],
+              "numerator": 0.0,
+              "denominator": -15.0,
+              "reason": null
+            }
+          ],
+          "noMathematicalInfeasibilityClaim": true
+        }
+      }
+    },
+    {
+      "name": "halfplane-3-true",
+      "query": {
+        "family": "three-cycle-critical-native",
+        "edges": [
+          [
+            [
+              2,
+              -3
+            ],
+            [
+              1,
+              -3
+            ]
+          ],
+          [
+            [
+              0,
+              -1
+            ],
+            [
+              2,
+              2
+            ]
+          ],
+          [
+            [
+              -1,
+              1
+            ],
+            [
+              1,
+              3
+            ]
+          ]
+        ],
+        "checkHalfPlane": true
+      },
+      "response": {
+        "schema": "origamica-three-cycle-critical-v1",
+        "query": {
+          "family": "three-cycle-critical-native",
+          "edges": [
+            [
+              [
+                2.0,
+                -3.0
+              ],
+              [
+                1.0,
+                -3.0
+              ]
+            ],
+            [
+              [
+                0.0,
+                -1.0
+              ],
+              [
+                2.0,
+                2.0
+              ]
+            ],
+            [
+              [
+                -1.0,
+                1.0
+              ],
+              [
+                1.0,
+                3.0
+              ]
+            ]
+          ],
+          "checkHalfPlane": true
+        },
+        "source": {
+          "function": "ThreeCycleCriticalTwistAngles",
+          "definitionCell": "In[2700]",
+          "counterclockwiseCell": "In[2696]",
+          "clockwiseCell": "In[2698]",
+          "defaultOptionsCell": "In[2695]",
+          "sameHalfPlaneCell": "In[2691]",
+          "definitionLines": [
+            200504,
+            200536
+          ],
+          "checkHalfPlaneDefault": true,
+          "originalArcTanRatio": true,
+          "originalReversedEdgeCW": true,
+          "wolframExecuted": false,
+          "symbolicExpressionRuntime": false,
+          "paperCertification": false
+        },
+        "data": {
+          "status": "evaluated",
+          "anglesRad": [
+            1.5707963267948966,
+            4.71238898038469
+          ],
+          "anglesDeg": [
+            90.0,
+            270.0
+          ],
+          "evaluations": [
+            {
+              "sameHalfPlane": true,
+              "halfPlaneEarlyReturnUsed": true,
+              "route": "half-plane-return",
+              "angleRad": 1.5707963267948966,
+              "intersections": [
+                null,
+                null
+              ],
+              "u2": null,
+              "numerator": null,
+              "denominator": null,
+              "reason": null
+            },
+            {
+              "sameHalfPlane": true,
+              "halfPlaneEarlyReturnUsed": true,
+              "route": "half-plane-return",
+              "angleRad": 1.5707963267948966,
+              "intersections": [
+                null,
+                null
+              ],
+              "u2": null,
+              "numerator": null,
+              "denominator": null,
+              "reason": null
+            }
+          ],
+          "noMathematicalInfeasibilityClaim": true
+        }
+      }
+    },
+    {
+      "name": "halfplane-3-false",
+      "query": {
+        "family": "three-cycle-critical-native",
+        "edges": [
+          [
+            [
+              2,
+              -3
+            ],
+            [
+              1,
+              -3
+            ]
+          ],
+          [
+            [
+              0,
+              -1
+            ],
+            [
+              2,
+              2
+            ]
+          ],
+          [
+            [
+              -1,
+              1
+            ],
+            [
+              1,
+              3
+            ]
+          ]
+        ],
+        "checkHalfPlane": false
+      },
+      "response": {
+        "schema": "origamica-three-cycle-critical-v1",
+        "query": {
+          "family": "three-cycle-critical-native",
+          "edges": [
+            [
+              [
+                2.0,
+                -3.0
+              ],
+              [
+                1.0,
+                -3.0
+              ]
+            ],
+            [
+              [
+                0.0,
+                -1.0
+              ],
+              [
+                2.0,
+                2.0
+              ]
+            ],
+            [
+              [
+                -1.0,
+                1.0
+              ],
+              [
+                1.0,
+                3.0
+              ]
+            ]
+          ],
+          "checkHalfPlane": false
+        },
+        "source": {
+          "function": "ThreeCycleCriticalTwistAngles",
+          "definitionCell": "In[2700]",
+          "counterclockwiseCell": "In[2696]",
+          "clockwiseCell": "In[2698]",
+          "defaultOptionsCell": "In[2695]",
+          "sameHalfPlaneCell": "In[2691]",
+          "definitionLines": [
+            200504,
+            200536
+          ],
+          "checkHalfPlaneDefault": true,
+          "originalArcTanRatio": true,
+          "originalReversedEdgeCW": true,
+          "wolframExecuted": false,
+          "symbolicExpressionRuntime": false,
+          "paperCertification": false
+        },
+        "data": {
+          "status": "evaluated",
+          "anglesRad": [
+            -1.4801364395941516,
+            1.6614562139956417
+          ],
+          "anglesDeg": [
+            -84.80557109226521,
+            95.1944289077348
+          ],
+          "evaluations": [
+            {
+              "sameHalfPlane": true,
+              "halfPlaneEarlyReturnUsed": false,
+              "route": "original-line-intersections",
+              "angleRad": -1.4801364395941516,
+              "intersections": [
+                [
+                  -0.16666666666666652,
+                  -0.16666666666666696
+                ],
+                [
+                  4.0,
+                  5.0
+                ]
+              ],
+              "u2": [
+                -5.166666666666667,
+                4.166666666666666
+              ],
+              "numerator": -23.833333333333332,
+              "denominator": 2.1666666666666643,
+              "reason": null
+            },
+            {
+              "sameHalfPlane": true,
+              "halfPlaneEarlyReturnUsed": false,
+              "route": "original-line-intersections",
+              "angleRad": -1.4801364395941514,
+              "intersections": [
+                [
+                  0.3333333333333335,
+                  -2.6666666666666665
+                ],
+                [
+                  4.5,
+                  2.5
+                ]
+              ],
+              "u2": [
+                -5.166666666666666,
+                4.166666666666666
+              ],
+              "numerator": 23.83333333333333,
+              "denominator": -2.166666666666666,
+              "reason": null
+            }
+          ],
+          "noMathematicalInfeasibilityClaim": true
+        }
+      }
+    },
+    {
+      "name": "halfplane-4-true",
+      "query": {
+        "family": "three-cycle-critical-native",
+        "edges": [
+          [
+            [
+              3,
+              -1
+            ],
+            [
+              2,
+              -3
+            ]
+          ],
+          [
+            [
+              2,
+              -3
+            ],
+            [
+              1,
+              2
+            ]
+          ],
+          [
+            [
+              0,
+              1
+            ],
+            [
+              -2,
+              3
+            ]
+          ]
+        ],
+        "checkHalfPlane": true
+      },
+      "response": {
+        "schema": "origamica-three-cycle-critical-v1",
+        "query": {
+          "family": "three-cycle-critical-native",
+          "edges": [
+            [
+              [
+                3.0,
+                -1.0
+              ],
+              [
+                2.0,
+                -3.0
+              ]
+            ],
+            [
+              [
+                2.0,
+                -3.0
+              ],
+              [
+                1.0,
+                2.0
+              ]
+            ],
+            [
+              [
+                0.0,
+                1.0
+              ],
+              [
+                -2.0,
+                3.0
+              ]
+            ]
+          ],
+          "checkHalfPlane": true
+        },
+        "source": {
+          "function": "ThreeCycleCriticalTwistAngles",
+          "definitionCell": "In[2700]",
+          "counterclockwiseCell": "In[2696]",
+          "clockwiseCell": "In[2698]",
+          "defaultOptionsCell": "In[2695]",
+          "sameHalfPlaneCell": "In[2691]",
+          "definitionLines": [
+            200504,
+            200536
+          ],
+          "checkHalfPlaneDefault": true,
+          "originalArcTanRatio": true,
+          "originalReversedEdgeCW": true,
+          "wolframExecuted": false,
+          "symbolicExpressionRuntime": false,
+          "paperCertification": false
+        },
+        "data": {
+          "status": "evaluated",
+          "anglesRad": [
+            1.5707963267948966,
+            4.71238898038469
+          ],
+          "anglesDeg": [
+            90.0,
+            270.0
+          ],
+          "evaluations": [
+            {
+              "sameHalfPlane": true,
+              "halfPlaneEarlyReturnUsed": true,
+              "route": "half-plane-return",
+              "angleRad": 1.5707963267948966,
+              "intersections": [
+                null,
+                null
+              ],
+              "u2": null,
+              "numerator": null,
+              "denominator": null,
+              "reason": null
+            },
+            {
+              "sameHalfPlane": true,
+              "halfPlaneEarlyReturnUsed": true,
+              "route": "half-plane-return",
+              "angleRad": 1.5707963267948966,
+              "intersections": [
+                null,
+                null
+              ],
+              "u2": null,
+              "numerator": null,
+              "denominator": null,
+              "reason": null
+            }
+          ],
+          "noMathematicalInfeasibilityClaim": true
+        }
+      }
+    },
+    {
+      "name": "halfplane-4-false",
+      "query": {
+        "family": "three-cycle-critical-native",
+        "edges": [
+          [
+            [
+              3,
+              -1
+            ],
+            [
+              2,
+              -3
+            ]
+          ],
+          [
+            [
+              2,
+              -3
+            ],
+            [
+              1,
+              2
+            ]
+          ],
+          [
+            [
+              0,
+              1
+            ],
+            [
+              -2,
+              3
+            ]
+          ]
+        ],
+        "checkHalfPlane": false
+      },
+      "response": {
+        "schema": "origamica-three-cycle-critical-v1",
+        "query": {
+          "family": "three-cycle-critical-native",
+          "edges": [
+            [
+              [
+                3.0,
+                -1.0
+              ],
+              [
+                2.0,
+                -3.0
+              ]
+            ],
+            [
+              [
+                2.0,
+                -3.0
+              ],
+              [
+                1.0,
+                2.0
+              ]
+            ],
+            [
+              [
+                0.0,
+                1.0
+              ],
+              [
+                -2.0,
+                3.0
+              ]
+            ]
+          ],
+          "checkHalfPlane": false
+        },
+        "source": {
+          "function": "ThreeCycleCriticalTwistAngles",
+          "definitionCell": "In[2700]",
+          "counterclockwiseCell": "In[2696]",
+          "clockwiseCell": "In[2698]",
+          "defaultOptionsCell": "In[2695]",
+          "sameHalfPlaneCell": "In[2691]",
+          "definitionLines": [
+            200504,
+            200536
+          ],
+          "checkHalfPlaneDefault": true,
+          "originalArcTanRatio": true,
+          "originalReversedEdgeCW": true,
+          "wolframExecuted": false,
+          "symbolicExpressionRuntime": false,
+          "paperCertification": false
+        },
+        "data": {
+          "status": "evaluated",
+          "anglesRad": [
+            -1.051650212548374,
+            3.3636745554952734
+          ],
+          "anglesDeg": [
+            -60.255118703057796,
+            192.72435568542238
+          ],
+          "evaluations": [
+            {
+              "sameHalfPlane": true,
+              "halfPlaneEarlyReturnUsed": false,
+              "route": "original-line-intersections",
+              "angleRad": -1.051650212548374,
+              "intersections": [
+                [
+                  -1.714285714285714,
+                  -1.142857142857143
+                ],
+                [
+                  -1.25,
+                  0.25
+                ]
+              ],
+              "u2": [
+                -1.392857142857143,
+                0.46428571428571397
+              ],
+              "numerator": -6.500000000000002,
+              "denominator": 3.7142857142857126,
+              "reason": null
+            },
+            {
+              "sameHalfPlane": true,
+              "halfPlaneEarlyReturnUsed": false,
+              "route": "original-line-intersections",
+              "angleRad": 0.2220819019054802,
+              "intersections": [
+                [
+                  3.7857142857142856,
+                  -2.642857142857143
+                ],
+                [
+                  -2.0,
+                  -2.5
+                ]
+              ],
+              "u2": [
+                -0.1428571428571428,
+                -5.785714285714286
+              ],
+              "numerator": 6.5,
+              "denominator": 28.785714285714285,
+              "reason": null
+            }
+          ],
+          "noMathematicalInfeasibilityClaim": true
+        }
+      }
+    },
+    {
+      "name": "halfplane-5-true",
+      "query": {
+        "family": "three-cycle-critical-native",
+        "edges": [
+          [
+            [
+              -1,
+              -3
+            ],
+            [
+              1,
+              1
+            ]
+          ],
+          [
+            [
+              2,
+              -3
+            ],
+            [
+              -3,
+              -1
+            ]
+          ],
+          [
+            [
+              1,
+              -1
+            ],
+            [
+              -3,
+              0
+            ]
+          ]
+        ],
+        "checkHalfPlane": true
+      },
+      "response": {
+        "schema": "origamica-three-cycle-critical-v1",
+        "query": {
+          "family": "three-cycle-critical-native",
+          "edges": [
+            [
+              [
+                -1.0,
+                -3.0
+              ],
+              [
+                1.0,
+                1.0
+              ]
+            ],
+            [
+              [
+                2.0,
+                -3.0
+              ],
+              [
+                -3.0,
+                -1.0
+              ]
+            ],
+            [
+              [
+                1.0,
+                -1.0
+              ],
+              [
+                -3.0,
+                0.0
+              ]
+            ]
+          ],
+          "checkHalfPlane": true
+        },
+        "source": {
+          "function": "ThreeCycleCriticalTwistAngles",
+          "definitionCell": "In[2700]",
+          "counterclockwiseCell": "In[2696]",
+          "clockwiseCell": "In[2698]",
+          "defaultOptionsCell": "In[2695]",
+          "sameHalfPlaneCell": "In[2691]",
+          "definitionLines": [
+            200504,
+            200536
+          ],
+          "checkHalfPlaneDefault": true,
+          "originalArcTanRatio": true,
+          "originalReversedEdgeCW": true,
+          "wolframExecuted": false,
+          "symbolicExpressionRuntime": false,
+          "paperCertification": false
+        },
+        "data": {
+          "status": "evaluated",
+          "anglesRad": [
+            1.5707963267948966,
+            4.71238898038469
+          ],
+          "anglesDeg": [
+            90.0,
+            270.0
+          ],
+          "evaluations": [
+            {
+              "sameHalfPlane": true,
+              "halfPlaneEarlyReturnUsed": true,
+              "route": "half-plane-return",
+              "angleRad": 1.5707963267948966,
+              "intersections": [
+                null,
+                null
+              ],
+              "u2": null,
+              "numerator": null,
+              "denominator": null,
+              "reason": null
+            },
+            {
+              "sameHalfPlane": true,
+              "halfPlaneEarlyReturnUsed": true,
+              "route": "half-plane-return",
+              "angleRad": 1.5707963267948966,
+              "intersections": [
+                null,
+                null
+              ],
+              "u2": null,
+              "numerator": null,
+              "denominator": null,
+              "reason": null
+            }
+          ],
+          "noMathematicalInfeasibilityClaim": true
+        }
+      }
+    },
+    {
+      "name": "halfplane-5-false",
+      "query": {
+        "family": "three-cycle-critical-native",
+        "edges": [
+          [
+            [
+              -1,
+              -3
+            ],
+            [
+              1,
+              1
+            ]
+          ],
+          [
+            [
+              2,
+              -3
+            ],
+            [
+              -3,
+              -1
+            ]
+          ],
+          [
+            [
+              1,
+              -1
+            ],
+            [
+              -3,
+              0
+            ]
+          ]
+        ],
+        "checkHalfPlane": false
+      },
+      "response": {
+        "schema": "origamica-three-cycle-critical-v1",
+        "query": {
+          "family": "three-cycle-critical-native",
+          "edges": [
+            [
+              [
+                -1.0,
+                -3.0
+              ],
+              [
+                1.0,
+                1.0
+              ]
+            ],
+            [
+              [
+                2.0,
+                -3.0
+              ],
+              [
+                -3.0,
+                -1.0
+              ]
+            ],
+            [
+              [
+                1.0,
+                -1.0
+              ],
+              [
+                -3.0,
+                0.0
+              ]
+            ]
+          ],
+          "checkHalfPlane": false
+        },
+        "source": {
+          "function": "ThreeCycleCriticalTwistAngles",
+          "definitionCell": "In[2700]",
+          "counterclockwiseCell": "In[2696]",
+          "clockwiseCell": "In[2698]",
+          "defaultOptionsCell": "In[2695]",
+          "sameHalfPlaneCell": "In[2691]",
+          "definitionLines": [
+            200504,
+            200536
+          ],
+          "checkHalfPlaneDefault": true,
+          "originalArcTanRatio": true,
+          "originalReversedEdgeCW": true,
+          "wolframExecuted": false,
+          "symbolicExpressionRuntime": false,
+          "paperCertification": false
+        },
+        "data": {
+          "status": "evaluated",
+          "anglesRad": [
+            1.0714496051147666,
+            3.9502424397977043
+          ],
+          "anglesDeg": [
+            61.38954033403479,
+            226.33221985386965
+          ],
+          "evaluations": [
+            {
+              "sameHalfPlane": true,
+              "halfPlaneEarlyReturnUsed": false,
+              "route": "original-line-intersections",
+              "angleRad": 1.0714496051147666,
+              "intersections": [
+                [
+                  -1.083333333333333,
+                  0.16666666666666674
+                ],
+                [
+                  -6.666666666666666,
+                  -0.5
+                ]
+              ],
+              "u2": [
+                0.6666666666666667,
+                -5.583333333333333
+              ],
+              "numerator": -26.583333333333332,
+              "denominator": -14.5,
+              "reason": null
+            },
+            {
+              "sameHalfPlane": true,
+              "halfPlaneEarlyReturnUsed": false,
+              "route": "original-line-intersections",
+              "angleRad": 0.8086497862079113,
+              "intersections": [
+                [
+                  0.5,
+                  -3.125
+                ],
+                [
+                  -5.833333333333333,
+                  -5.666666666666666
+                ]
+              ],
+              "u2": [
+                2.541666666666666,
+                -6.333333333333333
+              ],
+              "numerator": 26.583333333333332,
+              "denominator": 25.374999999999996,
+              "reason": null
+            }
+          ],
+          "noMathematicalInfeasibilityClaim": true
+        }
+      }
+    },
+    {
+      "name": "ccw-triangle-true",
+      "query": {
+        "family": "three-cycle-critical-native",
+        "edges": [
+          [
+            [
+              0,
+              0
+            ],
+            [
+              1,
+              0
+            ]
+          ],
+          [
+            [
+              1,
+              0
+            ],
+            [
+              0,
+              1
+            ]
+          ],
+          [
+            [
+              0,
+              1
+            ],
+            [
+              0,
+              0
+            ]
+          ]
+        ],
+        "checkHalfPlane": true
+      },
+      "response": {
+        "schema": "origamica-three-cycle-critical-v1",
+        "query": {
+          "family": "three-cycle-critical-native",
+          "edges": [
+            [
+              [
+                0.0,
+                0.0
+              ],
+              [
+                1.0,
+                0.0
+              ]
+            ],
+            [
+              [
+                1.0,
+                0.0
+              ],
+              [
+                0.0,
+                1.0
+              ]
+            ],
+            [
+              [
+                0.0,
+                1.0
+              ],
+              [
+                0.0,
+                0.0
+              ]
+            ]
+          ],
+          "checkHalfPlane": true
+        },
+        "source": {
+          "function": "ThreeCycleCriticalTwistAngles",
+          "definitionCell": "In[2700]",
+          "counterclockwiseCell": "In[2696]",
+          "clockwiseCell": "In[2698]",
+          "defaultOptionsCell": "In[2695]",
+          "sameHalfPlaneCell": "In[2691]",
+          "definitionLines": [
+            200504,
+            200536
+          ],
+          "checkHalfPlaneDefault": true,
+          "originalArcTanRatio": true,
+          "originalReversedEdgeCW": true,
+          "wolframExecuted": false,
+          "symbolicExpressionRuntime": false,
+          "paperCertification": false
+        },
+        "data": {
+          "status": "evaluated",
+          "anglesRad": [
+            0.4636476090008061,
+            2.677945044588987
+          ],
+          "anglesDeg": [
+            26.56505117707799,
+            153.434948822922
+          ],
+          "evaluations": [
+            {
+              "sameHalfPlane": false,
+              "halfPlaneEarlyReturnUsed": false,
+              "route": "original-line-intersections",
+              "angleRad": 0.4636476090008061,
+              "intersections": [
+                [
+                  1.0,
+                  1.0
+                ],
+                [
+                  -0.5,
+                  0.5
+                ]
+              ],
+              "u2": [
+                0.5,
+                -1.5
+              ],
+              "numerator": -1.0,
+              "denominator": -2.0,
+              "reason": null
+            },
+            {
+              "sameHalfPlane": false,
+              "halfPlaneEarlyReturnUsed": false,
+              "route": "original-line-intersections",
+              "angleRad": -0.4636476090008061,
+              "intersections": [
+                [
+                  0.5,
+                  -0.5
+                ],
+                [
+                  1.0,
+                  1.0
+                ]
+              ],
+              "u2": [
+                -1.5,
+                0.5
+              ],
+              "numerator": 1.0,
+              "denominator": -2.0,
+              "reason": null
+            }
+          ],
+          "noMathematicalInfeasibilityClaim": true
+        }
+      }
+    },
+    {
+      "name": "ccw-triangle-false",
+      "query": {
+        "family": "three-cycle-critical-native",
+        "edges": [
+          [
+            [
+              0,
+              0
+            ],
+            [
+              1,
+              0
+            ]
+          ],
+          [
+            [
+              1,
+              0
+            ],
+            [
+              0,
+              1
+            ]
+          ],
+          [
+            [
+              0,
+              1
+            ],
+            [
+              0,
+              0
+            ]
+          ]
+        ],
+        "checkHalfPlane": false
+      },
+      "response": {
+        "schema": "origamica-three-cycle-critical-v1",
+        "query": {
+          "family": "three-cycle-critical-native",
+          "edges": [
+            [
+              [
+                0.0,
+                0.0
+              ],
+              [
+                1.0,
+                0.0
+              ]
+            ],
+            [
+              [
+                1.0,
+                0.0
+              ],
+              [
+                0.0,
+                1.0
+              ]
+            ],
+            [
+              [
+                0.0,
+                1.0
+              ],
+              [
+                0.0,
+                0.0
+              ]
+            ]
+          ],
+          "checkHalfPlane": false
+        },
+        "source": {
+          "function": "ThreeCycleCriticalTwistAngles",
+          "definitionCell": "In[2700]",
+          "counterclockwiseCell": "In[2696]",
+          "clockwiseCell": "In[2698]",
+          "defaultOptionsCell": "In[2695]",
+          "sameHalfPlaneCell": "In[2691]",
+          "definitionLines": [
+            200504,
+            200536
+          ],
+          "checkHalfPlaneDefault": true,
+          "originalArcTanRatio": true,
+          "originalReversedEdgeCW": true,
+          "wolframExecuted": false,
+          "symbolicExpressionRuntime": false,
+          "paperCertification": false
+        },
+        "data": {
+          "status": "evaluated",
+          "anglesRad": [
+            0.4636476090008061,
+            2.677945044588987
+          ],
+          "anglesDeg": [
+            26.56505117707799,
+            153.434948822922
+          ],
+          "evaluations": [
+            {
+              "sameHalfPlane": false,
+              "halfPlaneEarlyReturnUsed": false,
+              "route": "original-line-intersections",
+              "angleRad": 0.4636476090008061,
+              "intersections": [
+                [
+                  1.0,
+                  1.0
+                ],
+                [
+                  -0.5,
+                  0.5
+                ]
+              ],
+              "u2": [
+                0.5,
+                -1.5
+              ],
+              "numerator": -1.0,
+              "denominator": -2.0,
+              "reason": null
+            },
+            {
+              "sameHalfPlane": false,
+              "halfPlaneEarlyReturnUsed": false,
+              "route": "original-line-intersections",
+              "angleRad": -0.4636476090008061,
+              "intersections": [
+                [
+                  0.5,
+                  -0.5
+                ],
+                [
+                  1.0,
+                  1.0
+                ]
+              ],
+              "u2": [
+                -1.5,
+                0.5
+              ],
+              "numerator": 1.0,
+              "denominator": -2.0,
+              "reason": null
+            }
+          ],
+          "noMathematicalInfeasibilityClaim": true
+        }
+      }
+    },
+    {
+      "name": "cw-triangle-true",
+      "query": {
+        "family": "three-cycle-critical-native",
+        "edges": [
+          [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              1
+            ]
+          ],
+          [
+            [
+              0,
+              1
+            ],
+            [
+              1,
+              0
+            ]
+          ],
+          [
+            [
+              1,
+              0
+            ],
+            [
+              0,
+              0
+            ]
+          ]
+        ],
+        "checkHalfPlane": true
+      },
+      "response": {
+        "schema": "origamica-three-cycle-critical-v1",
+        "query": {
+          "family": "three-cycle-critical-native",
+          "edges": [
+            [
+              [
+                0.0,
+                0.0
+              ],
+              [
+                0.0,
+                1.0
+              ]
+            ],
+            [
+              [
+                0.0,
+                1.0
+              ],
+              [
+                1.0,
+                0.0
+              ]
+            ],
+            [
+              [
+                1.0,
+                0.0
+              ],
+              [
+                0.0,
+                0.0
+              ]
+            ]
+          ],
+          "checkHalfPlane": true
+        },
+        "source": {
+          "function": "ThreeCycleCriticalTwistAngles",
+          "definitionCell": "In[2700]",
+          "counterclockwiseCell": "In[2696]",
+          "clockwiseCell": "In[2698]",
+          "defaultOptionsCell": "In[2695]",
+          "sameHalfPlaneCell": "In[2691]",
+          "definitionLines": [
+            200504,
+            200536
+          ],
+          "checkHalfPlaneDefault": true,
+          "originalArcTanRatio": true,
+          "originalReversedEdgeCW": true,
+          "wolframExecuted": false,
+          "symbolicExpressionRuntime": false,
+          "paperCertification": false
+        },
+        "data": {
+          "status": "evaluated",
+          "anglesRad": [
+            -0.4636476090008061,
+            3.6052402625905993
+          ],
+          "anglesDeg": [
+            -26.56505117707799,
+            206.565051177078
+          ],
+          "evaluations": [
+            {
+              "sameHalfPlane": false,
+              "halfPlaneEarlyReturnUsed": false,
+              "route": "original-line-intersections",
+              "angleRad": -0.4636476090008061,
+              "intersections": [
+                [
+                  1.0,
+                  1.0
+                ],
+                [
+                  0.5,
+                  -0.5
+                ]
+              ],
+              "u2": [
+                1.5,
+                -0.5
+              ],
+              "numerator": -1.0,
+              "denominator": 2.0,
+              "reason": null
+            },
+            {
+              "sameHalfPlane": false,
+              "halfPlaneEarlyReturnUsed": false,
+              "route": "original-line-intersections",
+              "angleRad": 0.4636476090008061,
+              "intersections": [
+                [
+                  -0.5,
+                  0.5
+                ],
+                [
+                  1.0,
+                  1.0
+                ]
+              ],
+              "u2": [
+                -0.5,
+                1.5
+              ],
+              "numerator": 1.0,
+              "denominator": 2.0,
+              "reason": null
+            }
+          ],
+          "noMathematicalInfeasibilityClaim": true
+        }
+      }
+    },
+    {
+      "name": "cw-triangle-false",
+      "query": {
+        "family": "three-cycle-critical-native",
+        "edges": [
+          [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              1
+            ]
+          ],
+          [
+            [
+              0,
+              1
+            ],
+            [
+              1,
+              0
+            ]
+          ],
+          [
+            [
+              1,
+              0
+            ],
+            [
+              0,
+              0
+            ]
+          ]
+        ],
+        "checkHalfPlane": false
+      },
+      "response": {
+        "schema": "origamica-three-cycle-critical-v1",
+        "query": {
+          "family": "three-cycle-critical-native",
+          "edges": [
+            [
+              [
+                0.0,
+                0.0
+              ],
+              [
+                0.0,
+                1.0
+              ]
+            ],
+            [
+              [
+                0.0,
+                1.0
+              ],
+              [
+                1.0,
+                0.0
+              ]
+            ],
+            [
+              [
+                1.0,
+                0.0
+              ],
+              [
+                0.0,
+                0.0
+              ]
+            ]
+          ],
+          "checkHalfPlane": false
+        },
+        "source": {
+          "function": "ThreeCycleCriticalTwistAngles",
+          "definitionCell": "In[2700]",
+          "counterclockwiseCell": "In[2696]",
+          "clockwiseCell": "In[2698]",
+          "defaultOptionsCell": "In[2695]",
+          "sameHalfPlaneCell": "In[2691]",
+          "definitionLines": [
+            200504,
+            200536
+          ],
+          "checkHalfPlaneDefault": true,
+          "originalArcTanRatio": true,
+          "originalReversedEdgeCW": true,
+          "wolframExecuted": false,
+          "symbolicExpressionRuntime": false,
+          "paperCertification": false
+        },
+        "data": {
+          "status": "evaluated",
+          "anglesRad": [
+            -0.4636476090008061,
+            3.6052402625905993
+          ],
+          "anglesDeg": [
+            -26.56505117707799,
+            206.565051177078
+          ],
+          "evaluations": [
+            {
+              "sameHalfPlane": false,
+              "halfPlaneEarlyReturnUsed": false,
+              "route": "original-line-intersections",
+              "angleRad": -0.4636476090008061,
+              "intersections": [
+                [
+                  1.0,
+                  1.0
+                ],
+                [
+                  0.5,
+                  -0.5
+                ]
+              ],
+              "u2": [
+                1.5,
+                -0.5
+              ],
+              "numerator": -1.0,
+              "denominator": 2.0,
+              "reason": null
+            },
+            {
+              "sameHalfPlane": false,
+              "halfPlaneEarlyReturnUsed": false,
+              "route": "original-line-intersections",
+              "angleRad": 0.4636476090008061,
+              "intersections": [
+                [
+                  -0.5,
+                  0.5
+                ],
+                [
+                  1.0,
+                  1.0
+                ]
+              ],
+              "u2": [
+                -0.5,
+                1.5
+              ],
+              "numerator": 1.0,
+              "denominator": 2.0,
+              "reason": null
+            }
+          ],
+          "noMathematicalInfeasibilityClaim": true
+        }
+      }
+    },
+    {
+      "name": "zero-edges-true",
+      "query": {
+        "family": "three-cycle-critical-native",
+        "edges": [
+          [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ]
+          ],
+          [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ]
+          ],
+          [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ]
+          ]
+        ],
+        "checkHalfPlane": true
+      },
+      "response": {
+        "schema": "origamica-three-cycle-critical-v1",
+        "query": {
+          "family": "three-cycle-critical-native",
+          "edges": [
+            [
+              [
+                0.0,
+                0.0
+              ],
+              [
+                0.0,
+                0.0
+              ]
+            ],
+            [
+              [
+                0.0,
+                0.0
+              ],
+              [
+                0.0,
+                0.0
+              ]
+            ],
+            [
+              [
+                0.0,
+                0.0
+              ],
+              [
+                0.0,
+                0.0
+              ]
+            ]
+          ],
+          "checkHalfPlane": true
+        },
+        "source": {
+          "function": "ThreeCycleCriticalTwistAngles",
+          "definitionCell": "In[2700]",
+          "counterclockwiseCell": "In[2696]",
+          "clockwiseCell": "In[2698]",
+          "defaultOptionsCell": "In[2695]",
+          "sameHalfPlaneCell": "In[2691]",
+          "definitionLines": [
+            200504,
+            200536
+          ],
+          "checkHalfPlaneDefault": true,
+          "originalArcTanRatio": true,
+          "originalReversedEdgeCW": true,
+          "wolframExecuted": false,
+          "symbolicExpressionRuntime": false,
+          "paperCertification": false
+        },
+        "data": {
+          "status": "evaluated",
+          "anglesRad": [
+            1.5707963267948966,
+            4.71238898038469
+          ],
+          "anglesDeg": [
+            90.0,
+            270.0
+          ],
+          "evaluations": [
+            {
+              "sameHalfPlane": true,
+              "halfPlaneEarlyReturnUsed": true,
+              "route": "half-plane-return",
+              "angleRad": 1.5707963267948966,
+              "intersections": [
+                null,
+                null
+              ],
+              "u2": null,
+              "numerator": null,
+              "denominator": null,
+              "reason": null
+            },
+            {
+              "sameHalfPlane": true,
+              "halfPlaneEarlyReturnUsed": true,
+              "route": "half-plane-return",
+              "angleRad": 1.5707963267948966,
+              "intersections": [
+                null,
+                null
+              ],
+              "u2": null,
+              "numerator": null,
+              "denominator": null,
+              "reason": null
+            }
+          ],
+          "noMathematicalInfeasibilityClaim": true
+        }
+      }
+    },
+    {
+      "name": "zero-edges-false",
+      "query": {
+        "family": "three-cycle-critical-native",
+        "edges": [
+          [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ]
+          ],
+          [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ]
+          ],
+          [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ]
+          ]
+        ],
+        "checkHalfPlane": false
+      },
+      "response": {
+        "schema": "origamica-three-cycle-critical-v1",
+        "query": {
+          "family": "three-cycle-critical-native",
+          "edges": [
+            [
+              [
+                0.0,
+                0.0
+              ],
+              [
+                0.0,
+                0.0
+              ]
+            ],
+            [
+              [
+                0.0,
+                0.0
+              ],
+              [
+                0.0,
+                0.0
+              ]
+            ],
+            [
+              [
+                0.0,
+                0.0
+              ],
+              [
+                0.0,
+                0.0
+              ]
+            ]
+          ],
+          "checkHalfPlane": false
+        },
+        "source": {
+          "function": "ThreeCycleCriticalTwistAngles",
+          "definitionCell": "In[2700]",
+          "counterclockwiseCell": "In[2696]",
+          "clockwiseCell": "In[2698]",
+          "defaultOptionsCell": "In[2695]",
+          "sameHalfPlaneCell": "In[2691]",
+          "definitionLines": [
+            200504,
+            200536
+          ],
+          "checkHalfPlaneDefault": true,
+          "originalArcTanRatio": true,
+          "originalReversedEdgeCW": true,
+          "wolframExecuted": false,
+          "symbolicExpressionRuntime": false,
+          "paperCertification": false
+        },
+        "data": {
+          "status": "numeric-evaluation-incomplete",
+          "anglesRad": [
+            null,
+            null
+          ],
+          "anglesDeg": [
+            null,
+            null
+          ],
+          "evaluations": [
+            {
+              "sameHalfPlane": true,
+              "halfPlaneEarlyReturnUsed": false,
+              "route": "original-line-intersections",
+              "angleRad": null,
+              "intersections": [
+                null,
+                null
+              ],
+              "u2": null,
+              "numerator": null,
+              "denominator": null,
+              "reason": "line-intersection-not-numerically-certified"
+            },
+            {
+              "sameHalfPlane": true,
+              "halfPlaneEarlyReturnUsed": false,
+              "route": "original-line-intersections",
+              "angleRad": null,
+              "intersections": [
+                null,
+                null
+              ],
+              "u2": null,
+              "numerator": null,
+              "denominator": null,
+              "reason": "line-intersection-not-numerically-certified"
+            }
+          ],
+          "noMathematicalInfeasibilityClaim": true
+        }
+      }
+    },
+    {
+      "name": "parallel-true",
+      "query": {
+        "family": "three-cycle-critical-native",
+        "edges": [
+          [
+            [
+              0,
+              0
+            ],
+            [
+              1,
+              0
+            ]
+          ],
+          [
+            [
+              0,
+              1
+            ],
+            [
+              1,
+              1
+            ]
+          ],
+          [
+            [
+              0,
+              2
+            ],
+            [
+              1,
+              2
+            ]
+          ]
+        ],
+        "checkHalfPlane": true
+      },
+      "response": {
+        "schema": "origamica-three-cycle-critical-v1",
+        "query": {
+          "family": "three-cycle-critical-native",
+          "edges": [
+            [
+              [
+                0.0,
+                0.0
+              ],
+              [
+                1.0,
+                0.0
+              ]
+            ],
+            [
+              [
+                0.0,
+                1.0
+              ],
+              [
+                1.0,
+                1.0
+              ]
+            ],
+            [
+              [
+                0.0,
+                2.0
+              ],
+              [
+                1.0,
+                2.0
+              ]
+            ]
+          ],
+          "checkHalfPlane": true
+        },
+        "source": {
+          "function": "ThreeCycleCriticalTwistAngles",
+          "definitionCell": "In[2700]",
+          "counterclockwiseCell": "In[2696]",
+          "clockwiseCell": "In[2698]",
+          "defaultOptionsCell": "In[2695]",
+          "sameHalfPlaneCell": "In[2691]",
+          "definitionLines": [
+            200504,
+            200536
+          ],
+          "checkHalfPlaneDefault": true,
+          "originalArcTanRatio": true,
+          "originalReversedEdgeCW": true,
+          "wolframExecuted": false,
+          "symbolicExpressionRuntime": false,
+          "paperCertification": false
+        },
+        "data": {
+          "status": "evaluated",
+          "anglesRad": [
+            1.5707963267948966,
+            4.71238898038469
+          ],
+          "anglesDeg": [
+            90.0,
+            270.0
+          ],
+          "evaluations": [
+            {
+              "sameHalfPlane": true,
+              "halfPlaneEarlyReturnUsed": true,
+              "route": "half-plane-return",
+              "angleRad": 1.5707963267948966,
+              "intersections": [
+                null,
+                null
+              ],
+              "u2": null,
+              "numerator": null,
+              "denominator": null,
+              "reason": null
+            },
+            {
+              "sameHalfPlane": true,
+              "halfPlaneEarlyReturnUsed": true,
+              "route": "half-plane-return",
+              "angleRad": 1.5707963267948966,
+              "intersections": [
+                null,
+                null
+              ],
+              "u2": null,
+              "numerator": null,
+              "denominator": null,
+              "reason": null
+            }
+          ],
+          "noMathematicalInfeasibilityClaim": true
+        }
+      }
+    },
+    {
+      "name": "parallel-false",
+      "query": {
+        "family": "three-cycle-critical-native",
+        "edges": [
+          [
+            [
+              0,
+              0
+            ],
+            [
+              1,
+              0
+            ]
+          ],
+          [
+            [
+              0,
+              1
+            ],
+            [
+              1,
+              1
+            ]
+          ],
+          [
+            [
+              0,
+              2
+            ],
+            [
+              1,
+              2
+            ]
+          ]
+        ],
+        "checkHalfPlane": false
+      },
+      "response": {
+        "schema": "origamica-three-cycle-critical-v1",
+        "query": {
+          "family": "three-cycle-critical-native",
+          "edges": [
+            [
+              [
+                0.0,
+                0.0
+              ],
+              [
+                1.0,
+                0.0
+              ]
+            ],
+            [
+              [
+                0.0,
+                1.0
+              ],
+              [
+                1.0,
+                1.0
+              ]
+            ],
+            [
+              [
+                0.0,
+                2.0
+              ],
+              [
+                1.0,
+                2.0
+              ]
+            ]
+          ],
+          "checkHalfPlane": false
+        },
+        "source": {
+          "function": "ThreeCycleCriticalTwistAngles",
+          "definitionCell": "In[2700]",
+          "counterclockwiseCell": "In[2696]",
+          "clockwiseCell": "In[2698]",
+          "defaultOptionsCell": "In[2695]",
+          "sameHalfPlaneCell": "In[2691]",
+          "definitionLines": [
+            200504,
+            200536
+          ],
+          "checkHalfPlaneDefault": true,
+          "originalArcTanRatio": true,
+          "originalReversedEdgeCW": true,
+          "wolframExecuted": false,
+          "symbolicExpressionRuntime": false,
+          "paperCertification": false
+        },
+        "data": {
+          "status": "numeric-evaluation-incomplete",
+          "anglesRad": [
+            null,
+            null
+          ],
+          "anglesDeg": [
+            null,
+            null
+          ],
+          "evaluations": [
+            {
+              "sameHalfPlane": true,
+              "halfPlaneEarlyReturnUsed": false,
+              "route": "original-line-intersections",
+              "angleRad": null,
+              "intersections": [
+                null,
+                null
+              ],
+              "u2": null,
+              "numerator": null,
+              "denominator": null,
+              "reason": "line-intersection-not-numerically-certified"
+            },
+            {
+              "sameHalfPlane": true,
+              "halfPlaneEarlyReturnUsed": false,
+              "route": "original-line-intersections",
+              "angleRad": null,
+              "intersections": [
+                null,
+                null
+              ],
+              "u2": null,
+              "numerator": null,
+              "denominator": null,
+              "reason": "line-intersection-not-numerically-certified"
+            }
+          ],
+          "noMathematicalInfeasibilityClaim": true
+        }
+      }
+    },
+    {
+      "name": "similarity-small-true",
+      "query": {
+        "family": "three-cycle-critical-native",
+        "edges": [
+          [
+            [
+              2.0,
+              -3.000001
+            ],
+            [
+              2.0,
+              -2.999997
+            ]
+          ],
+          [
+            [
+              1.999997,
+              -3.0
+            ],
+            [
+              2.0,
+              -3.000003
+            ]
+          ],
+          [
+            [
+              1.999997,
+              -2.999998
+            ],
+            [
+              2.0,
+              -2.999998
+            ]
+          ]
+        ],
+        "checkHalfPlane": true
+      },
+      "response": {
+        "schema": "origamica-three-cycle-critical-v1",
+        "query": {
+          "family": "three-cycle-critical-native",
+          "edges": [
+            [
+              [
+                2.0,
+                -3.000001
+              ],
+              [
+                2.0,
+                -2.999997
+              ]
+            ],
+            [
+              [
+                1.999997,
+                -3.0
+              ],
+              [
+                2.0,
+                -3.000003
+              ]
+            ],
+            [
+              [
+                1.999997,
+                -2.999998
+              ],
+              [
+                2.0,
+                -2.999998
+              ]
+            ]
+          ],
+          "checkHalfPlane": true
+        },
+        "source": {
+          "function": "ThreeCycleCriticalTwistAngles",
+          "definitionCell": "In[2700]",
+          "counterclockwiseCell": "In[2696]",
+          "clockwiseCell": "In[2698]",
+          "defaultOptionsCell": "In[2695]",
+          "sameHalfPlaneCell": "In[2691]",
+          "definitionLines": [
+            200504,
+            200536
+          ],
+          "checkHalfPlaneDefault": true,
+          "originalArcTanRatio": true,
+          "originalReversedEdgeCW": true,
+          "wolframExecuted": false,
+          "symbolicExpressionRuntime": false,
+          "paperCertification": false
+        },
+        "data": {
+          "status": "evaluated",
+          "anglesRad": [
+            1.5707963267948966,
+            4.71238898038469
+          ],
+          "anglesDeg": [
+            90.0,
+            270.0
+          ],
+          "evaluations": [
+            {
+              "sameHalfPlane": true,
+              "halfPlaneEarlyReturnUsed": true,
+              "route": "half-plane-return",
+              "angleRad": 1.5707963267948966,
+              "intersections": [
+                null,
+                null
+              ],
+              "u2": null,
+              "numerator": null,
+              "denominator": null,
+              "reason": null
+            },
+            {
+              "sameHalfPlane": true,
+              "halfPlaneEarlyReturnUsed": true,
+              "route": "half-plane-return",
+              "angleRad": 1.5707963267948966,
+              "intersections": [
+                null,
+                null
+              ],
+              "u2": null,
+              "numerator": null,
+              "denominator": null,
+              "reason": null
+            }
+          ],
+          "noMathematicalInfeasibilityClaim": true
+        }
+      }
+    },
+    {
+      "name": "similarity-small-false",
+      "query": {
+        "family": "three-cycle-critical-native",
+        "edges": [
+          [
+            [
+              2.0,
+              -3.000001
+            ],
+            [
+              2.0,
+              -2.999997
+            ]
+          ],
+          [
+            [
+              1.999997,
+              -3.0
+            ],
+            [
+              2.0,
+              -3.000003
+            ]
+          ],
+          [
+            [
+              1.999997,
+              -2.999998
+            ],
+            [
+              2.0,
+              -2.999998
+            ]
+          ]
+        ],
+        "checkHalfPlane": false
+      },
+      "response": {
+        "schema": "origamica-three-cycle-critical-v1",
+        "query": {
+          "family": "three-cycle-critical-native",
+          "edges": [
+            [
+              [
+                2.0,
+                -3.000001
+              ],
+              [
+                2.0,
+                -2.999997
+              ]
+            ],
+            [
+              [
+                1.999997,
+                -3.0
+              ],
+              [
+                2.0,
+                -3.000003
+              ]
+            ],
+            [
+              [
+                1.999997,
+                -2.999998
+              ],
+              [
+                2.0,
+                -2.999998
+              ]
+            ]
+          ],
+          "checkHalfPlane": false
+        },
+        "source": {
+          "function": "ThreeCycleCriticalTwistAngles",
+          "definitionCell": "In[2700]",
+          "counterclockwiseCell": "In[2696]",
+          "clockwiseCell": "In[2698]",
+          "defaultOptionsCell": "In[2695]",
+          "sameHalfPlaneCell": "In[2691]",
+          "definitionLines": [
+            200504,
+            200536
+          ],
+          "checkHalfPlaneDefault": true,
+          "originalArcTanRatio": true,
+          "originalReversedEdgeCW": true,
+          "wolframExecuted": false,
+          "symbolicExpressionRuntime": false,
+          "paperCertification": false
+        },
+        "data": {
+          "status": "evaluated",
+          "anglesRad": [
+            0.6947382761821429,
+            1.7681918867472595
+          ],
+          "anglesDeg": [
+            39.80557109143095,
+            101.30993247989201
+          ],
+          "evaluations": [
+            {
+              "sameHalfPlane": true,
+              "halfPlaneEarlyReturnUsed": false,
+              "route": "original-line-intersections",
+              "angleRad": 0.6947382761821429,
+              "intersections": [
+                [
+                  2.000003,
+                  -3.0
+                ],
+                [
+                  1.9999975,
+                  -3.0000005
+                ]
+              ],
+              "u2": [
+                5.00000000069889e-07,
+                -5.4999999998806e-06
+              ],
+              "numerator": 1.4999999999308357e-11,
+              "denominator": 1.7999999999702938e-11,
+              "reason": null
+            },
+            {
+              "sameHalfPlane": true,
+              "halfPlaneEarlyReturnUsed": false,
+              "route": "original-line-intersections",
+              "angleRad": -1.3734007668425336,
+              "intersections": [
+                [
+                  1.999998,
+                  -3.0000020000000003
+                ],
+                [
+                  1.999996,
+                  -2.999999
+                ]
+              ],
+              "u2": [
+                -3.000000000419334e-06,
+                -1.9999999998354667e-06
+              ],
+              "numerator": -1.5000000000640625e-11,
+              "denominator": 3.0000000017268463e-12,
+              "reason": null
+            }
+          ],
+          "noMathematicalInfeasibilityClaim": true
+        }
+      }
+    }
+  ],
+  "polygons": [
+    {
+      "name": "in2702-five",
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          1,
+          -0.5
+        ],
+        [
+          1.8,
+          -0.2
+        ],
+        [
+          1.5,
+          0.5
+        ],
+        [
+          0.5,
+          0.7
+        ]
+      ],
+      "ranges": {
+        "true": [
+          42.87614608194722,
+          140.601848347708
+        ],
+        "false": [
+          30.895836080130696,
+          145.55297199892883
+        ]
+      }
+    },
+    {
+      "name": "regular-six",
+      "points": [
+        [
+          1.0,
+          0.0
+        ],
+        [
+          0.5000000000000001,
+          0.8660254037844386
+        ],
+        [
+          -0.4999999999999998,
+          0.8660254037844387
+        ],
+        [
+          -1.0,
+          1.2246467991473532e-16
+        ],
+        [
+          -0.5000000000000004,
+          -0.8660254037844385
+        ],
+        [
+          0.5000000000000001,
+          -0.8660254037844386
+        ]
+      ],
+      "ranges": {
+        "true": [
+          59.99999999999999,
+          120.00000000000001
+        ],
+        "false": [
+          59.99999999999997,
+          120.00000000000001
+        ]
+      }
+    }
+  ]
+}

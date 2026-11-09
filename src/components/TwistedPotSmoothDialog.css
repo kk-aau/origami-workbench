@@ -1,0 +1,16 @@
+@media(max-width:760px){
+  .tess-dialog[open]:has(>.twisted-pot-smooth-dialog){width:calc(100vw - 18px);height:calc(100dvh - 18px);overflow:hidden;padding:10px}
+  .tess-dialog .twisted-pot-smooth-dialog{display:grid;grid-template-columns:188px minmax(0,1fr);gap:8px;min-height:0;overflow:hidden}
+  .twisted-pot-smooth-dialog .huffman-controls{min-height:0;overflow:hidden;gap:7px;padding:9px}
+  .twisted-pot-smooth-dialog .huffman-controls h3{font-size:18px;margin-top:2px}
+  .twisted-pot-smooth-dialog .huffman-root{padding:5px}
+  .twisted-pot-smooth-dialog .huffman-results,.twisted-pot-smooth-dialog .huffman-panels{min-height:0}
+}
+@media(max-width:570px){
+  .tess-dialog .twisted-pot-smooth-dialog{grid-template-columns:1fr;grid-template-rows:auto minmax(0,1fr)}
+  .twisted-pot-smooth-dialog .huffman-controls{display:grid;grid-template-columns:1fr 1fr;gap:4px 8px;max-height:125px}
+  .twisted-pot-smooth-dialog .huffman-controls h3,.twisted-pot-smooth-dialog .huffman-controls p,.twisted-pot-smooth-dialog .huffman-source{display:none}
+  .twisted-pot-smooth-dialog .huffman-overline,.twisted-pot-smooth-dialog .huffman-status{grid-column:1/-1}
+  .twisted-pot-smooth-dialog .huffman-panels{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .twisted-pot-smooth-dialog .huffman-panel{min-height:0}
+}

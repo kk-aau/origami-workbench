@@ -1,0 +1,13 @@
+import fs from 'node:fs';
+import crypto from 'node:crypto';
+import assert from 'node:assert/strict';
+const file='output/original-linked-first3d-full-run-1010.json',run=JSON.parse(fs.readFileSync(file,'utf8'));
+assert.equal(run.exitCode,null);
+for(const row of run.inputs)assert.equal(crypto.createHash('sha256').update(fs.readFileSync(row.file)).digest('hex'),row.sha256,row.file);
+const log=fs.readFileSync('output/original-linked-first3d-full-test-1010.log','utf8');
+assert.ok(!/^✖|^FAILED|^ERROR:|^FAIL:/m.test(log));
+assert.deepEqual([...log.matchAll(/ℹ pass (\d+)/g)].map(row=>Number(row[1])),[2722,7,63]);
+assert.equal(Number(log.match(/Ran (\d+) tests/)?.[1]),1226);
+run.exitCode=0;run.finishedAt=new Date().toISOString();run.inputsUnchanged=true;
+fs.writeFileSync(file,JSON.stringify(run,null,2));
+console.log(`Full 2722/1226/7/63 checks passed; ${run.inputs.length} source/test inputs unchanged.`);

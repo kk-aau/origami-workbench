@@ -1,0 +1,1229 @@
+{
+  "schema": "origamica-test-pleat-fixtures-v1",
+  "cases": [
+    {
+      "name": "horizontal-0",
+      "query": {
+        "family": "test-pleat-native",
+        "points": [
+          [
+            0,
+            0
+          ],
+          [
+            1,
+            0
+          ]
+        ],
+        "angleDeg": 0
+      },
+      "response": {
+        "schema": "origamica-test-pleat-v1",
+        "query": {
+          "family": "test-pleat-native",
+          "points": [
+            [
+              0.0,
+              0.0
+            ],
+            [
+              1.0,
+              0.0
+            ]
+          ],
+          "angleDeg": 0.0
+        },
+        "source": {
+          "function": "TestPleat",
+          "definitionCell": "In[2682]",
+          "definitionLines": [
+            199210,
+            199288
+          ],
+          "alphaRad": 0.0,
+          "direction": [
+            -1.0,
+            0.0
+          ],
+          "dab": 0.5,
+          "length": 1.8,
+          "pa": [
+            -1.3,
+            0.0
+          ],
+          "pb": [
+            -1.2999999999999998,
+            0.0
+          ],
+          "originalGraphicOrder": [
+            "Polygon[pa,pb,qb,qa]",
+            "Line[qa,qb]",
+            "Line[qa,pa]",
+            "Line[qb,pb]"
+          ],
+          "publicOptions": [],
+          "wolframExecuted": false,
+          "paperCertification": false
+        },
+        "data": {
+          "graphics": [
+            {
+              "primitive": "Polygon",
+              "points": [
+                [
+                  -1.3,
+                  0.0
+                ],
+                [
+                  -1.2999999999999998,
+                  0.0
+                ],
+                [
+                  1.0,
+                  0.0
+                ],
+                [
+                  0.0,
+                  0.0
+                ]
+              ],
+              "style": {
+                "Opacity": 0.1
+              }
+            },
+            {
+              "primitive": "Line",
+              "points": [
+                [
+                  0.0,
+                  0.0
+                ],
+                [
+                  1.0,
+                  0.0
+                ]
+              ],
+              "style": "Black"
+            },
+            {
+              "primitive": "Line",
+              "points": [
+                [
+                  0.0,
+                  0.0
+                ],
+                [
+                  -1.3,
+                  0.0
+                ]
+              ],
+              "style": "Red"
+            },
+            {
+              "primitive": "Line",
+              "points": [
+                [
+                  1.0,
+                  0.0
+                ],
+                [
+                  -1.2999999999999998,
+                  0.0
+                ]
+              ],
+              "style": "Blue"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "horizontal-36",
+      "query": {
+        "family": "test-pleat-native",
+        "points": [
+          [
+            0,
+            0
+          ],
+          [
+            1,
+            0
+          ]
+        ],
+        "angleDeg": 36
+      },
+      "response": {
+        "schema": "origamica-test-pleat-v1",
+        "query": {
+          "family": "test-pleat-native",
+          "points": [
+            [
+              0.0,
+              0.0
+            ],
+            [
+              1.0,
+              0.0
+            ]
+          ],
+          "angleDeg": 36.0
+        },
+        "source": {
+          "function": "TestPleat",
+          "definitionCell": "In[2682]",
+          "definitionLines": [
+            199210,
+            199288
+          ],
+          "alphaRad": 0.6283185307179586,
+          "direction": [
+            -0.8090169943749475,
+            0.5877852522924731
+          ],
+          "dab": 0.4045084971874737,
+          "length": 1.8,
+          "pa": [
+            -1.1289763412811686,
+            0.8202493250526632
+          ],
+          "pb": [
+            -0.7834848384686426,
+            1.2957775832002403
+          ],
+          "originalGraphicOrder": [
+            "Polygon[pa,pb,qb,qa]",
+            "Line[qa,qb]",
+            "Line[qa,pa]",
+            "Line[qb,pb]"
+          ],
+          "publicOptions": [],
+          "wolframExecuted": false,
+          "paperCertification": false
+        },
+        "data": {
+          "graphics": [
+            {
+              "primitive": "Polygon",
+              "points": [
+                [
+                  -1.1289763412811686,
+                  0.8202493250526632
+                ],
+                [
+                  -0.7834848384686426,
+                  1.2957775832002403
+                ],
+                [
+                  1.0,
+                  0.0
+                ],
+                [
+                  0.0,
+                  0.0
+                ]
+              ],
+              "style": {
+                "Opacity": 0.1
+              }
+            },
+            {
+              "primitive": "Line",
+              "points": [
+                [
+                  0.0,
+                  0.0
+                ],
+                [
+                  1.0,
+                  0.0
+                ]
+              ],
+              "style": "Black"
+            },
+            {
+              "primitive": "Line",
+              "points": [
+                [
+                  0.0,
+                  0.0
+                ],
+                [
+                  -1.1289763412811686,
+                  0.8202493250526632
+                ]
+              ],
+              "style": "Red"
+            },
+            {
+              "primitive": "Line",
+              "points": [
+                [
+                  1.0,
+                  0.0
+                ],
+                [
+                  -0.7834848384686426,
+                  1.2957775832002403
+                ]
+              ],
+              "style": "Blue"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "horizontal-90",
+      "query": {
+        "family": "test-pleat-native",
+        "points": [
+          [
+            0,
+            0
+          ],
+          [
+            1,
+            0
+          ]
+        ],
+        "angleDeg": 90
+      },
+      "response": {
+        "schema": "origamica-test-pleat-v1",
+        "query": {
+          "family": "test-pleat-native",
+          "points": [
+            [
+              0.0,
+              0.0
+            ],
+            [
+              1.0,
+              0.0
+            ]
+          ],
+          "angleDeg": 90.0
+        },
+        "source": {
+          "function": "TestPleat",
+          "definitionCell": "In[2682]",
+          "definitionLines": [
+            199210,
+            199288
+          ],
+          "alphaRad": 1.5707963267948966,
+          "direction": [
+            -6.123233995736766e-17,
+            1.0
+          ],
+          "dab": 3.061616997868383e-17,
+          "length": 1.8,
+          "pa": [
+            -1.1021821192326179e-16,
+            1.8
+          ],
+          "pb": [
+            0.9999999999999999,
+            1.8
+          ],
+          "originalGraphicOrder": [
+            "Polygon[pa,pb,qb,qa]",
+            "Line[qa,qb]",
+            "Line[qa,pa]",
+            "Line[qb,pb]"
+          ],
+          "publicOptions": [],
+          "wolframExecuted": false,
+          "paperCertification": false
+        },
+        "data": {
+          "graphics": [
+            {
+              "primitive": "Polygon",
+              "points": [
+                [
+                  -1.1021821192326179e-16,
+                  1.8
+                ],
+                [
+                  0.9999999999999999,
+                  1.8
+                ],
+                [
+                  1.0,
+                  0.0
+                ],
+                [
+                  0.0,
+                  0.0
+                ]
+              ],
+              "style": {
+                "Opacity": 0.1
+              }
+            },
+            {
+              "primitive": "Line",
+              "points": [
+                [
+                  0.0,
+                  0.0
+                ],
+                [
+                  1.0,
+                  0.0
+                ]
+              ],
+              "style": "Black"
+            },
+            {
+              "primitive": "Line",
+              "points": [
+                [
+                  0.0,
+                  0.0
+                ],
+                [
+                  -1.1021821192326179e-16,
+                  1.8
+                ]
+              ],
+              "style": "Red"
+            },
+            {
+              "primitive": "Line",
+              "points": [
+                [
+                  1.0,
+                  0.0
+                ],
+                [
+                  0.9999999999999999,
+                  1.8
+                ]
+              ],
+              "style": "Blue"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "horizontal-180",
+      "query": {
+        "family": "test-pleat-native",
+        "points": [
+          [
+            0,
+            0
+          ],
+          [
+            1,
+            0
+          ]
+        ],
+        "angleDeg": 180
+      },
+      "response": {
+        "schema": "origamica-test-pleat-v1",
+        "query": {
+          "family": "test-pleat-native",
+          "points": [
+            [
+              0.0,
+              0.0
+            ],
+            [
+              1.0,
+              0.0
+            ]
+          ],
+          "angleDeg": 180.0
+        },
+        "source": {
+          "function": "TestPleat",
+          "definitionCell": "In[2682]",
+          "definitionLines": [
+            199210,
+            199288
+          ],
+          "alphaRad": 3.141592653589793,
+          "direction": [
+            1.0,
+            1.2246467991473532e-16
+          ],
+          "dab": -0.5,
+          "length": 1.8,
+          "pa": [
+            2.3,
+            2.816687638038912e-16
+          ],
+          "pb": [
+            2.3,
+            1.5920408388915593e-16
+          ],
+          "originalGraphicOrder": [
+            "Polygon[pa,pb,qb,qa]",
+            "Line[qa,qb]",
+            "Line[qa,pa]",
+            "Line[qb,pb]"
+          ],
+          "publicOptions": [],
+          "wolframExecuted": false,
+          "paperCertification": false
+        },
+        "data": {
+          "graphics": [
+            {
+              "primitive": "Polygon",
+              "points": [
+                [
+                  2.3,
+                  2.816687638038912e-16
+                ],
+                [
+                  2.3,
+                  1.5920408388915593e-16
+                ],
+                [
+                  1.0,
+                  0.0
+                ],
+                [
+                  0.0,
+                  0.0
+                ]
+              ],
+              "style": {
+                "Opacity": 0.1
+              }
+            },
+            {
+              "primitive": "Line",
+              "points": [
+                [
+                  0.0,
+                  0.0
+                ],
+                [
+                  1.0,
+                  0.0
+                ]
+              ],
+              "style": "Black"
+            },
+            {
+              "primitive": "Line",
+              "points": [
+                [
+                  0.0,
+                  0.0
+                ],
+                [
+                  2.3,
+                  2.816687638038912e-16
+                ]
+              ],
+              "style": "Red"
+            },
+            {
+              "primitive": "Line",
+              "points": [
+                [
+                  1.0,
+                  0.0
+                ],
+                [
+                  2.3,
+                  1.5920408388915593e-16
+                ]
+              ],
+              "style": "Blue"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "negative-angle",
+      "query": {
+        "family": "test-pleat-native",
+        "points": [
+          [
+            0,
+            0
+          ],
+          [
+            1,
+            0
+          ]
+        ],
+        "angleDeg": -90
+      },
+      "response": {
+        "schema": "origamica-test-pleat-v1",
+        "query": {
+          "family": "test-pleat-native",
+          "points": [
+            [
+              0.0,
+              0.0
+            ],
+            [
+              1.0,
+              0.0
+            ]
+          ],
+          "angleDeg": -90.0
+        },
+        "source": {
+          "function": "TestPleat",
+          "definitionCell": "In[2682]",
+          "definitionLines": [
+            199210,
+            199288
+          ],
+          "alphaRad": -1.5707963267948966,
+          "direction": [
+            -6.123233995736766e-17,
+            -1.0
+          ],
+          "dab": 3.061616997868383e-17,
+          "length": 1.8,
+          "pa": [
+            -1.1021821192326179e-16,
+            -1.8
+          ],
+          "pb": [
+            0.9999999999999999,
+            -1.8
+          ],
+          "originalGraphicOrder": [
+            "Polygon[pa,pb,qb,qa]",
+            "Line[qa,qb]",
+            "Line[qa,pa]",
+            "Line[qb,pb]"
+          ],
+          "publicOptions": [],
+          "wolframExecuted": false,
+          "paperCertification": false
+        },
+        "data": {
+          "graphics": [
+            {
+              "primitive": "Polygon",
+              "points": [
+                [
+                  -1.1021821192326179e-16,
+                  -1.8
+                ],
+                [
+                  0.9999999999999999,
+                  -1.8
+                ],
+                [
+                  1.0,
+                  0.0
+                ],
+                [
+                  0.0,
+                  0.0
+                ]
+              ],
+              "style": {
+                "Opacity": 0.1
+              }
+            },
+            {
+              "primitive": "Line",
+              "points": [
+                [
+                  0.0,
+                  0.0
+                ],
+                [
+                  1.0,
+                  0.0
+                ]
+              ],
+              "style": "Black"
+            },
+            {
+              "primitive": "Line",
+              "points": [
+                [
+                  0.0,
+                  0.0
+                ],
+                [
+                  -1.1021821192326179e-16,
+                  -1.8
+                ]
+              ],
+              "style": "Red"
+            },
+            {
+              "primitive": "Line",
+              "points": [
+                [
+                  1.0,
+                  0.0
+                ],
+                [
+                  0.9999999999999999,
+                  -1.8
+                ]
+              ],
+              "style": "Blue"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "rotated-translated",
+      "query": {
+        "family": "test-pleat-native",
+        "points": [
+          [
+            2,
+            3
+          ],
+          [
+            5,
+            7
+          ]
+        ],
+        "angleDeg": 27
+      },
+      "response": {
+        "schema": "origamica-test-pleat-v1",
+        "query": {
+          "family": "test-pleat-native",
+          "points": [
+            [
+              2.0,
+              3.0
+            ],
+            [
+              5.0,
+              7.0
+            ]
+          ],
+          "angleDeg": 27.0
+        },
+        "source": {
+          "function": "TestPleat",
+          "definitionCell": "In[2682]",
+          "definitionLines": [
+            199210,
+            199288
+          ],
+          "alphaRad": 0.47123889803846897,
+          "direction": [
+            -0.8977963143046581,
+            -0.44041091950696626
+          ],
+          "dab": 2.2275163104709197,
+          "length": 9.0,
+          "pa": [
+            -4.080310895147621,
+            0.017324230948566388
+          ],
+          "pb": [
+            -5.080022762336226,
+            2.0552792179260413
+          ],
+          "originalGraphicOrder": [
+            "Polygon[pa,pb,qb,qa]",
+            "Line[qa,qb]",
+            "Line[qa,pa]",
+            "Line[qb,pb]"
+          ],
+          "publicOptions": [],
+          "wolframExecuted": false,
+          "paperCertification": false
+        },
+        "data": {
+          "graphics": [
+            {
+              "primitive": "Polygon",
+              "points": [
+                [
+                  -4.080310895147621,
+                  0.017324230948566388
+                ],
+                [
+                  -5.080022762336226,
+                  2.0552792179260413
+                ],
+                [
+                  5.0,
+                  7.0
+                ],
+                [
+                  2.0,
+                  3.0
+                ]
+              ],
+              "style": {
+                "Opacity": 0.1
+              }
+            },
+            {
+              "primitive": "Line",
+              "points": [
+                [
+                  2.0,
+                  3.0
+                ],
+                [
+                  5.0,
+                  7.0
+                ]
+              ],
+              "style": "Black"
+            },
+            {
+              "primitive": "Line",
+              "points": [
+                [
+                  2.0,
+                  3.0
+                ],
+                [
+                  -4.080310895147621,
+                  0.017324230948566388
+                ]
+              ],
+              "style": "Red"
+            },
+            {
+              "primitive": "Line",
+              "points": [
+                [
+                  5.0,
+                  7.0
+                ],
+                [
+                  -5.080022762336226,
+                  2.0552792179260413
+                ]
+              ],
+              "style": "Blue"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "reversed",
+      "query": {
+        "family": "test-pleat-native",
+        "points": [
+          [
+            5,
+            7
+          ],
+          [
+            2,
+            3
+          ]
+        ],
+        "angleDeg": 27
+      },
+      "response": {
+        "schema": "origamica-test-pleat-v1",
+        "query": {
+          "family": "test-pleat-native",
+          "points": [
+            [
+              5.0,
+              7.0
+            ],
+            [
+              2.0,
+              3.0
+            ]
+          ],
+          "angleDeg": 27.0
+        },
+        "source": {
+          "function": "TestPleat",
+          "definitionCell": "In[2682]",
+          "definitionLines": [
+            199210,
+            199288
+          ],
+          "alphaRad": 0.47123889803846897,
+          "direction": [
+            0.8977963143046581,
+            0.44041091950696626
+          ],
+          "dab": 2.2275163104709197,
+          "length": 9.0,
+          "pa": [
+            11.08031089514762,
+            9.982675769051433
+          ],
+          "pb": [
+            12.080022762336226,
+            7.944720782073959
+          ],
+          "originalGraphicOrder": [
+            "Polygon[pa,pb,qb,qa]",
+            "Line[qa,qb]",
+            "Line[qa,pa]",
+            "Line[qb,pb]"
+          ],
+          "publicOptions": [],
+          "wolframExecuted": false,
+          "paperCertification": false
+        },
+        "data": {
+          "graphics": [
+            {
+              "primitive": "Polygon",
+              "points": [
+                [
+                  11.08031089514762,
+                  9.982675769051433
+                ],
+                [
+                  12.080022762336226,
+                  7.944720782073959
+                ],
+                [
+                  2.0,
+                  3.0
+                ],
+                [
+                  5.0,
+                  7.0
+                ]
+              ],
+              "style": {
+                "Opacity": 0.1
+              }
+            },
+            {
+              "primitive": "Line",
+              "points": [
+                [
+                  5.0,
+                  7.0
+                ],
+                [
+                  2.0,
+                  3.0
+                ]
+              ],
+              "style": "Black"
+            },
+            {
+              "primitive": "Line",
+              "points": [
+                [
+                  5.0,
+                  7.0
+                ],
+                [
+                  11.08031089514762,
+                  9.982675769051433
+                ]
+              ],
+              "style": "Red"
+            },
+            {
+              "primitive": "Line",
+              "points": [
+                [
+                  2.0,
+                  3.0
+                ],
+                [
+                  12.080022762336226,
+                  7.944720782073959
+                ]
+              ],
+              "style": "Blue"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "tiny",
+      "query": {
+        "family": "test-pleat-native",
+        "points": [
+          [
+            0,
+            0
+          ],
+          [
+            1e-12,
+            2e-12
+          ]
+        ],
+        "angleDeg": 36
+      },
+      "response": {
+        "schema": "origamica-test-pleat-v1",
+        "query": {
+          "family": "test-pleat-native",
+          "points": [
+            [
+              0.0,
+              0.0
+            ],
+            [
+              1e-12,
+              2e-12
+            ]
+          ],
+          "angleDeg": 36.0
+        },
+        "source": {
+          "function": "TestPleat",
+          "definitionCell": "In[2682]",
+          "definitionLines": [
+            199210,
+            199288
+          ],
+          "alphaRad": 0.6283185307179586,
+          "direction": [
+            -0.8875345109941232,
+            -0.46074124169041214
+          ],
+          "dab": 9.045084971874737e-13,
+          "length": 4.0249223594996216e-12,
+          "pa": [
+            -2.769474991386495e-12,
+            -1.4377033575096738e-12
+          ],
+          "pb": [
+            -3.375040004869123e-12,
+            -2.711920937370442e-13
+          ],
+          "originalGraphicOrder": [
+            "Polygon[pa,pb,qb,qa]",
+            "Line[qa,qb]",
+            "Line[qa,pa]",
+            "Line[qb,pb]"
+          ],
+          "publicOptions": [],
+          "wolframExecuted": false,
+          "paperCertification": false
+        },
+        "data": {
+          "graphics": [
+            {
+              "primitive": "Polygon",
+              "points": [
+                [
+                  -2.769474991386495e-12,
+                  -1.4377033575096738e-12
+                ],
+                [
+                  -3.375040004869123e-12,
+                  -2.711920937370442e-13
+                ],
+                [
+                  1e-12,
+                  2e-12
+                ],
+                [
+                  0.0,
+                  0.0
+                ]
+              ],
+              "style": {
+                "Opacity": 0.1
+              }
+            },
+            {
+              "primitive": "Line",
+              "points": [
+                [
+                  0.0,
+                  0.0
+                ],
+                [
+                  1e-12,
+                  2e-12
+                ]
+              ],
+              "style": "Black"
+            },
+            {
+              "primitive": "Line",
+              "points": [
+                [
+                  0.0,
+                  0.0
+                ],
+                [
+                  -2.769474991386495e-12,
+                  -1.4377033575096738e-12
+                ]
+              ],
+              "style": "Red"
+            },
+            {
+              "primitive": "Line",
+              "points": [
+                [
+                  1e-12,
+                  2e-12
+                ],
+                [
+                  -3.375040004869123e-12,
+                  -2.711920937370442e-13
+                ]
+              ],
+              "style": "Blue"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "large-angle",
+      "query": {
+        "family": "test-pleat-native",
+        "points": [
+          [
+            1000,
+            -1000
+          ],
+          [
+            -1000,
+            1000
+          ]
+        ],
+        "angleDeg": 36000
+      },
+      "response": {
+        "schema": "origamica-test-pleat-v1",
+        "query": {
+          "family": "test-pleat-native",
+          "points": [
+            [
+              1000.0,
+              -1000.0
+            ],
+            [
+              -1000.0,
+              1000.0
+            ]
+          ],
+          "angleDeg": 36000.0
+        },
+        "source": {
+          "function": "TestPleat",
+          "definitionCell": "In[2682]",
+          "definitionLines": [
+            199210,
+            199288
+          ],
+          "alphaRad": 628.3185307179587,
+          "direction": [
+            0.7071067811865447,
+            -0.7071067811865503
+          ],
+          "dab": 1414.213562373095,
+          "length": 5091.168824543142,
+          "pa": [
+            3599.9999999999895,
+            -3600.0000000000105
+          ],
+          "pb": [
+            3599.999999999982,
+            -3600.000000000018
+          ],
+          "originalGraphicOrder": [
+            "Polygon[pa,pb,qb,qa]",
+            "Line[qa,qb]",
+            "Line[qa,pa]",
+            "Line[qb,pb]"
+          ],
+          "publicOptions": [],
+          "wolframExecuted": false,
+          "paperCertification": false
+        },
+        "data": {
+          "graphics": [
+            {
+              "primitive": "Polygon",
+              "points": [
+                [
+                  3599.9999999999895,
+                  -3600.0000000000105
+                ],
+                [
+                  3599.999999999982,
+                  -3600.000000000018
+                ],
+                [
+                  -1000.0,
+                  1000.0
+                ],
+                [
+                  1000.0,
+                  -1000.0
+                ]
+              ],
+              "style": {
+                "Opacity": 0.1
+              }
+            },
+            {
+              "primitive": "Line",
+              "points": [
+                [
+                  1000.0,
+                  -1000.0
+                ],
+                [
+                  -1000.0,
+                  1000.0
+                ]
+              ],
+              "style": "Black"
+            },
+            {
+              "primitive": "Line",
+              "points": [
+                [
+                  1000.0,
+                  -1000.0
+                ],
+                [
+                  3599.9999999999895,
+                  -3600.0000000000105
+                ]
+              ],
+              "style": "Red"
+            },
+            {
+              "primitive": "Line",
+              "points": [
+                [
+                  -1000.0,
+                  1000.0
+                ],
+                [
+                  3599.999999999982,
+                  -3600.000000000018
+                ]
+              ],
+              "style": "Blue"
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

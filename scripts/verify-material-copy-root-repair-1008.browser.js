@@ -1,0 +1,7 @@
+async page=>{
+ const checks=[],errors=[];page.on('pageerror',e=>errors.push(e.message));await page.evaluate(()=>{window.confirm=()=>true;});
+ await page.getByLabel('折痕工程文件',{exact:true}).setInputFiles('output/playwright/material-copy-ordinary-root-source-1008.zhezhi.json');await page.getByRole('button',{name:'平折参数',exact:true}).click();await page.locator('[data-starting-face="stale"]').waitFor();checks.push('无材料合同的面索引明确标为失效');
+ await page.getByRole('button',{name:'设置起始面',exact:true}).click();await page.getByLabel('起始面候选 F1',{exact:true}).click();await page.getByRole('button',{name:'应用起始面',exact:true}).click();await page.locator('[data-starting-face="0"]').waitFor();checks.push('普通工程明确重选恢复起始面');
+ await page.getByRole('button',{name:'计算平折',exact:true}).click();await page.waitForFunction(()=>document.querySelector('.flat-result-label')?.textContent?.includes('已找到层序解'));checks.push('修复后重新平折已解');
+ await page.getByRole('button',{name:'导出作品',exact:true}).click();const d=page.getByRole('dialog',{name:'导出作品',exact:true});await d.getByRole('combobox').first().selectOption('json');const saved=page.waitForEvent('download');await d.getByRole('button',{name:'导出文件',exact:true}).click();await(await saved).saveAs('output/playwright/material-copy-ordinary-root-repaired-1008.zhezhi.json');await page.getByRole('button',{name:'关闭窗口',exact:true}).click();checks.push('普通起始面修复实际JSON下载');if(errors.length)throw Error(errors.join('\n'));checks.push('零页面异常');return {passed:checks.length,checks,errors};
+}

@@ -1,0 +1,4 @@
+.diagram-arrow-binding{margin:14px 0;padding:12px 0;border-top:1px solid #d6dfd2;border-bottom:1px solid #d6dfd2}
+.diagram-arrow-binding .diagram-note,.diagram-arrow-binding .diagram-text-field>span{color:#526354}
+.diagram-arrow-binding .diagram-field-caption{margin:0 0 6px;color:#293d35;font-size:13px;font-weight:600}
+.diagram-arrow-binding .diagram-binding-status{margin:0 0 10px;color:#526354;font-size:12px;line-height:1.5}

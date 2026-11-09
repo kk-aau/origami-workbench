@@ -1,0 +1,8 @@
+import fs from 'node:fs';
+import {materialCutFixture} from '../tests/fixtures/materialModel';
+import {setStartingFace} from '../src/app/flatFoldSettings';
+import {inspectMaterialTopology} from '../src/core/materialTopology';
+import {computeMaterialFlatGeometry} from '../src/core/materialFlatGeometry';
+import {copyMaterialSelection,pasteMaterialSelection} from '../src/app/materialClipboard';
+const target=setStartingFace(materialCutFixture().source,3),old=inspectMaterialTopology(target);if(!old.ok)throw Error(old.reason);const cp=copyMaterialSelection(target,old.edgeSegmentIds),result=pasteMaterialSelection(target,{kind:'material-clipboard-paste',clipboard:cp,offset:[400,0],cpOnly:false,splitTarget:false}).doc,newm=inspectMaterialTopology(result);if(!newm.ok)throw Error(newm.reason);
+const a=computeMaterialFlatGeometry(target,3).geometry.vertices,b=computeMaterialFlatGeometry(result,3).geometry.vertices.slice(0,a.length),error=Math.max(...a.map((p,i)=>Math.hypot(p[0]-b[i][0],p[1]-b[i][1]))),legacy=structuredClone(result);(legacy.metadata!.materialTopology as {startingFace:number}).startingFace=3;const c=computeMaterialFlatGeometry(legacy,3).geometry.vertices,legacyError=Math.max(...a.map((p,i)=>Math.hypot(p[0]-c[i][0],p[1]-c[i][1])));if(error!==0||legacyError<200)throw Error('Reference-promotion regression not reproduced/fixed');fs.writeFileSync('output/audits/material-clipboard-root-probe-1008.json',JSON.stringify({verified:true,sourceReference:old.startingFace,chosen:3,newReference:newm.startingFace,maximumVisibleTargetDisplacement:error,legacyReferenceRelabellingDisplacement:legacyError},null,2));console.log(error);

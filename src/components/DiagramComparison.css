@@ -1,0 +1,43 @@
+.diagram-workspace.diagram-compact-workspace.is-comparison .diagram-body{grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px}
+.diagram-workspace.is-comparison .diagram-body>.panel-divider{display:none}
+.diagram-workspace.is-comparison .diagram-paper-work-area{position:relative}
+.diagram-workspace.is-comparison:not(.with-comparison-layers) .diagram-context-shelf{display:none}
+.diagram-workspace.is-comparison.with-comparison-layers .diagram-context-shelf{position:absolute;inset:0 auto 0 0;z-index:8;width:212px;max-width:75%;background:var(--diagram-sheet);border-right:1px solid var(--diagram-line)}
+.diagram-workspace.is-comparison:not(.with-comparison-symbols) .diagram-symbol-dock{display:none}
+.diagram-comparison-heading{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:7px 9px;border-bottom:1px solid var(--diagram-line);flex-shrink:0;min-height:38px}
+.diagram-comparison-heading strong{font-size:12px}
+.diagram-comparison-heading>span{font-size:11px;color:var(--diagram-muted);margin-right:auto}
+.diagram-comparison-heading button{font-size:11px;min-height:28px;padding:4px 7px}
+.diagram-comparison-cp{display:flex;flex-direction:column;min-width:0;min-height:0;overflow:hidden;border:1px solid var(--diagram-line);border-radius:5px;background:var(--diagram-sheet)}
+.diagram-comparison-cp>nav{display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:7px 9px;border-bottom:1px solid var(--diagram-line);flex-shrink:0}
+.diagram-comparison-cp>nav button{font-size:11px;min-height:28px;padding:4px 7px}
+.diagram-comparison-cp>nav button[aria-pressed=true],.diagram-comparison-heading button[aria-pressed=true]{background:var(--tint);border-color:var(--accent);color:var(--ink)}
+.diagram-comparison-cp>nav span{font-size:11px;color:var(--diagram-muted)}
+.diagram-workspace.diagram-compact-workspace .diagram-comparison-cp>.diagram-cp-card{flex:1;min-height:0;border:0;border-radius:0;overflow:auto;scrollbar-width:thin;scrollbar-color:var(--diagram-muted) var(--diagram-sheet)}
+.diagram-workspace.diagram-compact-workspace .diagram-comparison-cp .diagram-cp-card>svg.diagram-cp-image.diagram-cp-interactive{flex:1 1 0;height:0;min-height:160px;margin:0;width:100%;background:var(--paper);touch-action:none}
+.diagram-cp-zoom{display:flex;align-items:center;justify-content:flex-end;gap:4px;flex-shrink:0;padding:6px 9px;color:var(--diagram-muted);font-size:11px}
+.diagram-cp-zoom>span{margin-right:auto}
+.diagram-cp-zoom button{min-height:28px;min-width:28px;font-size:11px;padding:4px 6px}
+.diagram-cp-zoom output{min-width:40px;text-align:right;font-variant-numeric:tabular-nums}
+.diagram-cp-interactive[data-cp-expanded=true]:focus-visible{outline:2px solid var(--accent);outline-offset:-3px}
+.diagram-local-layers{position:absolute;top:12px;right:12px;width:166px;max-width:calc(100% - 24px);z-index:6;pointer-events:none;background:var(--paper);color:var(--ink);border:1px solid var(--line);border-radius:5px;overflow:hidden}
+.diagram-local-layers>header{display:flex;align-items:center;justify-content:space-between;gap:6px;padding:8px 9px;border-bottom:1px solid var(--line)}
+.diagram-local-layers>header strong{font-size:12px}
+.diagram-local-layers>header span,.diagram-local-layers>footer{font-size:11px;color:var(--muted)}
+.diagram-local-layers>footer{padding:7px 9px;border-top:1px solid var(--line)}
+.diagram-local-layer-row{display:grid;grid-template-columns:1fr auto 36px;gap:6px;align-items:center;min-height:30px;padding:4px 9px;font-size:11px;color:var(--muted)}
+.diagram-local-layer-row strong{font-size:13px;font-variant-numeric:tabular-nums;color:var(--ink)}
+.diagram-local-layer-row small{font-size:10px;text-align:right}
+.diagram-local-layer-row.is-current{color:var(--ink);background:var(--tint);border-block:1px solid var(--line);min-height:36px}
+.diagram-local-layer-edge,.diagram-local-layer-note{margin:0;padding:8px 9px;color:var(--muted);font-size:11px;line-height:1.6}
+@container diagram-main (max-width:850px){
+  .diagram-comparison-heading>span,.diagram-comparison-cp>nav>span,.diagram-cp-zoom>span{display:none}
+  .diagram-local-layers{top:8px;right:8px;width:150px}
+  .diagram-workspace.is-comparison .diagram-step-caption{flex-wrap:wrap}
+}
+@media(max-height:800px){
+  .diagram-local-layers>header{padding:4px 9px;line-height:16px}
+  .diagram-local-layer-row,.diagram-local-layer-row.is-current{min-height:22px;padding:2px 9px;line-height:16px}
+  .diagram-local-layers>footer{padding:3px 9px;line-height:16px}
+  .diagram-local-layer-edge,.diagram-local-layer-note{padding:4px 9px;line-height:16px}
+}

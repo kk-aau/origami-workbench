@@ -1,0 +1,31 @@
+import fs from 'node:fs';
+import assert from 'node:assert/strict';
+import {importDocument} from '../src/core/formats';
+import {inspectMaterialTopology} from '../src/core/materialTopology';
+import {constructMaterialMove,type MaterialConstructionMoveIntent} from '../src/app/materialConstructionMove';
+import {computeFlatFold} from '../src/core/flatFold';
+import {resolveStartingFace} from '../src/app/flatFoldSettings';
+import {modelOverlapRegions} from '../src/app/modelOverlapRegions';
+import {modelRegionLayers} from '../src/app/modelRegionLayers';
+import {DXF_LAYERS} from '../src/core/dxf';
+import {materialSlitFixture} from '../tests/fixtures/materialModel';
+import {cutMaterialEdges} from '../src/core/materialCut';
+import type {Doc} from '../src/core/types';
+const read=(name:string)=>importDocument(fs.readFileSync(`output/playwright/material-move-${name}-1008.zhezhi.json`,'utf8'),'json').doc,material=(d:Doc)=>{const m=inspectMaterialTopology(d);assert.ok(m.ok,m.ok?'':m.reason);return m;};
+const source=importDocument(fs.readFileSync('output/playwright/material-tools-source-1008.zhezhi.json','utf8'),'json').doc,old=material(source),cases:Record<string,unknown>={};
+for(const id of ['two-point','four-point','component','drag']){
+ const transform:MaterialConstructionMoveIntent['transform']=id==='four-point'?{kind:'similarity',a:[0,0],b:[200,0],c:[600,0],d:[600,200]}:{kind:'translate',from:[0,0],to:[600,0]},ids=id==='component'?old.components[0].edges.map(e=>old.edgeSegmentIds[e]):old.edgeSegmentIds,req:MaterialConstructionMoveIntent={kind:'material-construction-move',segmentIds:ids,transform,lockBoundary:false},expected=constructMaterialMove(source,req).doc,doc=read(id+'-final'),m=material(doc);
+ assert.deepEqual(doc,expected);if(id!=='drag')assert.deepEqual(read(id+'-preview'),source);assert.deepEqual(read(id+'-undo'),source);assert.deepEqual(read(id+'-applied'),doc);assert.deepEqual(read(id+'-redo'),doc);assert.deepEqual(m.edgeSegmentIds,old.edgeSegmentIds);
+ for(const key of ['edges_vertices','edges_assignment','edges_foldAngle','edges_faces','faces_vertices','faces_edges','faces_faces'] as const)assert.deepEqual(m.graph[key],old.graph[key]);assert.deepEqual(doc.segments.map(s=>s.id),source.segments.map(s=>s.id));source.segments.filter(s=>!ids.includes(s.id)).forEach(s=>assert.deepEqual(doc.segments.find(v=>v.id===s.id),s));
+ const text=fs.readFileSync(`output/playwright/material-move-${id}-final-1008.fold`,'utf8'),raw=JSON.parse(text),fold=importDocument(text,'fold').doc,fm=material(fold);assert.deepEqual(raw.vertices_coords,m.graph.vertices_coords);assert.deepEqual(raw.file_frames[0].vertices_coords,m.foldedVertices);assert.deepEqual(fm.graph,m.graph);assert.deepEqual(fm.foldedVertices,m.foldedVertices);
+ for(const candidate of [doc,fold]){const root=resolveStartingFace(candidate,material(candidate).graph);assert.equal(root.stale,false);assert.equal(root.face,resolveStartingFace(source,old.graph).face);const flat=computeFlatFold(candidate,undefined,{startingFace:root.face});assert.equal(flat.geometry.status,'ready');assert.equal(flat.layers.status,'solved');const overlap=modelOverlapRegions(flat);for(const side of ['front','back'] as const){const regions=modelRegionLayers(flat,overlap,side);assert.ok(regions.length);assert.ok(regions.every(r=>r.layers.status==='ordered'));}}
+ const dxf=fs.readFileSync(`output/playwright/material-move-${id}-final-1008.dxf`,'utf8'),pairs=dxf.trimEnd().split(/\r?\n/),rows:Record<string,string>[]=[];let row:Record<string,string>={};assert.equal(pairs.length%2,0);assert.ok(dxf.includes('AC1009'));assert.ok(!dxf.includes('POLYLINE'));for(let i=0;i<pairs.length;i+=2){if(pairs[i]==='0'){row={};rows.push(row);}row[pairs[i]]=pairs[i+1];}const lines=rows.filter(r=>r['0']==='LINE');assert.equal(lines.length,doc.segments.length);doc.segments.forEach((s,i)=>{const e=lines[i];assert.equal(e['8'],DXF_LAYERS[s.assignment].name);assert.ok([Number(e['10']),-Number(e['20'])].every((n,j)=>n===s.a[j]));assert.ok([Number(e['11']),-Number(e['21'])].every((n,j)=>n===s.b[j]));});
+ cases[id]={vertices:m.graph.vertices_coords.length,edges:m.graph.edges_vertices.length,faces:m.graph.faces_vertices!.length,components:m.components.length,dxfLines:lines.length};
+}
+const square=importDocument(fs.readFileSync('output/playwright/material-copy-square-source-1008.zhezhi.json','utf8'),'json').doc;
+for(const id of ['moveselection','movefour']){assert.deepEqual(read('protected-'+id),source);assert.deepEqual(read('partial-'+id),square);}assert.deepEqual(read('cancel'),source);
+// An existing ring material input is independent of the visual fixture. Its
+// hole and interior island must remain distinct after reference movement.
+const grid=materialSlitFixture().source,gm=material(grid),internal=gm.graph.faces_edges![4].filter(e=>gm.graph.edges_assignment[e]!=='B').map(e=>gm.edgeSegmentIds[e]),ringDoc=cutMaterialEdges(grid,{kind:'material-cut',segmentIds:internal}).doc,rm=material(ringDoc),ring=rm.components.find(c=>c.boundaryLoops.length===2)!;assert.ok(ring);const moved=constructMaterialMove(ringDoc,{kind:'material-construction-move',segmentIds:ring.edges.map(e=>rm.edgeSegmentIds[e]),transform:{kind:'similarity',a:[0,0],b:[300,0],c:[500,0],d:[500,300]},lockBoundary:false}).doc,mm=material(moved);assert.deepEqual(mm.graph.edges_vertices,rm.graph.edges_vertices);assert.deepEqual(mm.graph.faces_edges,rm.graph.faces_edges);assert.deepEqual(mm.components,rm.components);assert.equal(computeFlatFold(moved).layers.status,'solved');
+fs.writeFileSync('output/audits/material-move-download-1008.json',JSON.stringify({verified:true,fullReferenceIntentsReplayedExactly:true,previewCancelUndoRedoExact:true,protectedAndPartialRejectionsLeaveWholeDocumentExact:true,allOriginalIndexedIdentityRetained:true,unselectedSegmentsExactlyUnchanged:true,actualFOLDCPFFExact:true,allNativeFOLDLayersSolved:true,allFrontBackRegionsOrdered:true,ordinaryR12DXFGeometryExactlySameMillimeters:true,independentRingAndIslandRetainBoundaryIdentity:true,cases},null,2));
+console.log('Verified actual movement files: exact full reference replay, retained IDs, unselected sources, history, CP/FF FOLD, roots/front-back layers and ordinary DXF. Ring material also verified.');

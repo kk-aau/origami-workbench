@@ -1,0 +1,591 @@
+# Licensing
+
+This file summarizes the licensing posture of this repository. It is a
+developer-facing guide, not legal advice.
+
+## Project License
+
+The Rust workspace is declared as `GPL-2.0-or-later` in `Cargo.toml`.
+
+This is a direct Rust/WASM port of the model side of Robert J. Lang's
+TreeMaker 5.0.1, so the Rust implementation should be treated as a derivative
+work of TreeMaker's GPL model code. Do not relicense this port as MIT, Apache,
+BSD, proprietary, or another non-GPL license unless the relevant copyright
+holders explicitly grant that permission.
+
+The root `LICENSE.txt` contains the GPL v2 license text shipped with
+TreeMaker 5.0.1. The Free Software Directory also records TreeMaker as
+`GPLv2orlater`.
+
+If you distribute binaries, wasm packages, npm packages, or other object-code
+forms built from this repository, the GPL requires that recipients receive or
+can obtain the corresponding source code under the same GPL terms.
+
+## Third-Party Ports
+
+Beyond TreeMaker, this repository contains Rust/TypeScript ports of four other
+origami tools. It also bundles two upstreams without porting them: Step-Folder /
+DEFOX, whose JavaScript the Defox import runs unchanged (the last row below),
+and ReferenceFinder, as a compiled GPL binary (its own section below). The four
+ported upstreams and Step-Folder are permissively licensed (MIT) and therefore
+GPL-compatible, so bundling them inside the GPL-2.0-or-later whole is allowed. ReferenceFinder is GPL itself, so
+it does not change what kind of whole this is; it is, however, the one component
+whose GPL *version* is not settled. Because the project is GPL v2 **or later**,
+Apache-2.0 components are compatible too (the combined work can be taken as
+GPLv3) — reasoning that holds only while every GPL component in the bundle
+admits the or-later reading, which is exactly what the ReferenceFinder question
+puts at stake. The root `NOTICE` file reproduces each upstream
+copyright/permission notice; keep it in source and binary distributions.
+
+| Upstream | Upstream license | Ported into | Crate/package license | Attribution |
+| --- | --- | --- | --- | --- |
+| Box Pleating Studio (Mu-Tsun Tsai) | MIT | `oristudio-bp`, `oristudio-bp-wasm` | MIT (both) | `crates/oristudio-bp/LICENSE` + `NOTICE` |
+| Oriedita / Orihime | MIT | `oristudio-cp`, `oristudio-cp-wasm` | MIT OR Apache-2.0 (both) | `crates/oristudio-cp/LICENSE` + `NOTICE` |
+| Flat-Folder (Jason S. Ku) | MIT | `treemaker-flatfold` | MIT OR Apache-2.0 | `crates/treemaker-flatfold/LICENSE-MIT`, `LICENSE-APACHE` + `NOTICE` |
+| Origami Simulator (Amanda Ghassaei) | MIT | `packages/origami-simulator` | MIT | `packages/origami-simulator/LICENSE` + `NOTICE` |
+| Step-Folder / DEFOX (Kei Morisue; origamimagiro) | MIT | Not ported: bundled unchanged as vendored JS (`third_party/step-folder`, including its copy of Flat-Folder's JS) through `apps/web/src/diagram/import/defoxRenderer.js` | MIT (upstream files, unchanged) | `third_party/step-folder/LICENSE` + `NOTICE` |
+
+The individual MIT crate licenses let those crates be reused on their own MIT
+terms; each retains its upstream copyright notice so that reuse stays compliant.
+When such a crate is combined into a shipped Ori Studio binary/wasm alongside the
+GPL TreeMaker port, the combined distribution as a whole is governed by the GPL.
+
+## ExplOri (a Service, Not a Port)
+
+The **Search 22.5°** design kind is the one upstream that ships no upstream code.
+It sends the user's tree to ExplOri (`225.designorigami.net`, Brandon Wong /
+theplantpsychologist, built on
+[`theplantpsychologist/SEARCH-22.5`](https://github.com/theplantpsychologist/SEARCH-22.5))
+and renders the crease patterns that service returns from its precomputed archive
+of 22.5° tilings.
+
+| What | Where | Status |
+| --- | --- | --- |
+| Client + document model | `apps/web/src/explori/` | Original work; ships under the app's terms. No SEARCH-22.5 code is vendored or ported. |
+| CORS/trim proxy | `apps/web/functions/api/explori/`, `apps/web/functions/_lib/explori.ts` | Original work. Required — upstream sends no `Access-Control-Allow-Origin` and answers `OPTIONS` with 501, so the browser cannot call it directly. |
+| Search results | fetched per query | **Upstream's data, not ours.** Nothing is cached or redistributed. The archive carries no stated license and the service publishes no terms. |
+| Test fixture | `apps/web/src/explori/__fixtures__/queryResponse.json` | The only copy of upstream data in this repository: one captured `/api/query` response, kept so the parsing tests run offline. |
+
+Two consequences worth keeping in view. First, the feature has a **runtime
+dependency on a third party's personal server** — if it goes away, so does the
+design kind; nothing here degrades to a local implementation. Second, upstream
+logs the query tree, the caller's IP, and the request headers, so the app tells
+users their tree leaves the machine. That notice is a feature notice and is
+deliberately not gated on the analytics opt-out.
+
+Permission to build the integration was given by theplantpsychologist; see
+`implementation-plans/explori-design-type.md` for that exchange and for what was
+agreed about the unversioned API.
+
+## ReferenceFinder (a Bundled GPL Binary Built From Vendored Source)
+
+ReferenceFinder is the third kind of upstream in this repository: neither a port
+nor a service, but a **third-party binary we build from vendored GPL source**.
+`third_party/reference-finder` vendors the C++ core (`src/core/**`) of Mu-Tsun
+Tsai's web build of Robert J. Lang's ReferenceFinder, together with the
+`makefile` that is the authoritative compiler-flag list, `LICENSE`,
+`package.json`, and the upstream README/CONTRIBUTING/CHANGELOG. The React app,
+locales, icons, and upstream's committed `src/lib/ref.{js,wasm}` are omitted.
+`scripts/build-reference-finder.mjs` compiles that source with the Emscripten
+version pinned in `scripts/reference-finder-emsdk.json` into the gitignored
+`apps/web/src/generated/reference-finder/`, so no binary is tracked and every
+shipping bundle rebuilds it from source.
+
+The result is consumed at arm's length. It runs in its own Web Worker and the
+app talks to it only over ReferenceFinder's console protocol — numbers on stdin
+(the database settings, then per-query search settings and coordinates) and JSON
+lines on stdout (progress objects, then one solution object per result with its
+`steps` and `diagrams`). No ReferenceFinder code is linked into, transcribed
+into, or generated for any Rust crate or TypeScript module; the wasm is a black
+box behind that protocol.
+
+**Which GPL version.** Lang's original is `GPL-2.0-or-later`: his
+`README_src.txt` grants "either version 2 of the License, or (at your option)
+any later version". Tsai's fork is less clear. Its `LICENSE` says only that
+ReferenceFinder "is distributed under the terms of the GNU GPL" and then
+reproduces the version 2 text, and its `package.json` declares `GPL-2.0`, which
+in SPDX means version 2 only. The modifications by Mu-Tsun Tsai and Omri Shavit
+(both named in the copyright line printed by `src/core/main.cpp`) therefore have
+**no reliable or-later grant yet**. GPLv2 §9's rule for a work that states no
+version does not rescue this, because a version *is* stated. The question is
+open with the maintainers; until they confirm or-later, treat the ReferenceFinder
+wasm as possibly GPL-2.0-only.
+
+Why that matters here rather than being a footnote: the section above admits the
+seven Apache-2.0-only runtime npm dependencies on the grounds that the whole can
+be taken as GPLv3. A GPL-2.0-only component cannot be taken as GPLv3, so if the
+modifications turn out to be v2-only, that reasoning no longer covers a bundle
+that contains this wasm, and those seven dependencies need a decision of their
+own (replace them, or obtain a compatible grant). Nothing else changes in kind —
+the whole was already GPL.
+
+The **corresponding source** for the shipped wasm is `third_party/reference-finder`
+plus `scripts/build-reference-finder.mjs` and `scripts/reference-finder-emsdk.json`
+— the exact source, the exact build recipe, and the exact toolchain pin. Publish
+all three with any artifact that contains the wasm. That source is upstream's
+pinned commit **plus one local modification** — the search patch described under
+"Local changes" in `third_party/reference-finder/README.treemaker.md` and
+recorded as `local_patches` in `upstream-sync.json` — so the shipped binary is a
+modified version of the GPL work, and the modified source is what the repository
+carries and what must accompany it. The modification is marked in the source
+("Ori Studio patch") as GPLv2 §2(a) asks.
+
+One more artifact exists and is deliberately not a distributed one. When `em++`
+is absent and no build output exists, the build script fetches upstream's
+committed `ref.{js,wasm}` from the pinned commit, verifies recorded SHA-256
+values, and installs it so `npm run dev` works without Emscripten. That fallback
+is a developer convenience only: CI sets `REFERENCE_FINDER_FORCE_SOURCE=1` so a
+fetched artifact can never satisfy a shipping build, and every deploy and release
+workflow installs the pinned Emscripten and builds from source.
+
+## Fonts
+
+The Diagram workspace sets text in Noto Sans (Latin, Cyrillic, Greek) and Noto
+Sans SC, TC, JP and KR, under the **SIL Open Font License 1.1**. The OFL allows
+bundling and embedding with any software, GPL included, provided the fonts are
+not sold alone and each copy keeps the licence and copyright notices; a modified
+font may not use a Reserved Font Name ("Source" for the CJK families).
+
+- The bundled Latin files are in `apps/web/src/diagram/fonts/` beside
+  `OFL-NotoSans.txt`. The CJK files are built by
+  `scripts/diagram-fonts/build_fonts.py`, which writes each family's OFL.txt
+  beside them; anything that serves or ships them ships those too. The web
+  deploys build them (`.github/actions/build-diagram-fonts`), and the desktop
+  app ships the common files with every OFL.txt, leaving only the full files
+  to the site; `scripts/diagram-fonts/check_fonts.py` fails a build whose
+  directory lacks a licence.
+- Our files are modified (static instances, subset, features removed) and keep
+  the "Noto Sans …" names, which reserve nothing; none is named "Source".
+- Pages and PDFs the app writes embed subsets of them, which the OFL permits:
+  a document embedding a font is not a redistribution of the font.
+
+`NOTICE` section 7 carries the copyright lines.
+
+## Which Crates Are Actually GPL
+
+The workspace default in the root `Cargo.toml` is `GPL-2.0-or-later`, and for a
+long time most crates simply took it via `license.workspace = true`. That was
+over-broad: a crate is only bound by TreeMaker's GPL if it has a dependency edge
+reaching the TreeMaker port. Most do not.
+
+The GPL roots are `treemaker-core` (the port itself) and the two crates that link
+it, `treemaker-cli` and `treemaker-wasm`. Everything reachable *from* them is
+still permissive on its own terms; it is the combined binary that is GPL.
+
+| Crate | Workspace deps (normal) | Declared license |
+| --- | --- | --- |
+| `treemaker-core` | `treemaker-fold` | `GPL-2.0-or-later` — the port |
+| `treemaker-cli` | `treemaker-core`, `oristudio-cp-compiler`, `oristudio-cp`, `treemaker-flatfold`, `treemaker-fold` | `GPL-2.0-or-later` |
+| `treemaker-wasm` | `treemaker-core`, `treemaker-flatfold`, `treemaker-fold` | `GPL-2.0-or-later` |
+| `oracle-tests` | none (dev-only: `treemaker-core`, `treemaker-flatfold`, `treemaker-fold`, `oristudio-cp`, `oristudio-fold`, `oristudio-geometry`, `oristudio-layer-order`) | `GPL-2.0-or-later` — the edge is a dev-dependency, but the crate is nothing but tests and every test binary links `treemaker-core` |
+| `treemaker-fold` | none | MIT OR Apache-2.0 |
+| `treemaker-flatfold` | `treemaker-fold` | MIT OR Apache-2.0 |
+| `oristudio-cp` | `treemaker-fold` | MIT OR Apache-2.0 |
+| `oristudio-cp-wasm` | `oristudio-cp`, `treemaker-fold` | MIT OR Apache-2.0 |
+| `oristudio-cp-compiler` | `oristudio-cp`, `treemaker-flatfold`, `treemaker-fold` | MIT OR Apache-2.0 |
+| `oristudio-cp-eval` | none | MIT OR Apache-2.0 |
+| `oristudio-cp-detect` | `oristudio-cp-compiler`, `oristudio-cp-eval`, + their closure | MIT OR Apache-2.0 |
+| `oristudio-cp-detect-inspector` | `oristudio-cp-detect`, `oristudio-cp-compiler`, `oristudio-cp-eval` | MIT OR Apache-2.0 |
+| `oristudio-cp-detect-wasm` | `oristudio-cp-detect`, `oristudio-cp-detect-inspector`, + their closure | MIT OR Apache-2.0 |
+| `oristudio-precrease` | `oristudio-geometry` | MIT OR Apache-2.0 — original precrease planner; consumes ReferenceFinder's output at runtime, links none of its code |
+| `oristudio-precrease-wasm` | `oristudio-precrease`, `oristudio-geometry` | MIT OR Apache-2.0 |
+| `oristudio-geometry` | none | MIT OR Apache-2.0 — original: the shared tolerance, lines, frames, Huzita–Justin constructions and convex-polygon primitives |
+| `oristudio-layer-order` | `oristudio-geometry` | MIT OR Apache-2.0 — original: pairwise layer order, cell overlay, constraints and checker |
+| `oristudio-fold` | `oristudio-geometry`, `oristudio-layer-order`, `treemaker-flatfold`, `treemaker-fold`; with the `kernel` feature also `oristudio-cp` | MIT OR Apache-2.0 — original: the Fold workspace's engine (flat folded states and the plain fold); the Fold spike was its behavioural reference, and no Beloch, Flat-Folder or Oriedita code is ported (completion calls Flat-Folder's search through `treemaker-flatfold`) |
+| `oristudio-fold-wasm` | `oristudio-cp`, `oristudio-fold` (with `kernel`), `oristudio-geometry`, `oristudio-layer-order`, `treemaker-flatfold`, `treemaker-fold` | MIT OR Apache-2.0 — original: the Fold engine's wasm-bindgen bridge, which links the CP kernel for Import CP, Send to Edit and the FOLD export; nothing it reaches has an edge to `treemaker-core` |
+| `oristudio-pdf` | none | MIT OR Apache-2.0 — original: the Diagram's pages as one PDF, through krilla |
+| `oristudio-pdf-wasm` | `oristudio-pdf` | MIT OR Apache-2.0 |
+| `oristudio-bp` | none | MIT |
+| `oristudio-bp-wasm` | `oristudio-bp` | MIT |
+| `ori-studio` (`apps/tauri/src-tauri`) | `oristudio-cp`, `treemaker-fold` | `GPL-2.0-or-later` (workspace) |
+
+Regenerate the middle column with
+`cargo tree -p <crate> --edges normal --prefix none`.
+
+One of those rows deserves a sentence.
+
+The Tauri shell, `ori-studio`, has no native dependency edge to `treemaker-core`
+— the TreeMaker engine reaches the desktop app as wasm loaded by the renderer,
+not as a linked Rust crate. It nonetheless keeps the workspace GPL default,
+because what it *distributes* is the whole product including that wasm. This is
+the one place where the declared license describes the shipped bundle rather than
+the crate's own link graph, and it should stay that way.
+
+Eight crates that carry no upstream LICENSE file of their own now declare a
+permissive license: `oristudio-bp-wasm`, `oristudio-cp-wasm`, `oristudio-cp-eval`,
+`oristudio-cp-detect`, `oristudio-cp-detect-inspector`,
+`oristudio-cp-detect-wasm`, `oristudio-pdf` and `oristudio-pdf-wasm`. The two
+kernel wasm wrappers are covered by their kernel's LICENSE file, which names the
+wrapper explicitly; the detection and PDF crates are original work with no
+upstream and no LICENSE file at all. If any of them is ever
+published on its own, give it the license text before it goes out.
+
+## What Is Covered
+
+| Path or artifact | License / status | Notes |
+| --- | --- | --- |
+| Rust workspace crates | Mixed | `treemaker-core`, `treemaker-cli`, `treemaker-wasm`, `oracle-tests`, and the `ori-studio` Tauri shell are `GPL-2.0-or-later`; the rest are permissive. See "Which Crates Are Actually GPL" above for the edge list. |
+| `LICENSE.txt` | GPL v2 text from TreeMaker 5.0.1 | Keep this file in source distributions. |
+| `third_party/treemaker-5.0.1` | TreeMaker GPL source distribution | Vendored as the behavioral baseline and C++ oracle source. Preserve notices. |
+| `third_party/box-pleating-studio` | MIT (Mu-Tsun Tsai) | Vendored reference/oracle source for the BP port. Preserve `LICENSE.md`. |
+| `third_party/flat-folder` | MIT (Jason S. Ku) | Vendored reference/oracle source for the flat-fold port. Preserve `LICENSE`. |
+| `third_party/oriedita` | MIT (Oriedita / Orihime) | Vendored reference/oracle source for the CP-editing port. Preserve `LICENSE.md`. |
+| `third_party/step-folder` | MIT (origamimagiro; `src/flatfolder` Jason S. Ku) | Vendored unchanged and bundled into the Defox import worker; not a port. Preserve `LICENSE`, `src/flatfolder/LICENSE` and `src/linefolder/LICENSE.txt`. |
+| `third_party/reference-finder` | GPL — Lang: v2 or later; Tsai/Shavit modifications: v2, or-later unconfirmed | Vendored C++ core compiled to the bundled wasm; not a port. Preserve `LICENSE` and `package.json` (the only file stating a GPL version). See "ReferenceFinder" above. |
+| `apps/web/src/generated/reference-finder/` | Generated GPL wasm | Emscripten build of the vendored source by `scripts/build-reference-finder.mjs`. Ignored by git; distributing any bundle that contains it triggers the GPL source obligations. Corresponding source: the vendored tree, the build script, and `scripts/reference-finder-emsdk.json`. |
+| Upstream `ref.{js,wasm}` fetched by `scripts/build-reference-finder.mjs` (dev fallback) | Upstream's GPL build output | Fetched from the pinned commit and SHA-verified only when `em++` is absent, so `npm run dev` works without Emscripten. **Never deployed**: CI sets `REFERENCE_FINDER_FORCE_SOURCE=1`, so no shipping build can be satisfied by it. |
+| `packages/origami-simulator` | MIT (Amanda Ghassaei + port) | TypeScript port of the Origami Simulator solver. Preserve `LICENSE` and `NOTICE`. |
+| `third_party/treemaker-5.0.1/Source/tmModel/wnlib` | Unrestricted per TreeMaker's bundled license notice | The TreeMaker license file says the `wnlib` directory may be distributed with no restrictions. |
+| `tests/fixtures` | GPL-compatible TreeMaker fixture data | Fixtures are copied or generated from the TreeMaker parity workflow; keep them with the GPL source distribution. |
+| `tests/fixtures/fold-samples` | MIT OR Apache-2.0 (original) | Three FOLD crease patterns of traditional bases (no known author), written for Ori Studio and bundled in the web app as the Fold workspace's Import CP samples. Provenance in `README.md` beside them. |
+| `tests/fixtures/beloch` | MIT (Christopher Mühl) | 56 FOLD fixture files copied unchanged from Beloch (`github.com/tophcodes/beloch`, commit `88bfcce`), test data for the Fold workspace's layer-order checker; no Beloch code is ported or run. Preserve `LICENSE.md` and the attribution in `README.md` beside them. |
+| `crates/*/testdata` | GPL-compatible TreeMaker fixture data | Small crate-local copies keep packaged crate tests self-contained. |
+| `tests/corpus` | Documentation only | Real-user corpora stay external unless redistribution permission is explicit. |
+| `crates/treemaker-wasm/LICENSE.txt` | GPL v2 text | Included so the generated wasm/npm package carries the license text. |
+| `crates/treemaker-wasm/pkg` | Generated GPL package output | Ignored by git; if published, publish with license/source availability. |
+| `apps/web/public/models/cp-detector-*`, `cp-vertex-refiner-*` | **No license declared** — see below | ONNX exports of in-house detector weights. Ignored by git; the tracked pointer is `scripts/cp-detect/current-model.json`, and the checkpoints live in the separate `create-pattern-detector` repository. |
+| `apps/web/src/explori/__fixtures__/queryResponse.json` | Upstream ExplOri data, no stated license | One captured `/api/query` response, kept so the ExplOri parsing tests run offline. Not redistributed as product data. |
+| `target/` and other build outputs | Generated from GPL source | Ignored by git; distribution triggers GPL source obligations. |
+
+**The model assets are the one artifact with no licensing record at all**, and
+this row exists to say so rather than to imply the question is answered. They are
+not in the repository today — every `cp-detector-*` and `cp-vertex-refiner-*`
+directory is gitignored, and the browser detector is dev-gated — so nothing is
+being distributed under unclear terms right now. Three things need deciding
+before that changes:
+
+1. **A license for the weights.** They carry no copyright header, no
+   `LICENSE`, and no manifest field for either. Whatever ships alongside the app
+   needs one, and it need not match the app's.
+2. **A provenance record for the training data.** The weights are derived from
+   whatever the model was trained on, and the model id in
+   `scripts/cp-detect/current-model.json` names 22.5° tiling and box-pleat
+   sources whose own terms have not been written down here. The datasets live
+   outside this repository, so this file cannot settle it — but the answer
+   belongs in the training repo and should be pointed at from here.
+3. **Where they are served from.** A published model becomes a distributed
+   artifact wherever it is hosted, so the license decision has to precede the
+   hosting decision, not follow it.
+
+## Optimizer Backends
+
+TreeMaker 5.0.1 abstracts nonlinear constrained optimization behind `tmNLCO`.
+The public source supports several possible adapters, but only ALM is enabled by
+default in `Source/tmModel/tmNLCO/tmNLCO.h`.
+
+| Backend | Port status | License / redistribution status | Practical effect |
+| --- | --- | --- | --- |
+| `ALM` | Ported | Distributable TreeMaker code | This is the parity baseline used by Rust and the C++ oracle. |
+| `CFSQP` | Not ported | External/proprietary optimizer; not redistributed with TreeMaker 5.0.1 source | Would only affect numerical optimization performance/results, not file I/O or CP construction. |
+| `RFSQP` | Not ported | External/evaluation FSQP-family optimizer; TreeMaker source comments note it is not redistributable | Would only affect numerical optimization performance/results. |
+| `wnlib` | Not ported as an optimizer backend | Bundled `wnlib` code is unrestricted, but not enabled by default in TreeMaker 5.0.1 | Lang's bundled notes say it was faster than ALM but less reliable on some convergence tests. |
+
+CFSQP/RFSQP are intentionally excluded unless redistributable source and
+compatible license terms are provided. They are not required for TreeMaker
+5.0.1 ALM parity.
+
+## Publishing Checklist
+
+Before publishing a repository, CLI binary, wasm package, or npm package:
+
+1. Keep `LICENSE.txt`, `LICENSING.md`, the TreeMaker notices in
+   `third_party/treemaker-5.0.1`, and the ReferenceFinder notices in
+   `third_party/reference-finder` (`LICENSE`, `package.json`, and the copyright
+   line in `src/core/main.cpp`), together with the root `NOTICE`.
+2. Publish the corresponding source for any binary or wasm artifact. For the
+   ReferenceFinder wasm that means `third_party/reference-finder`,
+   `scripts/build-reference-finder.mjs`, and `scripts/reference-finder-emsdk.json`
+   — the exact source, build recipe, and toolchain pin that produced it.
+3. Do not include CFSQP/RFSQP source or binaries unless you have a separate
+   redistribution license that is compatible with the GPL.
+4. Make the *combined* artifact's metadata say `GPL-2.0-or-later`. Individual
+   crates keep their own `license` — check it against the edge list above rather
+   than assuming the workspace default, and give any permissive crate a LICENSE
+   file before publishing it alone.
+5. Keep generated package outputs from hiding the source dependency: link back
+   to this repository or otherwise provide the exact source used to build them.
+6. If you add new dependencies, check their licenses before release. For npm,
+   check whether the addition belongs in `devDependencies` — the FSL note below
+   is the case where that distinction carries weight.
+7. Do not ship the CP detector model assets until they have a license and a
+   training-data provenance record; see "What Is Covered".
+
+## Rust Dependency License Inventory
+
+The current crates.io dependency graph is GPL-compatible. This list was
+generated from `cargo metadata` against the checked-in `Cargo.lock`.
+
+The Diagram's PDF writer (`oristudio-pdf`, `oristudio-pdf-wasm`) added krilla,
+krilla-svg, usvg and their closure, regenerated with
+`cargo tree -p oristudio-pdf -p oristudio-pdf-wasm --target all --edges normal --prefix none --format '{p} {l}'`
+(every target: fontdb reads fontconfig's files on Linux):
+all permissive (MIT, Apache-2.0 OR MIT, BSD-2/3-Clause, Zlib, Unicode-3.0),
+none Apache-2.0 alone, which GPLv2 could not take.
+
+| Crate | Version | License |
+| --- | --- | --- |
+| `adler2` | `2.0.1` | `0BSD OR MIT OR Apache-2.0` |
+| `anstream` | `1.0.0` | `MIT OR Apache-2.0` |
+| `anstyle` | `1.0.14` | `MIT OR Apache-2.0` |
+| `anstyle-parse` | `1.0.0` | `MIT OR Apache-2.0` |
+| `anstyle-query` | `1.1.5` | `MIT OR Apache-2.0` |
+| `anstyle-wincon` | `3.0.11` | `MIT OR Apache-2.0` |
+| `anyhow` | `1.0.102` | `MIT OR Apache-2.0` |
+| `arrayref` | `0.3.9` | `BSD-2-Clause` |
+| `arrayvec` | `0.7.8` | `MIT OR Apache-2.0` |
+| `async-trait` | `0.1.89` | `MIT OR Apache-2.0` |
+| `autocfg` | `1.5.0` | `Apache-2.0 OR MIT` |
+| `base64` | `0.22.1` | `MIT OR Apache-2.0` |
+| `bit-set` | `0.8.0` | `Apache-2.0 OR MIT` |
+| `bit-vec` | `0.8.0` | `Apache-2.0 OR MIT` |
+| `bitflags` | `2.11.1` | `MIT OR Apache-2.0` |
+| `block-buffer` | `0.10.4` | `MIT OR Apache-2.0` |
+| `bumpalo` | `3.20.2` | `MIT OR Apache-2.0` |
+| `bytemuck` | `1.25.0` | `Zlib OR Apache-2.0 OR MIT` |
+| `bytemuck_derive` | `1.12.1` | `Zlib OR Apache-2.0 OR MIT` |
+| `byteorder-lite` | `0.1.0` | `Unlicense OR MIT` |
+| `cast` | `0.3.0` | `MIT OR Apache-2.0` |
+| `cc` | `1.2.62` | `MIT OR Apache-2.0` |
+| `cfg-if` | `1.0.4` | `MIT OR Apache-2.0` |
+| `clap` | `4.6.1` | `MIT OR Apache-2.0` |
+| `clap_builder` | `4.6.0` | `MIT OR Apache-2.0` |
+| `clap_derive` | `4.6.1` | `MIT OR Apache-2.0` |
+| `clap_lex` | `1.1.0` | `MIT OR Apache-2.0` |
+| `color_quant` | `1.1.0` | `MIT` |
+| `colorchoice` | `1.0.5` | `MIT OR Apache-2.0` |
+| `console_error_panic_hook` | `0.1.7` | `Apache-2.0/MIT` |
+| `core_maths` | `0.1.1` | `MIT` |
+| `cpufeatures` | `0.2.17` | `MIT OR Apache-2.0` |
+| `crc32fast` | `1.5.0` | `MIT OR Apache-2.0` |
+| `crypto-common` | `0.1.7` | `MIT OR Apache-2.0` |
+| `data-url` | `0.3.2` | `MIT OR Apache-2.0` |
+| `digest` | `0.10.7` | `MIT OR Apache-2.0` |
+| `equivalent` | `1.0.2` | `Apache-2.0 OR MIT` |
+| `errno` | `0.3.14` | `MIT OR Apache-2.0` |
+| `fastrand` | `2.4.1` | `Apache-2.0 OR MIT` |
+| `fdeflate` | `0.3.7` | `MIT OR Apache-2.0` |
+| `find-msvc-tools` | `0.1.9` | `MIT OR Apache-2.0` |
+| `flate2` | `1.1.9` | `MIT OR Apache-2.0` |
+| `float-cmp` | `0.9.0` | `MIT` |
+| `fnv` | `1.0.7` | `Apache-2.0 / MIT` |
+| `foldhash` | `0.1.5` | `Zlib` |
+| `font-types` | `0.11.3` | `MIT OR Apache-2.0` |
+| `fontconfig-parser` | `0.5.8` | `MIT` |
+| `fontdb` | `0.23.0` | `MIT` |
+| `futures-core` | `0.3.32` | `MIT OR Apache-2.0` |
+| `futures-task` | `0.3.32` | `MIT OR Apache-2.0` |
+| `futures-util` | `0.3.32` | `MIT OR Apache-2.0` |
+| `generic-array` | `0.14.7` | `MIT` |
+| `getrandom` | `0.3.4` | `MIT OR Apache-2.0` |
+| `getrandom` | `0.4.2` | `MIT OR Apache-2.0` |
+| `gif` | `0.14.2` | `MIT OR Apache-2.0` |
+| `hashbrown` | `0.15.5` | `MIT OR Apache-2.0` |
+| `hashbrown` | `0.17.1` | `MIT OR Apache-2.0` |
+| `heck` | `0.5.0` | `MIT OR Apache-2.0` |
+| `id-arena` | `2.3.0` | `MIT/Apache-2.0` |
+| `image-webp` | `0.2.4` | `MIT OR Apache-2.0` |
+| `imagesize` | `0.14.0` | `MIT` |
+| `indexmap` | `2.14.0` | `Apache-2.0 OR MIT` |
+| `is_terminal_polyfill` | `1.70.2` | `MIT OR Apache-2.0` |
+| `itoa` | `1.0.18` | `MIT OR Apache-2.0` |
+| `js-sys` | `0.3.98` | `MIT OR Apache-2.0` |
+| `krilla` | `0.8.2` | `MIT OR Apache-2.0` |
+| `krilla-svg` | `0.8.1` | `MIT OR Apache-2.0` |
+| `kurbo` | `0.13.1` | `Apache-2.0 OR MIT` |
+| `leb128fmt` | `0.1.0` | `MIT OR Apache-2.0` |
+| `libc` | `0.2.186` | `MIT OR Apache-2.0` |
+| `libm` | `0.2.16` | `MIT` |
+| `linux-raw-sys` | `0.12.1` | `Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT` |
+| `log` | `0.4.29` | `MIT OR Apache-2.0` |
+| `memchr` | `2.8.0` | `Unlicense OR MIT` |
+| `memmap2` | `0.9.11` | `MIT OR Apache-2.0` |
+| `minicov` | `0.3.8` | `Apache-2.0/MIT` |
+| `miniz_oxide` | `0.8.9` | `MIT OR Zlib OR Apache-2.0` |
+| `nu-ansi-term` | `0.50.3` | `MIT` |
+| `num-traits` | `0.2.19` | `MIT OR Apache-2.0` |
+| `once_cell` | `1.21.4` | `MIT OR Apache-2.0` |
+| `once_cell_polyfill` | `1.70.2` | `MIT OR Apache-2.0` |
+| `oorandom` | `11.1.5` | `MIT` |
+| `pdf-writer` | `0.15.0` | `MIT OR Apache-2.0` |
+| `pico-args` | `0.5.0` | `MIT` |
+| `pin-project-lite` | `0.2.17` | `Apache-2.0 OR MIT` |
+| `png` | `0.18.1` | `MIT OR Apache-2.0` |
+| `polycool` | `0.4.0` | `MIT OR Apache-2.0` |
+| `ppv-lite86` | `0.2.21` | `MIT OR Apache-2.0` |
+| `prettyplease` | `0.2.37` | `MIT OR Apache-2.0` |
+| `proc-macro2` | `1.0.106` | `MIT OR Apache-2.0` |
+| `proptest` | `1.11.0` | `MIT OR Apache-2.0` |
+| `quick-error` | `1.2.3` | `MIT/Apache-2.0` |
+| `quick-error` | `2.0.1` | `MIT/Apache-2.0` |
+| `quote` | `1.0.45` | `MIT OR Apache-2.0` |
+| `r-efi` | `5.3.0` | `MIT OR Apache-2.0 OR LGPL-2.1-or-later` |
+| `r-efi` | `6.0.0` | `MIT OR Apache-2.0 OR LGPL-2.1-or-later` |
+| `rand` | `0.9.4` | `MIT OR Apache-2.0` |
+| `rand_chacha` | `0.9.0` | `MIT OR Apache-2.0` |
+| `rand_core` | `0.9.5` | `MIT OR Apache-2.0` |
+| `rand_xorshift` | `0.4.0` | `MIT OR Apache-2.0` |
+| `read-fonts` | `0.39.2` | `MIT OR Apache-2.0` |
+| `regex-syntax` | `0.8.10` | `MIT OR Apache-2.0` |
+| `resvg` | `0.47.0` | `Apache-2.0 OR MIT` |
+| `rgb` | `0.8.53` | `MIT` |
+| `roxmltree` | `0.20.0` | `MIT OR Apache-2.0` |
+| `roxmltree` | `0.21.1` | `MIT OR Apache-2.0` |
+| `rustc-hash` | `2.1.2` | `Apache-2.0 OR MIT` |
+| `rustix` | `1.1.4` | `Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT` |
+| `rustversion` | `1.0.22` | `MIT OR Apache-2.0` |
+| `rusty-fork` | `0.3.1` | `MIT/Apache-2.0` |
+| `rustybuzz` | `0.20.1` | `MIT` |
+| `ryu` | `1.0.23` | `Apache-2.0 OR BSL-1.0` |
+| `same-file` | `1.0.6` | `Unlicense/MIT` |
+| `semver` | `1.0.28` | `MIT OR Apache-2.0` |
+| `serde` | `1.0.228` | `MIT OR Apache-2.0` |
+| `serde-wasm-bindgen` | `0.6.5` | `MIT` |
+| `serde_core` | `1.0.228` | `MIT OR Apache-2.0` |
+| `serde_derive` | `1.0.228` | `MIT OR Apache-2.0` |
+| `serde_json` | `1.0.149` | `MIT OR Apache-2.0` |
+| `sha2` | `0.10.9` | `MIT OR Apache-2.0` |
+| `shlex` | `1.3.0` | `MIT OR Apache-2.0` |
+| `simd-adler32` | `0.3.9` | `MIT` |
+| `simplecss` | `0.2.2` | `Apache-2.0 OR MIT` |
+| `siphasher` | `1.0.3` | `MIT/Apache-2.0` |
+| `skrifa` | `0.42.1` | `MIT OR Apache-2.0` |
+| `slab` | `0.4.12` | `MIT` |
+| `slotmap` | `1.1.1` | `Zlib` |
+| `smallvec` | `1.15.1` | `MIT OR Apache-2.0` |
+| `stable_deref_trait` | `1.2.1` | `MIT OR Apache-2.0` |
+| `strict-num` | `0.1.1` | `MIT` |
+| `strsim` | `0.11.1` | `MIT` |
+| `subsetter` | `0.2.6` | `MIT OR Apache-2.0` |
+| `svgtypes` | `0.16.1` | `Apache-2.0 OR MIT` |
+| `syn` | `2.0.117` | `MIT OR Apache-2.0` |
+| `syn` | `3.0.3` | `MIT OR Apache-2.0` |
+| `synstructure` | `0.13.2` | `MIT` |
+| `tempfile` | `3.27.0` | `MIT OR Apache-2.0` |
+| `thiserror` | `2.0.18` | `MIT OR Apache-2.0` |
+| `thiserror-impl` | `2.0.18` | `MIT OR Apache-2.0` |
+| `tiny-skia` | `0.12.0` | `BSD-3-Clause` |
+| `tiny-skia-path` | `0.12.0` | `BSD-3-Clause` |
+| `tinyvec` | `1.11.0` | `Zlib OR Apache-2.0 OR MIT` |
+| `tinyvec_macros` | `0.1.1` | `MIT OR Apache-2.0 OR Zlib` |
+| `ttf-parser` | `0.25.1` | `MIT OR Apache-2.0` |
+| `typenum` | `1.20.0` | `MIT OR Apache-2.0` |
+| `unarray` | `0.1.4` | `MIT OR Apache-2.0` |
+| `unicode-bidi` | `0.3.18` | `MIT OR Apache-2.0` |
+| `unicode-bidi-mirroring` | `0.4.0` | `MIT/Apache-2.0` |
+| `unicode-ccc` | `0.4.0` | `MIT/Apache-2.0` |
+| `unicode-ident` | `1.0.24` | `(MIT OR Apache-2.0) AND Unicode-3.0` |
+| `unicode-properties` | `0.1.4` | `MIT/Apache-2.0` |
+| `unicode-script` | `0.5.8` | `MIT OR Apache-2.0` |
+| `unicode-vo` | `0.1.0` | `MIT/Apache-2.0` |
+| `unicode-xid` | `0.2.6` | `MIT OR Apache-2.0` |
+| `usvg` | `0.47.0` | `Apache-2.0 OR MIT` |
+| `utf8parse` | `0.2.2` | `Apache-2.0 OR MIT` |
+| `version_check` | `0.9.5` | `MIT/Apache-2.0` |
+| `wait-timeout` | `0.2.1` | `MIT/Apache-2.0` |
+| `walkdir` | `2.5.0` | `Unlicense/MIT` |
+| `wasip2` | `1.0.3+wasi-0.2.9` | `Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT` |
+| `wasip3` | `0.4.0+wasi-0.3.0-rc-2026-01-06` | `Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT` |
+| `wasm-bindgen` | `0.2.121` | `MIT OR Apache-2.0` |
+| `wasm-bindgen-futures` | `0.4.71` | `MIT OR Apache-2.0` |
+| `wasm-bindgen-macro` | `0.2.121` | `MIT OR Apache-2.0` |
+| `wasm-bindgen-macro-support` | `0.2.121` | `MIT OR Apache-2.0` |
+| `wasm-bindgen-shared` | `0.2.121` | `MIT OR Apache-2.0` |
+| `wasm-bindgen-test` | `0.3.71` | `MIT OR Apache-2.0` |
+| `wasm-bindgen-test-macro` | `0.3.71` | `MIT OR Apache-2.0` |
+| `wasm-bindgen-test-shared` | `0.2.121` | `MIT OR Apache-2.0` |
+| `wasm-encoder` | `0.244.0` | `Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT` |
+| `wasm-metadata` | `0.244.0` | `Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT` |
+| `wasmparser` | `0.244.0` | `Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT` |
+| `weezl` | `0.1.12` | `MIT OR Apache-2.0` |
+| `winapi-util` | `0.1.11` | `Unlicense OR MIT` |
+| `windows-link` | `0.2.1` | `MIT OR Apache-2.0` |
+| `windows-sys` | `0.61.2` | `MIT OR Apache-2.0` |
+| `wit-bindgen` | `0.51.0` | `Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT` |
+| `wit-bindgen` | `0.57.1` | `Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT` |
+| `wit-bindgen-core` | `0.51.0` | `Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT` |
+| `wit-bindgen-rust` | `0.51.0` | `Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT` |
+| `wit-bindgen-rust-macro` | `0.51.0` | `Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT` |
+| `wit-component` | `0.244.0` | `Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT` |
+| `wit-parser` | `0.244.0` | `Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT` |
+| `write-fonts` | `0.48.1` | `MIT OR Apache-2.0` |
+| `xmlwriter` | `0.1.0` | `MIT` |
+| `xmp-writer` | `0.3.3` | `MIT OR Apache-2.0` |
+| `yoke` | `0.8.2` | `Unicode-3.0` |
+| `yoke-derive` | `0.8.2` | `Unicode-3.0` |
+| `zerocopy` | `0.8.48` | `BSD-2-Clause OR Apache-2.0 OR MIT` |
+| `zerocopy-derive` | `0.8.48` | `BSD-2-Clause OR Apache-2.0 OR MIT` |
+| `zerofrom` | `0.1.8` | `Unicode-3.0` |
+| `zerofrom-derive` | `0.1.7` | `Unicode-3.0` |
+| `zmij` | `1.0.21` | `MIT` |
+| `zune-core` | `0.5.1` | `MIT OR Apache-2.0 OR Zlib` |
+| `zune-jpeg` | `0.5.15` | `MIT OR Apache-2.0 OR Zlib` |
+
+
+## npm Dependency License Inventory
+
+This file used to say the npm tree was "all permissive (MIT/Apache-2.0/ISC/BSD)".
+That was close enough to be misleading: the installed tree also contains
+BlueOak-1.0.0, MIT-0, 0BSD, CC0-1.0, CC-BY-4.0, Python-2.0, FSL-1.1-MIT, and two
+compound expressions. None of them is a problem, but a reviewer skimming for
+"anything unusual" would have found nothing and stopped looking.
+
+Counted below is the **installed** tree, not the declared one — 578 third-party
+packages, split by whether they are reachable from the shipped app's runtime
+dependencies:
+
+```bash
+npm ls --all --parseable                       # everything installed
+npm ls --all --omit=dev --parseable -w @treemaker/web   # what ships
+```
+
+Read `license` out of each resulting directory's `package.json`; workspace
+packages (`@treemaker/*`) are our own and excluded.
+
+| License | Runtime | Dev/build | Notes |
+| --- | ---: | ---: | --- |
+| MIT | 164 | 287 | Includes `harfbuzzjs`, whose subset wasm cuts the Diagram's fonts. |
+| BSD-3-Clause | 11 | 5 | Runtime count is mostly `protobufjs` sub-packages under `onnxruntime-web`. |
+| Apache-2.0 | 7 | 21 | Compatible because the project is GPL v2 **or later**. |
+| ISC | 3 | 36 | |
+| `MIT OR Apache-2.0` | 3 | 0 | Tauri plugins. |
+| `Apache-2.0 OR MIT` | 1 | 2 | `@tauri-apps/api`; the CLI is dev-only. |
+| BSD-2-Clause | 1 | 19 | |
+| 0BSD | 1 | 0 | `tslib`. |
+| `(Apache-2.0 AND MIT)` | 1 | 0 | `posthog-js` — **AND**, not OR: different files carry different terms. Both permissive. |
+| `(MPL-2.0 OR Apache-2.0)` | 1 | 0 | `dompurify`, pulled in by `posthog-js`. Dual-licensed, so take the Apache-2.0 arm; the MPL arm never has to be exercised. |
+| BlueOak-1.0.0 | 0 | 9 | Permissive; the `glob`/`minimatch` family. |
+| MIT-0 | 0 | 2 | |
+| FSL-1.1-MIT | 0 | 2 | `@sentry/cli` — see below. |
+| CC-BY-4.0 | 0 | 1 | `caniuse-lite`, a browser-support data table. Attribution-only, and build-time. |
+| CC0-1.0 | 0 | 1 | `mdn-data`. |
+| Python-2.0 | 0 | 1 | `argparse`. |
+
+There are no GPL, AGPL, or LGPL npm dependencies.
+
+**`@sentry/cli` must stay a devDependency.** The Functional Source License is not
+an open-source license: it carries a competing-use restriction (it forbids use in
+anything that competes with Sentry) and only converts to MIT two years after each
+release. It reaches us through `@sentry/vite-plugin`, which uploads source maps at
+build time, so it never enters a shipped bundle and the restriction never touches
+a user. Promoting it — or anything else FSL — to a runtime dependency would change
+that, and would also put a non-GPL-compatible term inside a GPL distribution.
+
+One trap when regenerating this: `npm ls --omit=dev` **from the repo root** is not
+the runtime set. `apps/cp-detect-architecture-inspector` is a dev tool that
+declares `vite` and `@vitejs/plugin-react` as ordinary `dependencies`, which drags
+Babel and `caniuse-lite` into the root's "production" tree. Scoping to
+`-w @treemaker/web` is what makes the runtime column mean what it says.
+
+## Source References
+
+- TreeMaker 5.0.1 bundled license: `third_party/treemaker-5.0.1/LICENSE.txt`
+- TreeMaker optimizer notes: `third_party/treemaker-5.0.1/Source/tmModel/tmNLCO/README.txt`
+- Enabled optimizer flags: `third_party/treemaker-5.0.1/Source/tmModel/tmNLCO/tmNLCO.h`
+- ReferenceFinder fork license and declared SPDX id:
+  `third_party/reference-finder/LICENSE`, `third_party/reference-finder/package.json`
+- ReferenceFinder copyright line (Lang, Tsai, Shavit):
+  `third_party/reference-finder/src/core/main.cpp`
+- Lang's ReferenceFinder distribution (its `README_src.txt` carries the
+  v2-or-later grant): <https://langorigami.com/article/referencefinder/>
+- FSF GPL v2 text: <https://www.gnu.org/licenses/old-licenses/gpl-2.0.html>
+- FSF Directory TreeMaker entry: <https://directory.fsf.org/wiki/TreeMaker>

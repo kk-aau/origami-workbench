@@ -1,0 +1,7 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import {assign,swap,exampleDoc,historyReducer,transformSelection} from '../../src/app/state';
+test('mountain and valley apply immediately and keep independent scope',()=>{const d=exampleDoc();const ids=new Set([d.segments[4].id]);const v=assign(d.segments,ids,'V');assert.equal(v[4].assignment,'V');assert.equal(v[4].angle,180);assert.deepEqual(v[5],d.segments[5]);const m=assign(v,ids,'M');assert.equal(m[4].angle,-180);});
+test('swap excludes boundary and auxiliary, preserves unknown angle',()=>{const d=exampleDoc();d.segments[4].angle=null;const s=swap(d.segments,new Set(d.segments.map(s=>s.id)));assert.equal(s[0].assignment,'B');assert.equal(s[4].angle,null);assert.equal(s[4].assignment,'V');});
+test('history restores data and does not record no-ops',()=>{const doc=exampleDoc();let h={past:[],present:doc,future:[]} as Parameters<typeof historyReducer>[0];h=historyReducer(h,{type:'commit',doc});assert.equal(h.past.length,0);h=historyReducer(h,{type:'commit',doc:{...doc,name:'中文作品'}});h=historyReducer(h,{type:'undo'});assert.equal(h.present.name,doc.name);h=historyReducer(h,{type:'redo'});assert.equal(h.present.name,'中文作品');});
+test('copy makes stable new ids without modifying originals',()=>{const d=exampleDoc();const r=transformSelection(d,new Set([d.segments[4].id]),'copy',10,0);assert.equal(r.segments.length,d.segments.length+1);assert.notEqual(r.segments.at(-1)!.id,d.segments[4].id);assert.deepEqual(r.segments.at(-1)!.a,[60,0]);});

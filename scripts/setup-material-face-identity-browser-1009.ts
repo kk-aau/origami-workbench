@@ -1,0 +1,11 @@
+import fs from 'node:fs';
+import {faceIdentityCase} from '../tests/fixtures/materialFaceIdentity';
+import {exportDocument} from '../src/core/formats';
+import {inspectMaterialCurveModel} from '../src/core/materialCurveModel';
+import {editMaterialFaces as oldEdit} from '../output/audits/material-face-model-artifacts-1009/src/core/materialFaceEdit';
+import {weakToolSheet as oldSheet} from '../output/audits/material-face-model-artifacts-1009/tests/fixtures/materialWeakTools';
+const save=(name:string,doc:ReturnType<typeof faceIdentityCase>)=>{doc.name=`原面身份-${name}`;fs.writeFileSync(`output/playwright/material-face-identity-${name}-initial-1009.zhezhi.json`,exportDocument(doc,'json').text);return doc;};
+for(const name of ['move','shared','hole','weak','copy','chain'])save(name,faceIdentityCase(name));
+const legacyMoved=oldEdit(oldSheet(),{kind:'material-transform',components:[0],operation:{kind:'move',a:20,b:10},parametric:true}).doc,legacy=oldEdit(legacyMoved,{kind:'material-face-insert',face:0,from:{edgeId:'material-edge-0',fraction:.5},to:{edgeId:'material-edge-2',fraction:.5},assignment:'F',fixedPart:0,cpOnly:false,parametric:true}).doc;save('legacy',legacy);const old=inspectMaterialCurveModel(legacy);if(!old.ok||Object.hasOwn(old.model.groups[1].region!,'owner'))throw Error('Expected real old v7 direction-only model.');
+const first=(legacy.metadata!.materialCurveModel as {groups:{id:string}[]}).groups[1].id;save('legacy-chain',oldEdit(legacy,{kind:'material-face-insert',face:0,from:{edgeId:first+'::crease-0',fraction:.5},to:{edgeId:'material-edge-1',fraction:.5},assignment:'F',fixedPart:0,cpOnly:false,parametric:true}).doc);
+const recipes=[['move','mirrorX'],['move','mirrorY'],['legacy','mirrorX'],['shared','mirrorX'],['hole','mirrorY'],['weak','mirrorX'],['chain','mirrorX'],['legacy-chain','mirrorY']].map(([source,kind])=>({name:source+'-'+kind,source,kind}));fs.writeFileSync('output/audits/material-face-identity-recipes-1009.json',JSON.stringify(recipes,null,2));console.log('Prepared transform/child/hole/weak/copy/chained identities and real frozen-v7 legacy inputs.');

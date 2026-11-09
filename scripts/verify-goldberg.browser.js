@@ -1,0 +1,36 @@
+async page=>{
+ const checks=[],check=(ok,message)=>{if(!ok)throw Error(message);checks.push(message);};
+ const button=name=>page.getByRole('button',{name,exact:true});
+ const response=test=>page.waitForResponse(r=>r.url().endsWith('/api/tessellate')&&test(r.request().postDataJSON()??{}));
+ const number=async(label,value,test)=>{const pending=response(test);await page.getByLabel(label,{exact:true}).fill(String(value));await page.getByLabel(label,{exact:true}).press('Enter');const r=await pending;return [r.status(),await r.json()];};
+ await page.setViewportSize({width:1000,height:720});
+ await button('保存工程').click();await page.locator('.save-dot.saved').waitFor();
+ await button('镶嵌设计').click();await button('05 非周期').click();
+ let pending=response(p=>p.kind==='goldberg'&&p.goldbergVersion==='origamica');await page.getByLabel('母结构类型',{exact:true}).selectOption('goldberg');const initial=await pending;let status=initial.status(),body=await initial.json();
+ check(status===200&&body.stats.tiles===20&&await page.getByLabel('Goldberg 构造',{exact:true}).inputValue()==='origamica','新增构造默认使用原版径向模式');
+ [status,body]=await number('旋转阶 m',8,p=>p.goldbergOrder===8);
+ check(status===200&&body.stats.tiles===32&&body.source.goldbergOrder===8,'旋转阶改变真实三角单元数量');
+ [status,body]=await number('上下偏移 o',1,p=>p.goldbergOffset===1);
+ check(status===200&&body.stats.tiles===32&&body.source.goldbergOffset===1&&body.source.dual==='face circumcenters','偶数阶上下偏移并保留原版三角面外心对偶');
+ check(body.stats.checks.geometry.status==='passed'&&body.stats.checks.local.status==='passed'&&!!body.dual,'偏移后的几何、局部条件和对偶通过');
+ check(await page.locator('.inspector').evaluate(e=>e.scrollHeight<=e.clientHeight+1),'1000×720 扭转参数栏无滚动');
+ await page.locator('.tess-view-switch').getByRole('button',{name:'原始与对偶'}).click();
+ check(await page.locator('.tess-view-switch').getByRole('button',{name:'原始与对偶'}).getAttribute('aria-pressed')==='true','原始与对偶可在同一画布查看');
+ await page.locator('.tess-view-switch').getByRole('button',{name:'折痕图'}).click();await page.screenshot({path:'output/playwright/goldberg-offset-original.png'});
+ pending=response(p=>p.goldbergOutput==='tiling');await page.getByLabel('Goldberg 输出',{exact:true}).selectOption('tiling');const tiledResponse=await pending;body=await tiledResponse.json();
+ check(tiledResponse.status()===200&&body.source.output==='tiling'&&body.stats.foldability==='not_applicable'&&await button('计算平折').isDisabled(),'母结构排布不冒充可平折折痕');
+ check(await page.locator('.inspector').evaluate(e=>e.scrollHeight<=e.clientHeight+1),'母结构参数栏无滚动');
+ [status,body]=await number('旋转阶 m',3,p=>p.goldbergOrder===3);
+ check(status===200&&body.source.output==='tiling'&&body.stats.parameters.goldbergOffset===0,'3 阶自动清除偏移并保留母结构');
+ check(await page.getByLabel('Goldberg 输出',{exact:true}).locator('option[value=twist]').evaluate(e=>e.disabled),'退化外心对偶不能选扭转输出');
+ pending=response(p=>p.goldbergVersion==='legacy');await page.getByLabel('Goldberg 构造',{exact:true}).selectOption('legacy');const legacy=await(await pending).json();
+ check(legacy.stats.tiles!==12&&legacy.source.mesh!=='Origamica radial unit triangles','旧五重细分仍按旧工程解释');
+ pending=response(p=>p.goldbergVersion==='origamica');await page.getByLabel('Goldberg 构造',{exact:true}).selectOption('origamica');await pending;
+ await number('旋转阶 m',8,p=>p.goldbergOrder===8);await number('上下偏移 o',1,p=>p.goldbergOffset===1);
+ pending=response(p=>p.goldbergOutput==='tiling'&&p.goldbergOffset===1);await page.getByLabel('Goldberg 输出',{exact:true}).selectOption('tiling');await pending;
+ await button('采用母结构副本 →').click();await button('保存工程').click();await page.locator('.save-dot.saved').waitFor();
+ await button('镶嵌设计').click();await button('02 周期拼接').click();
+ pending=response(p=>p.goldbergVersion==='origamica'&&p.goldbergOffset===1);await button('读取工程参数').click();const restored=await(await pending).json();
+ check(restored.source.output==='tiling'&&restored.source.goldbergOrder===8&&restored.source.goldbergOffset===1,'采用并保存后恢复原版旋转阶、偏移与输出');
+ return {passed:checks.length,checks};
+}

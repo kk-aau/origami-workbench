@@ -1,0 +1,25 @@
+.tess-dialog[open]:has(>.geometry-editor){display:flex;flex-direction:column;width:min(1040px,calc(100vw - 24px));height:min(750px,calc(100dvh - 24px));max-height:none;overflow:hidden;padding:12px 15px;box-sizing:border-box}
+.tess-dialog:has(>.geometry-editor)>header{flex:none;margin:0;padding-bottom:9px}
+.geometry-editor{display:flex;flex:1;flex-direction:column;min-height:0;gap:7px;padding-top:8px}
+.geometry-editor-toolbar{display:flex;flex:none;align-items:center;flex-wrap:wrap;gap:4px;font-size:11px}
+.geometry-editor-toolbar button{min-height:27px;padding:3px 8px;font-size:11px}
+.geometry-editor-toolbar button[aria-pressed=true]{background:var(--accent-soft,#e4eee7);border-color:var(--accent,#477a61)}
+.geometry-editor-toolbar label{display:flex;align-items:center;gap:3px;white-space:nowrap}
+.geometry-editor-toolbar input[type=checkbox]{width:13px;height:13px;accent-color:var(--accent,#477a61)}
+.geometry-grid-step input{width:65px;min-width:0;height:25px;padding:2px 3px}
+.geometry-editor-extra{flex:none;display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+.geometry-editor-extra:empty{display:none}
+.geometry-editor-viewport{flex:1;min-height:120px;position:relative;border:1px solid var(--line,#ccd5ce);overflow:hidden;background:var(--paper,#fff)}
+.geometry-editor-viewport .tess-mesh-editor{display:block;width:100%;height:100%;min-height:0;margin:0;aspect-ratio:auto;box-sizing:border-box;border:0;touch-action:none;user-select:none;cursor:crosshair}
+.geometry-editor-readout{flex:none;display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:10px;color:var(--muted,#66786b);min-height:18px}
+.geometry-editor .tess-editor-coordinates{flex:none;display:flex;flex-wrap:wrap;align-items:center;height:auto;min-height:30px;padding:0;gap:7px;margin:0;font-size:11px}
+.geometry-editor .tess-editor-coordinates label{display:flex;align-items:center;gap:5px}
+.geometry-editor .tess-editor-coordinates .number-field{width:150px;margin:0}
+.geometry-editor .tess-editor-coordinates input{max-width:100px;min-height:25px;padding:3px 5px}
+.geometry-editor .tess-editor-coordinates button{font-size:11px;min-height:26px;padding:3px 6px}
+.geometry-target-distance{font-size:10px;color:#087d89}
+.geometry-editor>.tess-editor-error{flex:none;min-height:19px;max-height:38px;line-height:19px;margin:0;font-size:11px;overflow:hidden}
+.geometry-editor>footer{flex:none;display:flex;gap:6px;align-items:center;margin:0;padding-top:6px;border-top:1px solid var(--line,#ccd5ce)}
+.geometry-editor>footer>span{flex:1;font-size:11px;color:var(--muted,#66786b)}
+.geometry-editor>footer button{font-size:11px;min-height:28px;padding:4px 9px}
+@media(max-width:650px){.tess-dialog[open]:has(>.geometry-editor){width:calc(100vw - 12px);height:calc(100dvh - 12px);padding:8px}.geometry-editor{gap:4px}.geometry-editor-toolbar button{padding:2px 5px;min-height:23px;font-size:10px}.geometry-editor-readout{font-size:9px;flex-wrap:wrap;gap:3px}.geometry-editor .tess-editor-coordinates{gap:4px}.geometry-editor .tess-editor-coordinates .number-field{width:125px}}

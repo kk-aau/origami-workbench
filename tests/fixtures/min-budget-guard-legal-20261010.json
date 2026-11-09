@@ -1,0 +1,3471 @@
+{
+  "cases": [
+    {
+      "name": "clockwise",
+      "params": {
+        "family": "primal-dual",
+        "tiling": "square",
+        "rings": 1,
+        "angle": 30,
+        "scale": 0.5773502691896258,
+        "parameterization": "gamma-alpha",
+        "gamma": 1,
+        "pleatAngle": 30,
+        "twistDirection": "cw",
+        "reciprocalMethod": "original-min-total-pleat",
+        "motherParams": {
+          "family": "custom",
+          "vertices": [
+            [
+              0,
+              0
+            ],
+            [
+              1,
+              0
+            ],
+            [
+              0,
+              1
+            ],
+            [
+              -1,
+              0
+            ],
+            [
+              0,
+              -1
+            ]
+          ],
+          "faces": [
+            [
+              0,
+              1,
+              2
+            ],
+            [
+              0,
+              2,
+              3
+            ],
+            [
+              0,
+              3,
+              4
+            ],
+            [
+              0,
+              4,
+              1
+            ]
+          ],
+          "repeatX": 1,
+          "repeatY": 1,
+          "angle": 36,
+          "scale": 0.3,
+          "customOutput": "twist"
+        },
+        "dualTargets": [
+          [
+            1,
+            0.5
+          ],
+          [
+            -1,
+            0.5
+          ],
+          [
+            -1,
+            -0.5
+          ],
+          [
+            1,
+            -0.5
+          ]
+        ]
+      },
+      "response": {
+        "preview": {
+          "kind": "shrink-rotate",
+          "vertices": [
+            [
+              -0.75,
+              0.75,
+              -0.25,
+              -0.75
+            ],
+            [
+              -0.75,
+              -0.75,
+              -0.25,
+              0.75
+            ],
+            [
+              -0.75,
+              0.75,
+              0.75,
+              -0.75
+            ],
+            [
+              -0.75,
+              -0.75,
+              0.75,
+              -0.25
+            ],
+            [
+              -0.75,
+              0.75,
+              0.75,
+              0.25
+            ],
+            [
+              -0.75,
+              -0.75,
+              0.75,
+              0.75
+            ],
+            [
+              0.75,
+              0.75,
+              -0.75,
+              -0.75
+            ],
+            [
+              0.75,
+              -0.75,
+              -0.75,
+              -0.25
+            ],
+            [
+              0.75,
+              0.75,
+              -0.75,
+              0.25
+            ],
+            [
+              0.75,
+              -0.75,
+              -0.75,
+              0.75
+            ],
+            [
+              0.75,
+              0.75,
+              0.25,
+              -0.75
+            ],
+            [
+              0.75,
+              -0.75,
+              0.25,
+              0.75
+            ]
+          ]
+        },
+        "fold": {
+          "file_spec": 1.2,
+          "file_creator": "折纸工作台 / Pleat / perpendicular-reciprocal / Shrink-Rotate",
+          "file_classes": [
+            "singleModel"
+          ],
+          "frame_classes": [
+            "creasePattern"
+          ],
+          "frame_attributes": [
+            "2D"
+          ],
+          "vertices_coords": [
+            [
+              -1.0915063509,
+              0.4471687836
+            ],
+            [
+              -0.6584936491,
+              -0.3028312164
+            ],
+            [
+              -0.5915063509,
+              0.1584936491
+            ],
+            [
+              -0.4471687836,
+              -1.0915063509
+            ],
+            [
+              -0.3028312164,
+              0.6584936491
+            ],
+            [
+              -0.1584936491,
+              -0.5915063509
+            ],
+            [
+              0.1584936491,
+              0.5915063509
+            ],
+            [
+              0.3028312164,
+              -0.6584936491
+            ],
+            [
+              0.4471687836,
+              1.0915063509
+            ],
+            [
+              0.5915063509,
+              -0.1584936491
+            ],
+            [
+              0.6584936491,
+              0.3028312164
+            ],
+            [
+              1.0915063509,
+              -0.4471687836
+            ]
+          ],
+          "edges_vertices": [
+            [
+              0,
+              1
+            ],
+            [
+              0,
+              2
+            ],
+            [
+              0,
+              4
+            ],
+            [
+              1,
+              3
+            ],
+            [
+              1,
+              5
+            ],
+            [
+              2,
+              4
+            ],
+            [
+              2,
+              5
+            ],
+            [
+              2,
+              6
+            ],
+            [
+              3,
+              5
+            ],
+            [
+              3,
+              7
+            ],
+            [
+              4,
+              8
+            ],
+            [
+              5,
+              9
+            ],
+            [
+              6,
+              8
+            ],
+            [
+              6,
+              9
+            ],
+            [
+              6,
+              10
+            ],
+            [
+              7,
+              9
+            ],
+            [
+              7,
+              11
+            ],
+            [
+              8,
+              10
+            ],
+            [
+              9,
+              11
+            ],
+            [
+              10,
+              11
+            ]
+          ],
+          "edges_assignment": [
+            "B",
+            "M",
+            "B",
+            "B",
+            "V",
+            "V",
+            "V",
+            "V",
+            "M",
+            "B",
+            "B",
+            "V",
+            "M",
+            "V",
+            "V",
+            "V",
+            "B",
+            "B",
+            "M",
+            "B"
+          ],
+          "edges_foldAngle": [
+            null,
+            -180,
+            null,
+            null,
+            180,
+            180,
+            180,
+            180,
+            -180,
+            null,
+            null,
+            180,
+            -180,
+            180,
+            180,
+            180,
+            null,
+            null,
+            -180,
+            null
+          ],
+          "faces_vertices": [
+            [
+              0,
+              2,
+              5,
+              1
+            ],
+            [
+              0,
+              4,
+              2
+            ],
+            [
+              1,
+              5,
+              3
+            ],
+            [
+              2,
+              4,
+              8,
+              6
+            ],
+            [
+              2,
+              6,
+              9,
+              5
+            ],
+            [
+              3,
+              5,
+              9,
+              7
+            ],
+            [
+              6,
+              8,
+              10
+            ],
+            [
+              6,
+              10,
+              11,
+              9
+            ],
+            [
+              7,
+              9,
+              11
+            ]
+          ],
+          "frame_description": "参数化候选；整体层序和无碰撞路径未验证。"
+        },
+        "mother": {
+          "file_spec": 1.2,
+          "file_classes": [
+            "singleModel"
+          ],
+          "frame_classes": [
+            "creasePattern"
+          ],
+          "frame_attributes": [
+            "2D"
+          ],
+          "vertices_coords": [
+            [
+              0.0,
+              0.0
+            ],
+            [
+              1.0,
+              0.0
+            ],
+            [
+              0.0,
+              1.0
+            ],
+            [
+              -1.0,
+              0.0
+            ],
+            [
+              0.0,
+              -1.0
+            ]
+          ],
+          "edges_vertices": [
+            [
+              0,
+              1
+            ],
+            [
+              1,
+              2
+            ],
+            [
+              0,
+              2
+            ],
+            [
+              2,
+              3
+            ],
+            [
+              0,
+              3
+            ],
+            [
+              3,
+              4
+            ],
+            [
+              0,
+              4
+            ],
+            [
+              1,
+              4
+            ]
+          ],
+          "edges_assignment": [
+            "U",
+            "B",
+            "U",
+            "B",
+            "U",
+            "B",
+            "U",
+            "B"
+          ],
+          "edges_foldAngle": [
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
+          ],
+          "faces_vertices": [
+            [
+              2,
+              1,
+              0
+            ],
+            [
+              3,
+              2,
+              0
+            ],
+            [
+              4,
+              3,
+              0
+            ],
+            [
+              1,
+              4,
+              0
+            ]
+          ],
+          "zhezhi_custom_face_index": [
+            0,
+            1,
+            2,
+            3
+          ],
+          "zhezhi_custom_polygons": [
+            [
+              [
+                0.0,
+                0.0
+              ],
+              [
+                1.0,
+                0.0
+              ],
+              [
+                0.0,
+                1.0
+              ]
+            ],
+            [
+              [
+                0.0,
+                0.0
+              ],
+              [
+                0.0,
+                1.0
+              ],
+              [
+                -1.0,
+                0.0
+              ]
+            ],
+            [
+              [
+                0.0,
+                0.0
+              ],
+              [
+                -1.0,
+                0.0
+              ],
+              [
+                0.0,
+                -1.0
+              ]
+            ],
+            [
+              [
+                0.0,
+                0.0
+              ],
+              [
+                0.0,
+                -1.0
+              ],
+              [
+                1.0,
+                0.0
+              ]
+            ]
+          ]
+        },
+        "dual": {
+          "file_spec": 1.2,
+          "file_classes": [
+            "singleModel"
+          ],
+          "frame_classes": [
+            "creasePattern"
+          ],
+          "frame_attributes": [
+            "2D"
+          ],
+          "vertices_coords": [
+            [
+              0.75,
+              0.75
+            ],
+            [
+              -0.75,
+              0.75
+            ],
+            [
+              -0.75,
+              -0.75
+            ],
+            [
+              0.75,
+              -0.75
+            ]
+          ],
+          "edges_vertices": [
+            [
+              0,
+              3
+            ],
+            [
+              0,
+              1
+            ],
+            [
+              1,
+              2
+            ],
+            [
+              2,
+              3
+            ]
+          ],
+          "edges_assignment": [
+            "A",
+            "A",
+            "A",
+            "A"
+          ],
+          "edges_foldAngle": [
+            null,
+            null,
+            null,
+            null
+          ],
+          "faces_vertices": [
+            [
+              3,
+              0,
+              1,
+              2
+            ]
+          ],
+          "zhezhi_dual_primal_vertices": [
+            0
+          ]
+        },
+        "stats": {
+          "vertices": 12,
+          "edges": 20,
+          "faces": 9,
+          "tiles": 4,
+          "mountainEdges": 4,
+          "valleyEdges": 8,
+          "boundaryEdges": 8,
+          "unassignedEdges": 0,
+          "elapsedMs": 1455,
+          "parameters": {
+            "family": "primal-dual",
+            "tiling": "square",
+            "rings": 1,
+            "reciprocalMethod": "original-min-total-pleat",
+            "dualTargets": [
+              [
+                1.0,
+                0.5
+              ],
+              [
+                -1.0,
+                0.5
+              ],
+              [
+                -1.0,
+                -0.5
+              ],
+              [
+                1.0,
+                -0.5
+              ]
+            ],
+            "motherParams": {
+              "family": "custom",
+              "angle": 36.0,
+              "scale": 0.3,
+              "vertices": [
+                [
+                  0.0,
+                  0.0
+                ],
+                [
+                  1.0,
+                  0.0
+                ],
+                [
+                  0.0,
+                  1.0
+                ],
+                [
+                  -1.0,
+                  0.0
+                ],
+                [
+                  0.0,
+                  -1.0
+                ]
+              ],
+              "faces": [
+                [
+                  0,
+                  1,
+                  2
+                ],
+                [
+                  0,
+                  2,
+                  3
+                ],
+                [
+                  0,
+                  3,
+                  4
+                ],
+                [
+                  0,
+                  4,
+                  1
+                ]
+              ],
+              "repeatX": 1,
+              "repeatY": 1
+            },
+            "angle": -30.000000000000004,
+            "scale": 0.5773502691896257,
+            "twistDirection": "cw",
+            "parameterization": "gamma-alpha",
+            "gamma": 1.0,
+            "pleatAngle": 30.0
+          },
+          "checks": {
+            "geometry": {
+              "status": "passed",
+              "zeroLengthEdges": [],
+              "duplicateEdges": [],
+              "crossingCount": 0,
+              "crossingPairs": [],
+              "crossingPairsTruncated": false,
+              "tolerance": 2.1830127018e-08
+            },
+            "local": {
+              "status": "passed",
+              "interiorVertices": 4,
+              "oddDegreeVertices": [],
+              "kawasakiViolations": [],
+              "maekawaViolations": [],
+              "unknownAssignmentVertices": [],
+              "maxKawasakiErrorDeg": 0.0,
+              "toleranceDeg": 0.001
+            },
+            "lff": {
+              "status": "failed",
+              "scope": "Origamica degree-four local M/V constraints; no global layer order or fold-path proof",
+              "interiorVertices": 4,
+              "checkedVertices": 4,
+              "toleranceDeg": 0.001,
+              "graphVertices": [
+                [
+                  -0.875,
+                  0.07216878360000001
+                ],
+                [
+                  -0.8415063509,
+                  0.30283121635
+                ],
+                [
+                  -0.69716878365,
+                  0.55283121635
+                ],
+                [
+                  -0.55283121635,
+                  -0.69716878365
+                ],
+                [
+                  -0.40849364909999997,
+                  -0.44716878365
+                ],
+                [
+                  -0.44716878365,
+                  0.40849364909999997
+                ],
+                [
+                  -0.375,
+                  -0.21650635090000003
+                ],
+                [
+                  -0.21650635090000003,
+                  0.375
+                ],
+                [
+                  -0.30283121635,
+                  -0.8415063509
+                ],
+                [
+                  -0.07216878360000001,
+                  -0.875
+                ],
+                [
+                  0.07216878360000001,
+                  0.875
+                ],
+                [
+                  0.21650635090000003,
+                  -0.375
+                ],
+                [
+                  0.30283121635,
+                  0.8415063509
+                ],
+                [
+                  0.375,
+                  0.21650635090000003
+                ],
+                [
+                  0.40849364909999997,
+                  0.44716878365
+                ],
+                [
+                  0.44716878365,
+                  -0.40849364909999997
+                ],
+                [
+                  0.69716878365,
+                  -0.55283121635
+                ],
+                [
+                  0.55283121635,
+                  0.69716878365
+                ],
+                [
+                  0.8415063509,
+                  -0.30283121635
+                ],
+                [
+                  0.875,
+                  -0.07216878360000001
+                ]
+              ],
+              "graphEdges": [
+                [
+                  7,
+                  5
+                ],
+                [
+                  1,
+                  6
+                ],
+                [
+                  6,
+                  4
+                ],
+                [
+                  8,
+                  11
+                ],
+                [
+                  13,
+                  14
+                ],
+                [
+                  12,
+                  7
+                ],
+                [
+                  11,
+                  15
+                ],
+                [
+                  18,
+                  13
+                ]
+              ],
+              "edgeTypes": [
+                -1,
+                1,
+                -1,
+                1,
+                -1,
+                1,
+                -1,
+                1
+              ],
+              "constraintVertices": [
+                2,
+                2,
+                5,
+                5,
+                6,
+                6,
+                9,
+                9
+              ],
+              "assignmentViolations": [
+                0,
+                1,
+                2,
+                3,
+                4,
+                5,
+                6,
+                7
+              ],
+              "unassignedConstraints": [],
+              "reason": "necessary_condition_conflict"
+            },
+            "layerOrder": {
+              "status": "not_checked"
+            }
+          },
+          "foldability": "candidate",
+          "kind": "shrink_rotate"
+        },
+        "warnings": [
+          "本结果是参数化候选折痕图，不是保证可折的成品；即使局部条件通过，整体层序、碰撞、连续折叠路径及实物小样仍未验证。"
+        ],
+        "source": {
+          "name": "折纸工作台 / Pleat",
+          "license": "GPL-3.0-only / MIT",
+          "algorithm": "perpendicular-reciprocal / Shrink-Rotate",
+          "version": 1,
+          "motherSource": {},
+          "motherFamily": "custom",
+          "reciprocalMinTotalPleat": {
+            "schema": "origamica-reciprocal-min-total-pleat-v1",
+            "function": "MakeReciprocalDiagram",
+            "definitionCell": "In[1527]",
+            "definitionLines": [
+              105170,
+              105763
+            ],
+            "method": "MinTotalPleat",
+            "branchLines": [
+              105409,
+              105435
+            ],
+            "commonSolveLines": [
+              105595,
+              105625
+            ],
+            "commonFitLines": [
+              105627,
+              105674
+            ],
+            "indexConvention": "zero-based; supplied pairing order",
+            "input": {
+              "vertices": [
+                [
+                  0.0,
+                  0.0
+                ],
+                [
+                  1.0,
+                  0.0
+                ],
+                [
+                  0.0,
+                  1.0
+                ],
+                [
+                  -1.0,
+                  0.0
+                ],
+                [
+                  0.0,
+                  -1.0
+                ]
+              ],
+              "interiorEdges": [
+                [
+                  0,
+                  1
+                ],
+                [
+                  0,
+                  2
+                ],
+                [
+                  0,
+                  3
+                ],
+                [
+                  0,
+                  4
+                ]
+              ],
+              "dualVertices": [
+                [
+                  1.0,
+                  0.5
+                ],
+                [
+                  -1.0,
+                  0.5
+                ],
+                [
+                  -1.0,
+                  -0.5
+                ],
+                [
+                  1.0,
+                  -0.5
+                ]
+              ],
+              "dualEdges": [
+                [
+                  0,
+                  3
+                ],
+                [
+                  0,
+                  1
+                ],
+                [
+                  1,
+                  2
+                ],
+                [
+                  2,
+                  3
+                ]
+              ]
+            },
+            "inputSigns": [
+              -1,
+              1,
+              1,
+              1
+            ],
+            "anchor": [
+              0,
+              0
+            ],
+            "minimumNormalizedPleat": 1,
+            "normalizedDualVertices": [
+              [
+                -0.0,
+                -0.0
+              ],
+              [
+                -1.0,
+                -0.0
+              ],
+              [
+                -1.0,
+                -1.0
+              ],
+              [
+                -0.0,
+                -1.0
+              ]
+            ],
+            "normalizedPleatLengths": [
+              1.0,
+              1.0,
+              1.0,
+              1.0
+            ],
+            "totalNormalizedPleat": 4.0,
+            "certificate": {
+              "equalityMultipliers": [
+                -0.0,
+                -0.0,
+                1.0,
+                -1.0,
+                1.0,
+                1.0
+              ],
+              "widthMultipliers": [
+                0.0,
+                2.0,
+                2.0,
+                0.0
+              ],
+              "positiveWidthConstraints": [
+                1,
+                2
+              ],
+              "uniqueRank": 8,
+              "variableCount": 8,
+              "tolerance": 1e-08,
+              "rankTolerance": 1e-09,
+              "positiveThreshold": 2e-09
+            },
+            "fit": {
+              "scale": 1.5,
+              "translation": [
+                0.75,
+                0.75
+              ],
+              "squaredDeviation": 0.5
+            },
+            "returnedDualVertices": [
+              [
+                0.75,
+                0.75
+              ],
+              [
+                -0.75,
+                0.75
+              ],
+              [
+                -0.75,
+                -0.75
+              ],
+              [
+                0.75,
+                -0.75
+              ]
+            ],
+            "solver": "SciPy HiGHS linear programming; closed-form common RMS fit",
+            "uniqueOptimumRequired": true,
+            "wolframExecuted": false,
+            "symbolicOptionsImplemented": false,
+            "motherAdapter": "sorted undirected shared primal edges; paired face traversal order; explicit input duals"
+          },
+          "assignmentMethod": "Origamica directed primal input edges / CCW dual pairs",
+          "foldedForm": [
+            [
+              -0.9330127018922192,
+              -0.14433756729740638
+            ],
+            [
+              -0.06698729810778065,
+              -0.14433756729740646
+            ],
+            [
+              -0.4330127018922193,
+              -0.4330127018922193
+            ],
+            [
+              0.14433756729740638,
+              -0.9330127018922192
+            ],
+            [
+              -0.14433756729740646,
+              0.06698729810778065
+            ],
+            [
+              0.4330127018922193,
+              -0.4330127018922193
+            ],
+            [
+              -0.4330127018922193,
+              0.4330127018922193
+            ],
+            [
+              0.14433756729740646,
+              -0.06698729810778065
+            ],
+            [
+              -0.14433756729740638,
+              0.9330127018922192
+            ],
+            [
+              0.4330127018922193,
+              0.4330127018922193
+            ],
+            [
+              0.06698729810778065,
+              0.14433756729740646
+            ],
+            [
+              0.9330127018922192,
+              0.14433756729740638
+            ]
+          ],
+          "foldedFormMethod": "Origamica gamma/-alpha direct construction",
+          "foldedFormMaxIsometryError": 1.32159838628354e-10
+        }
+      }
+    },
+    {
+      "name": "rho-beta-cp-only",
+      "params": {
+        "family": "primal-dual",
+        "tiling": "square",
+        "rings": 1,
+        "angle": 30,
+        "scale": 0.5773502691896258,
+        "reciprocalMethod": "original-min-total-pleat",
+        "motherParams": {
+          "family": "custom",
+          "vertices": [
+            [
+              0,
+              0
+            ],
+            [
+              1,
+              0
+            ],
+            [
+              0,
+              1
+            ],
+            [
+              -1,
+              0
+            ],
+            [
+              0,
+              -1
+            ]
+          ],
+          "faces": [
+            [
+              0,
+              1,
+              2
+            ],
+            [
+              0,
+              2,
+              3
+            ],
+            [
+              0,
+              3,
+              4
+            ],
+            [
+              0,
+              4,
+              1
+            ]
+          ],
+          "repeatX": 1,
+          "repeatY": 1,
+          "angle": 36,
+          "scale": 0.3,
+          "customOutput": "twist"
+        },
+        "dualTargets": [
+          [
+            1,
+            0.5
+          ],
+          [
+            -1,
+            0.5
+          ],
+          [
+            -1,
+            -0.5
+          ],
+          [
+            1,
+            -0.5
+          ]
+        ]
+      },
+      "response": {
+        "preview": {
+          "kind": "shrink-rotate",
+          "vertices": [
+            [
+              -0.75,
+              -0.75,
+              -0.25,
+              0.75
+            ],
+            [
+              -0.75,
+              0.75,
+              -0.25,
+              -0.75
+            ],
+            [
+              -0.75,
+              -0.75,
+              0.75,
+              0.75
+            ],
+            [
+              -0.75,
+              0.75,
+              0.75,
+              0.25
+            ],
+            [
+              -0.75,
+              -0.75,
+              0.75,
+              -0.25
+            ],
+            [
+              -0.75,
+              0.75,
+              0.75,
+              -0.75
+            ],
+            [
+              0.75,
+              -0.75,
+              -0.75,
+              0.75
+            ],
+            [
+              0.75,
+              0.75,
+              -0.75,
+              0.25
+            ],
+            [
+              0.75,
+              -0.75,
+              -0.75,
+              -0.25
+            ],
+            [
+              0.75,
+              0.75,
+              -0.75,
+              -0.75
+            ],
+            [
+              0.75,
+              -0.75,
+              0.25,
+              0.75
+            ],
+            [
+              0.75,
+              0.75,
+              0.25,
+              -0.75
+            ]
+          ]
+        },
+        "fold": {
+          "file_spec": 1.2,
+          "file_creator": "折纸工作台 / Pleat / perpendicular-reciprocal / Shrink-Rotate",
+          "file_classes": [
+            "singleModel"
+          ],
+          "frame_classes": [
+            "creasePattern"
+          ],
+          "frame_attributes": [
+            "2D"
+          ],
+          "vertices_coords": [
+            [
+              -1.0915063509,
+              -0.4471687836
+            ],
+            [
+              -0.6584936491,
+              0.3028312164
+            ],
+            [
+              -0.5915063509,
+              -0.1584936491
+            ],
+            [
+              -0.4471687836,
+              1.0915063509
+            ],
+            [
+              -0.3028312164,
+              -0.6584936491
+            ],
+            [
+              -0.1584936491,
+              0.5915063509
+            ],
+            [
+              0.1584936491,
+              -0.5915063509
+            ],
+            [
+              0.3028312164,
+              0.6584936491
+            ],
+            [
+              0.4471687836,
+              -1.0915063509
+            ],
+            [
+              0.5915063509,
+              0.1584936491
+            ],
+            [
+              0.6584936491,
+              -0.3028312164
+            ],
+            [
+              1.0915063509,
+              0.4471687836
+            ]
+          ],
+          "edges_vertices": [
+            [
+              0,
+              1
+            ],
+            [
+              0,
+              2
+            ],
+            [
+              0,
+              4
+            ],
+            [
+              1,
+              3
+            ],
+            [
+              1,
+              5
+            ],
+            [
+              2,
+              4
+            ],
+            [
+              2,
+              5
+            ],
+            [
+              2,
+              6
+            ],
+            [
+              3,
+              5
+            ],
+            [
+              3,
+              7
+            ],
+            [
+              4,
+              8
+            ],
+            [
+              5,
+              9
+            ],
+            [
+              6,
+              8
+            ],
+            [
+              6,
+              9
+            ],
+            [
+              6,
+              10
+            ],
+            [
+              7,
+              9
+            ],
+            [
+              7,
+              11
+            ],
+            [
+              8,
+              10
+            ],
+            [
+              9,
+              11
+            ],
+            [
+              10,
+              11
+            ]
+          ],
+          "edges_assignment": [
+            "B",
+            "V",
+            "B",
+            "B",
+            "M",
+            "M",
+            "V",
+            "V",
+            "V",
+            "B",
+            "B",
+            "V",
+            "V",
+            "V",
+            "M",
+            "M",
+            "B",
+            "B",
+            "V",
+            "B"
+          ],
+          "edges_foldAngle": [
+            null,
+            180,
+            null,
+            null,
+            -180,
+            -180,
+            180,
+            180,
+            180,
+            null,
+            null,
+            180,
+            180,
+            180,
+            -180,
+            -180,
+            null,
+            null,
+            180,
+            null
+          ],
+          "faces_vertices": [
+            [
+              0,
+              1,
+              5,
+              2
+            ],
+            [
+              0,
+              2,
+              4
+            ],
+            [
+              1,
+              3,
+              5
+            ],
+            [
+              2,
+              5,
+              9,
+              6
+            ],
+            [
+              2,
+              6,
+              8,
+              4
+            ],
+            [
+              3,
+              7,
+              9,
+              5
+            ],
+            [
+              6,
+              9,
+              11,
+              10
+            ],
+            [
+              6,
+              10,
+              8
+            ],
+            [
+              7,
+              11,
+              9
+            ]
+          ],
+          "frame_description": "参数化候选；整体层序和无碰撞路径未验证。"
+        },
+        "mother": {
+          "file_spec": 1.2,
+          "file_classes": [
+            "singleModel"
+          ],
+          "frame_classes": [
+            "creasePattern"
+          ],
+          "frame_attributes": [
+            "2D"
+          ],
+          "vertices_coords": [
+            [
+              0.0,
+              0.0
+            ],
+            [
+              1.0,
+              0.0
+            ],
+            [
+              0.0,
+              1.0
+            ],
+            [
+              -1.0,
+              0.0
+            ],
+            [
+              0.0,
+              -1.0
+            ]
+          ],
+          "edges_vertices": [
+            [
+              0,
+              1
+            ],
+            [
+              1,
+              2
+            ],
+            [
+              0,
+              2
+            ],
+            [
+              2,
+              3
+            ],
+            [
+              0,
+              3
+            ],
+            [
+              3,
+              4
+            ],
+            [
+              0,
+              4
+            ],
+            [
+              1,
+              4
+            ]
+          ],
+          "edges_assignment": [
+            "U",
+            "B",
+            "U",
+            "B",
+            "U",
+            "B",
+            "U",
+            "B"
+          ],
+          "edges_foldAngle": [
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
+          ],
+          "faces_vertices": [
+            [
+              2,
+              1,
+              0
+            ],
+            [
+              3,
+              2,
+              0
+            ],
+            [
+              4,
+              3,
+              0
+            ],
+            [
+              1,
+              4,
+              0
+            ]
+          ],
+          "zhezhi_custom_face_index": [
+            0,
+            1,
+            2,
+            3
+          ],
+          "zhezhi_custom_polygons": [
+            [
+              [
+                0.0,
+                0.0
+              ],
+              [
+                1.0,
+                0.0
+              ],
+              [
+                0.0,
+                1.0
+              ]
+            ],
+            [
+              [
+                0.0,
+                0.0
+              ],
+              [
+                0.0,
+                1.0
+              ],
+              [
+                -1.0,
+                0.0
+              ]
+            ],
+            [
+              [
+                0.0,
+                0.0
+              ],
+              [
+                -1.0,
+                0.0
+              ],
+              [
+                0.0,
+                -1.0
+              ]
+            ],
+            [
+              [
+                0.0,
+                0.0
+              ],
+              [
+                0.0,
+                -1.0
+              ],
+              [
+                1.0,
+                0.0
+              ]
+            ]
+          ]
+        },
+        "dual": {
+          "file_spec": 1.2,
+          "file_classes": [
+            "singleModel"
+          ],
+          "frame_classes": [
+            "creasePattern"
+          ],
+          "frame_attributes": [
+            "2D"
+          ],
+          "vertices_coords": [
+            [
+              0.75,
+              0.75
+            ],
+            [
+              -0.75,
+              0.75
+            ],
+            [
+              -0.75,
+              -0.75
+            ],
+            [
+              0.75,
+              -0.75
+            ]
+          ],
+          "edges_vertices": [
+            [
+              0,
+              3
+            ],
+            [
+              0,
+              1
+            ],
+            [
+              1,
+              2
+            ],
+            [
+              2,
+              3
+            ]
+          ],
+          "edges_assignment": [
+            "A",
+            "A",
+            "A",
+            "A"
+          ],
+          "edges_foldAngle": [
+            null,
+            null,
+            null,
+            null
+          ],
+          "faces_vertices": [
+            [
+              3,
+              0,
+              1,
+              2
+            ]
+          ],
+          "zhezhi_dual_primal_vertices": [
+            0
+          ]
+        },
+        "stats": {
+          "vertices": 12,
+          "edges": 20,
+          "faces": 9,
+          "tiles": 4,
+          "mountainEdges": 4,
+          "valleyEdges": 8,
+          "boundaryEdges": 8,
+          "unassignedEdges": 0,
+          "elapsedMs": 4,
+          "parameters": {
+            "family": "primal-dual",
+            "tiling": "square",
+            "rings": 1,
+            "reciprocalMethod": "original-min-total-pleat",
+            "dualTargets": [
+              [
+                1.0,
+                0.5
+              ],
+              [
+                -1.0,
+                0.5
+              ],
+              [
+                -1.0,
+                -0.5
+              ],
+              [
+                1.0,
+                -0.5
+              ]
+            ],
+            "motherParams": {
+              "family": "custom",
+              "angle": 36.0,
+              "scale": 0.3,
+              "vertices": [
+                [
+                  0.0,
+                  0.0
+                ],
+                [
+                  1.0,
+                  0.0
+                ],
+                [
+                  0.0,
+                  1.0
+                ],
+                [
+                  -1.0,
+                  0.0
+                ],
+                [
+                  0.0,
+                  -1.0
+                ]
+              ],
+              "faces": [
+                [
+                  0,
+                  1,
+                  2
+                ],
+                [
+                  0,
+                  2,
+                  3
+                ],
+                [
+                  0,
+                  3,
+                  4
+                ],
+                [
+                  0,
+                  4,
+                  1
+                ]
+              ],
+              "repeatX": 1,
+              "repeatY": 1
+            },
+            "angle": 30.0,
+            "scale": 0.5773502691896258
+          },
+          "checks": {
+            "geometry": {
+              "status": "passed",
+              "zeroLengthEdges": [],
+              "duplicateEdges": [],
+              "crossingCount": 0,
+              "crossingPairs": [],
+              "crossingPairsTruncated": false,
+              "tolerance": 2.1830127018e-08
+            },
+            "local": {
+              "status": "passed",
+              "interiorVertices": 4,
+              "oddDegreeVertices": [],
+              "kawasakiViolations": [],
+              "maekawaViolations": [],
+              "unknownAssignmentVertices": [],
+              "maxKawasakiErrorDeg": 0.0,
+              "toleranceDeg": 0.001
+            },
+            "lff": {
+              "status": "passed",
+              "scope": "Origamica degree-four local M/V constraints; no global layer order or fold-path proof",
+              "interiorVertices": 4,
+              "checkedVertices": 4,
+              "toleranceDeg": 0.001,
+              "graphVertices": [
+                [
+                  -0.875,
+                  -0.07216878360000001
+                ],
+                [
+                  -0.8415063509,
+                  -0.30283121635
+                ],
+                [
+                  -0.69716878365,
+                  -0.55283121635
+                ],
+                [
+                  -0.55283121635,
+                  0.69716878365
+                ],
+                [
+                  -0.40849364909999997,
+                  0.44716878365
+                ],
+                [
+                  -0.44716878365,
+                  -0.40849364909999997
+                ],
+                [
+                  -0.375,
+                  0.21650635090000003
+                ],
+                [
+                  -0.21650635090000003,
+                  -0.375
+                ],
+                [
+                  -0.30283121635,
+                  0.8415063509
+                ],
+                [
+                  -0.07216878360000001,
+                  0.875
+                ],
+                [
+                  0.07216878360000001,
+                  -0.875
+                ],
+                [
+                  0.21650635090000003,
+                  0.375
+                ],
+                [
+                  0.30283121635,
+                  -0.8415063509
+                ],
+                [
+                  0.375,
+                  -0.21650635090000003
+                ],
+                [
+                  0.40849364909999997,
+                  -0.44716878365
+                ],
+                [
+                  0.44716878365,
+                  0.40849364909999997
+                ],
+                [
+                  0.69716878365,
+                  0.55283121635
+                ],
+                [
+                  0.55283121635,
+                  -0.69716878365
+                ],
+                [
+                  0.8415063509,
+                  0.30283121635
+                ],
+                [
+                  0.875,
+                  0.07216878360000001
+                ]
+              ],
+              "graphEdges": [
+                [
+                  5,
+                  7
+                ],
+                [
+                  6,
+                  1
+                ],
+                [
+                  4,
+                  6
+                ],
+                [
+                  11,
+                  8
+                ],
+                [
+                  14,
+                  13
+                ],
+                [
+                  7,
+                  12
+                ],
+                [
+                  15,
+                  11
+                ],
+                [
+                  13,
+                  18
+                ]
+              ],
+              "edgeTypes": [
+                -1,
+                1,
+                -1,
+                1,
+                -1,
+                1,
+                -1,
+                1
+              ],
+              "constraintVertices": [
+                2,
+                2,
+                5,
+                5,
+                6,
+                6,
+                9,
+                9
+              ],
+              "assignmentViolations": [],
+              "unassignedConstraints": []
+            },
+            "layerOrder": {
+              "status": "not_checked"
+            }
+          },
+          "foldability": "candidate",
+          "kind": "shrink_rotate"
+        },
+        "warnings": [
+          "本结果是参数化候选折痕图，不是保证可折的成品；即使局部条件通过，整体层序、碰撞、连续折叠路径及实物小样仍未验证。"
+        ],
+        "source": {
+          "name": "折纸工作台 / Pleat",
+          "license": "GPL-3.0-only / MIT",
+          "algorithm": "perpendicular-reciprocal / Shrink-Rotate",
+          "version": 1,
+          "motherSource": {},
+          "motherFamily": "custom",
+          "reciprocalMinTotalPleat": {
+            "schema": "origamica-reciprocal-min-total-pleat-v1",
+            "function": "MakeReciprocalDiagram",
+            "definitionCell": "In[1527]",
+            "definitionLines": [
+              105170,
+              105763
+            ],
+            "method": "MinTotalPleat",
+            "branchLines": [
+              105409,
+              105435
+            ],
+            "commonSolveLines": [
+              105595,
+              105625
+            ],
+            "commonFitLines": [
+              105627,
+              105674
+            ],
+            "indexConvention": "zero-based; supplied pairing order",
+            "input": {
+              "vertices": [
+                [
+                  0.0,
+                  0.0
+                ],
+                [
+                  1.0,
+                  0.0
+                ],
+                [
+                  0.0,
+                  1.0
+                ],
+                [
+                  -1.0,
+                  0.0
+                ],
+                [
+                  0.0,
+                  -1.0
+                ]
+              ],
+              "interiorEdges": [
+                [
+                  0,
+                  1
+                ],
+                [
+                  0,
+                  2
+                ],
+                [
+                  0,
+                  3
+                ],
+                [
+                  0,
+                  4
+                ]
+              ],
+              "dualVertices": [
+                [
+                  1.0,
+                  0.5
+                ],
+                [
+                  -1.0,
+                  0.5
+                ],
+                [
+                  -1.0,
+                  -0.5
+                ],
+                [
+                  1.0,
+                  -0.5
+                ]
+              ],
+              "dualEdges": [
+                [
+                  0,
+                  3
+                ],
+                [
+                  0,
+                  1
+                ],
+                [
+                  1,
+                  2
+                ],
+                [
+                  2,
+                  3
+                ]
+              ]
+            },
+            "inputSigns": [
+              -1,
+              1,
+              1,
+              1
+            ],
+            "anchor": [
+              0,
+              0
+            ],
+            "minimumNormalizedPleat": 1,
+            "normalizedDualVertices": [
+              [
+                -0.0,
+                -0.0
+              ],
+              [
+                -1.0,
+                -0.0
+              ],
+              [
+                -1.0,
+                -1.0
+              ],
+              [
+                -0.0,
+                -1.0
+              ]
+            ],
+            "normalizedPleatLengths": [
+              1.0,
+              1.0,
+              1.0,
+              1.0
+            ],
+            "totalNormalizedPleat": 4.0,
+            "certificate": {
+              "equalityMultipliers": [
+                -0.0,
+                -0.0,
+                1.0,
+                -1.0,
+                1.0,
+                1.0
+              ],
+              "widthMultipliers": [
+                0.0,
+                2.0,
+                2.0,
+                0.0
+              ],
+              "positiveWidthConstraints": [
+                1,
+                2
+              ],
+              "uniqueRank": 8,
+              "variableCount": 8,
+              "tolerance": 1e-08,
+              "rankTolerance": 1e-09,
+              "positiveThreshold": 2e-09
+            },
+            "fit": {
+              "scale": 1.5,
+              "translation": [
+                0.75,
+                0.75
+              ],
+              "squaredDeviation": 0.5
+            },
+            "returnedDualVertices": [
+              [
+                0.75,
+                0.75
+              ],
+              [
+                -0.75,
+                0.75
+              ],
+              [
+                -0.75,
+                -0.75
+              ],
+              [
+                0.75,
+                -0.75
+              ]
+            ],
+            "solver": "SciPy HiGHS linear programming; closed-form common RMS fit",
+            "uniqueOptimumRequired": true,
+            "wolframExecuted": false,
+            "symbolicOptionsImplemented": false,
+            "motherAdapter": "sorted undirected shared primal edges; paired face traversal order; explicit input duals"
+          },
+          "assignmentMethod": "Origamica directed primal input edges / CCW dual pairs"
+        }
+      }
+    },
+    {
+      "name": "optional-face-controls",
+      "params": {
+        "family": "primal-dual",
+        "tiling": "square",
+        "rings": 1,
+        "angle": 30,
+        "scale": 0.5773502691896258,
+        "parameterization": "gamma-alpha",
+        "gamma": 1,
+        "pleatAngle": 30,
+        "twistDirection": "ccw",
+        "reciprocalMethod": "original-min-total-pleat",
+        "motherParams": {
+          "family": "custom",
+          "vertices": [
+            [
+              0,
+              0
+            ],
+            [
+              1,
+              0
+            ],
+            [
+              0,
+              1
+            ],
+            [
+              -1,
+              0
+            ],
+            [
+              0,
+              -1
+            ]
+          ],
+          "faces": [
+            [
+              0,
+              1,
+              2
+            ],
+            [
+              0,
+              2,
+              3
+            ],
+            [
+              0,
+              3,
+              4
+            ],
+            [
+              0,
+              4,
+              1
+            ]
+          ],
+          "repeatX": 1,
+          "repeatY": 1,
+          "angle": 36,
+          "scale": 0.3,
+          "customOutput": "twist"
+        },
+        "dualTargets": [
+          [
+            1,
+            0.5
+          ],
+          [
+            -1,
+            0.5
+          ],
+          [
+            -1,
+            -0.5
+          ],
+          [
+            1,
+            -0.5
+          ]
+        ],
+        "visibleTopFace": 1,
+        "faceupFace": 1
+      },
+      "response": {
+        "preview": {
+          "kind": "shrink-rotate",
+          "vertices": [
+            [
+              -0.75,
+              -0.75,
+              -0.25,
+              0.75
+            ],
+            [
+              -0.75,
+              0.75,
+              -0.25,
+              -0.75
+            ],
+            [
+              -0.75,
+              -0.75,
+              0.75,
+              0.75
+            ],
+            [
+              -0.75,
+              0.75,
+              0.75,
+              0.25
+            ],
+            [
+              -0.75,
+              -0.75,
+              0.75,
+              -0.25
+            ],
+            [
+              -0.75,
+              0.75,
+              0.75,
+              -0.75
+            ],
+            [
+              0.75,
+              -0.75,
+              -0.75,
+              0.75
+            ],
+            [
+              0.75,
+              0.75,
+              -0.75,
+              0.25
+            ],
+            [
+              0.75,
+              -0.75,
+              -0.75,
+              -0.25
+            ],
+            [
+              0.75,
+              0.75,
+              -0.75,
+              -0.75
+            ],
+            [
+              0.75,
+              -0.75,
+              0.25,
+              0.75
+            ],
+            [
+              0.75,
+              0.75,
+              0.25,
+              -0.75
+            ]
+          ]
+        },
+        "fold": {
+          "file_spec": 1.2,
+          "file_creator": "折纸工作台 / Pleat / perpendicular-reciprocal / Shrink-Rotate",
+          "file_classes": [
+            "singleModel"
+          ],
+          "frame_classes": [
+            "creasePattern"
+          ],
+          "frame_attributes": [
+            "2D"
+          ],
+          "vertices_coords": [
+            [
+              -1.0915063509,
+              -0.4471687836
+            ],
+            [
+              -0.6584936491,
+              0.3028312164
+            ],
+            [
+              -0.5915063509,
+              -0.1584936491
+            ],
+            [
+              -0.4471687836,
+              1.0915063509
+            ],
+            [
+              -0.3028312164,
+              -0.6584936491
+            ],
+            [
+              -0.1584936491,
+              0.5915063509
+            ],
+            [
+              0.1584936491,
+              -0.5915063509
+            ],
+            [
+              0.3028312164,
+              0.6584936491
+            ],
+            [
+              0.4471687836,
+              -1.0915063509
+            ],
+            [
+              0.5915063509,
+              0.1584936491
+            ],
+            [
+              0.6584936491,
+              -0.3028312164
+            ],
+            [
+              1.0915063509,
+              0.4471687836
+            ]
+          ],
+          "edges_vertices": [
+            [
+              0,
+              1
+            ],
+            [
+              0,
+              2
+            ],
+            [
+              0,
+              4
+            ],
+            [
+              1,
+              3
+            ],
+            [
+              1,
+              5
+            ],
+            [
+              2,
+              4
+            ],
+            [
+              2,
+              5
+            ],
+            [
+              2,
+              6
+            ],
+            [
+              3,
+              5
+            ],
+            [
+              3,
+              7
+            ],
+            [
+              4,
+              8
+            ],
+            [
+              5,
+              9
+            ],
+            [
+              6,
+              8
+            ],
+            [
+              6,
+              9
+            ],
+            [
+              6,
+              10
+            ],
+            [
+              7,
+              9
+            ],
+            [
+              7,
+              11
+            ],
+            [
+              8,
+              10
+            ],
+            [
+              9,
+              11
+            ],
+            [
+              10,
+              11
+            ]
+          ],
+          "edges_assignment": [
+            "B",
+            "V",
+            "B",
+            "B",
+            "M",
+            "M",
+            "V",
+            "V",
+            "V",
+            "B",
+            "B",
+            "V",
+            "V",
+            "V",
+            "M",
+            "M",
+            "B",
+            "B",
+            "V",
+            "B"
+          ],
+          "edges_foldAngle": [
+            null,
+            180,
+            null,
+            null,
+            -180,
+            -180,
+            180,
+            180,
+            180,
+            null,
+            null,
+            180,
+            180,
+            180,
+            -180,
+            -180,
+            null,
+            null,
+            180,
+            null
+          ],
+          "faces_vertices": [
+            [
+              0,
+              1,
+              5,
+              2
+            ],
+            [
+              0,
+              2,
+              4
+            ],
+            [
+              1,
+              3,
+              5
+            ],
+            [
+              2,
+              5,
+              9,
+              6
+            ],
+            [
+              2,
+              6,
+              8,
+              4
+            ],
+            [
+              3,
+              7,
+              9,
+              5
+            ],
+            [
+              6,
+              9,
+              11,
+              10
+            ],
+            [
+              6,
+              10,
+              8
+            ],
+            [
+              7,
+              11,
+              9
+            ]
+          ],
+          "frame_description": "参数化候选；整体层序和无碰撞路径未验证。"
+        },
+        "mother": {
+          "file_spec": 1.2,
+          "file_classes": [
+            "singleModel"
+          ],
+          "frame_classes": [
+            "creasePattern"
+          ],
+          "frame_attributes": [
+            "2D"
+          ],
+          "vertices_coords": [
+            [
+              0.0,
+              0.0
+            ],
+            [
+              1.0,
+              0.0
+            ],
+            [
+              0.0,
+              1.0
+            ],
+            [
+              -1.0,
+              0.0
+            ],
+            [
+              0.0,
+              -1.0
+            ]
+          ],
+          "edges_vertices": [
+            [
+              0,
+              1
+            ],
+            [
+              1,
+              2
+            ],
+            [
+              0,
+              2
+            ],
+            [
+              2,
+              3
+            ],
+            [
+              0,
+              3
+            ],
+            [
+              3,
+              4
+            ],
+            [
+              0,
+              4
+            ],
+            [
+              1,
+              4
+            ]
+          ],
+          "edges_assignment": [
+            "U",
+            "B",
+            "U",
+            "B",
+            "U",
+            "B",
+            "U",
+            "B"
+          ],
+          "edges_foldAngle": [
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
+          ],
+          "faces_vertices": [
+            [
+              2,
+              1,
+              0
+            ],
+            [
+              3,
+              2,
+              0
+            ],
+            [
+              4,
+              3,
+              0
+            ],
+            [
+              1,
+              4,
+              0
+            ]
+          ],
+          "zhezhi_custom_face_index": [
+            0,
+            1,
+            2,
+            3
+          ],
+          "zhezhi_custom_polygons": [
+            [
+              [
+                0.0,
+                0.0
+              ],
+              [
+                1.0,
+                0.0
+              ],
+              [
+                0.0,
+                1.0
+              ]
+            ],
+            [
+              [
+                0.0,
+                0.0
+              ],
+              [
+                0.0,
+                1.0
+              ],
+              [
+                -1.0,
+                0.0
+              ]
+            ],
+            [
+              [
+                0.0,
+                0.0
+              ],
+              [
+                -1.0,
+                0.0
+              ],
+              [
+                0.0,
+                -1.0
+              ]
+            ],
+            [
+              [
+                0.0,
+                0.0
+              ],
+              [
+                0.0,
+                -1.0
+              ],
+              [
+                1.0,
+                0.0
+              ]
+            ]
+          ]
+        },
+        "dual": {
+          "file_spec": 1.2,
+          "file_classes": [
+            "singleModel"
+          ],
+          "frame_classes": [
+            "creasePattern"
+          ],
+          "frame_attributes": [
+            "2D"
+          ],
+          "vertices_coords": [
+            [
+              0.75,
+              0.75
+            ],
+            [
+              -0.75,
+              0.75
+            ],
+            [
+              -0.75,
+              -0.75
+            ],
+            [
+              0.75,
+              -0.75
+            ]
+          ],
+          "edges_vertices": [
+            [
+              0,
+              3
+            ],
+            [
+              0,
+              1
+            ],
+            [
+              1,
+              2
+            ],
+            [
+              2,
+              3
+            ]
+          ],
+          "edges_assignment": [
+            "A",
+            "A",
+            "A",
+            "A"
+          ],
+          "edges_foldAngle": [
+            null,
+            null,
+            null,
+            null
+          ],
+          "faces_vertices": [
+            [
+              3,
+              0,
+              1,
+              2
+            ]
+          ],
+          "zhezhi_dual_primal_vertices": [
+            0
+          ]
+        },
+        "stats": {
+          "vertices": 12,
+          "edges": 20,
+          "faces": 9,
+          "tiles": 4,
+          "mountainEdges": 4,
+          "valleyEdges": 8,
+          "boundaryEdges": 8,
+          "unassignedEdges": 0,
+          "elapsedMs": 4,
+          "parameters": {
+            "family": "primal-dual",
+            "tiling": "square",
+            "rings": 1,
+            "reciprocalMethod": "original-min-total-pleat",
+            "dualTargets": [
+              [
+                1.0,
+                0.5
+              ],
+              [
+                -1.0,
+                0.5
+              ],
+              [
+                -1.0,
+                -0.5
+              ],
+              [
+                1.0,
+                -0.5
+              ]
+            ],
+            "motherParams": {
+              "family": "custom",
+              "angle": 36.0,
+              "scale": 0.3,
+              "vertices": [
+                [
+                  0.0,
+                  0.0
+                ],
+                [
+                  1.0,
+                  0.0
+                ],
+                [
+                  0.0,
+                  1.0
+                ],
+                [
+                  -1.0,
+                  0.0
+                ],
+                [
+                  0.0,
+                  -1.0
+                ]
+              ],
+              "faces": [
+                [
+                  0,
+                  1,
+                  2
+                ],
+                [
+                  0,
+                  2,
+                  3
+                ],
+                [
+                  0,
+                  3,
+                  4
+                ],
+                [
+                  0,
+                  4,
+                  1
+                ]
+              ],
+              "repeatX": 1,
+              "repeatY": 1
+            },
+            "visibleTopFace": 1,
+            "faceupFace": 1,
+            "angle": 30.000000000000004,
+            "scale": 0.5773502691896257,
+            "twistDirection": "ccw",
+            "parameterization": "gamma-alpha",
+            "gamma": 1.0,
+            "pleatAngle": 30.0
+          },
+          "checks": {
+            "geometry": {
+              "status": "passed",
+              "zeroLengthEdges": [],
+              "duplicateEdges": [],
+              "crossingCount": 0,
+              "crossingPairs": [],
+              "crossingPairsTruncated": false,
+              "tolerance": 2.1830127018e-08
+            },
+            "local": {
+              "status": "passed",
+              "interiorVertices": 4,
+              "oddDegreeVertices": [],
+              "kawasakiViolations": [],
+              "maekawaViolations": [],
+              "unknownAssignmentVertices": [],
+              "maxKawasakiErrorDeg": 0.0,
+              "toleranceDeg": 0.001
+            },
+            "lff": {
+              "status": "passed",
+              "scope": "Origamica degree-four local M/V constraints; no global layer order or fold-path proof",
+              "interiorVertices": 4,
+              "checkedVertices": 4,
+              "toleranceDeg": 0.001,
+              "graphVertices": [
+                [
+                  -0.875,
+                  -0.07216878360000001
+                ],
+                [
+                  -0.8415063509,
+                  -0.30283121635
+                ],
+                [
+                  -0.69716878365,
+                  -0.55283121635
+                ],
+                [
+                  -0.55283121635,
+                  0.69716878365
+                ],
+                [
+                  -0.40849364909999997,
+                  0.44716878365
+                ],
+                [
+                  -0.44716878365,
+                  -0.40849364909999997
+                ],
+                [
+                  -0.375,
+                  0.21650635090000003
+                ],
+                [
+                  -0.21650635090000003,
+                  -0.375
+                ],
+                [
+                  -0.30283121635,
+                  0.8415063509
+                ],
+                [
+                  -0.07216878360000001,
+                  0.875
+                ],
+                [
+                  0.07216878360000001,
+                  -0.875
+                ],
+                [
+                  0.21650635090000003,
+                  0.375
+                ],
+                [
+                  0.30283121635,
+                  -0.8415063509
+                ],
+                [
+                  0.375,
+                  -0.21650635090000003
+                ],
+                [
+                  0.40849364909999997,
+                  -0.44716878365
+                ],
+                [
+                  0.44716878365,
+                  0.40849364909999997
+                ],
+                [
+                  0.69716878365,
+                  0.55283121635
+                ],
+                [
+                  0.55283121635,
+                  -0.69716878365
+                ],
+                [
+                  0.8415063509,
+                  0.30283121635
+                ],
+                [
+                  0.875,
+                  0.07216878360000001
+                ]
+              ],
+              "graphEdges": [
+                [
+                  5,
+                  7
+                ],
+                [
+                  6,
+                  1
+                ],
+                [
+                  4,
+                  6
+                ],
+                [
+                  11,
+                  8
+                ],
+                [
+                  14,
+                  13
+                ],
+                [
+                  7,
+                  12
+                ],
+                [
+                  15,
+                  11
+                ],
+                [
+                  13,
+                  18
+                ]
+              ],
+              "edgeTypes": [
+                -1,
+                1,
+                -1,
+                1,
+                -1,
+                1,
+                -1,
+                1
+              ],
+              "constraintVertices": [
+                2,
+                2,
+                5,
+                5,
+                6,
+                6,
+                9,
+                9
+              ],
+              "assignmentViolations": [],
+              "unassignedConstraints": []
+            },
+            "layerOrder": {
+              "status": "not_checked"
+            }
+          },
+          "foldability": "candidate",
+          "kind": "shrink_rotate"
+        },
+        "warnings": [
+          "本结果是参数化候选折痕图，不是保证可折的成品；即使局部条件通过，整体层序、碰撞、连续折叠路径及实物小样仍未验证。"
+        ],
+        "source": {
+          "name": "折纸工作台 / Pleat",
+          "license": "GPL-3.0-only / MIT",
+          "algorithm": "perpendicular-reciprocal / Shrink-Rotate",
+          "version": 1,
+          "motherSource": {},
+          "motherFamily": "custom",
+          "reciprocalMinTotalPleat": {
+            "schema": "origamica-reciprocal-min-total-pleat-v1",
+            "function": "MakeReciprocalDiagram",
+            "definitionCell": "In[1527]",
+            "definitionLines": [
+              105170,
+              105763
+            ],
+            "method": "MinTotalPleat",
+            "branchLines": [
+              105409,
+              105435
+            ],
+            "commonSolveLines": [
+              105595,
+              105625
+            ],
+            "commonFitLines": [
+              105627,
+              105674
+            ],
+            "indexConvention": "zero-based; supplied pairing order",
+            "input": {
+              "vertices": [
+                [
+                  0.0,
+                  0.0
+                ],
+                [
+                  1.0,
+                  0.0
+                ],
+                [
+                  0.0,
+                  1.0
+                ],
+                [
+                  -1.0,
+                  0.0
+                ],
+                [
+                  0.0,
+                  -1.0
+                ]
+              ],
+              "interiorEdges": [
+                [
+                  0,
+                  1
+                ],
+                [
+                  0,
+                  2
+                ],
+                [
+                  0,
+                  3
+                ],
+                [
+                  0,
+                  4
+                ]
+              ],
+              "dualVertices": [
+                [
+                  1.0,
+                  0.5
+                ],
+                [
+                  -1.0,
+                  0.5
+                ],
+                [
+                  -1.0,
+                  -0.5
+                ],
+                [
+                  1.0,
+                  -0.5
+                ]
+              ],
+              "dualEdges": [
+                [
+                  0,
+                  3
+                ],
+                [
+                  0,
+                  1
+                ],
+                [
+                  1,
+                  2
+                ],
+                [
+                  2,
+                  3
+                ]
+              ]
+            },
+            "inputSigns": [
+              -1,
+              1,
+              1,
+              1
+            ],
+            "anchor": [
+              0,
+              0
+            ],
+            "minimumNormalizedPleat": 1,
+            "normalizedDualVertices": [
+              [
+                -0.0,
+                -0.0
+              ],
+              [
+                -1.0,
+                -0.0
+              ],
+              [
+                -1.0,
+                -1.0
+              ],
+              [
+                -0.0,
+                -1.0
+              ]
+            ],
+            "normalizedPleatLengths": [
+              1.0,
+              1.0,
+              1.0,
+              1.0
+            ],
+            "totalNormalizedPleat": 4.0,
+            "certificate": {
+              "equalityMultipliers": [
+                -0.0,
+                -0.0,
+                1.0,
+                -1.0,
+                1.0,
+                1.0
+              ],
+              "widthMultipliers": [
+                0.0,
+                2.0,
+                2.0,
+                0.0
+              ],
+              "positiveWidthConstraints": [
+                1,
+                2
+              ],
+              "uniqueRank": 8,
+              "variableCount": 8,
+              "tolerance": 1e-08,
+              "rankTolerance": 1e-09,
+              "positiveThreshold": 2e-09
+            },
+            "fit": {
+              "scale": 1.5,
+              "translation": [
+                0.75,
+                0.75
+              ],
+              "squaredDeviation": 0.5
+            },
+            "returnedDualVertices": [
+              [
+                0.75,
+                0.75
+              ],
+              [
+                -0.75,
+                0.75
+              ],
+              [
+                -0.75,
+                -0.75
+              ],
+              [
+                0.75,
+                -0.75
+              ]
+            ],
+            "solver": "SciPy HiGHS linear programming; closed-form common RMS fit",
+            "uniqueOptimumRequired": true,
+            "wolframExecuted": false,
+            "symbolicOptionsImplemented": false,
+            "motherAdapter": "sorted undirected shared primal edges; paired face traversal order; explicit input duals"
+          },
+          "assignmentMethod": "Origamica directed primal input edges / CCW dual pairs",
+          "foldedForm": [
+            [
+              -0.9330127018922192,
+              0.14433756729740638
+            ],
+            [
+              -0.06698729810778065,
+              0.14433756729740646
+            ],
+            [
+              -0.4330127018922193,
+              0.4330127018922193
+            ],
+            [
+              0.14433756729740638,
+              0.9330127018922192
+            ],
+            [
+              -0.14433756729740646,
+              -0.06698729810778065
+            ],
+            [
+              0.4330127018922193,
+              0.4330127018922193
+            ],
+            [
+              -0.4330127018922193,
+              -0.4330127018922193
+            ],
+            [
+              0.14433756729740646,
+              0.06698729810778065
+            ],
+            [
+              -0.14433756729740638,
+              -0.9330127018922192
+            ],
+            [
+              0.4330127018922193,
+              -0.4330127018922193
+            ],
+            [
+              0.06698729810778065,
+              -0.14433756729740646
+            ],
+            [
+              0.9330127018922192,
+              -0.14433756729740638
+            ]
+          ],
+          "foldedFormMethod": "Origamica gamma/-alpha direct construction",
+          "foldedFormMaxIsometryError": 1.32159838628354e-10
+        }
+      }
+    }
+  ]
+}

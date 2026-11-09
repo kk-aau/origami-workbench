@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>折纸工坊 · 三维模拟</title>
+  <link rel="icon" href="data:," />
+  <style>
+    :root{font-family:"Microsoft YaHei UI","Microsoft YaHei",sans-serif;color:#37514a;background:#f0f3ef}
+    *{box-sizing:border-box}body{margin:0;overflow:hidden}canvas{display:block;width:100vw;height:100vh;touch-action:none;cursor:grab}canvas:active{cursor:grabbing}
+    #status{position:fixed;top:16px;left:18px;max-width:calc(100% - 36px);padding:8px 12px;background:#ffffffed;border:1px solid #dce3db;border-radius:7px;font-size:12px;line-height:1.65;white-space:pre-line;pointer-events:none}
+    #status.error{color:#a93437;background:#fff1f0;border-color:#e9b6b6}
+    #hint{position:fixed;bottom:20px;left:128px;max-width:calc(100% - 144px);color:#56675e;font-size:12px;pointer-events:none;background:#f0f3efdc;padding:5px 8px;border-radius:4px}
+    #view-actions{position:fixed;right:16px;top:56px;display:flex;gap:5px;max-width:calc(100% - 32px);flex-wrap:wrap;justify-content:flex-end}
+    #view-actions button{border:1px solid #ced8cf;background:#fff;color:#37514a;border-radius:5px;padding:7px 10px;cursor:pointer;font:inherit;font-size:12px}
+    #view-actions button:focus-visible{outline:3px solid #2f7660;outline-offset:2px}
+    #view-actions button[aria-pressed="true"]{background:#dcece4;border-color:#639680}
+    #view-actions button:disabled{opacity:.5;cursor:default}
+    canvas[data-interaction="grab"],canvas[data-interaction="pin"]{cursor:crosshair}
+    #pinned-vertices{pointer-events:none}#pinned-vertices i{position:fixed;width:10px;height:10px;border:2px solid #9a4914;background:#ffe2af;transform:translate(-50%,-50%)}
+    #vertex-marker{position:fixed;width:13px;height:13px;border:2px solid #247b68;border-radius:50%;background:#e4fff3c9;box-shadow:0 0 0 3px #ffffffc7;transform:translate(-50%,-50%);pointer-events:none}
+    #vertex-marker[data-state="grab"]{border-color:#b05d1e;background:#ffe6badb}
+    #orientation-cube{position:fixed;left:16px;bottom:16px;width:104px;height:122px;touch-action:none;user-select:none;cursor:grab}
+    #orientation-cube:active{cursor:grabbing}#orientation-cube svg{width:104px;height:104px;display:block;overflow:visible}
+    #orientation-cube g{cursor:pointer;outline:none}#orientation-cube polygon{stroke:#f6f8f5;stroke-width:1;stroke-linejoin:round;transition:fill .12s}
+    #orientation-cube g:hover polygon,#orientation-cube g:focus-visible polygon{fill:#b7d1c0;stroke:#57816d;stroke-width:1.5}
+    #orientation-cube text{font-size:10px;fill:#4e6258;pointer-events:none}
+    .view-cube-reset{display:block;margin:-5px auto 0;border:0;border-radius:3px;background:#f7f9f4cc;color:#56675e;font:inherit;font-size:12px;padding:3px 11px;cursor:pointer}
+    .view-cube-reset:hover{background:#dce9dd;color:#355a45}.view-cube-reset:focus-visible{outline:2px solid #57816d;outline-offset:2px}
+    body:has(#simulation[data-animation="true"]) :is(#status,#hint,#view-actions){display:none}
+  </style>
+</head>
+<body>
+  <canvas id="simulation" aria-label="折纸三维模拟。拖动旋转视角，滚轮缩放。按住 Shift 或开启顶点塑形后拖动顶点调整纸面。"></canvas>
+  <div id="vertex-marker" hidden aria-hidden="true"></div>
+  <div id="pinned-vertices" aria-hidden="true"></div>
+  <div id="status" role="status" aria-live="polite">正在加载本地模拟引擎…</div>
+  <div id="hint">拖动旋转 · 滚轮缩放 · Shift+拖动顶点塑形</div>
+  <div id="orientation-cube"></div>
+  <div id="view-actions"><button id="vertex-grab" type="button" aria-pressed="false">顶点塑形</button><button id="vertex-pin" type="button" aria-pressed="false" title="点击顶点固定，再次点击解除">固定点</button><button id="pins-clear" type="button" disabled>解除全部</button><button id="pose-undo" type="button" title="撤销三维操作（Ctrl+Z）" disabled>撤销</button><button id="pose-redo" type="button" title="重做三维操作（Ctrl+Shift+Z）" disabled>重做</button><button id="view-reset" type="button">视角复位</button></div>
+  <script type="module" src="/src/engine/simframe.ts"></script>
+</body>
+</html>

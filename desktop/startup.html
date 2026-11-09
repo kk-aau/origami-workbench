@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <title>折纸工坊 · 正在启动</title>
+  <link rel="stylesheet" href="../src/ui/dialog.css">
+  <link rel="stylesheet" href="startup.css">
+</head>
+<body>
+  <main class="startup-shell" data-startup-stage="starting" data-startup-slow="false">
+    <header class="startup-drag">
+      <button type="button" id="startup-close" aria-label="退出启动" title="退出启动">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>
+      </button>
+    </header>
+    <div class="startup-brand">
+      <svg class="startup-mark" viewBox="0 0 256 256" aria-hidden="true">
+        <rect width="256" height="256" fill="#1f503e"/>
+        <g fill="none" stroke="#fbfbf1" stroke-width="7">
+          <path d="M43 43H213V213H43ZM43 43 213 213M43 213 213 43M128 43V213M43 128 128 213"/>
+          <path class="crease-trace" d="M43 43 128 128 213 43M128 128 128 213"/>
+        </g>
+      </svg>
+      <div>
+        <h1>折纸工坊</h1>
+        <p class="startup-caption">中文折纸设计工作台</p>
+      </div>
+    </div>
+    <section class="startup-status" role="status" aria-live="polite" aria-atomic="true">
+      <h2 id="startup-title">正在启动折纸工坊…</h2>
+      <p id="startup-detail">正在准备本机工作台，请稍候。</p>
+    </section>
+    <footer class="startup-footer">
+      <span class="startup-local">离线启动 · 数据保存在本机</span>
+      <span id="startup-version"></span>
+      <div class="startup-actions" hidden>
+        <button type="button" class="startup-button" id="startup-open-logs">打开日志文件夹</button>
+        <button type="button" class="startup-button is-primary" id="startup-quit">退出应用</button>
+      </div>
+    </footer>
+  </main>
+  <script src="startup.js"></script>
+</body>
+</html>

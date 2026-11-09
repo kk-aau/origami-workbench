@@ -1,0 +1,50 @@
+async page=>{
+ const out='output/original-ring-unsafe-courteous-browser-1010/paraboloidal-x',checks=[],errors=[],downloads=[],responses=[];
+ const check=(ok,name)=>{if(!ok)throw Error(name);checks.push(name);};
+ page.on('pageerror',e=>errors.push(e.message));await page.setViewportSize({width:1000,height:720});await page.evaluate(()=>window.confirm=()=>true);
+ const button=name=>page.getByRole('button',{name,exact:true});
+ const getDownload=async(action,name,origin='user-button')=>{const pending=page.waitForEvent('download');await action();const d=await pending;await d.saveAs(`${out}/${name}`);downloads.push({path:`${out}/${name}`,suggested:d.suggestedFilename(),origin});};
+ const exportDoc=async(format,name)=>{await button('导出作品').click();const dialog=page.getByRole('dialog',{name:'导出作品',exact:true});await dialog.getByRole('combobox').first().selectOption(format);await getDownload(()=>dialog.getByRole('button',{name:'导出文件',exact:true}).click(),name);await button('关闭窗口').click();};
+ const capture=async(response,name)=>{const r=await response.json();check(response.status()===200,`${name}: true public API200`);responses.push({name,query:response.request().postDataJSON(),response:r});
+  await getDownload(()=>page.evaluate(({r,name})=>{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(r,null,2)],{type:'application/json'}));a.download=name;a.click();URL.revokeObjectURL(a.href);},{r,name}),name,'actual-browser-response-capture');return r;};
+ const waitResponse=(predicate,status=200)=>page.waitForResponse(r=>r.status()===status&&r.url().endsWith('/api/tessellate')&&r.request().method()==='POST'&&predicate(r.request().postDataJSON()),{timeout:15000});
+ await button('镶嵌设计').click();await page.getByRole('button',{name:/^\d+ 空间构造$/}).click();await page.getByLabel('空间构造类型',{exact:true}).selectOption('paraboloidal-flasher');
+ await page.waitForTimeout(400);const diagonal=page.getByLabel('抛物面 Flasher 对角折线',{exact:true});
+ check(await diagonal.locator('option[value="X"]').count()===1,'original X option is actually visible in existing construct entry');
+ let pending=waitResponse(p=>p.family==='paraboloidal-flasher'&&p.diagonal==='X'&&p.focalLength===6);await diagonal.selectOption('X');
+ const first=await capture(await pending,'actual-main-default-X-api.json');
+ check(first.stats.parameters.diagonal==='X','real request/result preserve original X');
+ check([first.stats.vertices,first.stats.edges,first.stats.faces].join('/')==='100/196/97','real candidate100/196/97 complete CP');
+ check(first.stats.checks.geometry.status==='passed'&&first.source.planarFaceOverlapChecked===true,'real X CP geometry and area-overlap gates passed');
+ check(first.source.staticGlobalIsometryChecked===true&&first.stats.checks.layerOrder.status==='not_checked','static isometry is distinguished from flat-fold layer certification');
+ await button('采用展开图副本 →').waitFor();check(await button('采用展开图副本 →').isEnabled(),'only valid current X enables ordinary CP adoption');
+ await button('采用展开图副本 →').click();await page.getByLabel('工程名称',{exact:true}).fill('原X抛物面Flasher');
+ check(await button('折痕编辑').getAttribute('aria-pressed')==='true'||!(await diagonal.isVisible()),'actual CP adoption enters crease editing');
+ await exportDoc('json','adopted-default-X.zhezhi.json');await exportDoc('fold','adopted-default-X.fold');await exportDoc('dxf','adopted-default-X.dxf');
+ await page.getByLabel('折痕工程文件',{exact:true}).setInputFiles(`${out}/adopted-default-X.zhezhi.json`);await button('镶嵌设计').click();
+ check(await diagonal.inputValue()==='X','actual JSON reopen restores original X construction parameter');
+ check(await page.getByLabel('焦距 f',{exact:true}).inputValue()==='6','actual JSON reopen restores original focal length');
+ pending=waitResponse(p=>p.family==='paraboloidal-flasher'&&p.diagonal==='X'&&p.focalLength===7);
+ await page.getByLabel('焦距 f',{exact:true}).fill('7');const edited=await capture(await pending,'actual-main-edited-X-api.json');
+ check(edited.stats.parameters.focalLength===7&&edited.stats.parameters.diagonal==='X','parameter adjustment reaches real original X solver');
+ check(JSON.stringify(edited.fold.vertices_coords)!==JSON.stringify(first.fold.vertices_coords),'edited X parameter reconstructs actual CP geometry');
+ check(JSON.stringify(edited.source.foldedForm3D)!==JSON.stringify(first.source.foldedForm3D),'edited X parameter reconstructs indexed spatial FF');
+ check(edited.stats.checks.geometry.status==='passed'&&edited.source.planarFaceOverlapChecked===true,'edited X repeats all geometry and overlap gates');
+ check(await button('采用展开图副本 →').isEnabled(),'edited current verified X can be adopted');await button('采用展开图副本 →').click();
+ await page.getByLabel('工程名称',{exact:true}).fill('原X抛物面Flasher-f7');
+ await exportDoc('json','adopted-edited-X.zhezhi.json');await exportDoc('fold','adopted-edited-X.fold');await exportDoc('dxf','adopted-edited-X.dxf');
+ await page.getByLabel('折痕工程文件',{exact:true}).setInputFiles(`${out}/adopted-edited-X.fold`);
+ await exportDoc('json','reopened-edited-X-fold.zhezhi.json');await button('镶嵌设计').click();
+ check(await diagonal.inputValue()==='X'&&await page.getByLabel('焦距 f',{exact:true}).inputValue()==='7','actual FOLD reopen retains X/f7 source and editable construction');
+ await page.screenshot({path:`${out}/x-candidate-1000x720.png`});
+ pending=waitResponse(p=>p.family==='paraboloidal-flasher'&&p.diagonal==='X'&&p.focalLength===1000000,422);
+ await page.getByLabel('焦距 f',{exact:true}).fill('1000000');let rejected=await pending;
+ check(rejected.status()===422,'unverified near-coincident X branch is truly rejected by public route');
+ await page.getByRole('alert').filter({hasText:'交叉检查'}).waitFor();check(await button('采用展开图副本 →').isDisabled(),'failed X branch cannot adopt prior valid candidate');
+ const failed=await rejected.json();check(!('fold' in failed),'failure does not leak old verified geometry');
+ await page.getByLabel('焦距 f',{exact:true}).fill('7');await page.waitForTimeout(500);
+ check(errors.length===0,'real main App has no runtime page exception');
+ return {verified:true,passed:checks.length,checks,errors,downloads,actualUserDownloads:downloads.filter(d=>d.origin==='user-button').length,
+         actualResponseCaptures:responses.length,bundle:await page.evaluate(()=>Array.from(document.scripts).map(s=>s.src).find(s=>/main-.*\.js/.test(s))),
+         notVerified:['Wolfram numerical Out','flat-fold layer certification','continuous folding/self-collision','native portable application','physical folding/engraving']};
+}

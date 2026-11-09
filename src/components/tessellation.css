@@ -1,0 +1,182 @@
+.tess-controls section{padding:8px 12px!important}
+.inspector:has(.tess-controls){min-width:328px}
+.inspector:has(.tess-controls)>.inspector-heading{display:none}
+.tess-families{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px}
+.tess-families button{display:flex;align-items:center;gap:3px;padding:4px;border:1px solid var(--line,#d4d9d1);border-radius:4px;background:transparent;font-size:11px;white-space:nowrap;min-height:29px}
+.tess-families button span{display:none}
+.tess-families button[aria-pressed=true]{background:#e0ede5;color:#245c47;border-color:#8cb3a0}
+.tess-pair{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.tess-number{min-width:0;margin:3px 0;font-size:11px}
+.tess-number label{display:flex;align-items:center;justify-content:space-between;gap:3px;white-space:nowrap}
+.tess-number input[type=number]{width:60px;min-width:0;height:26px;padding:2px 3px 2px 5px;border:1px solid var(--line);border-radius:4px;background:var(--paper,#fff);color:inherit;font:12px Consolas,monospace}
+.tess-number input[type=number]::-webkit-inner-spin-button{opacity:1}
+.tess-number input[type=range]{display:block;width:100%;height:13px;margin:2px 0 0;padding:0;accent-color:#427560;cursor:ew-resize}
+.tess-number input[aria-invalid=true]{border-color:#b74735}.tess-number small{color:#b74735}
+.tess-controls .number-field{margin:6px 0;gap:5px}
+.tess-pair .number-field{min-width:0;flex-wrap:nowrap}
+.tess-pair .number-input{width:65px;min-width:0}
+.tess-controls .select-field{flex-direction:row;align-items:center;justify-content:space-between;margin:6px 0}
+.tess-controls .select-field select{width:135px;padding:6px}
+.tess-controls .select-field:has(select[aria-label="空间构造类型"]){flex-direction:column;align-items:stretch;gap:3px}
+.tess-controls select[aria-label="空间构造类型"]{width:100%;max-width:100%}
+.tess-source-tools{margin:5px 0;padding:4px 0;border-top:1px solid var(--line)}
+.tess-source-tools .select-field{flex-direction:column;align-items:stretch;gap:4px}
+.tess-source-tools select[aria-label="原式工具与参考示例"]{width:100%;max-width:100%}
+.tess-controls .note{font-size:11px;line-height:1.6;margin-top:7px}
+.tess-controls .tess-generation-error{margin:3px 0;padding:4px 6px;border-left:3px solid #b54a3a;background:#fff2ed;color:#8c392e;line-height:1.35;overflow-wrap:anywhere}
+:root[data-theme="dark"] .tess-controls .tess-generation-error{background:#4a2b28;color:#ffd1c8}
+.tess-actions{display:flex;gap:6px;margin-top:9px}.tess-actions button{flex:1}
+.tess-controls .primal-dual-saved-example{display:block;width:100%;min-height:28px;margin:4px 0 2px;padding:4px 8px;border:1px solid #93b9a4;border-left:3px solid #367b5c;background:color-mix(in srgb,var(--paper,#fff) 78%,#c9e6d3);color:var(--ink,#202124);text-align:left;font-size:11px;font-weight:600}
+.tess-checks{display:flex;gap:6px}.tess-checks span{padding:5px 7px;border-radius:3px;background:#f7e9de;color:#92542f;font-size:12px}.tess-checks span[data-good=true]{background:#e3eee6;color:#356c50}
+.tess-controls summary{cursor:pointer;font-size:12px;color:inherit}.tess-help{padding:12px 14px}.tess-controls h2 small{font-size:10px;color:#9b692e;font-weight:400;margin-left:5px}
+.tess-view-switch{display:flex;gap:4px}.tess-view-switch button{padding:4px 9px;font-size:12px;border:1px solid transparent;border-radius:4px;background:transparent}.tess-view-switch button[aria-pressed=true]{border-color:#9bb5a6;background:#e3eee6;color:#245c47}
+.tess-section-title{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}.tess-section-title h2{margin:0!important}.tess-section-title button{font-size:11px;padding:0 5px;min-height:22px}
+.tess-controls .tess-actions{margin-top:5px;gap:4px}.tess-controls .tess-actions button{font-size:11px;padding:4px;min-height:27px}.tess-controls .number-input{padding:2px 5px}.tess-controls .number-field{font-size:11px;margin:4px 0}
+.tess-controls .ring-curve-actions{gap:2px}.tess-controls .ring-curve-actions button{min-width:0;padding:3px 1px;white-space:nowrap}
+.tess-pair{gap:7px}.tess-pair .number-input{width:60px;flex-shrink:1}.tess-pair .number-field>span:first-child{max-width:none;white-space:nowrap}.tess-controls .text-button{font-size:11px;padding:3px 0;min-height:23px}
+.tess-dialog{position:fixed;inset:0;width:min(800px,92vw);max-height:90vh;margin:auto;padding:20px;background:var(--paper,#fff);color:var(--ink,#202124);border:1px solid var(--line,#ccc);border-radius:8px;box-shadow:0 14px 60px #0003;overflow:auto}.tess-dialog::backdrop{background:#17292066}.tess-dialog header,.tess-dialog footer{display:flex;align-items:center;gap:12px}.tess-dialog header{justify-content:space-between;padding-bottom:10px;border-bottom:1px solid var(--line)}.tess-dialog footer{justify-content:flex-end;margin-top:12px}.tess-dialog footer span{margin-right:auto;font-size:12px}.tess-dialog p{font-size:12px;line-height:1.8}.tess-help-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px 25px}.tess-json{width:100%;height:min(430px,55vh);resize:vertical;font:13px/1.6 Consolas,monospace;padding:10px;margin-top:12px;background:var(--surface);color:var(--ink);border:1px solid var(--line)}
+.tess-dialog .tube-points-json{height:125px;resize:none;margin:6px 0}
+.twist-analysis-ranges{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.twist-analysis-ranges>div{display:flex;flex-direction:column;gap:4px;padding:9px;border:1px solid var(--line,#ccc);border-radius:6px;font-size:12px}.twist-analysis-ranges span{font-variant-numeric:tabular-nums}.twist-analysis-angle{display:flex;align-items:end;gap:16px;margin:12px 0}.twist-analysis-angle>span{font-size:12px;padding-bottom:5px}.twist-type-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(85px,1fr));gap:5px;max-height:34vh;overflow:auto}.twist-type-grid code{padding:5px 8px;background:var(--surface,#f5f7f5);border:1px solid var(--line,#ccc);border-radius:4px;text-align:center;font-size:12px;letter-spacing:1px}@media(max-width:620px){.twist-analysis-ranges{grid-template-columns:1fr}.twist-analysis-angle{align-items:start;flex-direction:column}}
+.spherical-vertex-inputs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:2px 18px;margin-top:8px}.spherical-vertex-inputs .number-field{min-width:0}.spherical-vertex-results{grid-template-columns:repeat(4,minmax(0,1fr));margin-top:12px}@media(max-width:620px){.spherical-vertex-results{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.spherical-vertex-tabs{display:flex;gap:4px;margin-top:8px}.spherical-vertex-tabs button{font-size:11px;padding:4px 9px;min-height:26px;border:1px solid var(--line,#ccc);border-radius:4px;background:transparent}.spherical-vertex-tabs button[aria-pressed=true]{border-color:#8cb3a0;background:#e0ede5;color:#245c47}.spherical-branch-results{margin-top:9px}.spherical-branch-results p{margin:0 0 5px}.spherical-branch-results table{width:100%;border-collapse:collapse;font-size:12px}.spherical-branch-results th,.spherical-branch-results td{padding:4px 7px;border:1px solid var(--line,#ccc);text-align:center}.spherical-branch-results tbody th{text-align:left;font-weight:500}.spherical-branch-results thead{background:var(--surface,#f5f7f5)}
+.twist-properties .note{margin:6px 0 4px;line-height:1.5}.twist-property-inputs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px 14px;align-items:end}.twist-property-inputs .tess-number{margin:0}.twist-property-inputs .select-field{display:flex;flex-direction:column;align-items:stretch;gap:4px;margin:0 0 13px;font-size:11px}.twist-property-inputs .select-field select{height:26px;min-width:0;padding:2px 5px}.twist-property-reset{margin:2px 0 5px;padding:2px 0!important;font-size:11px}.twist-property-summary{display:flex;gap:14px;align-items:center;min-height:29px;padding:5px 8px;margin:5px 0;background:var(--surface,#f5f7f5);border-left:3px solid #4a8067;font-size:11px;font-variant-numeric:tabular-nums}.twist-property-summary strong{font-size:12px;white-space:nowrap}.twist-property-table{width:100%;border-collapse:collapse;font-size:11px;font-variant-numeric:tabular-nums}.twist-property-table th,.twist-property-table td{padding:4px 7px;border:1px solid var(--line,#ccc);text-align:right;white-space:nowrap}.twist-property-table th:first-child,.twist-property-table td:first-child{text-align:center}.twist-property-table thead{background:var(--surface,#f5f7f5)}.twist-property-table tbody tr:nth-child(even){background:color-mix(in srgb,var(--surface,#f5f7f5) 48%,transparent)}.twist-property-invalid{padding:10px;border:1px solid #cb9a85;border-radius:4px;color:#8d4730}.twist-property-form{display:flex;justify-content:space-between;align-items:center;margin:2px 0 7px}.twist-property-form .spherical-vertex-tabs{margin-top:0}.twist-property-form .text-button{font-size:11px}.twist-triangle-result{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:8px 0}.twist-triangle-result>div{display:flex;flex-direction:column;gap:2px;padding:8px 10px;border:1px solid var(--line,#ccc);border-radius:4px;font-size:11px}.twist-triangle-result strong{font-size:17px;font-weight:600;font-variant-numeric:tabular-nums;color:#2b6049}.twist-triangle-contained{margin:4px 0!important;padding:6px 10px;border-left:3px solid #4a8067;background:var(--surface,#f5f7f5);font-size:12px}.twist-property-inputs.twist-triangle-parameters{align-items:center}@media(max-width:620px){.twist-property-inputs{grid-template-columns:1fr 1fr}.twist-triangle-result{grid-template-columns:1fr 1fr}.twist-property-summary{flex-wrap:wrap;gap:4px 10px}.twist-property-table th,.twist-property-table td{padding:3px}}
+.spherical-scale-inputs{display:grid;gap:8px;margin-top:9px}.spherical-scale-inputs label{display:grid;gap:4px;font-size:12px}.spherical-scale-inputs input{width:100%;min-width:0;min-height:28px;box-sizing:border-box;padding:3px 7px;border:1px solid var(--line,#ccc);border-radius:4px;background:var(--surface,#fff);color:var(--ink)}.spherical-scale-pair{display:grid;grid-template-columns:1fr 1fr;gap:10px}.spherical-scale-mode{display:flex;gap:6px}.spherical-scale-mode button{font-size:11px;min-height:25px}.spherical-scale-mode button[aria-pressed=true]{background:#e0ede5;border-color:#8cb3a0;color:#245c47}
+.rigid-quad-results{max-width:100%}.rigid-quad-previews{display:grid;grid-template-columns:1fr 1fr;gap:10px}.rigid-quad-previews>div{display:grid;gap:3px;min-width:0;font-size:11px}.rigid-quad-drawing{display:block;width:100%;height:155px;background:#f9fbfa;border:1px solid var(--line,#ccc);border-radius:4px}@media(max-width:620px){.rigid-quad-previews{grid-template-columns:1fr}.rigid-quad-drawing{height:110px}}
+.lff-reduction-presets{display:flex;gap:6px}.lff-reduction-presets button{min-height:26px;font-size:11px}.lff-reduction-input{display:block;width:100%;min-height:70px;margin-top:8px;padding:8px 10px;resize:vertical;font:13px/1.5 Consolas,monospace;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:4px}.lff-reduction-results{margin-top:10px}.lff-reduction-results p{margin:4px 0}.lff-reduction-pairs{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:5px;margin:8px 0}.lff-reduction-pairs span{padding:5px 8px;background:#e9f3ef;border:1px solid #c5ddd2;border-radius:4px;font-size:12px}
+.tess-title-actions{display:flex;align-items:center;gap:4px}
+.tile-decoration-options{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;margin:10px 0;font-size:12px}.tile-decoration-options label,.tile-decoration-edges label{display:flex;align-items:center;gap:5px}.tile-decoration-options select,.tile-decoration-edges select{min-height:26px;background:var(--paper,#fff);color:var(--ink,#202124);border:1px solid var(--line,#ccc);border-radius:4px}.tile-decoration-workspace{height:min(36vh,300px);border:1px solid var(--line,#ccc);background:#fffefb}.tile-decoration-workspace svg{display:block;width:100%;height:100%}.tile-decoration-edges{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:6px;max-height:130px;overflow:auto;font-size:12px}.tile-decoration-edges label{justify-content:space-between}.tile-edge-controls{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px;padding:3px 5px;border:1px solid var(--line,#ccc);border-radius:4px}
+.tile-color-expressions{margin:2px 0 8px;font-size:12px}.tile-color-expressions summary{cursor:pointer;color:var(--muted,#586960)}.tile-color-expression-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:6px}.tile-color-expression-grid label{display:flex;align-items:center;gap:5px;min-width:0}.tile-color-expression-grid input{flex:1;min-width:0;height:27px;padding:3px 6px;font:12px Consolas,monospace;background:var(--paper,#fff);color:var(--ink,#202124);border:1px solid var(--line,#ccc);border-radius:4px}.tile-color-expression-grid input[aria-invalid="true"]{border-color:#b94b43}.tile-color-expression-error{display:block;color:#a23e35;margin-top:5px}@media(max-width:620px){.tile-color-expression-grid{grid-template-columns:1fr}}
+.tess-dialog:has(.tile-color-expressions[open]) .tile-decoration-workspace{height:min(30vh,250px)}
+.tile-label-expressions{margin:4px 0 8px;font-size:12px}.tile-label-expressions summary{cursor:pointer;color:var(--muted,#586960)}.tile-label-expressions>label{display:flex;align-items:center;gap:6px;margin-top:6px;min-width:0}.tile-label-expressions input{flex:1;min-width:0;height:27px;padding:3px 6px;font:12px Consolas,monospace;background:var(--paper,#fff);color:var(--ink,#202124);border:1px solid var(--line,#ccc);border-radius:4px}.tile-label-expressions input[aria-invalid="true"]{border-color:#b94b43}.tile-label-expressions output{display:block;margin-top:4px;color:var(--muted,#586960);overflow-wrap:anywhere}
+.tess-mesh-editor{display:block;width:100%;height:min(440px,52vh);margin-top:10px;background:#fafcfb;border:1px solid var(--line);touch-action:none}.tess-mesh-editor circle{cursor:grab}.tess-editor-coordinates{display:flex;align-items:center;gap:20px;font-size:12px}.tess-editor-coordinates .number-input{width:100px}
+@media(max-height:750px){.tess-controls section{padding:6px 10px!important}.tess-controls .number-field{margin:3px 0}.tess-controls .note{margin-top:5px}.tess-families{gap:4px}}
+@media(max-height:750px){.tess-controls .select-field{margin:3px 0}.tess-controls .tess-number{margin:2px 0}.tess-controls .tess-number input[type=range]{height:11px}.tess-families button{min-height:27px}}
+.tess-small-selects .select-field select{width:56px;min-width:0}.tess-small-selects .select-field{gap:3px}
+.tess-small-selects .tube-saved-select{grid-column:1/-1}.tess-small-selects .tube-saved-select select{width:100%;max-width:none}
+.tess-pair .select-field select{max-width:95px;min-width:0}
+.tess-controls .tess-actions:has(.unit-regular-centered-trigger){display:grid;grid-template-columns:repeat(4,minmax(0,1fr))}
+.tess-controls .tess-actions:has(.unit-regular-centered-trigger) button{min-width:0;padding:3px 2px;font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.unit-regular-centered-edges{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;margin:6px 0}
+.unit-regular-centered-edges label{display:flex;flex-direction:column;gap:2px;min-width:0;font-size:10px}
+.unit-regular-centered-edges select{width:100%;min-width:0;padding:3px 1px;border:1px solid var(--line);border-radius:4px;background:var(--paper,#fff);color:inherit;font-size:11px}
+.tess-dialog[aria-label="单位正多边形扭转"]{width:min(700px,94vw);max-height:calc(100vh - 24px);padding:12px 16px}
+.tess-dialog[aria-label="单位正多边形扭转"] header{padding-bottom:5px}
+.tess-dialog[aria-label="单位正多边形扭转"] p{margin:6px 0;line-height:1.45}
+.tess-dialog[aria-label="单位正多边形扭转"] footer{margin-top:6px}
+.unit-regular-centered-modes{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.unit-regular-centered-modes .select-field{min-width:0;margin:4px 0}
+.unit-regular-centered-modes select{width:100%;min-width:0}
+.unit-regular-centered-numbers{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.unit-regular-centered-numbers .tess-number label{font-size:10px}
+.unit-regular-centered-numbers .tess-number input[type=number]{width:52px}
+.unit-regular-centered-angle-note{display:block;margin:3px 0 4px;font-size:11px;color:var(--muted,#637268)}
+.tess-dialog[aria-label="单位正多边形扭转"] .unit-regular-centered-edges{grid-template-columns:repeat(6,minmax(0,1fr));gap:3px;margin:4px 0}
+.unit-regular-offset-tilt{align-self:center;font-size:11px;color:var(--muted,#637268)}
+.unit-regular-offset-tiles{display:grid;gap:5px;margin:5px 0}
+.unit-regular-offset-tile{padding:4px 6px;border:1px solid var(--line,#ccc);border-radius:5px}
+.unit-regular-offset-head{display:grid;grid-template-columns:1fr minmax(220px,290px);align-items:center;gap:8px;font-size:11px}
+.unit-regular-offset-head .tess-number{margin:0}
+.unit-regular-parameter-error{padding:5px 7px;border-left:3px solid #b54a3a;background:#fff2ed;color:#8c392e}
+@media(max-width:620px){.unit-regular-centered-numbers{grid-template-columns:1fr 1fr}.unit-regular-centered-modes{grid-template-columns:1fr}.tess-dialog[aria-label="单位正多边形扭转"] .unit-regular-centered-edges{grid-template-columns:repeat(4,minmax(0,1fr))}}
+@media(max-width:620px){.unit-regular-offset-head{grid-template-columns:1fr}.unit-regular-offset-head .tess-number{max-width:300px}}
+.tess-dialog[aria-label="单位三角形扭转"]{width:min(640px,94vw);max-height:calc(100vh - 24px);padding:12px 16px}
+.tess-dialog[aria-label="单位三角形扭转"] header{padding-bottom:5px}
+.tess-dialog[aria-label="单位三角形扭转"] p{margin:6px 0;line-height:1.45}
+.tess-dialog[aria-label="单位三角形扭转"] footer{margin-top:6px}
+.tess-dialog:has(.unit-cyclic-modes){width:min(760px,94vw);max-height:calc(100dvh - 24px);padding:12px 16px}
+.tess-dialog:has(.unit-cyclic-modes) header{padding-bottom:5px}
+.tess-dialog:has(.unit-cyclic-modes) p{margin:6px 0;line-height:1.45}
+.tess-dialog:has(.unit-cyclic-modes) footer{margin-top:6px}
+.unit-triangle-modes{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.unit-triangle-modes .select-field{min-width:0;margin:4px 0}
+.unit-triangle-modes select{width:100%;min-width:0}
+.unit-cyclic-modes{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.unit-cyclic-modes .select-field{min-width:0;margin:4px 0}
+.unit-cyclic-modes select{width:100%;min-width:0}
+.unit-triangle-angles,.unit-triangle-numbers{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.unit-cyclic-octagon-angles{grid-template-columns:repeat(4,minmax(0,1fr))}
+.unit-cyclic-many-angles{grid-template-columns:repeat(5,minmax(0,1fr));gap:4px 8px}
+.unit-triangle-angles .tess-number label,.unit-triangle-numbers .tess-number label{font-size:10px}
+.unit-triangle-angles .tess-number input[type=number],.unit-triangle-numbers .tess-number input[type=number]{width:52px}
+.unit-triangle-derived{display:flex;align-self:center;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:2px 6px;font-size:11px}
+.unit-triangle-derived strong{font-size:13px}.unit-triangle-derived small{width:100%;color:var(--muted,#637268)}
+.unit-triangle-fixed-angle,.unit-triangle-pleat-note{align-self:center;font-size:11px;color:var(--muted,#637268)}
+.unit-triangle-tiles{display:grid;gap:5px;margin:5px 0}
+.unit-triangle-tile{padding:5px 7px;border:1px solid var(--line,#ccc);border-radius:5px}
+.unit-triangle-tile-head{display:grid;grid-template-columns:1fr minmax(0,250px);align-items:center;gap:8px;min-height:21px;font-size:11px}
+.unit-triangle-tile-head .tess-number{margin:0}
+.unit-triangle-edges{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px;margin-top:3px}
+.unit-cyclic-octagon-edges{grid-template-columns:repeat(4,minmax(0,1fr))}
+.unit-cyclic-many-edges{grid-template-columns:repeat(6,minmax(0,1fr));gap:3px 8px}
+.unit-triangle-edges label{display:flex;align-items:center;justify-content:space-between;gap:5px;min-width:0;font-size:10px}
+.unit-triangle-edges select{width:min(100%,125px);min-width:0;padding:3px 2px;border:1px solid var(--line);border-radius:4px;background:var(--paper,#fff);color:inherit;font-size:11px}
+@media(max-width:620px){.unit-triangle-modes,.unit-cyclic-modes{grid-template-columns:1fr}.unit-triangle-tile-head{grid-template-columns:1fr}.unit-triangle-angles,.unit-triangle-numbers{grid-template-columns:1fr 1fr}}
+@media(max-width:620px){.unit-cyclic-octagon-angles,.unit-cyclic-octagon-edges,.unit-cyclic-many-angles,.unit-cyclic-many-edges{grid-template-columns:1fr 1fr}}
+.cairo-modes .select-field{gap:3px;font-size:11px}.cairo-modes .select-field select{width:88px;padding-left:2px;padding-right:1px}
+@media(max-height:750px){.tess-controls .select-field select{padding:3px}.tess-controls .note{margin:3px 0}.tess-controls .tess-section-title{margin-bottom:3px}.tess-controls .tess-checks span{padding:3px 6px}.tess-controls section{padding:5px 9px!important}}
+@media(max-height:750px){.tess-controls:has([aria-label="空间构造类型"]) .tess-families{grid-template-columns:repeat(5,minmax(0,1fr));gap:3px}.tess-controls:has([aria-label="空间构造类型"]) .tess-families button{min-height:24px;padding:2px 1px;font-size:10px;letter-spacing:-.03em;overflow:hidden}}
+@media(max-height:750px){.tess-controls .tess-number input[type=number]{height:21px}}
+.tess-preview-workspace{display:flex;flex:1;min-height:0;min-width:0;overflow:hidden}
+.tess-cp-pane{position:relative;display:flex;flex:1;min-width:0;min-height:0}
+.tess-cp-pane .canvas-wrap{min-height:0}
+.tess-preview-status{position:absolute;left:12px;top:12px;font-size:10px;color:var(--muted);background:var(--paper);border:1px solid var(--line);border-radius:4px;padding:4px 7px;pointer-events:none;min-width:82px;white-space:nowrap;text-align:center}
+.tess-preview-status[data-pending=true]{color:var(--muted)}
+.tess-preview-status[data-layer-state=solved]{color:#24664c;border-color:#96bea9}
+.tess-preview-status[data-layer-state=no-solution],.tess-preview-status[data-layer-state=invalid]{color:#9c3b31;border-color:#d5a69f;background:#fff5f2}
+.tess-preview-status[data-layer-state=unconfirmed]{color:#87601f;border-color:#d6bd87}
+.tess-flat-toggle{white-space:nowrap;font-size:11px;min-height:26px;padding:3px 8px;border:1px solid var(--line)}
+.tess-flat-pane{width:46%;min-width:285px;display:flex;flex-direction:column;min-height:0;border-left:1px solid var(--line);background:var(--paper);overflow:hidden}
+.tess-flat-pane>header{height:32px;flex:0 0 32px;display:flex;align-items:center;gap:5px;padding:2px 7px;border-bottom:1px solid var(--line);font-size:11px}
+.tess-flat-pane>header strong{white-space:nowrap;font-weight:500}.tess-flat-pane>header span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted);font-size:10px}
+.tess-flat-pane button{min-height:24px;padding:3px 5px;font-size:11px;white-space:nowrap}.tess-flat-pane button[aria-pressed=true]{background:var(--active,#e0ede5)}
+.tess-flat-tools{display:flex;align-items:center;justify-content:space-between;gap:3px;padding:3px 5px;flex:0 0 32px;border-bottom:1px solid var(--line);overflow:hidden}
+.tess-flat-tools label{display:flex;align-items:center;gap:2px;white-space:nowrap;font-size:10px}.tess-flat-tools input{margin:0}.tess-flat-tools select{font-size:10px;padding:2px 0;background:var(--paper);color:inherit;border:1px solid var(--line)}
+.tess-flat-drawing{flex:1;min-height:0;position:relative;overflow:hidden;background:var(--paper)}
+.tess-flat-drawing>svg{position:absolute;inset:0;width:100%;height:100%;touch-action:none;cursor:grab}.tess-flat-drawing>svg:active{cursor:grabbing}
+.tess-flat-empty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--muted);padding:20px;text-align:center;pointer-events:none}
+.tess-flat-status{flex:0 0 27px;line-height:27px;font-size:10px;color:var(--muted);border-top:1px solid var(--line);padding:0 7px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.tess-controls .tess-cancel{white-space:nowrap}.tess-controls .tess-cancel:disabled{visibility:hidden}
+
+.tess-cp-pane .canvas-tag{display:none}
+.tess-preview-status{pointer-events:auto;cursor:help}
+.tess-editor-coordinates{height:68px;align-items:flex-start;padding-top:10px}
+.tess-editor-error{height:22px;margin:0;line-height:22px!important;color:#a13d36}
+.tess-flat-pane.canvas-fold-overlay{display:block;position:absolute;inset:0;width:auto;min-width:0;border:0;background:transparent;overflow:visible}
+.tess-flat-pane.canvas-fold-overlay>header{position:absolute;top:8px;right:8px;left:auto;max-width:65%;height:25px;padding:3px 6px;background:var(--paper);border:1px solid var(--line);z-index:4;pointer-events:auto}
+.tess-flat-pane.canvas-fold-overlay .tess-flat-face-groups{position:absolute;top:43px;right:8px;z-index:6;width:min(340px,calc(100% - 16px));max-height:min(520px,calc(100% - 85px));overflow:auto;padding:11px;background:var(--paper);border:1px solid var(--line);box-shadow:0 8px 25px #17292030;pointer-events:auto}
+.tess-flat-pane.canvas-fold-overlay .tess-flat-drawing{position:absolute;inset:0;background:transparent;pointer-events:none}
+.tess-flat-pane.canvas-fold-overlay .tess-flat-drawing>svg{pointer-events:none}
+.tess-flat-pane.canvas-fold-overlay .tess-flat-drawing polygon{pointer-events:auto;cursor:grab}
+.tess-flat-pane.canvas-fold-overlay .tess-flat-empty{inset:40px 12px auto auto;max-width:230px;padding:8px;background:var(--paper);border:1px solid var(--line)}
+
+.tile-assembly-tools{display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin:6px 0;font-size:11px}.tile-assembly-tools button{font-size:11px;min-height:25px;padding:3px 6px}.tile-assembly-tools select{max-width:70px;padding:2px}.tile-assembly-tools label{display:flex;align-items:center;gap:4px}.tile-assembly-tools .number-field{font-size:11px;gap:4px;margin:0}.tile-assembly-tools .number-field>span:first-child{max-width:none}.tile-assembly-tools .number-input{width:65px;padding:1px 4px}.tile-assembly-canvas{width:100%;height:min(350px,42vh);background:var(--surface);border:1px solid var(--line);touch-action:none;cursor:grab}.tile-assembly-canvas:active{cursor:grabbing}.tile-assembly-status{min-height:22px;margin:4px 0!important;font-size:11px!important;line-height:22px!important}.tile-lattice{display:flex;gap:8px}.tile-assembly-canvas text{fill:var(--ink)}
+.tile-assembly-tools .tile-patch-vectors{flex-basis:100%;min-width:0}.tile-patch-vectors summary{padding:2px 0;color:var(--accent);cursor:pointer}.tile-patch-vectors>.tile-assembly-tools{margin:3px 0 0}.tile-patch-vectors .tile-assembly-tools select{max-width:103px}
+.tile-spec-controls{display:flex;align-items:center;flex-wrap:wrap;gap:6px 12px;margin:8px 0;font-size:12px}.tile-spec-controls label{display:flex;align-items:center;gap:4px}.tile-spec-controls .number-field{margin:0}.tile-spec-controls .number-input{width:65px}.tile-spec-controls select{max-width:120px}.tile-spec-controls .note{margin:0}.tile-spec-preview{display:block;width:100%;height:min(300px,34vh);border:1px solid var(--line);background:var(--surface)}
+
+.tess-triple{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.tess-triple .select-field{font-size:11px;gap:3px}.tess-triple .select-field select{width:42px;min-width:0}
+.woven-line-table{width:100%;border-collapse:collapse;margin:10px 0}.woven-line-table th,.woven-line-table td{padding:3px;text-align:left}.woven-line-table input{width:100%;min-width:65px}.woven-line-table th:first-child{width:32px}.woven-period-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:12px}.woven-index-map{width:100%;height:240px;background:#fafcfa}.woven-period-grid textarea{display:block;width:100%;height:150px;margin:8px 0}
+
+.site-coordinate-input{display:block;width:100%;height:110px;resize:vertical;margin:7px 0 12px;padding:8px;font:12px/1.5 Consolas,monospace;border:1px solid var(--line);background:var(--surface);color:var(--ink)}
+
+.tess-controls:has([aria-label="精确多边形方式"]) section{padding:3px 12px!important}
+.tess-controls:has([aria-label="精确多边形方式"]) .select-field{margin:3px 0}
+.tess-controls:has([aria-label="精确多边形方式"]) .select-field select{padding:3px}
+
+.tess-controls:has([aria-label="精确多边形方式"]) .tess-families button{min-height:26px;padding:3px}
+
+.flagstone-modes .select-field select{width:110px}
+@media(max-height:750px){.tess-controls:has([aria-label="自定义拼块输出"]) section{padding:4px 9px!important}}
+@media(max-height:750px){.tess-controls:has([aria-label="自定义拼块输出"]) .tess-families{grid-template-columns:repeat(5,minmax(0,1fr));gap:3px}.tess-controls:has([aria-label="自定义拼块输出"]) .tess-families button{min-height:24px;padding:2px 1px;font-size:10px;letter-spacing:-.03em;overflow:hidden}.tess-controls:has([aria-label="自定义拼块输出"]) .tess-pair .tess-number input[type=range]{display:none}}
+@media(max-height:750px){.tess-controls:has([aria-label="环形构造"]) section{padding:4px 9px!important}}
+@media(max-height:750px){.tess-controls:has([aria-label="Goldberg 构造"]) section{padding:2px 9px!important}.tess-controls:has([aria-label="Goldberg 构造"]) .select-field{margin:1px 0}.tess-controls:has([aria-label="Goldberg 构造"]) .tess-number{margin:1px 0}}
+.tess-unit-angles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:3px}
+.tess-controls:has([aria-label="单位四边形指定边"]) .tess-number input[type=range]{display:none}
+@media(max-height:750px){
+ .tess-controls:has([aria-label="线组方式"]) section{padding:3px 9px!important}
+ .tess-controls:has([aria-label="线组方式"]) .tess-families{grid-template-columns:repeat(5,minmax(0,1fr));gap:3px}
+ .tess-controls:has([aria-label="线组方式"]) .tess-families button{min-height:27px;padding:3px 1px;font-size:10px}
+}
+.tess-unit-angles .tess-number input[type=number]{width:48px}
+.tess-unit-side .select-field select{width:85px}
+@media(max-height:750px){.tess-controls:has([aria-label="单位四边形指定边"]) .tess-families button{min-height:23px;padding:2px 4px}.tess-controls:has([aria-label="单位四边形指定边"]) .tess-actions button{min-height:23px;padding:2px 4px}.tess-controls:has([aria-label="单位四边形指定边"]) section:last-child{padding-top:2px!important;padding-bottom:2px!important}.tess-controls:has([aria-label="单位四边形指定边"]) section:last-child>.note{display:none}}
+@media(max-height:750px){.tess-controls:has([aria-label="铺石类型"]) .tess-families button{min-height:24px;padding:2px 4px}.tess-controls:has([aria-label="铺石类型"]) section{padding-top:3px!important;padding-bottom:3px!important}}
