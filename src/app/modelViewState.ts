@@ -1,17 +1,19 @@
 import {validateModelColors,type ModelColors} from './modelColors';
 import type {Point} from '../core/types';
+import type {DiagramDepth} from './diagramDepth';
 export type ModelCameraKey='front-solid'|'front-transparent'|'back-solid'|'back-transparent';
 export type ModelViewLayout='single'|'both'|'four';
 export type ModelDisplayStyle='paper'|'wire';
 export interface ModelCamera {rotation:number;x:number;y:number;width:number;height:number}
 export interface ModelBoardPlacement {x:number;y:number;width:number;height:number;visible:boolean}
-export interface ModelViewState {showExistingCreases?:boolean;projectionCenter?:Point;side:'front'|'back';rotation:number;xray:boolean;cameras:Partial<Record<ModelCameraKey,ModelCamera>>;colors?:ModelColors;shadows?:boolean;antiAlias?:boolean;displayNumbers?:boolean;layout?:ModelViewLayout;displayStyle?:ModelDisplayStyle;board?:ModelBoardPlacement}
+export interface ModelViewState {depth?:DiagramDepth;showExistingCreases?:boolean;projectionCenter?:Point;side:'front'|'back';rotation:number;xray:boolean;cameras:Partial<Record<ModelCameraKey,ModelCamera>>;colors?:ModelColors;shadows?:boolean;antiAlias?:boolean;displayNumbers?:boolean;layout?:ModelViewLayout;displayStyle?:ModelDisplayStyle;board?:ModelBoardPlacement}
 export const defaultModelView=():ModelViewState=>({side:'front',rotation:0,xray:false,antiAlias:true,displayNumbers:false,cameras:{}});
 const keys=['front-solid','front-transparent','back-solid','back-transparent'];
 const record=(value:unknown):value is Record<string,unknown>=>!!value&&typeof value==='object'&&!Array.isArray(value);
 const angle=(value:unknown)=>typeof value==='number'&&Number.isFinite(value)&&value>=0&&value<360;
 export function validateModelView(value:unknown):asserts value is ModelViewState{
-  if(!record(value)||Object.keys(value).some(key=>!['showExistingCreases','projectionCenter','cameras','rotation','side','xray','colors','shadows','antiAlias','displayNumbers','layout','displayStyle','board'].includes(key))||(value.side!=='front'&&value.side!=='back')||!angle(value.rotation)||typeof value.xray!=='boolean'||!record(value.cameras))throw new Error('模型视图设置无效。');
+  if(!record(value)||Object.keys(value).some(key=>!['depth','showExistingCreases','projectionCenter','cameras','rotation','side','xray','colors','shadows','antiAlias','displayNumbers','layout','displayStyle','board'].includes(key))||(value.side!=='front'&&value.side!=='back')||!angle(value.rotation)||typeof value.xray!=='boolean'||!record(value.cameras))throw new Error('模型视图设置无效。');
+  if(Object.hasOwn(value,'depth')){const d=value.depth;if(!record(d)||Object.keys(d).sort().join(',')!=='amount,direction'||typeof d.amount!=='number'||!Number.isFinite(d.amount)||d.amount<0||d.amount>.15||!angle(d.direction))throw Error('图解立体化的展开量或方向无效。');}
   if(Object.hasOwn(value,'showExistingCreases')&&typeof value.showExistingCreases!=='boolean')throw new Error('已有折痕显示设置必须为布尔值。');
   if(Object.hasOwn(value,'projectionCenter')&&(!Array.isArray(value.projectionCenter)||value.projectionCenter.length!==2||value.projectionCenter.some(n=>typeof n!=='number'||!Number.isFinite(n)||Math.abs(n)>1e9)))throw new Error('模型视图中心无效。');
   if(Object.hasOwn(value,'board'))validateModelBoardPlacement(value.board);

@@ -1,4 +1,5 @@
 import type {FlatFoldResult} from '../core/types';
+import {diagramDepthActive} from './diagramDepth';
 import type {DiagramPose} from './diagramProject';
 import type {ModelViewState} from './modelViewState';
 import type {DiagramLineDefaults} from './diagramLineStyles';
@@ -17,7 +18,7 @@ const cache=new WeakMap<FlatFoldResult,Map<string,ModelRegionSurfaceData|null>>(
 /** Repaint only certified visible paper edges above authored ink. The paper
  * itself remains below the ink, so a later face never erases a drawn crease. */
 export function diagramBoundaryOverlay(pose:DiagramPose,view:ModelViewState,lineDefaults:DiagramLineDefaults,omitFlatCreases=false):string {
-  if(view.xray||pose.paperDeformation?.nodes.length||pose.result.layers.status!=='solved'||pose.result.geometry.status!=='ready')return '';
+  if(view.xray||pose.paperDeformation?.nodes.length||diagramDepthActive({...pose,view})||pose.result.layers.status!=='solved'||pose.result.geometry.status!=='ready')return '';
   const color=lineDefaults.boundary.globalFields?.includes('color')?lineDefaults.boundary.color:(view.colors??defaultModelColors()).line;
   const spatial=diagramSpatialEdgeMarkup(pose,view,color);
   let data=diagramLocalSurface(pose,view.side);

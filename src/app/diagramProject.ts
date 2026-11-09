@@ -1,3 +1,4 @@
+import {followDiagramDepthAnnotations} from './diagramPaperFollow';
 import {repairDiagramPaperStatesInPlace} from './diagramPaperPose';
 import {validateDoc,type Doc,type FlatFoldResult,type Point} from '../core/types';
 import {exportModelSnapshot,importModelSnapshot} from '../core/modelSnapshot';
@@ -820,6 +821,7 @@ export function updateDiagramPoseResult(project:DiagramProject,stepId:string,res
   // edits invalidate the certificate but keep the existing appearance instead.
   if(result.layers.status==='solved'&&result.layers.faceOrder)target.displayOrder=[...result.layers.faceOrder];
   if(result.layers.status==='solved'&&natural(result.layers.solutionIndex))target.layerSolutionIndex=result.layers.solutionIndex;
+  if(samePaperFaceTopology(pose.result,result)&&same(pose.result.geometry.vertices,result.geometry.vertices))step.annotations=followDiagramDepthAnnotations(pose,target,step.annotations??[]);
   syncPaperState(step);
   return next;
 }

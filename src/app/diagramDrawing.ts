@@ -13,7 +13,6 @@ import {defaultModelView,type ModelCamera,type ModelViewState} from './modelView
 import {epsilonFor} from '../core/geometry';
 import {polygonArea} from '../core/geometry';
 import {diagramIllustrationMesh} from './diagramIllustrationMesh';
-import {diagramPaperVertices} from './diagramPaperDeformation';
 import {modelProjection} from './modelProjection';
 import {diagramTearWindowRender} from './diagramTearWindowRender';
 import {diagramImageBounds,diagramImageSVG,isDiagramImageAnnotationVisible,type DiagramImage} from './diagramImages';
@@ -28,12 +27,13 @@ import {diagramDrawingRotationFrame,diagramDrawingRotationMarkup} from './diagra
 import {diagramSpatialFaceColor} from './diagramSpatialAppearance';
 import {diagramSpatialEdgeMarkup} from './diagramSpatialEdges';
 import {diagramBoundaryOverlay} from './diagramBoundaryOverlay';
+import {diagramDepthActive} from './diagramDepth';
 
 export const diagramPoseView=(pose:DiagramPose):ModelViewState=>pose.view??defaultModelView();
 export const diagramFaceVisible=(pose:DiagramPose,face:number)=>!pose.hiddenFaces?.includes(face);
 export function diagramPresentation(pose:DiagramPose,view=diagramPoseView(pose)) {
   const presentation=flatPresentation(pose.result,view.side,view.rotation,view.projectionCenter);
-  if(pose.paperDeformation?.nodes.length){const projection=modelProjection(pose.result.geometry.vertices,view.side==='back',view.rotation,view?.projectionCenter);presentation.vertices=diagramPaperVertices(pose).map(projection.project);}
+  if(pose.paperDeformation?.nodes.length||diagramDepthActive({...pose,view})){const projection=modelProjection(pose.result.geometry.vertices,view.side==='back',view.rotation,view?.projectionCenter);presentation.vertices=diagramIllustrationMesh({...pose,view}).vertices.map(projection.project);}
   const manual=!presentation.hasOrder&&!!pose.displayOrder?.length;
   const order=manual?(view.side==='back'?[...pose.displayOrder!].reverse():pose.displayOrder!):presentation.order;
   return {...presentation,order,visibleOrder:order.filter(face=>diagramFaceVisible(pose,face)),solid:(presentation.hasOrder||manual)&&!view.xray,manual};
@@ -55,14 +55,14 @@ export function diagramModelMarkup(pose:DiagramPose,view=diagramPoseView(pose),o
   if(!p.solid&&!p.manual&&!view.xray&&!cutaway.definitions){
     const local=diagramLocalSurfaceMarkup(pose,view,colors,omitFlatCreases);if(local!==null)return local+diagramSpatialEdgeMarkup(pose,view,colors.line);
   }
-  const graph=pose.result.geometry.graph,flatEdges=new Set<string>(),mesh=diagramIllustrationMesh(pose);
+  const graph=pose.result.geometry.graph,flatEdges=new Set<string>(),mesh=diagramIllustrationMesh({...pose,view}),depth=diagramDepthActive({...pose,view});
   const spatialEdges=pose.spatial&&!view.xray&&!pose.paperDeformation?.nodes.length&&!cutaway.definitions?new Set(graph?.zhezhi_spatialEdgeOnFaces as number[]|undefined):null;
   if(omitFlatCreases&&graph)graph.edges_vertices.forEach(([a,b],index)=>{if(graph.edges_assignment[index]==='F'||['M','V'].includes(graph.edges_assignment[index])&&pose.spatial&&typeof pose.spatial.measuredAngles[index]==='number'&&Math.abs(pose.spatial.measuredAngles[index]!)<=1e-5)flatEdges.add([Math.min(a,b),Math.max(a,b)].join('-'));});
   const faces=p.visibleOrder.map(index=>{
     if(spatialEdges?.has(index))return ''; // The dedicated depth-clipped silhouette paints zero-area faces.
     const rings=mesh.rings[index],path=facePath(rings[0],rings.slice(1),p.vertices);
     const attributes=`stroke="${colors.line}" stroke-width="${shade?1.35:1.2}" vector-effect="non-scaling-stroke" stroke-linejoin="round"`;
-    const cells=pose.paperDeformation?.nodes.length||graph?.zhezhi_flatCreases==='marks'&&graph.edges_assignment.includes('F')?mesh.triangles[index]:null;
+    const cells=pose.paperDeformation?.nodes.length||depth||graph?.zhezhi_flatCreases==='marks'&&graph.edges_assignment.includes('F')?mesh.triangles[index]:null;
     if(!flatEdges.size&&!cells)return cutaway.wrapFaces([index],`<path d="${path}" fill="${fillFor(index,p.frontMaterial[index])}" fill-opacity="${p.solid?1:.09}" fill-rule="evenodd" ${attributes} data-diagram-paper-face="${index}"/>`);
     // F subdivides the material topology but leaves the paper flat. Paint its
     // crease once through the layer-aware preview, rather than as a solid face edge.

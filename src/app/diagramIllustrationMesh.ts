@@ -4,6 +4,7 @@ import {epsilonFor} from '../core/geometry';
 import {hasMaterialTopology} from '../core/materialTopology';
 import type {FoldGraph,Point} from '../core/types';
 import type {DiagramPose} from './diagramProject';
+import {diagramDepthVertices} from './diagramDepth';
 import {buildDiagramPoseFold} from './diagramFoldGeometry';
 
 type Triangle=[number,number,number];
@@ -71,9 +72,9 @@ function extendedLayout(base:MeshLayout,pose:Pick<DiagramPose,'sourceDoc'|'paper
 /** Illustration cells follow existing CP creases, including unfolded F marks.
  * They share the original indexed vertices and parent paper-face identity;
  * neither the solver topology nor saved CP/layer count is changed. */
-export function diagramIllustrationMesh(pose:Pick<DiagramPose,'sourceDoc'|'result'|'paperDeformation'>):DiagramIllustrationMesh {
+export function diagramIllustrationMesh(pose:Pick<DiagramPose,'sourceDoc'|'result'|'paperDeformation'|'view'|'spatial'>):DiagramIllustrationMesh {
   const marks=pose.result.geometry.graph?.zhezhi_flatCreases==='marks',prior=cache.get(pose.sourceDoc)?.get(marks);
-  if(prior){const layout=extendedLayout(prior,pose);return {...layout,vertices:[...pose.result.geometry.vertices,...(pose.paperDeformation?.nodes.map(node=>node.point)??[])]};}
+  if(prior){const layout=extendedLayout(prior,pose);return {...layout,vertices:diagramDepthVertices(pose,[...pose.result.geometry.vertices,...(pose.paperDeformation?.nodes.map(node=>node.point)??[])],layout.triangles).vertices};}
   const graph=buildDiagramPoseFold(pose).graph,vertices=graph.vertices_coords,eps=epsilonFor(pose.sourceDoc);
   const tick=reportDiagramWork;
   const insert=(row:Triangle[],vertex:number)=>insertVertex(row,vertex,vertices,eps,tick);
@@ -156,5 +157,5 @@ export function diagramIllustrationMesh(pose:Pick<DiagramPose,'sourceDoc'|'resul
   for(const row of triangles)for(const triangle of row)if(cross(...triangle.map(v=>vertices[v]) as [Point,Point,Point])<0)[triangle[1],triangle[2]]=[triangle[2],triangle[1]];
   const base={baseGraph:graph,graph,triangles,rings:(graph.faces_vertices??[]).map((ring,face)=>[ring,...(graph.faces_holes?.[face]??[])])};
   let entries=cache.get(pose.sourceDoc);if(!entries){entries=new Map();cache.set(pose.sourceDoc,entries);}entries.set(marks,base);
-  const layout=extendedLayout(base,pose);return {...layout,vertices:[...pose.result.geometry.vertices,...(pose.paperDeformation?.nodes.map(node=>node.point)??[])]};
+  const layout=extendedLayout(base,pose);return {...layout,vertices:diagramDepthVertices(pose,[...pose.result.geometry.vertices,...(pose.paperDeformation?.nodes.map(node=>node.point)??[])],layout.triangles).vertices};
 }

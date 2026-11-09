@@ -95,6 +95,14 @@ export type FlatConflictKind='maekawa'|'taco_taco'|'taco_tortilla'|'tortilla_tor
  * refer to the public original-face geometry, never private subdivisions.
  * A branch witness explains a rejected candidate, not an independent proof
  * that those faces alone make the whole model impossible. */
+export interface FlatLayerRelation {above:number;below:number}
+export interface FlatConflictTrace {
+  /** Initial means a supplied hard relation, not necessarily a user choice. */
+  origins:(FlatLayerRelation&{source:'initial'|'search'})[];
+  steps:{relation:FlatLayerRelation;kind:FlatConflictKind;requires:FlatLayerRelation[]}[];
+  /** Only the diagnostic excerpt is bounded; never the underlying search. */
+  truncated:boolean;
+}
 export interface FlatFoldConflict {
   kind:FlatConflictKind;
   scope:'root'|'branch'|'condition'|'constraint';
@@ -102,6 +110,7 @@ export interface FlatFoldConflict {
   vertices?:number[];
   edges?:number[];
   relations?:{above:number;below:number}[];
+  trace?:FlatConflictTrace;
   message:string;
 }
 export interface FlatFoldResult {

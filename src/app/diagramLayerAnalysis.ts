@@ -1,3 +1,4 @@
+import {followDiagramDepthAnnotations} from './diagramPaperFollow';
 import {relativeLayerConstraintsMatch,validateRelativeLayerConstraints} from '../core/relativeLayerConstraints';
 import type {FlatFoldResult,FlatLayerPreference} from '../core/types';
 import {distance,epsilonFor,polygonArea} from '../core/geometry';
@@ -111,7 +112,7 @@ export function applyDiagramStepLayerAnalysis(project:DiagramProject,stepId:stri
       requestedDiagramLayerSolutionIndex(cached)!==requestedDiagramLayerSolutionIndex(pose)||!same(cached.result.layers.constraints??[],pose.result.layers.constraints??[])||!same(cached.result.layers.relativeConstraints??[],pose.result.layers.relativeConstraints??[]))return project;
     paperStates={...paperStates,[paperStates.active]:{...cached,result:{...cached.result,layers:structuredClone(result.layers)}}};
   }
-  return {...project,steps:project.steps.map(item=>item.id===stepId?{...step,pose:analysed,...(paperStates?{paperStates}:{})}:item)};
+  return {...project,steps:project.steps.map(item=>item.id===stepId?{...step,pose:analysed,annotations:followDiagramDepthAnnotations(pose,analysed,step.annotations??[]),...(paperStates?{paperStates}:{})}:item)};
 }
 
 /** Commit a freshly solved, explicitly selected candidate. Failed searches
@@ -141,5 +142,5 @@ export function applyDiagramLayerSolution(project:DiagramProject,stepId:string,k
   }
   if(pose.layerSolutionIndex===(unnumbered?undefined:index)&&same(result.layers,pose.result.layers)&&
       same(pose.displayOrder,result.layers.faceOrder)&&(!paperStates||same(paperStates,step.paperStates)))return project;
-  return {...project,steps:project.steps.map(item=>item.id===stepId?{...step,pose:selected(pose),...(paperStates?{paperStates}:{})}:item)};
+  return {...project,steps:project.steps.map(item=>item.id===stepId?{...step,pose:selected(pose),annotations:followDiagramDepthAnnotations(pose,selected(pose),step.annotations??[]),...(paperStates?{paperStates}:{})}:item)};
 }

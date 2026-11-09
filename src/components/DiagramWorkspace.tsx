@@ -33,6 +33,9 @@ import {diagramThumbnailSizes} from '../app/diagramThumbnailLayout';
 import {DiagramThumbnailCache} from '../app/diagramThumbnailCache';
 import {defaultModelColors,type ModelColors} from '../app/modelColors';
 import {defaultModelView, type ModelViewState} from '../app/modelViewState';
+import {diagramDepthActive,diagramDepthMaterialPoint,type DiagramDepth} from '../app/diagramDepth';
+import {updateDiagramDepth} from '../app/diagramDepthTransaction';
+import DiagramDepthControls from './DiagramDepthControls';
 import {adjustGridDivisions,GRID_MIN,GRID_MAX} from '../app/gridControls';
 import {diagramPaperGrid} from '../app/diagramGrid';
 import {editDiagramEqualDivisionRatio} from '../app/diagramEqualDivision';
@@ -191,7 +194,10 @@ function keepCurrentViews(next:DiagramProject,current:DiagramProject):DiagramPro
     if(latestStep?.canvas?.drawingRotation!==undefined)step={...step,canvas:{...(step.canvas??defaultDiagramCanvas(next.states.find(state=>state.id===step.beforeId)!.doc.paper.width)),drawingRotation:latestStep.canvas.drawingRotation}};
     if(latestStep?.orientationLocked!==undefined)step={...step,orientationLocked:latestStep.orientationLocked};
     if(step.pose&&latest&&step.pose.sourceStateId===latest.sourceStateId&&step.pose.sourceRevision===latest.sourceRevision){
-      const view=poseView(latest);
+      // Relief moves drawing coordinates, so undo it with the artwork rather
+      // than retaining it like an ordinary viewport change.
+      const view=structuredClone(poseView(latest));
+      if(step.pose.view?.depth)view.depth=structuredClone(step.pose.view.depth);else delete view.depth;
       const pose={...step.pose,view:structuredClone(view)};
       return {...step,pose,...(latestStep?.viewMode==='manual'?{viewMode:'manual' as const}:{}),...(step.paperStates?{paperStates:{...step.paperStates,[step.paperStates.active]:structuredClone(pose)}}:{})};
     }
@@ -563,7 +569,8 @@ const DiagramWorkspace=forwardRef<DiagramWorkspaceHandle,DiagramWorkspaceProps>(
   const layerScopeActive=selectedSourceFoldLines.length>0||layerScopeEditing&&selectedAnnotationIds.length===0&&!cpSelected;
   const displayedFoldFaces=selectedSourceFoldLines.length?selectedFoldFaces:layerScopeActive&&foldLink.layers==='selected'?foldLink.selectedFaces:[];
   const fixedDisplayPoint=foldLink.fixed?.target?.kind==='vertex'?foldLink.fixed.target.point:foldLink.fixed?.point;
-  const fixedCanvasPoint=pose&&foldLink.enabled&&foldLink.fixed&&fixedDisplayPoint?modelProjection(pose.result.geometry.vertices,currentView.side==='back',currentView.rotation,currentView?.projectionCenter).project([
+  const depthFixedPoint=pose&&fixedDisplayPoint&&diagramDepthActive(pose)?diagramDepthMaterialPoint(diagramIllustrationMesh(pose),fixedDisplayPoint):null;
+  const fixedCanvasPoint=pose&&foldLink.enabled&&foldLink.fixed&&fixedDisplayPoint?modelProjection(pose.result.geometry.vertices,currentView.side==='back',currentView.rotation,currentView?.projectionCenter).project(depthFixedPoint??[
     foldLink.fixed.matrix[0]*fixedDisplayPoint[0]+foldLink.fixed.matrix[2]*fixedDisplayPoint[1]+foldLink.fixed.matrix[4],
     foldLink.fixed.matrix[1]*fixedDisplayPoint[0]+foldLink.fixed.matrix[3]*fixedDisplayPoint[1]+foldLink.fixed.matrix[5],
   ]):undefined;
@@ -1563,6 +1570,7 @@ const DiagramWorkspace=forwardRef<DiagramWorkspaceHandle,DiagramWorkspaceProps>(
   }
   function switchPaperState(state:'flat'|'spatial'|'pulled'){
     if(busy)return;flushFields();
+    if(state==='pulled'&&!restoreDepthForDrag())return;
     if(state==='spatial'&&!hasNonFlatFoldAngles(pose?.sourceDoc??before.doc)){message('折痕角度均为 0° 或 180°，请使用平整状态。');return;}
     if(state==='pulled'&&!step.paperStates?.pulled){
       if(step.paperStates?.spatial&&step.paperStates.active==='flat'){commit(switchDiagramPaperState(projectRef.current,step.id,'spatial'));}
@@ -1582,6 +1590,17 @@ const DiagramWorkspace=forwardRef<DiagramWorkspaceHandle,DiagramWorkspaceProps>(
       const viewportOnly=JSON.stringify(previousAppearance)===JSON.stringify(appearance);
       commit(viewportOnly?updateDiagramPoseViewport(current,step.id,cameras):updateDiagramPoseView(current,step.id,view),false);
     }catch(e){message(errorText(e));}
+  }
+  function restoreDepthForDrag():boolean {
+    const current=projectRef.current,s=current.steps.find(item=>item.id===current.activeStepId);
+    if(!s?.pose||!diagramDepthActive(s.pose))return true;
+    try{commit(updateDiagramDepth(current,s.id,{...s.pose.view!.depth!,amount:0}));return true;}
+    catch(error){message(errorText(error));return false;}
+  }
+  function changeDepth(depth:DiagramDepth){
+    if(busy)return;
+    try{commit(updateDiagramDepth(projectRef.current,step.id,depth));if(tool==='vertex')setTool('select');setSelection(emptySelection());setSelectedAnnotationIds([]);}
+    catch(error){message(errorText(error));}
   }
   function updateLayerVisibility(hiddenFaces:number[]){
     if(!pose||busy)return;
@@ -1848,7 +1867,7 @@ const DiagramWorkspace=forwardRef<DiagramWorkspaceHandle,DiagramWorkspaceProps>(
       clearDrawingSelection(true);message(`已删除框内 ${annotations.length-next.length} 个绘图对象，可撤销。`);
     }catch(e){message(errorText(e));}
   }
-  function chooseTool(next:DiagramDrawingTool){setOrbitMode(false);const currentStep=projectRef.current.steps.find(item=>item.id===projectRef.current.activeStepId)!;if(next==='vertex'&&currentStep.paperStates?.spatial&&currentStep.paperStates.active==='flat'){try{commit(switchDiagramPaperState(projectRef.current,currentStep.id,'spatial'));}catch(error){message(errorText(error));return;}}setSelectedCalloutId(null);if(paperPulled&&['line','polyline','erase','perpendicular','parallel','bisector','trim','extend','fixed','ratio-point','special-point'].includes(next)){message('请切回平整状态或立体状态后再编辑折痕。');return;}if(['line','polyline','perpendicular','parallel','bisector','trim','extend'].includes(next)){const appearance=lineDefaults[lineStyle];setDrawingColor(appearance.color);setDrawingWidth(appearance.width);setDrawingPattern(appearance.strokePattern);}setLayerScopeEditing(next==='layer');setFixedHighlightShown(next==='fixed');setTool(next);setOverview(false);setSelection(emptySelection());if(!['select','pan','layer','mirror-copy'].includes(next))setSelectedAnnotationIds([]);setTab(next==='vertex'?'model':'drawing');if(next==='vertex')setPropertiesOpen(true);if(propertyScroll.current)propertyScroll.current.scrollTop=0;}
+  function chooseTool(next:DiagramDrawingTool){setOrbitMode(false);if(next==='vertex'&&!restoreDepthForDrag())return;const currentStep=projectRef.current.steps.find(item=>item.id===projectRef.current.activeStepId)!;if(next==='vertex'&&currentStep.paperStates?.spatial&&currentStep.paperStates.active==='flat'){try{commit(switchDiagramPaperState(projectRef.current,currentStep.id,'spatial'));}catch(error){message(errorText(error));return;}}setSelectedCalloutId(null);if(paperPulled&&['line','polyline','erase','perpendicular','parallel','bisector','trim','extend','fixed','ratio-point','special-point'].includes(next)){message('请切回平整状态或立体状态后再编辑折痕。');return;}if(['line','polyline','perpendicular','parallel','bisector','trim','extend'].includes(next)){const appearance=lineDefaults[lineStyle];setDrawingColor(appearance.color);setDrawingWidth(appearance.width);setDrawingPattern(appearance.strokePattern);}setLayerScopeEditing(next==='layer');setFixedHighlightShown(next==='fixed');setTool(next);setOverview(false);setSelection(emptySelection());if(!['select','pan','layer','mirror-copy'].includes(next))setSelectedAnnotationIds([]);setTab(next==='vertex'?'model':'drawing');if(next==='vertex')setPropertiesOpen(true);if(propertyScroll.current)propertyScroll.current.scrollTop=0;}
   function chooseLine(next:DiagramLineStyle){
     chooseTool('line');const appearance=lineDefaults[next];setLineStyle(next);setDrawingColor(appearance.color);setDrawingWidth(appearance.width);setDrawingPattern(appearance.strokePattern);
   }
@@ -2157,6 +2176,7 @@ const DiagramWorkspace=forwardRef<DiagramWorkspaceHandle,DiagramWorkspaceProps>(
   const precisionControls=<><DiagramPrecisionToolbar showLineStyles={false} tool={tool} lineStyle={lineStyle} foldAction={foldAction} onFoldAction={chooseFoldAction} disabled={!!busy||paperPulled||overview} angle={canvasSettings.anglePreset??0} pointCount={canvasSettings.constructionPoints?.length??0} precision={precision} onPrecision={setPrecision} onLine={chooseLine} onPointTool={chooseTool} onAngle={angle=>{updateCanvas({anglePreset:angle});chooseTool('line');}} onClearPoints={()=>updateCanvas({constructionPoints:[]})}/></>;
   const paperStateControls=paperVisible&&pose&&<div className="diagram-paper-state-controls">
     <div role="group" aria-label="纸面状态">{(['flat','spatial','pulled'] as const).map(state=><button key={state} disabled={!!busy||stale||state==='spatial'&&!hasNonFlatFoldAngles(pose.sourceDoc)} title={state==='spatial'&&!hasNonFlatFoldAngles(pose.sourceDoc)?'折痕角度均为 0° 或 180°，请使用平整状态':undefined} aria-pressed={(paperPulled?'pulled':step.paperStates?.active??(pose.spatial?'spatial':'flat'))===state} onClick={()=>switchPaperState(state)}>{{flat:'平整状态',spatial:'立体状态',pulled:'拖角状态'}[state]}</button>)}</div>
+    <DiagramDepthControls pose={pose} disabled={!!busy||stale||paperPulled} onChange={changeDepth}/>
     <div className="diagram-spatial-view-controls">
       <span className={'diagram-pose-badge'+(stale||otherSource?' is-stale':'')}>{stale?'CP 已更新 · 折图保留':paperPulled?'拖角造型 · 折痕锁定':pose.spatial?((!pose.spatial.camera.rotation&&pose.spatial.camera.yaw===0&&pose.spatial.camera.elevation===0)?'固定面俯视':(!pose.spatial.camera.rotation&&pose.spatial.camera.yaw===OBLIQUE_DIAGRAM_CAMERA.yaw&&pose.spatial.camera.elevation===OBLIQUE_DIAGRAM_CAMERA.elevation)?'斜视 · 30°':'自定义视角'):otherSource?`CP${originIndex} 折图副本`:`来源 CP${originIndex}`}</span>
       {pose.spatial&&<div role="group" aria-label="立体视角快捷切换">

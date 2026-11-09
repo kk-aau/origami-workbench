@@ -2,6 +2,7 @@ import {DiagramWorkCounter} from './diagramWork';
 import {buildDiagramFold,distance,epsilonFor,polygonArea} from '../core/geometry';
 import {buildDiagramPoseDocFold} from './diagramFoldGeometry';
 import {diagramIllustrationMesh} from './diagramIllustrationMesh';
+import {diagramDepthActive} from './diagramDepth';
 import {diagramPiecesStrictlyCoverPoint} from './diagramFoldOcclusion';
 import {flatLayerEdges} from '../core/flatLayerOrder';
 import {hasMaterialTopology} from '../core/materialTopology';
@@ -100,18 +101,19 @@ function prepare(pose:DiagramPose,source?:DiagramCPState,rigidOnly=false):Prepar
   if(status!=='ready'||!baseRaw.length||!faces.length)throw Error('折痕联动需要有效的平折纸面。');
   if(pose.spatial)validateDiagramSpatialPose(pose,true);
   const {baseGraph,graph,triangles,vertices:raw,rings}=diagramIllustrationMesh(pose),cp=graph.vertices_coords,baseCP=baseGraph.vertices_coords;
+  const depth=diagramDepthActive(pose),physical=depth?baseRaw:raw;
   if(baseCP.length!==baseRaw.length||JSON.stringify(baseGraph.faces_vertices)!==JSON.stringify(faces))throw Error('折图与来源 CP 的纸面身份不一致，请重新计算。');
   if(raw.length!==cp.length)throw Error('折痕联动的纸面锚点与来源顶点不对应。');
   raw.forEach(pointCheck);
   const budget=new DiagramWorkCounter(),eps=epsilonFor(pose.sourceDoc),holes=rings.map(row=>row.slice(1)),anchorFaces=new Set(pose.paperDeformation?.nodes.map(node=>node.face)??[]);
   const flatEdges=pose.result.geometry.graph?.zhezhi_flatCreases==='marks'?graph.edges_vertices.filter((_,i)=>graph.edges_assignment[i]==='F'):[];
   const flatFoldCells=faces.map((face,f)=>flatEdges.some(([a,b])=>{budget.tick();const point=lerp(cp[a],cp[b],.5);return contains(point,face.map(v=>cp[v]),eps,true)&&!(holes[f]??[]).some(r=>contains(point,r.map(v=>cp[v]),eps));}));
-  const localCells=flatFoldCells.map((flat,f)=>flat||anchorFaces.has(f));
+  const localCells=flatFoldCells.map((flat,f)=>depth||flat||anchorFaces.has(f));
   const edgeOn=new Set((pose.result.geometry.graph?.zhezhi_spatialEdgeOnFaces as number[]|undefined)??[]),projectionScale=raw.reduce((scale,p)=>Math.max(scale,Math.abs(p[0]),Math.abs(p[1])),1);
   const matrices=faces.map((face,f)=>{
     try{
       if(edgeOn.has(f)&&Math.abs(polygonArea(face.map(v=>raw[v])))<=Number.EPSILON*128*projectionScale**2)return null;
-      const matrix=pose.spatial?spatialFaceMatrix(pose.spatial,f):faceMatrix(cp,raw,face,eps,budget);
+      const matrix=pose.spatial?spatialFaceMatrix(pose.spatial,f):faceMatrix(cp,physical,face,eps,budget);
       // Projection may foreshorten a perfectly rigid 3D face. It must still
       // be invertible and agree with every indexed material point.
       if(pose.spatial){
@@ -123,14 +125,14 @@ function prepare(pose:DiagramPose,source?:DiagramCPState,rigidOnly=false):Prepar
       }
       // A pulled F endpoint can live inside a physically unsplit face. Its
       // boundary still looks rigid, but every illustration cell must agree.
-      for(const v of new Set([...(holes[f]??[]).flat(),...triangles[f].flat()])){budget.tick();if(distance(applyDiagramFoldMatrix(matrix,cp[v]),raw[v])>eps*20)throw Error('纸面已被非等距修形，请恢复真实平折图后再联动 CP。');}
+      for(const v of new Set([...(holes[f]??[]).flat(),...triangles[f].flat()])){budget.tick();if(distance(applyDiagramFoldMatrix(matrix,cp[v]),physical[v])>eps*20)throw Error('纸面已被非等距修形，请恢复真实平折图后再联动 CP。');}
       return matrix;
     }
     catch(error){if(rigidOnly||!(error instanceof Error)||!/(非等距|等距变换)/.test(error.message)&&!(flatFoldCells[f]&&/存在退化纸面/.test(error.message)))throw error;return null;}
   });
   // Illustration-only anchors must not recenter the saved model's camera.
   const view=pose.view,projection=modelProjection(baseRaw,view?.side==='back',view?.rotation??0,view?.projectionCenter),o=projection.project([0,0]),x=projection.project([1,0]),y=projection.project([0,1]);
-  const camera:DiagramFoldMatrix=[x[0]-o[0],x[1]-o[1],y[0]-o[0],y[1]-o[1],o[0],o[1]],shown=raw.map(projection.project),displayMatrices=matrices.map(m=>m?compose(camera,m):null);
+  const camera:DiagramFoldMatrix=[x[0]-o[0],x[1]-o[1],y[0]-o[0],y[1]-o[1],o[0],o[1]],shown=raw.map(projection.project),displayMatrices=matrices.map(m=>m&&!depth?compose(camera,m):null);
   const pieces=faces.map((face,f):FacePiece[]=>{
     const matrix=displayMatrices[f];if(matrix)return [{cp:rings[f][0].map(v=>cp[v]),shown:rings[f][0].map(v=>shown[v]),matrix,cpHoles:(holes[f]??[]).map(r=>r.map(v=>cp[v])),shownHoles:(holes[f]??[]).map(r=>r.map(v=>shown[v]))}];
     if(pose.spatial||edgeOn.has(f))return []; // An edge-on face has no invertible screen interior.
@@ -212,7 +214,7 @@ function order(prepared:Prepared,cover:number[]):number[] {
 }
 function screenAssignment(assignment:Assignment,matrix:DiagramFoldMatrix):Assignment{return det(matrix)<0?(assignment==='V'?'M':assignment==='M'?'V':assignment):assignment;}
 function previewLine(prepared:Prepared,line:Line,faceAssignments:Map<number,Assignment>,displayOnly=false,strokeSpan?:DiagramFoldPreviewSegment['strokeSpan'],visibleOnly=false):DiagramFoldPreviewSegment[]{
-  const {faces,eps,budget}=prepared,clips=faces.map((_,f)=>clipShownFace(prepared,f,line,displayOnly)),length=distance(line.a,line.b);
+  const {faces,eps,budget}=prepared,preserveBreaks=displayOnly||diagramDepthActive(prepared.pose),clips=faces.map((_,f)=>clipShownFace(prepared,f,line,preserveBreaks)),length=distance(line.a,line.b);
   const breaks=sortedBreaks([0,1,...clips.flat(2)],length,eps),out:DiagramFoldPreviewSegment[]=[],lastDisplayPart=new Map<number,DiagramFoldPreviewSegment>();
   for(let i=1;i<breaks.length;i++){
     const lo=breaks[i-1],hi=breaks[i],mid=(lo+hi)/2;if((hi-lo)*length<=eps)continue;
@@ -327,7 +329,7 @@ export function mapDiagramFoldLines(pose:DiagramPose,lines:DiagramLineAnnotation
   // physical CP coverage after inverse projection: another sheet at the same
   // screen coordinates is still a distinct, eligible part of the new fold.
   // Explicit press-and-return instructions keep their existing old-hinge path.
-  if(lines.length&&settings.layers==='selected'&&settings.selectedFaces.some(f=>!prepared.displayMatrices[f]))throw Error('所选纸面正对视线侧立，请调整空间视角后画折痕。');
+  if(lines.length&&settings.layers==='selected'&&settings.selectedFaces.some(f=>!prepared.pieces[f]?.length))throw Error('所选纸面正对视线侧立，请调整空间视角后画折痕。');
   const completed=pose.spatial?completedSpatialCreases(pose):pose.sourceDoc.segments.filter(s=>(s.assignment==='M'||s.assignment==='V')&&s.angle!==0);
   const boundaries=pose.sourceDoc.segments.filter(s=>s.assignment==='B');
   let skippedCompleted=false,skippedBoundary=false;
@@ -347,7 +349,9 @@ export function mapDiagramFoldLines(pose:DiagramPose,lines:DiagramLineAnnotation
     for(const part of parts){
       if(settings.layers==='selected'&&!selected.has(part.face))continue;
       if(topFaces&&!topFaces.has(part.face))continue;
-      const matrix=prepared.displayMatrices[part.face]!,back=inverse(matrix),assignment=screenAssignment(displayAssignment,matrix),a=applyDiagramFoldMatrix(back,part.a),b=applyDiagramFoldMatrix(back,part.b);
+      const matrix=prepared.displayMatrices[part.face]??prepared.pieces[part.face].find(piece=>contains(lerp(part.a,part.b,.5),piece.shown,prepared.eps))?.matrix;
+      if(!matrix)throw Error('当前图示没有可对应的材料纸面，请重新计算折图。');
+      const back=inverse(matrix),assignment=screenAssignment(displayAssignment,matrix),a=applyDiagramFoldMatrix(back,part.a),b=applyDiagramFoldMatrix(back,part.b);
       const magnitude=line.foldAngle===undefined?180:line.foldAngle;
       if(magnitude!==null&&(!Number.isFinite(magnitude)||magnitude<0||magnitude>180))throw Error('折叠角度须为 0 到 180 度。');
       const intent:Segment={id:`fold-link:${line.id}:${part.face}:${segments.length}`,a,b,assignment,angle:magnitude===null?null:assignment==='M'?-magnitude:magnitude};
@@ -470,7 +474,9 @@ export function diagramFoldFacesAtPoint(pose:DiagramPose,point:Point,source?:Dia
 export function pickDiagramFoldAnchor(pose:DiagramPose,point:Point,face?:number,source?:DiagramCPState):DiagramFoldAnchor {
   pointCheck(point);const prepared=prepare(pose,source,true),hits=prepared.faces.flatMap((_,f)=>diagramFaceVisible(pose,f)&&containsFace(prepared,f,point)?[f]:[]),sorted=order(prepared,hits);
   const chosen=face??sorted?.[0];if(chosen===undefined||!hits.includes(chosen))throw Error(hits.length?'重合纸面缺少确定层序，请明确选择固定纸面。':'请在要保持不动的纸面内部点击。');
-  const cpPoint=applyDiagramFoldMatrix(inverse(prepared.displayMatrices[chosen]!),point);return {point:cpPoint,matrix:[...prepared.matrices[chosen]!],...(pose.spatial?{spatialTransform:structuredClone(pose.spatial.faceTransforms[chosen])}:{})};
+  const display=prepared.displayMatrices[chosen]??prepared.pieces[chosen].find(piece=>contains(point,piece.shown,prepared.eps))?.matrix;
+  if(!display||!prepared.matrices[chosen])throw Error('无法对应固定纸面的原始位置。');
+  const cpPoint=applyDiagramFoldMatrix(inverse(display),point);return {point:cpPoint,matrix:[...prepared.matrices[chosen]!],...(pose.spatial?{spatialTransform:structuredClone(pose.spatial.faceTransforms[chosen])}:{})};
 }
 export function diagramFoldStartingFace(doc:Doc,fixed:DiagramFoldAnchor,graph:FoldGraph=buildDiagramFold(doc).graph):number {
   ordinary(doc);pointCheck(fixed.point);

@@ -139,7 +139,7 @@ export default function DiagramDrawingCanvas({showCursorHint=true,onCursorHintCh
   const saved=zoomRegion?{...normalView,cameras:focusCamera?.key===zoomStateKey?focusCamera.cameras:{}}:normalView,view=queuedView.current??draftView??saved;
   // Panning and zooming only change the SVG viewport. Keep geometry and paper
   // artwork stable until an actual presentation setting or drawing changes.
-  const drawingView=useMemo(()=>({...view,cameras:{}}),[view.side,view.rotation,view.projectionCenter,view.showExistingCreases,view.xray,view.colors,view.shadows,view.antiAlias,view.displayNumbers,view.layout,view.displayStyle,view.board]);
+  const drawingView=useMemo(()=>({...view,cameras:{}}),[view.depth,view.side,view.rotation,view.projectionCenter,view.showExistingCreases,view.xray,view.colors,view.shadows,view.antiAlias,view.displayNumbers,view.layout,view.displayStyle,view.board]);
   const inZoom=useMemo(()=>zoomRegion?prepareDiagramZoomRegionContains(zoomRegion):(_point:Point)=>true,[zoomStateKey]);
   const paintAnnotation=(a:DiagramAnnotation)=>a.kind==='line'?applyDiagramLineAppearance(a,lineDefaults):a;
   const frame=useMemo(()=>diagramDrawingFrame(pose,annotations.map(a=>a.kind==='line'?applyDiagramLineAppearance(a,lineDefaults):a),drawingView,images,paperVisible,callouts,zoomRegion,simulationSurface),[pose,annotations,lineDefaults,drawingView,images,paperVisible,callouts,zoomStateKey,simulationSurface]);

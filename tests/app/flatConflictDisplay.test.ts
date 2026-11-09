@@ -43,6 +43,17 @@ test('a selected branch witness is identified as an example rather than the sole
  assert.doesNotMatch(markup,/涉及纸面 F1/);
 });
 
+test('the diagnostic panel distinguishes hard origins, guessed origins and partial derivations',()=>{
+ const conflict:FlatFoldConflict={...branch,trace:{origins:[{above:1,below:0,source:'initial'},{above:0,below:1,source:'search'}],steps:[{relation:{above:1,below:0},kind:'transitivity',requires:[{above:1,below:0}]}],truncated:true}};
+ const markup=renderToStaticMarkup(createElement(FlatConflictDetails,{conflicts:[conflict],index:0,result,onSelect:()=>{},onLocate:()=>{}}));
+ assert.match(markup,/追溯关系来源/);assert.match(markup,/初始关系/);assert.match(markup,/搜索试排/);
+ assert.match(markup,/以下仅展示部分来源/);assert.match(markup,/求解过程未因此截断/);
+ assert.match(markup,/上下关系传递/);assert.match(markup,/不代表唯一或最小修改方案/);
+ assert.match(markup,/tabindex="0" role="region" aria-label="冲突关系推导来源"/);
+ const legacy=renderToStaticMarkup(createElement(FlatConflictDetails,{conflicts:[branch],index:0,result,onSelect:()=>{},onLocate:()=>{}}));
+ assert.doesNotMatch(legacy,/追溯关系来源/,'older saved diagnostics remain valid');
+});
+
 test('unlocalized and out-of-range evidence does not color the paper or offer a fake locate action',()=>{
  const global:FlatFoldConflict={kind:'global',scope:'constraint',faces:[],message:'当前没有可定位的冲突区域。'};
  for(const conflict of [global,{...global,faces:[-1,2,1.5],vertices:[99],edges:[-2]}]){

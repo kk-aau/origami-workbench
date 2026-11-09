@@ -23,6 +23,7 @@ import {buildExactModelTopology,walkExactCoverage} from '../app/modelExactTopolo
 import {flatExactProof,rememberFlatExactProof} from '../app/flatExactProof';
 import {makeLayerConflict,conflictsFromLayerError,maekawaConflicts} from './flatConflictDiagnostics';
 import {diagnoseFlatLayerCoverage} from './flatLayerSelfDiagnosis';
+import {traceFlatLayerError} from './flatLayerConflictTrace';
 
 export function emptyFoldResult(status: FlatFoldResult['geometry']['status'], message: string): FlatFoldResult {
   return { geometry: { status, message, vertices: [], faces: [] }, layers: { status: status === 'timeout' || status === 'cancelled' ? status : 'unknown', message: '尚未得到层序解。' }, warnings: [] };
@@ -119,6 +120,10 @@ function solveLayerGeometry(result: FlatFoldResult, eps: number, requestedIndex:
     if(error instanceof Error&&error.message.includes('no solution possible')){
       const recovered=recoverDiagramLayerCandidate(result,eps,requestedIndex,constraints,layerAdjustment,layerPreferences,publicGeometry,relativeConstraints);
       if(recovered)return recovered;
+      const conflicts=traceFlatLayerError(error,privateGeometry.graph,privateGeometry.epsilon);
+      if(conflicts.some(c=>c.trace)){
+        result.layers={status:'no-solution',message:'约束传播证明当前模型几何与山谷指派没有层序解。',constraints,conflicts};return result;
+      }
     }
     throw error;
   }

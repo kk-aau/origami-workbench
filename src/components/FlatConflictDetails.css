@@ -6,6 +6,9 @@
 .flat-conflict-details p{margin:6px 0 0;font-size:11px;line-height:1.55;overflow-wrap:anywhere}
 .flat-conflict-details .flat-conflict-note{font-size:10px;color:color-mix(in srgb,var(--ink,#293d35) 85%,var(--paper,#fffefb))}
 .flat-conflict-relations{margin-top:6px}.flat-conflict-relations summary{cursor:pointer}.flat-conflict-relations ul{margin:5px 0 0;padding-left:20px}
+.flat-conflict-trace-body{max-height:260px;overflow:auto;overflow-wrap:anywhere;padding-right:6px}
+.flat-conflict-trace-body li+li{margin-top:6px}
+.flat-conflict-details :is(summary,.flat-conflict-trace-body):focus-visible{outline:2px solid var(--accent,#32634c);outline-offset:2px}
 .flat-conflict-details :is(button,select):focus-visible{outline:2px solid var(--accent,#32634c);outline-offset:2px}
 .flat-conflict-overlay{--flat-conflict-color:#b45031}
 .flat-conflict-face,.flat-conflict-vertex{fill:color-mix(in srgb,var(--flat-conflict-color) 20%,transparent);stroke:var(--flat-conflict-color)}

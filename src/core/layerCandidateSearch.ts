@@ -1,7 +1,7 @@
 import ear from 'rabbit-ear';
 import type {ConvexLayerConstraints,LayerCategory} from './convexLayerContacts';
 import {reportFlatComputationProgress} from './flatComputationProgress';
-import type {FlatFoldConflict} from './types';
+import type {FlatConflictTrace,FlatFoldConflict,FlatLayerRelation} from './types';
 import {makeLayerConflict} from './flatConflictDiagnostics';
 
 const categories:LayerCategory[]=['taco_taco','taco_tortilla','tortilla_tortilla','transitivity'];
@@ -77,6 +77,10 @@ export class LayerCandidateSearch{
  private extraTerms=new Int32Array(0);private extraNext=new Int32Array(0);private extraHeads:Int32Array|undefined;private extraLength=0;
  private triangles=new Set<string>();private rootMark=0;private inSearch=false;private usePriority=false;private heap:VariableHeap|undefined;
  private conflictSamples:FlatFoldConflict[]=[];private sampledRules:number[]=[];
+ // A rule reference and its assigned-premise mask, not a copied proof tree.
+ // Allocated on first inference/guess; five bytes per pair. See the Flat-Folder
+ // attribution in THIRD_PARTY_NOTICES.md for the provenance-tracing idea.
+ private reasons:Int32Array|undefined;private premises:Uint8Array|undefined;
  constructor(readonly index:LayerPairIndex,constraints:ConvexLayerConstraints,private options:LayerSearchOptions={}){
   const trigger=options.switchAfterBacktracks;if(trigger!==undefined&&trigger!==Infinity&&(!Number.isSafeInteger(trigger)||trigger<1))throw Error('搜索策略切换间隔必须为正整数。');
   let ruleCount=0,termCount=0;
@@ -100,11 +104,36 @@ export class LayerCandidateSearch{
   * candidates, never a minimal unsatisfiable core or the sole global cause. */
  get conflicts():readonly FlatFoldConflict[]{return this.conflictSamples;}
  private clearConflicts(){this.conflictSamples=[];this.sampledRules=[];}
+ private prepareTrace(){if(!this.reasons){this.reasons=new Int32Array(this.values.length);this.premises=new Uint8Array(this.values.length);}}
  private set(term:number,value:number):boolean{
   const v=Math.abs(term)-1,next=term<0?3-value:value,current=this.values[v];if(current)return current===next;
-  this.values[v]=next;this.trail.push(v);if(this.inSearch)this.phases[v]=next;return true;
+  this.values[v]=next;this.trail.push(v);if(this.inSearch){this.phases[v]=next;this.prepareTrace();this.premises![v]=128;}return true;
  }
- private rollback(mark:number){while(this.trail.length>mark){const v=this.trail.pop()!;this.values[v]=0;if(this.inSearch&&this.usePriority)this.heap?.insert(v);}}
+ private infer(term:number,value:number,reason:number,terms:Int32Array,start:number,end:number):boolean{
+  const v=Math.abs(term)-1;if(this.values[v])return this.set(term,value);
+  let mask=0;for(let j=start;j<end;j++)if(this.values[Math.abs(terms[j])-1])mask|=1<<(j-start);
+  this.set(term,value);this.prepareTrace();this.reasons![v]=reason;this.premises![v]=mask;return true;
+ }
+ private rollback(mark:number){while(this.trail.length>mark){const v=this.trail.pop()!;this.values[v]=0;if(this.reasons){this.reasons[v]=0;this.premises![v]=0;}if(this.inSearch&&this.usePriority)this.heap?.insert(v);}}
+ private explain(terms:Int32Array,start:number,end:number):FlatConflictTrace|undefined{
+  if(!this.reasons)return undefined;
+  const pending:number[]=[],seen=new Set<number>(),trace:FlatConflictTrace={origins:[],steps:[],truncated:false};
+  const relation=(v:number):FlatLayerRelation=>{const [a,b]=this.index.pairs[v];return this.values[v]===1?{above:a,below:b}:{above:b,below:a};};
+  const enqueue=(v:number)=>{if(this.values[v]&&!seen.has(v)){seen.add(v);pending.push(v);}};
+  for(let j=start;j<end;j++)enqueue(Math.abs(terms[j])-1);
+  // Bound the diagnostic payload only. Search still exhausts its full domain.
+  // Masks capture premises at inference time, excluding later consequences.
+  for(let q=0;q<pending.length;q++){
+   if(q===64){trace.truncated=true;break;}
+   const v=pending[q],reason=this.reasons[v];
+   if(!reason){trace.origins.push({...relation(v),source:this.premises![v]===128?'search':'initial'});continue;}
+   const c=reason-1,source=reason>0?this.terms:this.extraTerms,from=reason>0?this.starts[c]:-reason-1,to=reason>0?this.starts[c+1]:from+3;
+   const requires:FlatLayerRelation[]=[];
+   for(let j=from;j<to;j++)if(this.premises![v]&(1<<(j-from))){const p=Math.abs(source[j])-1;requires.push(relation(p));enqueue(p);}
+   trace.steps.push({relation:relation(v),kind:categories[reason>0?this.types[c]:3],requires});
+  }
+  return trace.steps.length?trace:undefined;
+ }
  private conflict(type:number,terms:Int32Array,start:number,end:number){
   const key=terms===this.terms?start:-start-1;
   // A contradiction among forced relations is stronger evidence than an
@@ -117,7 +146,9 @@ export class LayerCandidateSearch{
     const v=Math.abs(terms[j])-1,[a,b]=this.index.pairs[v],value=this.values[v];faces.push(a,b);
     if(value)relations.push(value===1?{above:a,below:b}:{above:b,below:a});
    }
-   this.sampledRules.push(key);this.conflictSamples.push(makeLayerConflict(categories[type],this.inSearch?'branch':'root',faces,{relations}));
+   const conflict=makeLayerConflict(categories[type],this.inSearch?'branch':'root',faces,{relations}),trace=this.explain(terms,start,end);
+   if(trace)conflict.trace=trace;
+   this.sampledRules.push(key);this.conflictSamples.push(conflict);
   }
   if(!this.inSearch)return;
   for(let j=start;j<end;j++){const v=Math.abs(terms[j])-1;if(this.activity[v]<0xffffffff)this.activity[v]++;if(this.usePriority)this.heap?.promote(v);}
@@ -126,7 +157,7 @@ export class LayerCandidateSearch{
   let state=0;for(let j=start;j<end;j++){const term=terms[j],value=this.values[Math.abs(term)-1];state=state*3+(term<0&&value?3-value:value);}
   const answer=tables[type][state];
   if(answer<0){this.conflict(type,terms,start,end);return false;}
-  if(answer>0&&!this.set(terms[start+Math.floor(answer/3)-1],answer%3)){this.conflict(type,terms,start,end);return false;}
+  if(answer>0&&!this.infer(terms[start+Math.floor(answer/3)-1],answer%3,-start-1,terms,start,end)){this.conflict(type,terms,start,end);return false;}
   return true;
  }
  private reportProgress(){
@@ -147,7 +178,7 @@ export class LayerCandidateSearch{
     for(let j=start;j<end;j++){const term=this.terms[j],value=this.values[Math.abs(term)-1];state=state*3+(term<0&&value?3-value:value);}
     const answer=tables[type][state];
     if(answer<0){this.conflict(type,this.terms,start,end);return false;}
-    if(answer>0&&!this.set(this.terms[start+Math.floor(answer/3)-1],answer%3)){this.conflict(type,this.terms,start,end);return false;}
+    if(answer>0&&!this.infer(this.terms[start+Math.floor(answer/3)-1],answer%3,c+1,this.terms,start,end)){this.conflict(type,this.terms,start,end);return false;}
    }
    if(this.extraHeads)for(let k=this.extraHeads[v];k>=0;k=this.extraNext[k]){const start=k-k%3;if(!this.apply(3,this.extraTerms,start,start+3))return false;}
   }

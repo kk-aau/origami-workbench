@@ -28,6 +28,8 @@ Electron 44.4.2（MIT，含 Chromium/Node 及其第三方声明）和 electron-b
 
 ## 核心计算来源
 
+层序冲突的关系来源追溯参考 Jason S. Ku 的 [Flat-Folder](https://github.com/origamimagiro/flat-folder)（提交 `d50004815fb738d009e5b87b2307fbaefa717ef0`，`src/solver.js` 的 `initial_assignment` / `error_faces`，MIT）。本项目按现有有符号纸面对、增量区域约束和搜索回退结构独立实现，记录推导时的前提关系，并对诊断摘录标明截断；未使用 ODM 的闭源应用代码。原版权和许可保留于 `licenses/flat-folder-MIT.txt`。
+
 | 组件 | 固定版本 | 原许可和版权 | 本地依据 |
 |---|---|---|---|
 | Rabbit Ear | npm 0.9.4 | GNU GPLv3；模块头 `(c) Kraft`，包作者 Maya Kraft | `node_modules/rabbit-ear/license`、`package.json`、`module/index.js`；GPL 全文另保留于根 `LICENSE` |

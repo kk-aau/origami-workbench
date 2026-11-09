@@ -1,3 +1,4 @@
+import {diagramDepthActive} from './diagramDepth';
 import {epsilonFor} from '../core/geometry';
 import type {Point} from '../core/types';
 import type {DiagramPose} from './diagramProject';
@@ -52,7 +53,7 @@ function pieceId(original:string,piece:Piece,ids:Set<string>):string {
  * F handles remain untouched until the caller reprojects their CP routes.
  * Unbound symbols remain independent. Attached arrows resolve from their saved
  * material coordinates rather than being rebound as user placement edits. */
-export function followDiagramPaperAnnotations(previousPose:DiagramPose,nextPose:DiagramPose,annotations:DiagramAnnotation[]):DiagramAnnotation[] {
+export function followDiagramPaperAnnotations(previousPose:DiagramPose,nextPose:DiagramPose,annotations:DiagramAnnotation[],includeExistingCreases=false):DiagramAnnotation[] {
   validateDiagramAnnotations(annotations);
   if(previousPose.sourceStateId!==nextPose.sourceStateId||previousPose.sourceRevision!==nextPose.sourceRevision||!same(previousPose.sourceDoc,nextPose.sourceDoc))throw Error('折线跟随要求相同的来源 CP，不能跨步骤猜测纸面身份。');
   const [oldPose,newPose]=alignDiagramPaperAnchors(previousPose,nextPose),oldMesh=diagramIllustrationMesh(oldPose),newMesh=diagramIllustrationMesh(newPose);
@@ -73,7 +74,7 @@ export function followDiagramPaperAnnotations(previousPose:DiagramPose,nextPose:
   const result:DiagramAnnotation[]=[];
   for(const annotation of annotations){
     if(annotation.kind==='symbol'&&annotation.paperBinding){result.push(resolveDiagramArrowBinding(nextPose,annotation).annotation);continue;}
-    if(annotation.kind!=='line'||isDiagramCPExistingLine(annotation)){result.push(annotation);continue;}
+    if(annotation.kind!=='line'||!includeExistingCreases&&isDiagramCPExistingLine(annotation)){result.push(annotation);continue;}
     const selected=annotation.foldFaces?new Set(annotation.foldFaces):null,length=distance(annotation.a,annotation.b),tolerance=Math.min(1e-7,eps/Math.max(eps,length));
     if(selected&&[...selected].some(f=>f>=(graph.faces_vertices?.length??0)))throw Error('折线依附的原纸面不存在，请重新计算折图。');
     if(degenerate.some(t=>(!selected||selected.has(t.face))&&nearBox(annotation.a,annotation.b,t.points,eps)))throw Error('折线经过退化纸面，无法安全跟随，请恢复纸面后重试。');
@@ -115,4 +116,12 @@ export function followDiagramPaperAnnotations(previousPose:DiagramPose,nextPose:
     }
   }
   validateDiagramAnnotations(result);return result;
+}
+
+/** Layer changes can move cosmetic relief while physical geometry stays put. */
+export function followDiagramDepthAnnotations(previous:DiagramPose,next:DiagramPose,annotations:DiagramAnnotation[]):DiagramAnnotation[] {
+  // Reopened snapshots retain authored display coordinates while their layer
+  // certificate is revalidated. Do not apply their saved relief a second time.
+  if(previous.result.layers.status!=='solved')return annotations;
+  return diagramDepthActive(previous)||diagramDepthActive(next)?followDiagramPaperAnnotations(previous,next,annotations,true):annotations;
 }

@@ -1,0 +1,54 @@
+Flat-Folder 公开实现借鉴（2026-11-09）
+
+范围
+用户授权：在研究、安装 ODM 并阅读其所用公开求解器后，要求“借鉴吧”。
+本次只修改迁移版 workbench-tauri，不涉及旧 Electron 工程，不打包、不发布。
+
+对照结论
+1. layerSolutions.ts 已按独立解分组计数和选择，不展开组合的笛卡尔积，保留现有实现。
+2. diagramLocalLayerProbe.ts 已按鼠标所在局部重叠区域查询上下纸层，保留现有实现。
+3. 已有冲突定位保留；补齐最后发生矛盾的关系背后的推导来源。
+
+具体实现
+- LayerCandidateSearch 记录首次赋值的规则引用和当时已确定的前提位图。
+- 仅在首次推导或试排时分配两个数组，额外内存为每个纸面对 5 字节；不复制整棵推导树。
+- 搜索回退同步清除来源；诊断为独立快照，成功后清除被排除候选的冲突。
+- 初始硬关系与搜索试排分别标记；初始硬关系不冒称用户指定，可能来自山谷指派。
+- 动态加入的区域传递规则也保留来源；后续赋值不能成为早先推导的前提。
+- 每条冲突最多摘录 64 条关系，超过明确标为部分来源。这仅限制诊断展示/传输，不限制求解节点、时间、折痕或纸面数量。
+- 常规 Rabbit Ear 枚举路径仅在已有结构化根冲突时重建原规则并进行强制传播，补充诊断；成功路径不额外计算，没有根冲突的穷尽搜索不再次搜索。
+- 诊断重建失败保留原错误，不改判为有解，不掩盖原求解失败。
+- 原有局部冲突纸面用于高亮和共同重叠范围；推导源纸面只在“追溯关系来源”展示，不把所有来源混成同一重叠区域。
+
+来源和许可
+参考 Jason S. Ku / Flat-Folder 的 initial_assignment / error_faces 追溯思想。
+固定上游：d50004815fb738d009e5b87b2307fbaefa717ef0。
+按本项目数据结构独立实现；没有使用、反编译 ODM 闭源代码。
+出处见 THIRD_PARTY_NOTICES.md，MIT 全文见 licenses/flat-folder-MIT.txt。
+
+验证
+- 相关测试累计 50 项通过：搜索状态、200 个确定性问题的穷举对照、凸/凹面候选、冲突来源、公开重算入口、诊断渲染。
+- TypeScript tsc --noEmit 通过。
+- 真实八扇区模型经公开 recomputeFlatLayers 入口产生根冲突；完整追溯链可由初始关系逐条推导，无循环或缺失前提，输入未修改。
+- Edge 独立组件预览，1440x1000、1000x720；原组件展开操作通过，无横向溢出；长诊断区域内容高 2873px、容器高 260px，可独立滚动。控制台仅本地预览缺少 favicon 的 404。
+- 截图与原始哈希：output/odm-adoption/。该预览是实际组件的隔离样例，不是桌面发行包整体验收。
+- 2 万纸面对、15 次交替测量中位数（4 次预热后）：直接候选 3.728ms→3.769ms；强制推导链 3.877ms→4.043ms。合成数据小幅增加耗时；未宣称大工程加速，未做全工程性能基准。
+- 首次组合启动预览服务/浏览器命令被自动审批以 blocked by policy 拒绝；随后通过独立受管理的本地服务与浏览器命令完成组件预览。
+
+局限
+追溯不是最小不可满足集合，也不自动给出唯一修复方案。
+小工程凹面独立枚举器和没有结构化根冲突的旧求解异常仍沿用原有诊断；不能声称每一种无解都有完整追溯链。
+完整应用交互、用户大工程和发行包仍未在本轮验收。
+
+变更文件
+src/core/types.ts
+src/core/layerCandidateSearch.ts
+src/core/flatLayerConflictTrace.ts（新增）
+src/core/flatFold.ts
+src/components/FlatConflictDetails.tsx
+src/components/FlatConflictDetails.css
+tests/core/layerConflictTrace.test.ts（新增）
+tests/core/flatLayerConflictTrace.test.ts（新增）
+tests/app/flatConflictDisplay.test.ts
+THIRD_PARTY_NOTICES.md
+licenses/flat-folder-MIT.txt（新增）
