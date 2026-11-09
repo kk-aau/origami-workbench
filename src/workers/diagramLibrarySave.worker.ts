@@ -5,8 +5,15 @@ import type {DiagramLibrarySaveRequest,DiagramLibrarySaveReply} from '../app/dia
 
 const scope=globalThis as unknown as {onmessage:((event:MessageEvent<DiagramLibrarySaveRequest>)=>void)|null;postMessage(reply:DiagramLibrarySaveReply):void};
 scope.onmessage=event=>{
-  const {id,request,url,token}=event.data;
+  const {id,request,url,token,webPreferences}=event.data;
   try{
+    if(webPreferences){
+      const values=new Map(webPreferences),updates=new Map<string,string>();
+      const storage:Preferences={getItem:key=>values.get(key)??null,setItem(key,value){values.set(key,value);updates.set(key,value);},compareAndSet(key,expected,value){if((values.get(key)??null)!==expected)return false;values.set(key,value);updates.set(key,value);return true;}};
+      setPreferenceService(storage);
+      const result=runDiagramLibraryBackgroundSave(request,storage);
+      scope.postMessage({id,type:'result',result,webUpdates:[...updates]});return;
+    }
     const preference=(action:'get'|'set'|'compareAndSet',key:string,value?:string,expectedValue?:string|null):string|null|boolean=>{
       const xhr=new XMLHttpRequest();xhr.open(action==='get'?'GET':'POST',action==='get'?url+'?key='+encodeURIComponent(key):url,false);
       xhr.setRequestHeader('X-Zhezhi-Token',token);

@@ -1,3 +1,4 @@
+import {appAsset} from '../app/webRuntime';
 import {useCallback,useEffect,useRef,useState} from 'react';
 import type {DiagramProject} from '../app/diagramProject';
 import type {DiagramFullAnimationEntry} from '../app/diagramFullAnimation';
@@ -141,7 +142,7 @@ export default function DiagramFullAnimation({project,initialIndex,onClose}:{pro
   return <AppDialog title={`全程折叠演示 · ${project.name}`} onClose={onClose} size="workspace" className="diagram-animation-dialog diagram-full-animation" unwrapped>
     <div className="diagram-full-heading"><div><strong>第 {index+1} / {project.steps.length} 步{currentStep.title?` · ${currentStep.title}`:''}</strong><p role="status" className={failure?'is-error':''}>{stateText}</p></div><div className="diagram-full-views">{(['front','back','isometric'] as const).map((preset,i)=><button key={preset} disabled={!loaded||!!failure} aria-pressed={status?.view===preset} onClick={()=>bridge.current?.send({type:'zhezhi-sim-camera',preset})}>{['正面','背面','立体'][i]}</button>)}</div></div>
     <div className="diagram-animation-stage">
-      <iframe ref={iframe} src="/simulator/index.html" title="全程折叠演示画布" inert={!loaded||!!failure} tabIndex={!loaded||failure?-1:0}/>
+      <iframe ref={iframe} src={appAsset('simulator/index.html')} title="全程折叠演示画布" inert={!loaded||!!failure} tabIndex={!loaded||failure?-1:0}/>
       {preparing&&<div className="diagram-animation-loading"><span/><p>{preparing}</p><button onClick={stop}>停止计算</button></div>}
       {!loaded&&!preparing&&!failure&&<div className="diagram-animation-loading"><p>演示已停止，点击播放可重新准备第 {index+1} 步。</p><button onClick={play}>重新准备</button></div>}
       {failure&&<div className="diagram-full-failure"><div className="diagram-animation-error" role="alert"><strong>第 {failure.index+1} 步暂时无法继续</strong><p>{failure.message}</p><div className="diagram-full-error-actions"><button onClick={()=>{cancelWork();void openStep(index,false,progress);}}>重试</button>{failure.index+1<project.steps.length&&<button onClick={skip}>跳过此步，从下一步开始</button>}</div></div></div>}

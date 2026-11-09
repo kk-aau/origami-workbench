@@ -1,4 +1,8 @@
-# 折纸工坊 · Zhezhi Workbench
+# 折纸工坊 · Origami Workbench
+
+[在线使用网页版](https://kk-aau.github.io/origami-workbench/) · [下载完整桌面版](https://github.com/kk-aau/origami-workbench/releases/latest)
+
+网页版提供折痕编辑、平折、折序绘图和三维模拟／动画，计算与工程保存在当前浏览器。请下载工程备份；基础形设计、镶嵌及部分高级构造仍需桌面版。网页版 PDF 使用 300 dpi 图像页面，矢量 CP 可导出 SVG。详见[网页版使用与部署](docs/网页版部署与使用.md)。
 
 自 2026-10-28 起，本迁移版是后续开发、修复、体验、打包和发布的默认主项目。原 `../workbench/` 保留为只读历史对照；后续需求直接在本目录落实。
 

@@ -1,3 +1,4 @@
+import {appAsset} from '../app/webRuntime';
 import {useCallback, useEffect, useId, useRef, useState, type KeyboardEvent} from 'react';
 import type {DiagramStepAnimationClip} from '../app/diagramStepAnimation';
 import {startFlatLayerReanalysis, type FlatFoldTask} from '../core/workerClient';
@@ -263,7 +264,7 @@ export default function DiagramStepAnimation({clip,revision,title,onClose,onCapt
         <div role="group" aria-label="动画视角">{([['front','正面'],['back','背面'],['isometric','立体']] as const).map(([value,label])=><button type="button" key={value} aria-label={`动画${label}视角`} aria-pressed={camera===value} disabled={!ready} onClick={()=>{setCamera(value);bridge.current?.send({type:'zhezhi-sim-camera',preset:value});}}>{label}</button>)}</div>
       </div>
       <div className="diagram-animation-stage">
-        <iframe ref={iframe} src="/simulator/index.html" title="步骤折叠动画画布"/>
+        <iframe ref={iframe} src={appAsset('simulator/index.html')} title="步骤折叠动画画布"/>
         {!loaded&&!failed&&<div className="diagram-animation-loading"><span aria-hidden="true"/><p>{preparing}</p></div>}
         {failed&&<div className="diagram-animation-error" role="alert"><strong>此步骤暂时无法演示</strong><p>{planningError||status?.error||status?.message}</p></div>}
         <span className="diagram-animation-viewhint">拖动旋转 · 滚轮缩放</span>

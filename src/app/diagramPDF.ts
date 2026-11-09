@@ -60,7 +60,7 @@ interface PDFDocument {
 interface PDFRuntime {PDFDocument:{create():Promise<PDFDocument>;load(data:Uint8Array):Promise<PDFDocument>}}
 declare global {interface Window {PDFLib?:PDFRuntime}}
 let runtimePromise:Promise<PDFRuntime>|undefined;
-function loadPDFRuntime():Promise<PDFRuntime> {
+export function loadPDFRuntime():Promise<PDFRuntime> {
   if(window.PDFLib)return Promise.resolve(window.PDFLib);
   if(runtimePromise)return runtimePromise;
   runtimePromise=new Promise((resolve,reject)=>{

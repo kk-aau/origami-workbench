@@ -1,6 +1,7 @@
 import {api, storageSessionToken} from './api';
 import {setPreferenceService} from './preferenceStorage';
 import {migrateBrowserPreferenceStorage} from './browserPreferenceMigration';
+import {WEB_APP} from './webRuntime';
 
 export type StorageDirectoryKind='projectsDir'|'diagramsDir'|'dataDir';
 export type StoragePaths=Record<StorageDirectoryKind,string>;
@@ -46,6 +47,7 @@ export async function readStorageStatus():Promise<StorageStatus> {
   return value;
 }
 export async function initializeStoragePreferences():Promise<StorageStatus> {
+  if(WEB_APP){const {initializeBrowserStorage,browserPreferences}=await import('./browserStorage');await initializeBrowserStorage();setPreferenceService(browserPreferences);bootstrapStatus=await readStorageStatus();return bootstrapStatus;}
   bootstrapError='';bootstrapStatus=null;
   if(!window.desktop)setPreferenceService(undefined);
   const status=await readStorageStatus();

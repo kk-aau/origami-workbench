@@ -1,3 +1,4 @@
+import {appAsset} from '../app/webRuntime';
 import {useEffect,useMemo,useRef,useState} from 'react';
 import type {Doc} from '../core/types';
 import {defaultModelColors,type ModelColors} from '../app/modelColors';
@@ -140,7 +141,7 @@ export default function DiagramSimulationCapture({before,after,title,onClose,onC
       <button type="button" className="ui-button" disabled={busy} onClick={()=>setFrameKey(value=>value+1)}>重新载入</button>
     </div>
     <div className="diagram-simulation-capture-stage" aria-busy={!loaded&&!error}>
-      <iframe key={frameKey} ref={iframe} src="/simulator/index.html" title="折序三维模拟画布" onError={()=>{loadedRef.current=false;setLoaded(false);setError('三维画布载入失败，请重新载入。');}}/>
+      <iframe key={frameKey} ref={iframe} src={appAsset('simulator/index.html')} title="折序三维模拟画布" onError={()=>{loadedRef.current=false;setLoaded(false);setError('三维画布载入失败，请重新载入。');}}/>
       {!loaded&&!error&&<div className="diagram-simulation-capture-loading" role="status">正在载入三维模型…</div>}
     </div>
     {error&&<div className="diagram-simulation-capture-error" role="alert">{error}</div>}
