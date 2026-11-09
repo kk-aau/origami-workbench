@@ -1,0 +1,2818 @@
+(function(){function e(e,t){let n=()=>{throw Error(`底图文件头损坏、截断或不支持，无法核实尺寸。`)},r=(t,r)=>{(t<0||t+r>e.length)&&n()},i=t=>(r(t,2),e[t]*256+e[t+1]),a=(t,n=!1)=>(r(t,4),new DataView(e.buffer,e.byteOffset+t,4).getUint32(0,n)),o=t=>(r(t,3),e[t]+e[t+1]*256+e[t+2]*65536),s=(t,n)=>(r(t,n),String.fromCharCode(...e.subarray(t,t+n))),c=(e,t)=>{if(!e||!t||e>16384||t>16384||e*t>4e7)throw Error(`底图实际尺寸过大或无效，最多4000万像素、单边16384像素。`);return{width:e,height:t}};if(t===`image/png`)return(s(0,8)!==`PNG\r
+
+`||a(8)!==13||s(12,4)!==`IHDR`)&&n(),r(16,17),c(a(16),a(20));if(t===`image/jpeg`){i(0)!==65496&&n();let t=2;for(;t<e.length;){for(e[t++]!==255&&n();e[t]===255;)t++;r(t,1);let a=e[t++];if((a===218||a===217)&&n(),a===1||a>=208&&a<=215)continue;let o=i(t);if(o<2&&n(),r(t,o),[192,193,194,195,197,198,199,201,202,203,205,206,207].includes(a))return o<8&&n(),c(i(t+5),i(t+3));t+=o}n()}if(t===`image/webp`){(s(0,4)!==`RIFF`||s(8,4)!==`WEBP`||a(4,!0)+8!==e.length)&&n();let t=s(12,4),i=a(16,!0);if(r(20,i),t===`VP8X`)return i!==10&&n(),c(o(24)+1,o(27)+1);if(t===`VP8L`){(i<5||e[20]!==47)&&n();let t=a(21,!0);return t>>>29&&n(),c((t&16383)+1,(t>>>14&16383)+1)}if(t===`VP8 `)return(i<10||e[20]&1||s(23,3)!==`*`)&&n(),c(e[26]+256*e[27]&16383,e[28]+256*e[29]&16383)}n()}function t(t){if(!t||typeof t!=`object`)throw Error(`底图数据无效。`);let{name:n,dataUrl:r,width:i,height:a,opacity:o,visible:s,placement:c}=t;if(t.viewport!==void 0){let e=t.viewport;if(!e||typeof e!=`object`||![e.x,e.y,e.units].every(Number.isFinite)||Math.abs(e.x)>1e6||Math.abs(e.y)>1e6||e.units<1e-9||e.units>1e6)throw Error(`底图屏幕参照坐标或比例无效。`)}if(typeof n!=`string`||n.length>255)throw Error(`底图名称无效或过长。`);if(typeof r!=`string`||r.length>4e6)throw Error(`底图数据超过保存限额，请缩小图片后重试。`);let l=/^data:image\/(png|jpeg|webp);base64,/.exec(r);if(!l)throw Error(`底图只能保存内嵌 PNG、JPEG 或 WebP 图片，不接受网络链接或 SVG。`);let u=r.slice(l[0].length);if(!u.length||u.length%4!=0||!/^[A-Za-z0-9+/]*={0,2}$/.test(u))throw Error(`底图 Base64 数据无效。`);let d=atob(u.slice(0,Math.min(48,u.length)));if(!(l[1]===`png`?d.startsWith(`PNG\r
+
+`):l[1]===`jpeg`?d.startsWith(`ÿØÿ`):d.startsWith(`RIFF`)&&d.slice(8,12)===`WEBP`))throw Error(`底图内容与图片格式不一致。`);let f=e(Uint8Array.from(atob(u),e=>e.charCodeAt(0)),`image/`+l[1]);if(f.width!==i||f.height!==a)throw Error(`底图记录尺寸与文件头实际尺寸不一致。`);if(![i,a].every(e=>Number.isInteger(e)&&e>0&&e<=16384)||i*a>4e7)throw Error(`底图尺寸过大或无效，最多4000万像素、单边16384像素。`);if(!Number.isFinite(o)||o<0||o>1||typeof s!=`boolean`)throw Error(`底图透明度或显示状态无效。`);let p=e=>Array.isArray(e)&&e.length===2&&e.every(e=>Number.isFinite(e)&&Math.abs(e)<=1e6);if(!c||!p(c.origin)||!p(c.axis)||Math.hypot(...c.axis)<1e-9)throw Error(`底图配准位置或缩放无效。`);let[m,h]=c.origin,[g,_]=c.axis;for(let[e,t]of[[0,0],[i,0],[i,a],[0,a]])if(!p([m+e*g-t*_,h+e*_+t*g]))throw Error(`底图角点超出坐标范围。`)}function n(e){if(!e||typeof e!=`object`||Array.isArray(e)||Object.keys(e).some(e=>![`startingFace`,`materialFace`].includes(e)))throw Error(`平折设置格式无效。`);if(Object.hasOwn(e,`materialFace`)&&(!Number.isInteger(e.materialFace)||e.materialFace<0||e.materialFace>=8192))throw Error(`材料起始面索引无效。`);let t=e.startingFace;if(!Array.isArray(t)||t.length<3||t.length>6e3||!t.every(e=>Array.isArray(e)&&e.length===2&&e.every(e=>Number.isFinite(e)&&Math.abs(e)<=1e6)))throw Error(`起始面轮廓必须包含 3–6000 个有效二维顶点。`);if(new Set(t.map(e=>JSON.stringify(e))).size!==t.length)throw Error(`起始面轮廓不能含重复顶点。`)}function r(e){let r=e;if(!r||typeof r!=`object`||typeof r.name!=`string`||!r.paper||!Array.isArray(r.segments))throw Error(`工程格式无效：缺少名称、纸张或线段。`);if(r.schemaVersion!==void 0&&r.schemaVersion!==1&&r.schemaVersion!==2)throw Error(`工程版本不受支持，不能保证无损读取。`);if(![r.paper.width,r.paper.height].every(e=>Number.isFinite(e)&&e>0&&e<=1e6))throw Error(`纸张宽高必须是 0 到 1,000,000 之间的有限毫米值。`);let i=/* @__PURE__ */ new Set;for(let e of r.segments){if(!e||typeof e.id!=`string`||!e.id||i.has(e.id))throw Error(`线段标识缺失或重复。`);if(i.add(e.id),e.displayColor!==void 0&&(typeof e.displayColor!=`string`||!/^#[0-9a-f]{6}$/i.test(e.displayColor)))throw Error(`线段 ${e.id} 的显示颜色必须为六位十六进制色值。`);if(![e.a,e.b].every(e=>Array.isArray(e)&&e.length===2&&e.every(e=>Number.isFinite(e)&&Math.abs(e)<=1e6)))throw Error(`线段 ${e.id} 的坐标无效或超出范围。`);if(![`M`,`V`,`B`,`U`,`A`,`F`].includes(e.assignment))throw Error(`线段 ${e.id} 的山谷类型无效。`);if(e.angle!==null&&(!Number.isFinite(e.angle)||Math.abs(e.angle)>180))throw Error(`线段 ${e.id} 的目标角度必须在 -180° 到 180° 之间。`);if(e.assignment===`M`&&e.angle!==null&&e.angle>0||e.assignment===`V`&&e.angle!==null&&e.angle<0)throw Error(`线段 ${e.id} 的山谷类型与目标角度符号冲突。`);if([`A`,`B`,`F`].includes(e.assignment)&&e.angle!==null&&e.angle!==0)throw Error(`边界、辅助线和展开线不能设置非零折角（${e.id}）。`)}if(r.background!==void 0&&t(r.background),r.flatFold!==void 0&&n(r.flatFold),r.objects!==void 0){if(!Array.isArray(r.objects)||r.objects.length>1500)throw Error(`辅助对象必须是数组，且不超过 1500 个。`);let e=e=>Array.isArray(e)&&e.length===2&&e.every(e=>Number.isFinite(e)&&Math.abs(e)<=1e6),t=e=>Number.isFinite(e)&&e>0&&e<=1e6;for(let n of r.objects){if(!n||typeof n.id!=`string`||!n.id||i.has(n.id))throw Error(`对象标识缺失或与其他对象、线段重复。`);if(i.add(n.id),typeof n.color!=`string`||!/^#[0-9a-f]{6}$/i.test(n.color))throw Error(`对象 ${n.id} 颜色必须为六位十六进制色值。`);if(n.kind===`circle`){if(!e(n.center)||!t(n.radius))throw Error(`圆 ${n.id} 的圆心或半径无效。`)}else if(n.kind===`text`){if(!e(n.position)||!t(n.fontSize)||typeof n.text!=`string`||n.text.length>1e4)throw Error(`文字 ${n.id} 的位置、字号或内容无效。`)}else if(n.kind===`mark`){if(!e(n.a)||!e(n.b))throw Error(`标记 ${n.id} 的坐标无效。`)}else throw Error(`工程包含未支持的对象类型，未丢弃或覆盖原工程。`)}}}var i=class extends Error{analysis;constructor(e,t){super(e),this.analysis=t,this.name=`CPPathOptimizationError`}};let a=[`M`,`V`,`B`,`U`,`A`,`F`],o=e=>[e[0],e[1]],s=e=>({...e,a:o(e.a),b:o(e.b)}),c=(e,t)=>e[0]===t[0]&&e[1]===t[1],l=(e,t)=>Math.hypot(e[0]-t[0],e[1]-t[1]);function u(e){if(!e||typeof e!=`object`||Array.isArray(e))throw Error(`加工优化设置必须是对象。`);if(e.profiles!==void 0&&(!e.profiles||typeof e.profiles!=`object`||Array.isArray(e.profiles)||Object.keys(e.profiles).some(e=>!a.includes(e))))throw Error(`加工分组线型无效。`);if(e.mergeSameSettings!==void 0&&typeof e.mergeSameSettings!=`boolean`)throw Error(`同设置合并必须明确选择布尔值。`);if(e.optimizeTravel!==void 0&&typeof e.optimizeTravel!=`boolean`)throw Error(`空走排序设置必须是布尔值。`);if(e.pathMode!==void 0&&![`independent`,`collinear`,`continuous`].includes(e.pathMode))throw Error(`加工路径模式无效。`);let t=e.maxTurns??null,n=e.maxMergedLength??null,r=e.maxMergedSegments??null;if(t!==null&&(!Number.isSafeInteger(t)||t<0))throw Error(`连续转弯次数须为非负整数。`);if(n!==null&&(!Number.isFinite(n)||n<=0||n>3e6))throw Error(`合并长度须为大于零且不超过 3,000,000 毫米的数值。`);if(r!==null&&(!Number.isSafeInteger(r)||r<1))throw Error(`最多合并段数须为正整数。`);if(e.overlapPolicy!==void 0&&![`reject`,`retain`].includes(e.overlapPolicy))throw Error(`重叠线处理方式无效。`);let i=e.origin===void 0?[0,0]:e.origin;if(!Array.isArray(i)||i.length!==2||!i.every(e=>Number.isFinite(e)&&Math.abs(e)<=1e6))throw Error(`加工起点必须为有效毫米坐标。`);let s={};for(let t of a){let n=e.profiles?.[t]===void 0?{}:e.profiles[t];if(!n||typeof n!=`object`||Array.isArray(n))throw Error(`${t} 加工设置无效。`);let r=n.enabled===void 0||n.enabled,i=n.groupId===void 0?t:n.groupId,a=n.settingsKey===void 0?t:n.settingsKey,o=n.passes===void 0?1:n.passes;if(typeof r!=`boolean`)throw Error(`${t} 是否加工必须为布尔值。`);if(![i,a].every(e=>typeof e==`string`&&e.length>0&&e.length<=4096))throw Error(`${t} 加工分组或设置标识无效。`);if(!Number.isInteger(o)||o<1||o>100)throw Error(`${t} 加工次数须为 1 到 100 的整数。`);s[t]={enabled:r,groupId:i,settingsKey:a,passes:o}}return{profiles:s,pathMode:e.pathMode??`continuous`,maxTurns:t,maxMergedLength:n,maxMergedSegments:r,optimizeTravel:e.optimizeTravel??!0,mergeSameSettings:e.mergeSameSettings??!1,overlapPolicy:e.overlapPolicy??`reject`,origin:o(i)}}let d=/* @__PURE__ */ new DataView(/* @__PURE__ */ new ArrayBuffer(8));function f(e){if(e===0)return[0n,0];d.setFloat64(0,e,!1);let t=d.getBigUint64(0,!1),n=Number(t>>52n&2047n),r=t&(1n<<52n)-1n|(n===0?0n:1n<<52n);return[t>>63n==0n?r:-r,n===0?-1074:n-1075]}function p(e,t){for(e=e<0n?-e:e,t=t<0n?-t:t;t!==0n;)[e,t]=[t,e%t];return e}function m(e){let t=[...e.a,...e.b].map(f),n=Math.min(...t.filter(e=>e[0]!==0n).map(e=>e[1])),[r,i,a,o]=t.map(([e,t])=>e===0n?0n:e<<BigInt(t-n)),s=i-o,c=a-r,l=r*o-a*i;n<0?(s<<=BigInt(-n),c<<=BigInt(-n)):l<<=BigInt(n);let u=p(p(s,c),l),d=s===0n?c<0n?-1n:1n:s<0n?-1n:1n;return`${s/u*d},${c/u*d},${l/u*d}`}function h(e,t,n){if(c(e,t)||c(t,n))return!1;let r=+(e[0]===t[0]);return t[r]>e[r]==n[r]>t[r]&&m({a:e,b:t})===m({a:t,b:n})}function g(e){let t=0;for(let n=1;n<e.length-1;n++)h(e[n-1],e[n],e[n+1])||t++;return t}function _(e,t){let n=g(e);if(t.pathMode===`collinear`){if(n)throw Error(`共线方案出现转弯或折返。`);if(t.maxMergedSegments!==null&&e.length-1>t.maxMergedSegments)throw Error(`合并段数超过设置上限。`);if(e.length>2&&t.maxMergedLength!==null&&l(e[0],e.at(-1))>t.maxMergedLength)throw Error(`合并长度超过设置上限。`)}else if(t.maxTurns!==null&&n>t.maxTurns)throw Error(`规划路径连续转弯次数超过设置上限。`)}function v(e){let t=e.options.pathMode===`collinear`||e.options.pathMode===`continuous`&&e.options.maxTurns!==null,n=[];for(let r of e.paths){let e=0;for(let i=1;i<r.sourceSegmentIds.length;i++)(!t||!h(r.points[i-1],r.points[i],r.points[i+1]))&&(n.push({path:r,firstEdge:e,endEdge:i}),e=i);n.push({path:r,firstEdge:e,endEdge:r.sourceSegmentIds.length})}return n}function y(e,t={}){r(e);let n=u(t),i=[],a=[],o=[],d=[],f=[],p=/* @__PURE__ */ new Map;for(let t of e.segments){let e=s(t),r=n.profiles[e.assignment];if(!r.enabled){a.push(e);continue}if(c(e.a,e.b)){o.push(e);continue}i.push(e);let l=JSON.stringify(n.mergeSameSettings?[r.settingsKey,r.passes]:[e.assignment,r.groupId,r.settingsKey,r.passes]),u=p.get(l);u||(u={id:`g${f.length+1}`,settingsKey:r.settingsKey,passes:r.passes,assignments:[],sourceSegmentIds:[]},p.set(l,u),f.push(u)),u.assignments.includes(e.assignment)||u.assignments.push(e.assignment),u.sourceSegmentIds.push(e.id)}if(o.length&&d.push({code:`zero-length`,severity:`warning`,message:`${o.length} 条零长线不产生加工路径；原工程保持不变。`,segmentIds:o.map(e=>e.id)}),n.pathMode===`collinear`&&n.maxMergedLength!==null){let e=i.filter(e=>l(e.a,e.b)>n.maxMergedLength);e.length&&d.push({code:`long-source`,severity:`warning`,message:`${e.length} 条原线已超过合并长度上限，将原样保留，不自动切短。`,segmentIds:e.map(e=>e.id)})}let h=/* @__PURE__ */ new Map;for(let e of i){let t=m(e),n=h.get(t);n?n.push(e):h.set(t,[e])}let g=[],_=!1;scan:for(let e of h.values()){if(e.length<2)continue;let t=+(e[0].a[0]===e[0].b[0]),r=e.map(e=>({s:e,lo:Math.min(e.a[t],e.b[t]),hi:Math.max(e.a[t],e.b[t])})).sort((e,t)=>e.lo-t.lo||e.hi-t.hi);for(let e=0;e<r.length;e++)for(let t=e+1;t<r.length&&r[t].lo<r[e].hi;t++){if(g.length>=200){_=!0;break scan}let i=r[e].s,a=r[t].s,o=n.profiles[i.assignment],s=n.profiles[a.assignment];g.push({segmentIds:[i.id,a.id],kind:c(i.a,a.a)&&c(i.b,a.b)||c(i.a,a.b)&&c(i.b,a.a)?`duplicate`:`overlap`,sameSettings:o.settingsKey===s.settingsKey&&o.passes===s.passes})}}return g.length&&d.push({code:`overlap`,severity:`warning`,message:`发现${_?`至少 `:``}${g.length} 对重复或共线重叠线。默认暂停优化；明确选择保留时，重叠位置会按各源线及指定次数重复加工。`,segmentIds:[...new Set(g.flatMap(e=>e.segmentIds))]}),{included:i,excluded:a,zeroLength:o,overlaps:g,overlapsTruncated:_,issues:d,groups:f,options:n}}function b(e,t=[0,0]){let n=0,r=0,i=t;for(let t of e)if(t.points.length){r+=l(i,t.points[0]);for(let e=1;e<t.points.length;e++)n+=l(t.points[e-1],t.points[e]);i=t.points[t.points.length-1]}return{pathCount:e.length,drawLength:n,travelDistance:r}}let ee=e=>`${e[0]},${e[1]}`,te=(e,t)=>(e[0]-t[0])**2+(e[1]-t[1])**2;function ne(e,t,n){let r=[t[0]-e[0],t[1]-e[1]],i=[n[0]-t[0],n[1]-t[1]],a=Math.hypot(...r)*Math.hypot(...i);return a?Math.acos(Math.max(-1,Math.min(1,(r[0]*i[0]+r[1]*i[1])/a)))*180/Math.PI:0}function re(e,t){let n=/* @__PURE__ */ new Map,r=/* @__PURE__ */ new Map;for(let t of e){n.set(t.u,t.a),n.set(t.v,t.b);for(let e of[t.u,t.v]){let n=r.get(e);n?n.push(t):r.set(e,[t])}}let i=/* @__PURE__ */ new Set,a=[],s=0,l=0;for(let e of n.keys()){if(i.has(e))continue;let u=[],d=[e];for(i.add(e);d.length;){let e=d.pop();u.push(e);for(let t of r.get(e)){let n=t.u===e?t.v:t.u;i.has(n)||(i.add(n),d.push(n))}}let f=u.filter(e=>r.get(e).length%2);s+=Math.max(1,f.length/2);let p=`virtual-hub:${++l}`,m=new Map(u.map(e=>[e,[...r.get(e)]]));if(f.length){let e=[];m.set(p,e);for(let t=0;t<f.length;t++){let n={id:`${p}:${t}`,u:p,v:f[t],virtual:!0};e.push(n),m.get(f[t]).push(n)}}let h=/* @__PURE__ */ new Set,g=/* @__PURE__ */ new Map,_=[{node:f.length?p:e,via:null}],v=[];for(;_.length;){let e=_[_.length-1],t=m.get(e.node),r=-1,i=1/0,a=e.via&&!e.via.edge.virtual?n.get(e.via.from):void 0;if(t.length>64){let n=g.get(e.node)??0;for(;n<t.length&&h.has(t[n].id);)n++;g.set(e.node,n),n<t.length&&(r=n)}else for(let o=0;o<t.length;o++){let s=t[o];if(h.has(s.id))continue;let c=s.u===e.node?s.v:s.u,l=s.virtual?1e4:a?ne(a,n.get(e.node),n.get(c)):0;l<i&&(r=o,i=l)}if(r<0){let e=_.pop();e.via&&v.push(e.via)}else{let n=t[r],i=n.u===e.node?n.v:n.u;h.add(n.id),_.push({node:i,via:{edge:n,from:e.node,to:i}})}}v.reverse();let y=[],b=()=>{if(!y.length)return;let e=[n.get(y[0].from),...y.map(e=>n.get(e.to))].map(o);a.push({group:t,points:e,edgeIds:y.map(e=>Number(e.edge.id)),closed:c(e[0],e[e.length-1])}),y=[]};for(let e of v)e.edge.virtual?b():y.push(e);b()}if(a.length!==s)throw Error(`欧拉分解没有达到奇偶度路径下限，停止加工导出。`);return{paths:a,minimum:s}}function ie(e){return{...e,points:[...e.points].reverse(),edgeIds:[...e.edgeIds].reverse()}}function ae(e,t){if(!e.closed||t===0)return e;let n=e.points.slice(0,-1),r=n.slice(t).concat(n.slice(0,t));return{...e,points:[...r,r[0]],edgeIds:e.edgeIds.slice(t).concat(e.edgeIds.slice(0,t))}}function oe(e,t){if(t.pathMode!==`collinear`&&t.maxTurns===null)return e;let n=[];for(let r of e){let e=0,i=0,a=t=>{n.push({...r,points:r.points.slice(e,t+1),edgeIds:r.edgeIds.slice(e,t),closed:!1}),e=t,i=0};for(let n=1;n<r.edgeIds.length;n++){let o=!h(r.points[n-1],r.points[n],r.points[n+1]),s=o&&(t.pathMode===`collinear`||i+1>t.maxTurns),c=t.pathMode===`collinear`&&t.maxMergedSegments!==null&&n-e+1>t.maxMergedSegments,u=t.pathMode===`collinear`&&t.maxMergedLength!==null&&l(r.points[e],r.points[n+1])>t.maxMergedLength;s||c||u?a(n):o&&i++}a(r.edgeIds.length)}return n}function se(e,t,n=!0){if(!e.length)return[];let r=e.length>1500,i=r?[...e].sort((e,t)=>e.points[0][0]-t.points[0][0]||e.points[0][1]-t.points[0][1]):[...e],a=[],o=t,s=0;for(;r?s<i.length:i.length>0;){let e=r?s:0,t=i[e],c=1/0,l=r?s:0,u=r?s+1:i.length;for(let r=l;r<u;r++){let a=i[r];if(a.closed)for(let n=0;n<a.points.length-1;n++){let i=te(o,a.points[n]);i<c&&(c=i,e=r,t=ae(a,n))}else{let i=te(o,a.points[0]),s=te(o,a.points[a.points.length-1]);i<c&&(c=i,e=r,t=a),n&&s<c&&(c=s,e=r,t=ie(a))}}a.push(t),r?s++:i.splice(e,1),o=t.points[t.points.length-1]}if(!r&&n)for(let e=0;e<2;e++){let e=!1;for(let n=0;n<a.length-1;n++)for(let r=n+1;r<a.length;r++){let i=n?a[n-1].points[a[n-1].points.length-1]:t,o=r+1<a.length?a[r+1].points[0]:null,s=a[n].points[0],c=a[r].points[a[r].points.length-1],u=l(i,s)+(o?l(c,o):0);l(i,c)+(o?l(s,o):0)<u&&(a.splice(n,r-n+1,...a.slice(n,r+1).reverse().map(ie)),e=!0)}if(!e)break}return a}function ce(e,t){return e.map((e,n)=>({id:`path_${n+1}`,groupId:e.group.id,settingsKey:e.group.settingsKey,points:e.points.map(o),sourceSegmentIds:e.edgeIds.map(e=>t[e].source.id),assignments:e.edgeIds.map(e=>t[e].source.assignment)}))}function le(e,t){let n=new Map(t.included.map(e=>[e.id,e])),r=/* @__PURE__ */ new Map,i=new Map(t.groups.map(e=>[e.id,e])),a=new Map(t.groups.map(e=>[e.id,new Set(e.sourceSegmentIds)]));for(let o of e){_(o.points,t.options);let e=i.get(o.groupId);if(!e||o.settingsKey!==e.settingsKey||o.points.length!==o.sourceSegmentIds.length+1||o.assignments.length!==o.sourceSegmentIds.length)throw Error(`加工路径分组或点边数量无效。`);let s=a.get(e.id);for(let e=0;e<o.sourceSegmentIds.length;e++){let i=n.get(o.sourceSegmentIds[e]),a=o.points[e],l=o.points[e+1];if(!i||!s.has(i.id)||o.assignments[e]!==i.assignment||!(c(a,i.a)&&c(l,i.b)||c(a,i.b)&&c(l,i.a)))throw Error(`加工路径包含新增连线、位置变化或源线型错误。`);if(t.options.pathMode===`independent`&&(o.sourceSegmentIds.length!==1||!c(a,i.a)||!c(l,i.b)))throw Error(`逐边模式不能合并路径或反转原线段方向。`);r.set(i.id,(r.get(i.id)??0)+1)}}for(let e of t.included)if(r.get(e.id)!==t.options.profiles[e.assignment].passes)throw Error(`加工线 ${e.id} 遗漏或次数不符。`)}function ue(e,t={}){let n=y(e,t),{options:r,groups:a}=n;if(!n.included.length)throw new i(`没有可加工的非零长度线段。`,n);if(n.overlaps.length&&r.overlapPolicy===`reject`)throw new i(`重复或共线重叠线尚未处理；请先编辑原 CP，或明确选择保留全部源线并重复加工。`,n);let s=[],l=[],u=new Map(n.included.map(e=>[e.id,e])),d=/* @__PURE__ */ new Map;for(let e of a){let t=[];d.set(e.id,t);for(let n of e.sourceSegmentIds){let r=u.get(n);for(let n=0;n<e.passes;n++){let i={id:s.length,pass:n,a:o(r.a),b:o(r.b),source:r,u:ee(r.a),v:ee(r.b)};s.push(i),t.push(i),l.push({id:`original_${l.length+1}`,groupId:e.id,settingsKey:e.settingsKey,points:[o(r.a),o(r.b)],sourceSegmentIds:[r.id],assignments:[r.assignment]})}}}let f=[],p=0,h=r.origin;for(let e of a){let t=d.get(e.id),n=r.pathMode===`independent`,i;if(n)i={paths:t.map(t=>({group:e,points:[t.a,t.b],edgeIds:[Number(t.id)],closed:!1})),minimum:t.length};else if(r.pathMode===`collinear`){let n=/* @__PURE__ */ new Map;for(let e of t){let t=e.pass+`:`+m(e),r=n.get(t);r?r.push(e):n.set(t,[e])}i={paths:[],minimum:0};for(let t of n.values()){let n=re(t,e);i.paths.push(...n.paths),i.minimum+=n.minimum}}else i=re(t,e);p+=i.minimum;let a=r.optimizeTravel?se(i.paths,h,!n):i.paths,o=oe(a,r),s=o===a||!r.optimizeTravel?o:se(o,h,!n);f.push(...s),s.length&&(h=s[s.length-1].points[s[s.length-1].points.length-1])}let g=b(l,r.origin),_=ce(f,s),v=b(_,r.origin);if(!r.optimizeTravel){let e=new Map(n.included.map((e,t)=>[e.id,t]));_=_.map(t=>{if(t.sourceSegmentIds.length===1){let e=u.get(t.sourceSegmentIds[0]);return{...t,points:[o(e.a),o(e.b)]}}if(r.pathMode===`collinear`){let n=0;for(let r=1;r<t.sourceSegmentIds.length;r++)e.get(t.sourceSegmentIds[r])<e.get(t.sourceSegmentIds[n])&&(n=r);if(!c(t.points[n],u.get(t.sourceSegmentIds[n]).a))return{...t,points:[...t.points].reverse(),sourceSegmentIds:[...t.sourceSegmentIds].reverse(),assignments:[...t.assignments].reverse()}}return t}).sort((t,n)=>t.sourceSegmentIds.reduce((t,n)=>Math.min(t,e.get(n)),1/0)-n.sourceSegmentIds.reduce((t,n)=>Math.min(t,e.get(n)),1/0)),_=_.map((e,t)=>({...e,id:`path_${t+1}`})),v=b(_,r.origin)}return r.optimizeTravel&&v.travelDistance>g.travelDistance&&(_=l.map(e=>({...e,points:e.points.map(o),sourceSegmentIds:[...e.sourceSegmentIds],assignments:[...e.assignments]})),v=b(_,r.origin),n.issues.push({code:`route-fallback`,severity:`warning`,message:r.pathMode===`independent`?`候选逐边排序的空走超过原顺序，已保留原分组顺序及方向。`:`当前欧拉分解的空走超过原顺序，已回退到原分组路径；本次未保证达到最少路径数。`,segmentIds:[]})),le(_,n),{paths:_,baselinePaths:l,before:g,after:v,theoreticalMinimumPaths:p,atTheoreticalMinimum:_.length===p,analysis:n,groups:a,options:r}}let de=/* @__PURE__ */ RegExp(`^[:A-Za-z_\\u00C0-\\u00D6\\u00D8-\\u00F6\\u00F8-\\u02FF\\u0370-\\u037D\\u037F-\\u1FFF\\u200C-\\u200D\\u2070-\\u218F\\u2C00-\\u2FEF\\u3001-\\uD7FF\\uF900-\\uFDCF\\uFDF0-\\uFFFD][:A-Za-z_\\u00C0-\\u00D6\\u00D8-\\u00F6\\u00F8-\\u02FF\\u0370-\\u037D\\u037F-\\u1FFF\\u200C-\\u200D\\u2070-\\u218F\\u2C00-\\u2FEF\\u3001-\\uD7FF\\uF900-\\uFDCF\\uFDF0-\\uFFFD\\-.\\d\\u00B7\\u0300-\\u036F\\u203F-\\u2040]*$`);function fe(e,t){let n=[],r=t.exec(e);for(;r;){let i=[];i.startIndex=t.lastIndex-r[0].length;let a=r.length;for(let e=0;e<a;e++)i.push(r[e]);n.push(i),r=t.exec(e)}return n}let pe=function(e){return de.exec(e)!=null};function me(e){return e!==void 0}let he=[`hasOwnProperty`,`toString`,`valueOf`,`__defineGetter__`,`__defineSetter__`,`__lookupGetter__`,`__lookupSetter__`],ge=[`__proto__`,`constructor`,`prototype`],_e={allowBooleanAttributes:!1,unpairedTags:[]};function ve(e,t){t=Object.assign({},_e,t);let n=[],r=!1,i=!1;e[0]===`﻿`&&(e=e.substr(1));for(let a=0;a<e.length;a++)if(e[a]===`<`&&e[a+1]===`?`){if(a+=2,a=ye(e,a),a.err)return a}else if(e[a]===`<`){let o=a;if(a++,e[a]===`!`){a=be(e,a);continue}{let s=!1;e[a]===`/`&&(s=!0,a++);let c=``;for(;a<e.length&&e[a]!==`>`&&e[a]!==` `&&e[a]!==`	`&&e[a]!==`
+`&&e[a]!==`\r`;a++)c+=e[a];if(c=c.trim(),c[c.length-1]===`/`&&(c=c.substring(0,c.length-1),a--),!De(c)){let t;return t=c.trim().length===0?`Invalid space after '<'.`:`Tag '`+c+`' is an invalid name.`,S(`InvalidTag`,t,C(e,a))}let l=xe(e,a);if(l===!1)return S(`InvalidAttr`,`Attributes for '`+c+`' have open quote.`,C(e,a));let u=l.value;if(a=l.index,u[u.length-1]===`/`){let n=a-u.length;u=u.substring(0,u.length-1);let i=Ce(u,t);if(i===!0)r=!0;else return S(i.err.code,i.err.msg,C(e,n+i.err.line))}else if(s){if(!l.tagClosed)return S(`InvalidTag`,`Closing tag '`+c+`' doesn't have proper closing.`,C(e,a));if(u.trim().length>0)return S(`InvalidTag`,`Closing tag '`+c+`' can't have attributes or invalid starting.`,C(e,o));if(n.length===0)return S(`InvalidTag`,`Closing tag '`+c+`' has not been opened.`,C(e,o));{let t=n.pop();if(c!==t.tagName){let n=C(e,t.tagStartPos);return S(`InvalidTag`,`Expected closing tag '`+t.tagName+`' (opened in line `+n.line+`, col `+n.col+`) instead of closing tag '`+c+`'.`,C(e,o))}n.length==0&&(i=!0)}}else{let s=Ce(u,t);if(s!==!0)return S(s.err.code,s.err.msg,C(e,a-u.length+s.err.line));if(i===!0)return S(`InvalidXml`,`Multiple possible root nodes found.`,C(e,a));t.unpairedTags.indexOf(c)!==-1||n.push({tagName:c,tagStartPos:o}),r=!0}for(a++;a<e.length;a++)if(e[a]===`<`){if(e[a+1]===`!`){a++,a=be(e,a);continue}if(e[a+1]===`?`){if(a=ye(e,++a),a.err)return a}else break}else if(e[a]===`&`){let t=Te(e,a);if(t==-1)return S(`InvalidChar`,`char '&' is not expected.`,C(e,a));a=t}else if(i===!0&&!x(e[a]))return S(`InvalidXml`,`Extra text at the end`,C(e,a));e[a]===`<`&&a--}}else{if(x(e[a]))continue;return S(`InvalidChar`,`char '`+e[a]+`' is not expected.`,C(e,a))}return r?n.length==1?S(`InvalidTag`,`Unclosed tag '`+n[0].tagName+`'.`,C(e,n[0].tagStartPos)):n.length>0?S(`InvalidXml`,`Invalid '`+JSON.stringify(n.map(e=>e.tagName),null,4).replace(/\r?\n/g,``)+`' found.`,{line:1,col:1}):!0:S(`InvalidXml`,`Start tag expected.`,1)}function x(e){return e===` `||e===`	`||e===`
+`||e===`\r`}function ye(e,t){let n=t;for(;t<e.length;t++)if(e[t]==`?`||e[t]==` `){let r=e.substr(n,t-n);if(t>5&&r===`xml`)return S(`InvalidXml`,`XML declaration allowed only at the start of the document.`,C(e,t));if(e[t]==`?`&&e[t+1]==`>`){t++;break}continue}return t}function be(e,t){if(e.length>t+5&&e[t+1]===`-`&&e[t+2]===`-`){for(t+=3;t<e.length;t++)if(e[t]===`-`&&e[t+1]===`-`&&e[t+2]===`>`){t+=2;break}}else if(e.length>t+8&&e[t+1]===`D`&&e[t+2]===`O`&&e[t+3]===`C`&&e[t+4]===`T`&&e[t+5]===`Y`&&e[t+6]===`P`&&e[t+7]===`E`){let n=1;for(t+=8;t<e.length;t++)if(e[t]===`<`)n++;else if(e[t]===`>`&&(n--,n===0))break}else if(e.length>t+9&&e[t+1]===`[`&&e[t+2]===`C`&&e[t+3]===`D`&&e[t+4]===`A`&&e[t+5]===`T`&&e[t+6]===`A`&&e[t+7]===`[`){for(t+=8;t<e.length;t++)if(e[t]===`]`&&e[t+1]===`]`&&e[t+2]===`>`){t+=2;break}}return t}function xe(e,t){let n=``,r=``,i=!1;for(;t<e.length;t++){if(e[t]===`"`||e[t]===`'`)r===``?r=e[t]:r!==e[t]||(r=``);else if(e[t]===`>`&&r===``){i=!0;break}n+=e[t]}return r===``&&{value:n,index:t,tagClosed:i}}function Se(e){let t=[],n=e.length,r=0;for(;r<n;){let i=r;for(;r<n&&x(e[r]);)r++;if(r>=n)break;if(e[r]===`=`){r=i+1;continue}let a=e.slice(i,r),o=r;for(;r<n&&!x(e[r])&&e[r]!==`=`;)r++;let s=e.slice(o,r),c,l=r;for(;l<n&&x(e[l]);)l++;l<n&&e[l]===`=`&&(c=e.slice(r,l+1),r=l+1);let u,d,f=r;for(;f<n&&x(e[f]);)f++;if(f<n&&(e[f]===`"`||e[f]===`'`)){let t=f+1,n=e.indexOf(e[f],t);n!==-1&&(u=e[f],d=e.slice(t,n),r=n+1)}let p={startIndex:i};p[1]=a,p[2]=s,p[3]=c,p[4]=u!==void 0||void 0,p[5]=u,p[6]=d,t.push(p)}return t}function Ce(e,t){let n=Se(e),r={};for(let e=0;e<n.length;e++){if(n[e][1].length===0)return S(`InvalidAttr`,`Attribute '`+n[e][2]+`' has no space in starting.`,w(n[e]));if(n[e][3]!==void 0&&n[e][4]===void 0)return S(`InvalidAttr`,`Attribute '`+n[e][2]+`' is without value.`,w(n[e]));if(n[e][3]===void 0&&!t.allowBooleanAttributes)return S(`InvalidAttr`,`boolean attribute '`+n[e][2]+`' is not allowed.`,w(n[e]));let i=n[e][2];if(!Ee(i))return S(`InvalidAttr`,`Attribute '`+i+`' is an invalid name.`,w(n[e]));if(!Object.prototype.hasOwnProperty.call(r,i))r[i]=1;else return S(`InvalidAttr`,`Attribute '`+i+`' is repeated.`,w(n[e]))}return!0}function we(e,t){let n=/\d/;for(e[t]===`x`&&(t++,n=/[\da-fA-F]/);t<e.length;t++){if(e[t]===`;`)return t;if(!e[t].match(n))break}return-1}function Te(e,t){if(t++,e[t]===`;`)return-1;if(e[t]===`#`)return t++,we(e,t);let n=0;for(;t<e.length;t++,n++)if(!(e[t].match(/\w/)&&n<20)){if(e[t]===`;`)break;return-1}return t}function S(e,t,n){return{err:{code:e,msg:t,line:n.line||n,col:n.col}}}function Ee(e){return pe(e)}function De(e){return pe(e)}function C(e,t){let n=e.substring(0,t).split(/\r?\n/);return{line:n.length,col:n[n.length-1].length+1}}function w(e){return e.startIndex+e[1].length}let Oe={cent:`¢`,pound:`£`,curren:`¤`,yen:`¥`,euro:`€`,dollar:`$`,fnof:`ƒ`,inr:`₹`,af:`؋`,birr:`ብር`,peso:`₱`,rub:`₽`,won:`₩`,yuan:`¥`,cedil:`¸`},ke={amp:`&`,apos:`'`,gt:`>`,lt:`<`,quot:`"`},Ae={nbsp:`\xA0`,copy:`©`,reg:`®`,trade:`™`,mdash:`—`,ndash:`–`,hellip:`…`,laquo:`«`,raquo:`»`,lsquo:`‘`,rsquo:`’`,ldquo:`“`,rdquo:`”`,bull:`•`,para:`¶`,sect:`§`,deg:`°`,frac12:`½`,frac14:`¼`,frac34:`¾`},T=Object.freeze({ALLOW:`allow`,BLOCK:`block`,THROW:`throw`}),je=/* @__PURE__ */ new Set(`!?\\\\/[]$%{}^&*()<>|+`);function Me(e){if(e[0]===`#`)throw Error(`[EntityReplacer] Invalid character '#' in entity name: "${e}"`);for(let t of e)if(je.has(t))throw Error(`[EntityReplacer] Invalid character '${t}' in entity name: "${e}"`);return e}function E(...e){let t=Object.create(null);for(let n of e)if(n)for(let e of Object.keys(n)){let r=n[e];if(typeof r==`string`)t[e]=r;else if(r&&typeof r==`object`&&r.val!==void 0){let n=r.val;typeof n==`string`&&(t[e]=n)}}return t}let D=`external`,O=`base`;function Ne(e){return!e||e===D?/* @__PURE__ */ new Set([D]):e===`all`?/* @__PURE__ */ new Set([`all`]):e===O?/* @__PURE__ */ new Set([O]):Array.isArray(e)?new Set(e):/* @__PURE__ */ new Set([D])}let k=Object.freeze({allow:0,leave:1,remove:2,throw:3}),Pe=/* @__PURE__ */ new Set([9,10,13]);function Fe(e){if(!e)return{xmlVersion:1,onLevel:k.allow,nullLevel:k.remove};let t=e.xmlVersion===1.1?1.1:1,n=k[e.onNCR]??k.allow,r=k[e.nullNCR]??k.remove;return{xmlVersion:t,onLevel:n,nullLevel:Math.max(r,k.remove)}}var Ie=class{constructor(e={}){this._limit=e.limit||{},this._maxTotalExpansions=this._limit.maxTotalExpansions||0,this._maxExpandedLength=this._limit.maxExpandedLength||0,this._postCheck=typeof e.postCheck==`function`?e.postCheck:e=>e,this._limitTiers=Ne(this._limit.applyLimitsTo??D),this._numericAllowed=e.numericAllowed??!0,this._baseMap=E(ke,e.namedEntities||null),this._externalMap=Object.create(null),this._inputMap=Object.create(null),this._totalExpansions=0,this._expandedLength=0,this._removeSet=new Set(e.remove&&Array.isArray(e.remove)?e.remove:[]),this._leaveSet=new Set(e.leave&&Array.isArray(e.leave)?e.leave:[]);let t=Fe(e.ncr);this._ncrXmlVersion=t.xmlVersion,this._ncrOnLevel=t.onLevel,this._ncrNullLevel=t.nullLevel,this._onExternalEntity=typeof e.onExternalEntity==`function`?e.onExternalEntity:null,this._onInputEntity=typeof e.onInputEntity==`function`?e.onInputEntity:null}_applyRegistrationHook(e,t,n,r){if(!e)return!0;let i=e(t,n);if(i===T.BLOCK)return!1;if(i===T.THROW)throw Error(`[EntityDecoder] Registration of ${r} entity "&${t};" was rejected by hook`);return!0}setExternalEntities(e){if(e)for(let t of Object.keys(e))Me(t);if(!this._onExternalEntity){this._externalMap=E(e);return}let t=E(e),n=Object.create(null);for(let[e,r]of Object.entries(t))this._applyRegistrationHook(this._onExternalEntity,e,r,`external`)&&(n[e]=r);this._externalMap=n}addExternalEntity(e,t){Me(e),typeof t==`string`&&t.indexOf(`&`)===-1&&this._applyRegistrationHook(this._onExternalEntity,e,t,`external`)&&(this._externalMap[e]=t)}addInputEntities(e){if(this._totalExpansions=0,this._expandedLength=0,!this._onInputEntity){this._inputMap=E(e);return}let t=E(e),n=Object.create(null);for(let[e,r]of Object.entries(t))this._applyRegistrationHook(this._onInputEntity,e,r,`input`)&&(n[e]=r);this._inputMap=n}reset(){return this._inputMap=Object.create(null),this._totalExpansions=0,this._expandedLength=0,this}setXmlVersion(e){this._ncrXmlVersion=e===1.1?1.1:1}decode(e){if(typeof e!=`string`||e.length===0||e.indexOf(`&`)===-1)return e;let t=e,n=[],r=e.length,i=0,a=0,o=this._maxTotalExpansions>0,s=this._maxExpandedLength>0,c=o||s;for(;a<r;){if(e.charCodeAt(a)!==38){a++;continue}let t=a+1;for(;t<r&&e.charCodeAt(t)!==59&&t-a<=32;)t++;if(t>=r||e.charCodeAt(t)!==59){a++;continue}let l=e.slice(a+1,t);if(l.length===0){a++;continue}let u,d;if(this._removeSet.has(l))u=``,d===void 0&&(d=D);else if(this._leaveSet.has(l)){a++;continue}else if(l.charCodeAt(0)===35){let e=this._resolveNCR(l);if(e===void 0){a++;continue}u=e,d=O}else{let e=this._resolveName(l);u=e?.value,d=e?.tier}if(u===void 0){a++;continue}if(a>i&&n.push(e.slice(i,a)),n.push(u),i=t+1,a=i,c&&this._tierCounts(d)){if(o&&(this._totalExpansions++,this._totalExpansions>this._maxTotalExpansions))throw Error(`[EntityReplacer] Entity expansion count limit exceeded: ${this._totalExpansions} > ${this._maxTotalExpansions}`);if(s){let e=u.length-(l.length+2);if(e>0&&(this._expandedLength+=e,this._expandedLength>this._maxExpandedLength))throw Error(`[EntityReplacer] Expanded content length limit exceeded: ${this._expandedLength} > ${this._maxExpandedLength}`)}}}i<r&&n.push(e.slice(i));let l=n.length===0?e:n.join(``);return this._postCheck(l,t)}_tierCounts(e){return this._limitTiers.has(`all`)?!0:this._limitTiers.has(e)}_resolveName(e){if(e in this._inputMap)return{value:this._inputMap[e],tier:D};if(e in this._externalMap)return{value:this._externalMap[e],tier:D};if(e in this._baseMap)return{value:this._baseMap[e],tier:O}}_classifyNCR(e){return e===0?this._ncrNullLevel:e>=55296&&e<=57343||this._ncrXmlVersion===1&&e>=1&&e<=31&&!Pe.has(e)?k.remove:-1}_applyNCRAction(e,t,n){switch(e){case k.allow:return String.fromCodePoint(n);case k.remove:return``;case k.leave:return;case k.throw:throw Error(`[EntityDecoder] Prohibited numeric character reference &${t}; (U+${n.toString(16).toUpperCase().padStart(4,`0`)})`);default:return String.fromCodePoint(n)}}_resolveNCR(e){let t=e.charCodeAt(1),n;if(n=t===120||t===88?parseInt(e.slice(2),16):parseInt(e.slice(1),10),Number.isNaN(n)||n<0||n>1114111)return;let r=this._classifyNCR(n);if(!this._numericAllowed&&r<k.remove)return;let i=r===-1?this._ncrOnLevel:Math.max(this._ncrOnLevel,r);return this._applyNCRAction(i,e,n)}};let Le=e=>he.includes(e)?`__`+e:e,Re={preserveOrder:!1,attributeNamePrefix:`@_`,attributesGroupName:!1,textNodeName:`#text`,ignoreAttributes:!0,removeNSPrefix:!1,allowBooleanAttributes:!1,parseTagValue:!0,parseAttributeValue:!1,trimValues:!0,cdataPropName:!1,numberParseOptions:{hex:!0,leadingZeros:!0,eNotation:!0,unicode:!1},tagValueProcessor:function(e,t){return t},attributeValueProcessor:function(e,t){return t},stopNodes:[],alwaysCreateTextNode:!1,isArray:()=>!1,commentPropName:!1,unpairedTags:[],processEntities:!0,htmlEntities:!1,entityDecoder:null,ignoreDeclaration:!1,ignorePiTags:!1,transformTagName:!1,transformAttributeName:!1,updateTag:function(e,t,n){return e},captureMetaData:!1,maxNestedTags:100,strictReservedNames:!0,jPath:!0,onDangerousProperty:Le};function ze(e,t){if(typeof e!=`string`)return;let n=e.toLowerCase();if(he.some(e=>n===e.toLowerCase())||ge.some(e=>n===e.toLowerCase()))throw Error(`[SECURITY] Invalid ${t}: "${e}" is a reserved JavaScript keyword that could cause prototype pollution`)}function Be(e,t){return typeof e==`boolean`?{enabled:e,maxEntitySize:1e4,maxExpansionDepth:1e4,maxTotalExpansions:1/0,maxExpandedLength:1e5,maxEntityCount:1e3,allowedTags:null,tagFilter:null,appliesTo:`all`}:typeof e==`object`&&e?{enabled:e.enabled!==!1,maxEntitySize:Math.max(1,e.maxEntitySize??1e4),maxExpansionDepth:Math.max(1,e.maxExpansionDepth??1e4),maxTotalExpansions:Math.max(1,e.maxTotalExpansions??1/0),maxExpandedLength:Math.max(1,e.maxExpandedLength??1e5),maxEntityCount:Math.max(1,e.maxEntityCount??1e3),allowedTags:e.allowedTags??null,tagFilter:e.tagFilter??null,appliesTo:e.appliesTo??`all`}:Be(!0)}let Ve=function(e){let t=Object.assign({},Re,e),n=[{value:t.attributeNamePrefix,name:`attributeNamePrefix`},{value:t.attributesGroupName,name:`attributesGroupName`},{value:t.textNodeName,name:`textNodeName`},{value:t.cdataPropName,name:`cdataPropName`},{value:t.commentPropName,name:`commentPropName`}];for(let{value:e,name:t}of n)e&&ze(e,t);return t.onDangerousProperty===null&&(t.onDangerousProperty=Le),t.processEntities=Be(t.processEntities,t.htmlEntities),t.unpairedTagsSet=new Set(t.unpairedTags),t.stopNodes&&Array.isArray(t.stopNodes)&&(t.stopNodes=t.stopNodes.map(e=>typeof e==`string`&&e.startsWith(`*.`)?`..`+e.substring(2):e)),t},A;A=typeof Symbol==`function`?Symbol(`XML Node Metadata`):`@@xmlMetadata`;var j=class{constructor(e){this.tagname=e,this.child=[],this[`:@`]=Object.create(null)}add(e,t){e===`__proto__`&&(e=`#__proto__`),this.child.push({[e]:t})}addChild(e,t){e.tagname===`__proto__`&&(e.tagname=`#__proto__`),e[`:@`]&&Object.keys(e[`:@`]).length>0?this.child.push({[e.tagname]:e.child,":@":e[`:@`]}):this.child.push({[e.tagname]:e.child}),this.addStartIndex(t)}addStartIndex(e){e!==void 0&&(this.child[this.child.length-1][A]={startIndex:e})}addEndIndex(e){let t=this.child[this.child.length-1];t!==void 0&&t[A]!==void 0&&t[A].endIndex===void 0&&(t[A].endIndex=e)}static getMetaDataSymbol(){return A}};let M=(e,t,n=``)=>{let r=`[${e.replace(`:`,``)}][${t.replace(`:`,``)}]*`;return{name:RegExp(`^[${e}][${t}]*$`,n),ncName:RegExp(`^${r}$`,n),qName:RegExp(`^${r}(?::${r})?$`,n),nmToken:RegExp(`^[${t}]+$`,n),nmTokens:RegExp(`^[${t}]+(?:\\s+[${t}]+)*$`,n)}},He=M(`:A-Za-z_À-ÖØ-öø-˿Ͱ-ͽͿ-҆҈-῿‌-‍⁰-↏Ⰰ-⿯、-퟿豈-﷏ﷰ-�`,`:A-Za-z_À-ÖØ-öø-˿Ͱ-ͽͿ-҆҈-῿‌-‍⁰-↏Ⰰ-⿯、-퟿豈-﷏ﷰ-�\\-\\.\\d·̀-ͯ‿-⁀`),Ue=M(`:A-Za-z_À-˿Ͱ-ͽͿ-҆҈-῿‌-‍⁰-↏Ⰰ-⿯、-퟿豈-﷏ﷰ-�𐀀-󯿿`,`:A-Za-z_À-˿Ͱ-ͽͿ-҆҈-῿‌-‍⁰-↏Ⰰ-⿯、-퟿豈-﷏ﷰ-�𐀀-󯿿\\-\\.\\d·̀-ͯ҇‿-⁀`,`u`),We=M(`:A-Za-z_`,`:A-Za-z_\\-\\.\\d`),Ge=(e=`1.0`,t=!1)=>t?We:e===`1.1`?Ue:He,Ke=(e,{xmlVersion:t=`1.0`,asciiOnly:n=!1}={})=>Ge(t,n).qName.test(e);var qe=class{constructor(e,t){this.suppressValidationErr=!e,this.options=e,this.xmlVersion=t||1}setXmlVersion(e=1){this.xmlVersion=e}readDocType(e,t){let n=Object.create(null),r=0;if(e[t+3]===`O`&&e[t+4]===`C`&&e[t+5]===`T`&&e[t+6]===`Y`&&e[t+7]===`P`&&e[t+8]===`E`){t+=9;let i=1,a=!1,o=!1,s=null,c=``;for(;t<e.length;t++){if(s!==null){e[t]===s&&(s=null),c+=e[t];continue}if(!a&&!o&&(e[t]===`"`||e[t]===`'`)){s=e[t],c+=e[t];continue}if(e[t]===`<`&&!o){if(a&&P(e,`!ENTITY`,t)){t+=7;let i,a;if([i,a,t]=this.readEntityExp(e,t+1,this.suppressValidationErr),a.indexOf(`&`)===-1){if(this.options.enabled!==!1&&this.options.maxEntityCount!=null&&r>=this.options.maxEntityCount)throw Error(`Entity count (${r+1}) exceeds maximum allowed (${this.options.maxEntityCount})`);n[i]=a,r++}}else if(a&&P(e,`!ELEMENT`,t)){t+=8;let{index:n}=this.readElementExp(e,t+1);t=n}else if(a&&P(e,`!ATTLIST`,t))t+=8;else if(a&&P(e,`!NOTATION`,t)){t+=9;let{index:n}=this.readNotationExp(e,t+1,this.suppressValidationErr);t=n}else if(P(e,`!--`,t))o=!0;else throw Error(`Invalid DOCTYPE`);i++,c=``}else if(e[t]===`>`){if(o?e[t-1]===`-`&&e[t-2]===`-`&&(o=!1,i--):i--,i===0)break}else e[t]===`[`?a=!0:c+=e[t]}if(s!==null||i!==0)throw Error(`Unclosed DOCTYPE`)}else throw Error(`Invalid Tag instead of DOCTYPE`);return{entities:n,i:t}}readEntityExp(e,t){t=N(e,t);let n=t;for(;t<e.length&&!/\s/.test(e[t])&&e[t]!==`"`&&e[t]!==`'`;)t++;let r=e.substring(n,t);if(F(r,{xmlVersion:this.xmlVersion}),t=N(e,t),!this.suppressValidationErr){if(e.substring(t,t+6).toUpperCase()===`SYSTEM`)throw Error(`External entities are not supported`);if(e[t]===`%`)throw Error(`Parameter entities are not supported`)}let i=``;if([t,i]=this.readIdentifierVal(e,t,`entity`),this.options.enabled!==!1&&this.options.maxEntitySize!=null&&i.length>this.options.maxEntitySize)throw Error(`Entity "${r}" size (${i.length}) exceeds maximum allowed size (${this.options.maxEntitySize})`);return t--,[r,i,t]}readNotationExp(e,t){t=N(e,t);let n=t;for(;t<e.length&&!/\s/.test(e[t]);)t++;let r=e.substring(n,t);!this.suppressValidationErr&&F(r,{xmlVersion:this.xmlVersion}),t=N(e,t);let i=e.substring(t,t+6).toUpperCase();if(!this.suppressValidationErr&&i!==`SYSTEM`&&i!==`PUBLIC`)throw Error(`Expected SYSTEM or PUBLIC, found "${i}"`);t+=i.length,t=N(e,t);let a=null,o=null;if(i===`PUBLIC`)[t,a]=this.readIdentifierVal(e,t,`publicIdentifier`),t=N(e,t),(e[t]===`"`||e[t]===`'`)&&([t,o]=this.readIdentifierVal(e,t,`systemIdentifier`));else if(i===`SYSTEM`&&([t,o]=this.readIdentifierVal(e,t,`systemIdentifier`),!this.suppressValidationErr&&!o))throw Error(`Missing mandatory system identifier for SYSTEM notation`);return{notationName:r,publicIdentifier:a,systemIdentifier:o,index:--t}}readIdentifierVal(e,t,n){let r=``,i=e[t];if(i!==`"`&&i!==`'`)throw Error(`Expected quoted string, found "${i}"`);t++;let a=t;for(;t<e.length&&e[t]!==i;)t++;if(r=e.substring(a,t),e[t]!==i)throw Error(`Unterminated ${n} value`);return t++,[t,r]}readElementExp(e,t){t=N(e,t);let n=t;for(;t<e.length&&!/\s/.test(e[t]);)t++;let r=e.substring(n,t);if(!this.suppressValidationErr&&!Ke(r,{xmlVersion:this.xmlVersion}))throw Error(`Invalid element name: "${r}"`);t=N(e,t);let i=``;if(e[t]===`E`&&P(e,`MPTY`,t))t+=4;else if(e[t]===`A`&&P(e,`NY`,t))t+=2;else if(e[t]===`(`){t++;let n=t;for(;t<e.length&&e[t]!==`)`;)t++;if(i=e.substring(n,t),e[t]!==`)`)throw Error(`Unterminated content model`)}else if(!this.suppressValidationErr)throw Error(`Invalid Element Expression, found "${e[t]}"`);return{elementName:r,contentModel:i.trim(),index:t}}readAttlistExp(e,t){t=N(e,t);let n=t;for(;t<e.length&&!/\s/.test(e[t]);)t++;let r=e.substring(n,t);for(F(r,{xmlVersion:this.xmlVersion}),t=N(e,t),n=t;t<e.length&&!/\s/.test(e[t]);)t++;let i=e.substring(n,t);if(!F(i,{xmlVersion:this.xmlVersion}))throw Error(`Invalid attribute name: "${i}"`);t=N(e,t);let a=``;if(e.substring(t,t+8).toUpperCase()===`NOTATION`){if(a=`NOTATION`,t+=8,t=N(e,t),e[t]!==`(`)throw Error(`Expected '(', found "${e[t]}"`);t++;let n=[];for(;t<e.length&&e[t]!==`)`;){let r=t;for(;t<e.length&&e[t]!==`|`&&e[t]!==`)`;)t++;let i=e.substring(r,t);if(i=i.trim(),!F(i,{xmlVersion:this.xmlVersion}))throw Error(`Invalid notation name: "${i}"`);n.push(i),e[t]===`|`&&(t++,t=N(e,t))}if(e[t]!==`)`)throw Error(`Unterminated list of notations`);t++,a+=` (`+n.join(`|`)+`)`}else{let n=t;for(;t<e.length&&!/\s/.test(e[t]);)t++;if(a+=e.substring(n,t),!this.suppressValidationErr&&![`CDATA`,`ID`,`IDREF`,`IDREFS`,`ENTITY`,`ENTITIES`,`NMTOKEN`,`NMTOKENS`].includes(a.toUpperCase()))throw Error(`Invalid attribute type: "${a}"`)}t=N(e,t);let o=``;return e.substring(t,t+8).toUpperCase()===`#REQUIRED`?(o=`#REQUIRED`,t+=8):e.substring(t,t+7).toUpperCase()===`#IMPLIED`?(o=`#IMPLIED`,t+=7):[t,o]=this.readIdentifierVal(e,t,`ATTLIST`),{elementName:r,attributeName:i,attributeType:a,defaultValue:o,index:t}}};let N=(e,t)=>{for(;t<e.length&&/\s/.test(e[t]);)t++;return t};function P(e,t,n){for(let r=0;r<t.length;r++)if(t[r]!==e[n+r+1])return!1;return!0}function F(e,t){if(Ke(e,{xmlVersion:t}))return e;throw Error(`Invalid entity name ${e}`)}let Je=[48,1632,1776,2406,2534,2662,2790,2918,3046,3174,3302,3430,3558,3664,3792,3872,4160,4240,6112,6160,6470,6608,6784,6800,6992,7088,7232,7248,65296,120782,120792,120802,120812,120822,66720,68912,69734,69872,69942,70096,70384,70736,70864,71248,71360,71472,71904,72016,72688,72784,73040,73120,73552,92768,92864,93008,123200,123632,124144,125264,130032],Ye=/* @__PURE__ */ new Map,Xe=1632,Ze=(/* @__PURE__ */ new Uint8Array(63904)).fill(255);for(let e of Je)for(let t=0;t<10;t++){let n=e+t;n<=65535?Ze[n-Xe]=t:Ye.set(n,t)}let I=/* @__PURE__ */ new Set([8722,65293,65123]);function Qe(e){if(typeof e!=`string`)return e;let t=e.length;if(t===0)return e;let n=-1;for(let r=0;r<t;r++){let i=e.charCodeAt(r);if(!(i>=48&&i<=57||i===45)){if(i<1632){if(I.has(i)){n=r;break}continue}if(i>=55296&&i<=56319){if(r+1<t){let t=e.charCodeAt(r+1);if(t>=56320&&t<=57343){let e=65536+(i-55296<<10)+(t-56320);if(Ye.has(e)){n=r;break}}}continue}if(Ze[i-1632]!==255||I.has(i)){n=r;break}}}if(n===-1)return e;let r=[];n>0&&r.push(e.slice(0,n));for(let i=n;i<t;i++){let n=e.charCodeAt(i);if(n>=48&&n<=57||n===45){r.push(e[i]);continue}if(n<1632){r.push(I.has(n)?`-`:e[i]);continue}if(n>=55296&&n<=56319){if(i+1<t){let t=e.charCodeAt(i+1);if(t>=56320&&t<=57343){let e=65536+(n-55296<<10)+(t-56320),a=Ye.get(e);if(a!==void 0){r.push(String.fromCharCode(a+48)),i++;continue}}}r.push(e[i]);continue}if(I.has(n)){r.push(`-`);continue}let a=Ze[n-Xe];r.push(a===255?e[i]:String.fromCharCode(a+48))}return r.join(``)}let $e=/^[-+]?0x[a-fA-F0-9]+$/,et=/^0b[01]+$/,tt=/^0o[0-7]+$/,nt=/^([\-\+])?(0*)([0-9]*(\.[0-9]*)?)$/,rt={hex:!0,binary:!1,octal:!1,leadingZeros:!0,decimalPoint:`.`,eNotation:!0,infinity:`original`,unicode:!1};function it(e,t={}){if(t=Object.assign({},rt,t),!e||typeof e!=`string`)return e;let n=e.trim();if(n.length===0||t.skipLike!==void 0&&t.skipLike.test(n))return e;if(n===`0`||t.unicode&&(n=Qe(n),n===`0`))return 0;if(t.hex&&$e.test(n))return ct(n,16);if(t.binary&&et.test(n))return ct(n,2);if(t.octal&&tt.test(n))return ct(n,8);if(!isFinite(n))return lt(e,Number(n),t);if(n.includes(`e`)||n.includes(`E`))return ot(e,n,t);{let r=nt.exec(n);if(r){let i=r[1]||``,a=r[2],o=st(r[3]),s=i?e[a.length+1]===`.`:e[a.length]===`.`;if(!t.leadingZeros&&(a.length>1||a.length===1&&!s))return e;{let r=Number(n),s=String(r);if(r===0)return r;if(s.search(/[eE]/)!==-1)return t.eNotation?r:e;if(n.indexOf(`.`)!==-1)return s===`0`||s===o||s===`${i}${o}`?r:e;let c=a?o:n;return a?c===s||i+c===s?r:e:c===s||c===i+s?r:e}}return e}}let at=/^([-+])?(0*)(\d*(\.\d*)?[eE][-\+]?\d+)$/;function ot(e,t,n){if(!n.eNotation)return e;let r=t.match(at);if(r){let i=r[1]||``,a=r[3].indexOf(`e`)===-1?`E`:`e`,o=r[2],s=i?e[o.length+1]===a:e[o.length]===a;return o.length>1&&s?e:o.length===1&&(r[3].startsWith(`.${a}`)||r[3][0]===a)?Number(t):o.length>0?n.leadingZeros&&!s?(t=(r[1]||``)+r[3],Number(t)):e:Number(t)}return e}function st(e){if(e&&e.indexOf(`.`)!==-1){let t=e.length;for(;t>0&&e.charCodeAt(t-1)===48;)t--;return e=e.slice(0,t),e===`.`?e=`0`:e[0]===`.`?e=`0`+e:e[e.length-1]===`.`&&(e=e.substring(0,e.length-1)),e}return e}function ct(e,t){let n=e.trim();if((t===2||t===8)&&(e=n.substring(2)),parseInt)return parseInt(e,t);if(Number.parseInt)return Number.parseInt(e,t);if(window&&window.parseInt)return window.parseInt(e,t);throw Error(`parseInt, Number.parseInt, window.parseInt are not supported`)}function lt(e,t,n){let r=t===1/0;switch(n.infinity.toLowerCase()){case`null`:return null;case`infinity`:return t;case`string`:return r?`Infinity`:`-Infinity`;default:return e}}function ut(e){return typeof e==`function`?e:Array.isArray(e)?t=>{for(let n of e)if(typeof n==`string`&&t===n||n instanceof RegExp&&n.test(t))return!0}:()=>!1}var dt=class{constructor(e,t={},n){this.pattern=e,this.separator=t.separator||`.`,this.segments=this._parse(e),this.data=n,this._hasDeepWildcard=this.segments.some(e=>e.type===`deep-wildcard`),this._hasAttributeCondition=this.segments.some(e=>e.attrName!==void 0),this._hasPositionSelector=this.segments.some(e=>e.position!==void 0)}_parse(e){let t=[],n=0,r=``;for(;n<e.length;)e[n]===this.separator?n+1<e.length&&e[n+1]===this.separator?(r.trim()&&(t.push(this._parseSegment(r.trim())),r=``),t.push({type:`deep-wildcard`}),n+=2):(r.trim()&&t.push(this._parseSegment(r.trim())),r=``,n++):(r+=e[n],n++);return r.trim()&&t.push(this._parseSegment(r.trim())),t}_parseSegment(e){let t={type:`tag`},n=null,r=e,i=e.match(/^([^\[]+)(\[[^\]]*\])(.*)$/);if(i&&(r=i[1]+i[3],i[2])){let e=i[2].slice(1,-1);e&&(n=e)}let a,o=r;if(r.includes(`::`)){let t=r.indexOf(`::`);if(a=r.substring(0,t).trim(),o=r.substring(t+2).trim(),!a)throw Error(`Invalid namespace in pattern: ${e}`)}let s,c=null;if(o.includes(`:`)){let e=o.lastIndexOf(`:`),t=o.substring(0,e).trim(),n=o.substring(e+1).trim();[`first`,`last`,`odd`,`even`].includes(n)||/^nth\(\d+\)$/.test(n)?(s=t,c=n):s=o}else s=o;if(!s)throw Error(`Invalid segment pattern: ${e}`);if(t.tag=s,a&&(t.namespace=a),n){if(n.includes(`=`)){let e=n.indexOf(`=`);t.attrName=n.substring(0,e).trim(),t.attrValue=n.substring(e+1).trim()}else t.attrName=n.trim()}if(c){let e=c.match(/^nth\((\d+)\)$/);e?(t.position=`nth`,t.positionValue=parseInt(e[1],10)):t.position=c}return t}get length(){return this.segments.length}hasDeepWildcard(){return this._hasDeepWildcard}hasAttributeCondition(){return this._hasAttributeCondition}hasPositionSelector(){return this._hasPositionSelector}toString(){return this.pattern}},ft=class{constructor(){this._byDepthAndTag=/* @__PURE__ */ new Map,this._wildcardByDepth=/* @__PURE__ */ new Map,this._deepWildcards=[],this._deepByTerminalTag=/* @__PURE__ */ new Map,this._patterns=/* @__PURE__ */ new Set,this._sealed=!1}add(e){if(this._sealed)throw TypeError(`ExpressionSet is sealed. Create a new ExpressionSet to add more expressions.`);if(this._patterns.has(e.pattern))return this;if(this._patterns.add(e.pattern),e.hasDeepWildcard()){let t=e.segments[e.segments.length-1];if(t&&t.type!==`deep-wildcard`&&t.tag!==`*`){let n=t.tag;this._deepByTerminalTag.has(n)||this._deepByTerminalTag.set(n,[]),this._deepByTerminalTag.get(n).push(e)}else this._deepWildcards.push(e);return this}let t=e.length,n=e.segments[e.segments.length-1]?.tag;if(!n||n===`*`)this._wildcardByDepth.has(t)||this._wildcardByDepth.set(t,[]),this._wildcardByDepth.get(t).push(e);else{let r=`${t}:${n}`;this._byDepthAndTag.has(r)||this._byDepthAndTag.set(r,[]),this._byDepthAndTag.get(r).push(e)}return this}addAll(e){for(let t of e)this.add(t);return this}has(e){return this._patterns.has(e.pattern)}get size(){return this._patterns.size}seal(){return this._sealed=!0,this}get isSealed(){return this._sealed}matchesAny(e){return this.findMatch(e)!==null}findMatch(e){let t=e.getDepth(),n=e.getCurrentTag(),r=`${t}:${n}`,i=this._byDepthAndTag.get(r);if(i){for(let t=0;t<i.length;t++)if(e.matches(i[t]))return i[t]}let a=this._wildcardByDepth.get(t);if(a){for(let t=0;t<a.length;t++)if(e.matches(a[t]))return a[t]}let o=this._deepByTerminalTag.get(n);if(o){for(let t=0;t<o.length;t++)if(e.matches(o[t]))return o[t]}for(let t=0;t<this._deepWildcards.length;t++)if(e.matches(this._deepWildcards[t]))return this._deepWildcards[t];return null}},pt=class{constructor(e){this._matcher=e}get separator(){return this._matcher.separator}getCurrentTag(){let e=this._matcher.path;return e.length>0?e[e.length-1].tag:void 0}getCurrentNamespace(){let e=this._matcher.path;return e.length>0?e[e.length-1].namespace:void 0}getAttrValue(e){let t=this._matcher.path;if(t.length!==0)return t[t.length-1].values?.[e]}hasAttr(e){let t=this._matcher.path;if(t.length===0)return!1;let n=t[t.length-1];return n.values!==void 0&&e in n.values}getAnyParentAttr(e){return this._matcher.getAnyParentAttr(e)}hasAnyParentAttr(e){return this._matcher.hasAnyParentAttr(e)}getPosition(){let e=this._matcher.path;return e.length===0?-1:e[e.length-1].position??0}getCounter(){let e=this._matcher.path;return e.length===0?-1:e[e.length-1].counter??0}getIndex(){return this.getPosition()}getDepth(){return this._matcher.path.length}toString(e,t=!0){return this._matcher.toString(e,t)}toArray(){return this._matcher.path.map(e=>e.tag)}matches(e){return this._matcher.matches(e)}matchesAny(e){return e.matchesAny(this._matcher)}},mt=class{constructor(e={}){this.separator=e.separator||`.`,this.path=[],this.siblingStacks=[],this._pathStringCache=null,this._view=new pt(this),this._keptAttrs=[]}push(e,t=null,n=null,r=null){this._pathStringCache=null,this.path.length>0&&(this.path[this.path.length-1].values=void 0);let i=this.path.length,a=this.siblingStacks[i];a||(a={counts:/* @__PURE__ */ new Map,total:0},this.siblingStacks[i]=a);let o=n?`${n}:${e}`:e,s=a.counts.get(o)||0,c=a.total;a.counts.set(o,s+1),a.total++;let l={tag:e,position:c,counter:s};n!=null&&(l.namespace=n),t!=null&&(l.values=t),this.path.push(l);let u=this.path.length,d=r===null?null:r.keep;if(d!=null&&d.length>0&&t)for(let e=0;e<d.length;e++){let n=d[e];t[n]!==void 0&&this._keptAttrs.push({depth:u,name:n,value:t[n]})}}pop(){if(this.path.length===0)return;this._pathStringCache=null;let e=this.path.pop();this.siblingStacks.length>this.path.length+1&&(this.siblingStacks.length=this.path.length+1);let t=this.path.length+1;for(;this._keptAttrs.length>0&&this._keptAttrs[this._keptAttrs.length-1].depth>=t;)this._keptAttrs.pop();return e}updateCurrent(e){if(this.path.length>0){let t=this.path[this.path.length-1];e!=null&&(t.values=e)}}getCurrentTag(){return this.path.length>0?this.path[this.path.length-1].tag:void 0}getCurrentNamespace(){return this.path.length>0?this.path[this.path.length-1].namespace:void 0}getAttrValue(e){if(this.path.length!==0)return this.path[this.path.length-1].values?.[e]}hasAttr(e){if(this.path.length===0)return!1;let t=this.path[this.path.length-1];return t.values!==void 0&&e in t.values}getAnyParentAttr(e){let t=this._keptAttrs;for(let n=t.length-1;n>=0;n--)if(t[n].name===e)return t[n].value}hasAnyParentAttr(e){let t=this._keptAttrs;for(let n=t.length-1;n>=0;n--)if(t[n].name===e)return!0;return!1}getPosition(){return this.path.length===0?-1:this.path[this.path.length-1].position??0}getCounter(){return this.path.length===0?-1:this.path[this.path.length-1].counter??0}getIndex(){return this.getPosition()}getDepth(){return this.path.length}toString(e,t=!0){let n=e||this.separator;if(n===this.separator&&t===!0){if(this._pathStringCache!==null)return this._pathStringCache;let e=this.path.map(e=>e.namespace?`${e.namespace}:${e.tag}`:e.tag).join(n);return this._pathStringCache=e,e}return this.path.map(e=>t&&e.namespace?`${e.namespace}:${e.tag}`:e.tag).join(n)}toArray(){return this.path.map(e=>e.tag)}reset(){this._pathStringCache=null,this.path=[],this.siblingStacks=[],this._keptAttrs=[]}matches(e){let t=e.segments;return t.length===0?!1:e.hasDeepWildcard()?this._matchWithDeepWildcard(t):this._matchSimple(t)}_matchSimple(e){if(this.path.length!==e.length)return!1;for(let t=0;t<e.length;t++)if(!this._matchSegment(e[t],this.path[t],t===this.path.length-1))return!1;return!0}_matchWithDeepWildcard(e){let t=this.path.length-1,n=e.length-1;for(;n>=0&&t>=0;){let r=e[n];if(r.type===`deep-wildcard`){if(n--,n<0)return!0;let r=e[n],i=!1;for(let e=t;e>=0;e--)if(this._matchSegment(r,this.path[e],e===this.path.length-1)){t=e-1,n--,i=!0;break}if(!i)return!1}else{if(!this._matchSegment(r,this.path[t],t===this.path.length-1))return!1;t--,n--}}return n<0}_matchSegment(e,t,n){if(e.tag!==`*`&&e.tag!==t.tag||e.namespace!==void 0&&e.namespace!==`*`&&e.namespace!==t.namespace||e.attrName!==void 0&&(!n||!t.values||!(e.attrName in t.values)||e.attrValue!==void 0&&String(t.values[e.attrName])!==String(e.attrValue)))return!1;if(e.position!==void 0){if(!n)return!1;let r=t.counter??0;if(e.position===`first`&&r!==0||e.position===`odd`&&r%2!=1||e.position===`even`&&r%2!=0||e.position===`nth`&&r!==e.positionValue)return!1}return!0}matchesAny(e){return e.matchesAny(this)}snapshot(){return{path:this.path.map(e=>({...e})),siblingStacks:this.siblingStacks.map(e=>e&&{counts:new Map(e.counts),total:e.total}),keptAttrs:this._keptAttrs.map(e=>({...e}))}}restore(e){this._pathStringCache=null,this.path=e.path.map(e=>({...e})),this.siblingStacks=e.siblingStacks.map(e=>e&&{counts:new Map(e.counts),total:e.total}),this._keptAttrs=(e.keptAttrs||[]).map(e=>({...e}))}readOnly(){return this._view}};let ht=[{id:`html-script-open`,description:`<script opening tag`,pattern:/<script[\s>/]/i},{id:`html-script-close`,description:`<\/script closing tag`,pattern:/<\/script[\s>]/i},{id:`html-javascript-protocol`,description:`javascript: URI scheme (with optional whitespace/encoding)`,pattern:/j[\t\n\r ]*a[\t\n\r ]*v[\t\n\r ]*a[\t\n\r ]*s[\t\n\r ]*c[\t\n\r ]*r[\t\n\r ]*i[\t\n\r ]*p[\t\n\r ]*t[\t\n\r ]*:/i},{id:`html-vbscript-protocol`,description:`vbscript: URI scheme`,pattern:/vbscript[\t\n\r ]*:/i},{id:`html-data-html`,description:`data:text/html URI — can execute scripts in browsers`,pattern:/data[\t\n\r ]*:[\t\n\r ]*text\/html/i},{id:`html-data-xhtml`,description:`data:application/xhtml+xml URI`,pattern:/data[\t\n\r ]*:[\t\n\r ]*application\/xhtml/i},{id:`html-data-svg`,description:`data:image/svg+xml URI — can execute scripts`,pattern:/data[\t\n\r ]*:[\t\n\r ]*image\/svg\+xml/i},{id:`html-inline-event-handler`,description:`Inline event handler attributes: onclick=, onerror=, onload=, etc.`,pattern:/\bon\w{1,30}\s*=/i},{id:`html-entity-obfuscated-script`,description:`HTML-entity-encoded <script (e.g. &#x3C;script or &lt;script)`,pattern:/(?:&#x0*3[Cc];?|&#0*60;?|&lt;)\s*script/i},{id:`html-entity-obfuscated-javascript`,description:`HTML-entity-encoded javascript: (partial — catches common &#106; or &#x6a; for "j")`,pattern:/(?:&#x0*6[Aa];?|&#0*106;?)\s*(?:&#x0*61;?|a)[\s\S]{0,80}script\s*:/i},{id:`html-style-expression`,description:`CSS expression() — IE-era code execution in style attributes`,pattern:/style[\s\S]{0,20}expression\s*\(/i},{id:`html-object-embed`,description:`<object or <embed tags that can load active content`,pattern:/<(?:object|embed)[\s>/]/i},{id:`html-base-tag`,description:`<base href= — can hijack all relative URLs on a page`,pattern:/<base[\s>]/i},{id:`html-meta-refresh`,description:`<meta http-equiv="refresh" — can redirect users`,pattern:/<meta[\s\S]{0,40}http-equiv[\s\S]{0,20}refresh/i},{id:`html-srcdoc`,description:`srcdoc= attribute on iframes — embeds HTML that can run scripts`,pattern:/srcdoc\s*=/i},{id:`html-iframe`,description:`<iframe tag`,pattern:/<iframe[\s>/]/i},{id:`html-form`,description:`<form tag — can be used for phishing / credential harvesting injection`,pattern:/<form[\s>/]/i}],gt=[{id:`xml-cdata-injection`,description:`CDATA section injection: <![CDATA[ breaks out of text node context`,pattern:/<!\[CDATA\[/i},{id:`xml-cdata-close`,description:`CDATA close sequence: ]]> can terminate an enclosing CDATA section`,pattern:/\]\]>/},{id:`xml-processing-instruction`,description:`XML processing instruction: <?xml-stylesheet or <?php etc.`,pattern:/<\?(?:xml[\- ]|php|asp)/i},{id:`xml-doctype-injection`,description:`DOCTYPE declaration embedded in content — can define entities`,pattern:/<!DOCTYPE(?:[\s[]|$)/i},{id:`xml-entity-system`,description:`SYSTEM keyword — used in external entity declarations (XXE)`,pattern:/\bSYSTEM\s+["']/i},{id:`xml-entity-public`,description:`PUBLIC keyword — used in external entity declarations (XXE)`,pattern:/\bPUBLIC\s+["']/i},{id:`xml-entity-declaration`,description:`<!ENTITY declaration — defines entities, potential XXE or entity expansion`,pattern:/<!ENTITY[\s%]/i},{id:`xml-billion-laughs`,description:`Entity reference chaining / billion laughs: repeated &eX; style references`,pattern:/(?:&\w{1,20};){3,}/},{id:`xml-namespace-confusion`,description:`xmlns: attribute injection — can redefine namespaces to confuse parsers`,pattern:/\bxmlns(?::\w{1,40})?\s*=/i},{id:`xml-comment-injection`,description:`<!-- comment injection — can hide content from some parsers`,pattern:/<!--/},{id:`xml-comment-close`,description:`--> closes an enclosing XML comment`,pattern:/-->/},{id:`xml-pi-close`,description:`?> closes an enclosing processing instruction`,pattern:/\?>/}],_t=[{id:`svg-script-element`,description:`<script element inside SVG executes JavaScript`,pattern:/<script[\s>/]/i},{id:`svg-xlink-href-javascript`,description:`xlink:href with javascript: — classic SVG XSS via <a> or <use>`,pattern:/xlink\s*:\s*href\s*=\s*["']?\s*javascript\s*:/i},{id:`svg-href-javascript`,description:`href= with javascript: in SVG context (<a>, <animate>, etc.)`,pattern:/href\s*=\s*["']?\s*javascript\s*:/i},{id:`svg-foreignobject`,description:`<foreignObject embeds HTML inside SVG — can execute scripts`,pattern:/<foreignObject[\s>/]/i},{id:`svg-use-external`,description:`<use xlink:href or href pointing to external resource (non-fragment URL)`,pattern:/<use[\s\S]{0,60}(?:xlink\s*:\s*)?href\s*=\s*(?:["'][^#]|[^"'#\s>])/i},{id:`svg-animate-href`,description:`<animate attributeName="href" — can dynamically change href to javascript:`,pattern:/<animate[\s\S]{0,80}attributeName\s*=\s*["'][\s]*href["']/i},{id:`svg-animate-xlinkhref`,description:`<animate attributeName="xlink:href"`,pattern:/<animate[\s\S]{0,80}attributeName\s*=\s*["'][\s]*xlink\s*:\s*href["']/i},{id:`svg-set-javascript`,description:`<set to="javascript:..." — sets an attribute to a javascript: URI`,pattern:/<set[\s\S]{0,80}to\s*=\s*["']?\s*javascript\s*:/i},{id:`svg-event-handler`,description:`SVG-specific event handler attributes: onload=, onerror=, onactivate=, etc.`,pattern:/\bon(?:load|error|activate|begin|end|repeat|focus|blur|click|mouse\w{1,20}|key\w{1,20})\s*=/i},{id:`svg-handler-generic`,description:`Generic on* handler catch-all for SVG attributes`,pattern:/\bon\w{1,30}\s*=/i},{id:`svg-filter-feimage`,description:`<feImage href= — filter primitive that can load external resources`,pattern:/<feImage[\s\S]{0,80}(?:xlink\s*:\s*)?href\s*=/i},{id:`svg-image-external`,description:`<image xlink:href with http/https or javascript protocol`,pattern:/<image[\s\S]{0,80}(?:xlink\s*:\s*)?href\s*=\s*["']?\s*(?:https?|javascript)\s*:/i},{id:`svg-style-javascript`,description:`style= attribute containing javascript: (e.g. background:url(javascript:...))`,pattern:/style\s*=[\s\S]{0,60}javascript\s*:/i}],vt=[{id:`sql-block-comment-open`,description:`SQL block comment open: /* ... */ — unusual in legitimate user text`,pattern:/\/\*/},{id:`sql-union-select`,description:`UNION SELECT — most common SQL injection aggregation attack`,pattern:/\bUNION\s{1,20}(?:ALL\s{1,20})?SELECT\b/i},{id:`sql-drop-table`,description:`DROP TABLE — destructive DDL injection`,pattern:/\bDROP\s{1,20}TABLE\b/i},{id:`sql-drop-database`,description:`DROP DATABASE — destructive DDL injection`,pattern:/\bDROP\s{1,20}DATABASE\b/i},{id:`sql-insert-into`,description:`INSERT INTO — data injection`,pattern:/\bINSERT\s{1,20}INTO\b/i},{id:`sql-delete-from`,description:`DELETE FROM — data deletion injection`,pattern:/\bDELETE\s{1,20}FROM\b/i},{id:`sql-update-set`,description:`UPDATE ... SET — data modification injection`,pattern:/\bUPDATE\b[\s\S]{1,60}\bSET\b/i},{id:`sql-exec-xp`,description:`EXEC xp_ — MSSQL extended stored procedure execution`,pattern:/\bEXEC(?:UTE)?\s{1,20}xp_/i},{id:`sql-tautology-string`,description:`Classic string tautology: ' OR '1'='1 or " OR "1"="1"`,pattern:/'\s{0,10}OR\s{0,10}'[^']{0,20}'\s*=\s*'[^']{0,20}/i},{id:`sql-tautology-numeric`,description:`Numeric tautology: OR 1=1`,pattern:/\bOR\s{1,10}1\s*=\s*1\b/i},{id:`sql-always-true-zero`,description:`Numeric tautology: OR 0=0`,pattern:/\bOR\s{1,10}0\s*=\s*0\b/i},{id:`sql-sleep-benchmark`,description:`Time-based blind injection: SLEEP() or BENCHMARK()`,pattern:/\b(?:SLEEP|BENCHMARK)\s*\(/i},{id:`sql-waitfor-delay`,description:`MSSQL time-based blind injection: WAITFOR DELAY`,pattern:/\bWAITFOR\s{1,20}DELAY\b/i},{id:`sql-char-function`,description:`CHAR() function — used to obfuscate injected strings`,pattern:/\bCHAR\s*\(\s*\d{1,3}/i},{id:`sql-information-schema`,description:`INFORMATION_SCHEMA — reconnaissance query for table/column enumeration`,pattern:/\bINFORMATION_SCHEMA\b/i}],yt=[{id:`shell-path-traversal-unix`,description:`Unix path traversal: ../  — climbing the directory tree`,pattern:/\.\.\//},{id:`shell-path-traversal-windows`,description:`Windows path traversal: ..\\ — climbing the directory tree`,pattern:/\.\.\\/},{id:`shell-path-traversal-encoded`,description:`URL-encoded path traversal: %2e%2e or %2f variants`,pattern:/%2e%2e|%2f\.\.|\.\.%2f/i},{id:`shell-null-byte`,description:`Null byte injection: \\x00 or %00 — truncates strings in C-backed functions`,pattern:/\x00|%00/},{id:`shell-semicolon`,description:`Semicolon command separator: cmd1; cmd2`,pattern:/;/},{id:`shell-pipe`,description:`Pipe operator: cmd1 | cmd2`,pattern:/\|/},{id:`shell-and-operator`,description:`AND operator: cmd1 && cmd2`,pattern:/&&/},{id:`shell-or-operator`,description:`OR operator: cmd1 || cmd2`,pattern:/\|\|/},{id:`shell-backtick`,description:"Backtick command substitution: `cmd`",pattern:/`/},{id:`shell-dollar-paren`,description:`Dollar-paren command substitution: $(cmd)`,pattern:/\$\(/},{id:`shell-dollar-brace`,description:"Dollar-brace variable expansion: ${var} — can be abused for injection",pattern:/\$\{/},{id:`shell-redirect-out`,description:`Output redirection: cmd > file or cmd >> file`,pattern:/>{1,2}/},{id:`shell-redirect-in`,description:`Input redirection: cmd < file`,pattern:/</},{id:`shell-newline-injection`,description:`Newline injection: \\n or \\r — can inject new shell commands`,pattern:/[\n\r]/},{id:`shell-glob-star`,description:`Glob expansion: * or ? — can expand to unintended files`,pattern:/[/\\][*?]/},{id:`shell-absolute-root`,description:`Absolute root path injection: string starting with / or \\ (Windows UNC)`,pattern:/^(?:\/|\\\\)/},{id:`shell-windows-drive`,description:`Windows drive letter path injection: C:\\ or D:/`,pattern:/^[a-zA-Z]:[/\\]/},{id:`shell-curl-wget`,description:`curl/wget with URL or flags — can exfiltrate data or download payloads`,pattern:/\b(?:curl|wget)\s+(?:https?:\/\/|ftp:\/\/|-)/i}],bt=[{id:`redos-nested-quantifier-plus`,description:`Nested + quantifier inside a group with outer quantifier: (a+)+, (.+b)*, etc.`,pattern:/\([^)]*\+[^)]*\)[+*]/},{id:`redos-nested-quantifier-star`,description:`Nested * quantifier: (a*)* or (a*)+ — catastrophic backtracking`,pattern:/\([^)]*\*[^)]*\)[*+]/},{id:`redos-nested-groups`,description:`Doubly nested quantified groups: ((a+)+) — guaranteed catastrophic`,pattern:/\(\([^)]{0,40}\)[+*]\)[+*]/},{id:`redos-alternation-overlap`,description:`Overlapping alternation under quantifier: (a|a)+ — ambiguous NFA paths`,pattern:/\(([^|()]{1,20})\|(?:\1)(?:\|[^|()]{1,20}){0,5}\)[+*?]{1,2}/},{id:`redos-star-plus-concat`,description:`(x*x)+ pattern — triggers super-linear backtracking`,pattern:/\([^)]{0,10}\*[^)]{0,10}\)[+*]/},{id:`redos-dot-star-greedy`,description:`(.*){n,} or (.+){n,} — repeated greedy dot quantifiers`,pattern:/\(\.[*+]\)\{?\d/},{id:`redos-large-repetition`,description:`Very large fixed or range repetition count {1000,} or {1000,n} — denial of service via backtracking`,pattern:/\{\d{4,}(?:,\d*)?\}/},{id:`redos-catastrophic-alternation`,description:`Long alternation with many similar branches — polynomial backtracking risk`,pattern:/\([^)]{0,200}(?:\|[^|)]{0,50}){9,}\)/}],L=`["'\\s]*:`,xt=[{id:`nosql-where-operator`,description:`$where — executes arbitrary JavaScript server-side in MongoDB`,pattern:RegExp(`\\$where${L}`,`i`)},{id:`nosql-ne-operator`,description:`$ne — "not equal" operator used to bypass equality checks`,pattern:RegExp(`\\$ne${L}`,`i`)},{id:`nosql-gt-operator`,description:`$gt — "greater than" used to bypass password/value checks`,pattern:RegExp(`\\$gte?${L}`,`i`)},{id:`nosql-lt-operator`,description:`$lt / $lte — "less than" bypass variants`,pattern:RegExp(`\\$lte?${L}`,`i`)},{id:`nosql-regex-operator`,description:`$regex — can be used to extract data character by character (blind injection)`,pattern:RegExp(`\\$regex${L}`,`i`)},{id:`nosql-or-operator`,description:`$or — logical OR; used to create always-true conditions`,pattern:RegExp(`\\$or${L}\\s*\\[`,`i`)},{id:`nosql-and-operator`,description:`$and — logical AND operator injection`,pattern:RegExp(`\\$and${L}\\s*\\[`,`i`)},{id:`nosql-nor-operator`,description:`$nor — logical NOR operator injection`,pattern:RegExp(`\\$nor${L}\\s*\\[`,`i`)},{id:`nosql-exists-operator`,description:`$exists — can enumerate fields to determine schema`,pattern:RegExp(`\\$exists${L}`,`i`)},{id:`nosql-in-operator`,description:`$in — matches any value in a list; can enumerate values`,pattern:RegExp(`\\$in${L}\\s*\\[`,`i`)},{id:`nosql-expr-operator`,description:`$expr — allows aggregation expressions in queries (MongoDB 3.6+)`,pattern:RegExp(`\\$expr${L}`,`i`)},{id:`nosql-function-operator`,description:`$function — executes arbitrary JavaScript in MongoDB 4.4+`,pattern:RegExp(`\\$function${L}`,`i`)},{id:`nosql-accumulator-operator`,description:`$accumulator — custom aggregation with arbitrary JS execution`,pattern:RegExp(`\\$accumulator${L}`,`i`)},{id:`nosql-proto-pollution`,description:`__proto__ — prototype pollution via object key injection`,pattern:/__proto__/},{id:`nosql-constructor-prototype`,description:`constructor.prototype — alternative prototype pollution vector (dot notation or JSON key)`,pattern:/constructor[\s"':.,{\[]*prototype/i},{id:`nosql-proto-bracket`,description:`["__proto__"] — bracket-notation prototype pollution`,pattern:/\[["']__proto__["']\]/}],St=[{id:`log-crlf-injection`,description:`CRLF injection: literal \\r or \\n embeds fake log lines`,pattern:/[\r\n]/},{id:`log-url-encoded-crlf`,description:`URL-encoded CRLF: %0d, %0a, %0D, %0A — decoded by some log parsers`,pattern:/%0[dDaA]/},{id:`log-unicode-newline`,description:`Unicode newline variants: U+2028 (line separator), U+2029 (paragraph separator)`,pattern:/[\u2028\u2029]/},{id:`log-log4shell-jndi`,description:"Log4Shell: ${jndi:...} triggers remote code execution in Apache Log4j",pattern:/\$\{jndi\s*:/i},{id:`log-log4shell-obfuscated`,description:"Obfuscated Log4Shell: ${::-j}... lookup-bypass prefix used to evade WAF detection",pattern:/\$\{::-/},{id:`log-log4j-lookup`,description:"Log4j lookup syntax: ${env:...}, ${sys:...}, ${ctx:...} — data exfiltration",pattern:/\$\{(?:env|sys|ctx|main|map|sd|web|docker|k8s|spring)\s*:/i},{id:`log-ssti-double-brace`,description:`SSTI double-brace: {{expression}} — Jinja2, Twig, Handlebars, etc.`,pattern:/\{\{[\s\S]{0,80}\}\}/},{id:`log-ssti-hash-brace`,description:`SSTI hash-brace: #{expression} — Thymeleaf, Velocity, Ruby ERB`,pattern:/#\{[\s\S]{0,80}\}/},{id:`log-ssti-dollar-brace`,description:"SSTI/EL injection: ${expression with operators or method calls} — JSP EL, Freemarker, SpEL",pattern:/\$\{[^}]*(?:\.|\(|\*|\+|\bclass\b|\bruntime\b|\bprocess\b|\bexec\b)[^}]{0,80}\}/i},{id:`log-ssti-percent-tag`,description:`SSTI ERB/ASP tag: <%= expression %> — Ruby ERB, ASP`,pattern:/<%=[\s\S]{0,80}%>/},{id:`log-null-byte`,description:`Null byte: \\x00 or %00 — can truncate log entries in C-backed loggers`,pattern:/\x00|%00/},{id:`log-ansi-escape`,description:`ANSI escape sequence: ESC[ — can manipulate terminal output when logs are tailed`,pattern:/\x1b\[/}],Ct=[{id:`sql-line-comment`,description:`SQL line comment: -- followed by whitespace or end of string`,pattern:/--(?:\s|$)/},{id:`sql-stacked-query`,description:`Stacked queries: semicolon immediately followed by a SQL keyword`,pattern:/;\s{0,10}(?:SELECT|INSERT|UPDATE|DELETE|DROP|CREATE|ALTER|EXEC)\b/i},{id:`sql-hex-encoding`,description:`Hex-encoded string injection: 0x41414141 style (MySQL)`,pattern:/\b0x[0-9a-f]{4,}/i}],wt=[...vt,...Ct];ht.label=`HTML`,gt.label=`XML`,_t.label=`SVG`,vt.label=`SQL`,wt.label=`SQL-STRICT`,yt.label=`SHELL`,bt.label=`REDOS`,xt.label=`NOSQL`,St.label=`LOG`,Object.freeze({HTML:ht,XML:gt,SVG:_t,SQL:vt,"SQL-STRICT":wt,SHELL:yt,REDOS:bt,NOSQL:xt,LOG:St});function Tt(e){if(typeof e!=`string`)throw TypeError(`is-unsafe: first argument must be a string, got ${typeof e}`)}function Et(e){if(!(e instanceof RegExp)){if(Array.isArray(e)){if(e.length===0)throw TypeError(`is-unsafe: context must not be an empty array`);if(Array.isArray(e[0])){for(let t of e)if(!Array.isArray(t)||t.length===0)throw TypeError(`is-unsafe: each context in the array must be a non-empty pattern array (PatternList)`)}return}throw TypeError(`is-unsafe: second argument must be a PatternList (e.g. HTML), an array of PatternLists (e.g. [HTML, XML]), or a RegExp. Got: ${typeof e}`)}}function Dt(e){return e instanceof RegExp?{lists:null,regex:e}:Array.isArray(e[0])?{lists:e,regex:null}:{lists:[e],regex:null}}function Ot(e,t){let n=t.label??`CUSTOM`;for(let r of t)if(r.pattern.test(e))return{context:n,id:r.id,description:r.description,pattern:r.pattern};return null}function kt(e,t){Tt(e),Et(t);let{lists:n,regex:r}=Dt(t);if(r)return r.test(e);for(let t of n)if(Ot(e,t)!==null)return!0;return!1}function At(e,t){if(!e)return{};let n=t.attributesGroupName?e[t.attributesGroupName]:e;if(!n)return{};let r={};for(let e in n)if(e.startsWith(t.attributeNamePrefix)){let i=e.substring(t.attributeNamePrefix.length);r[i]=n[e]}else r[e]=n[e];return r}function jt(e){if(!e||typeof e!=`string`)return;let t=e.indexOf(`:`);if(t!==-1&&t>0){let n=e.substring(0,t);if(n!==`xmlns`)return n}}var Mt=class{constructor(e,t){this.options=e,this.currentNode=null,this.tagsNodeStack=[],this.parseXml=Lt,this.parseTextData=Nt,this.resolveNameSpace=Pt,this.buildAttributesMap=It,this.isItStopNode=Vt,this.replaceEntitiesValue=zt,this.readStopNodeData=Gt,this.saveTextToParentTag=Bt,this.addChild=Rt,this.ignoreAttributesFn=ut(this.options.ignoreAttributes),this.entityExpansionCount=0,this.currentExpandedLength=0,this.doctypefound=!1;let n={...ke};this.options.entityDecoder?this.entityDecoder=this.options.entityDecoder:(typeof this.options.htmlEntities==`object`?n=this.options.htmlEntities:this.options.htmlEntities===!0&&(n={...Ae,...Oe}),this.entityDecoder=new Ie({namedEntities:{...n,...t},numericAllowed:this.options.htmlEntities,limit:{maxTotalExpansions:this.options.processEntities.maxTotalExpansions,maxExpandedLength:this.options.processEntities.maxExpandedLength,applyLimitsTo:this.options.processEntities.appliesTo},onInputEntity:(e,t)=>kt(t,[ht,gt])?T.BLOCK:T.ALLOW})),this.matcher=new mt,this.readonlyMatcher=this.matcher.readOnly(),this.isCurrentNodeStopNode=!1,this.stopNodeExpressionsSet=new ft;let r=this.options.stopNodes;if(r&&r.length>0){for(let e=0;e<r.length;e++){let t=r[e];typeof t==`string`?this.stopNodeExpressionsSet.add(new dt(t)):t instanceof dt&&this.stopNodeExpressionsSet.add(t)}this.stopNodeExpressionsSet.seal()}}};function Nt(e,t,n,r,i,a,o){let s=this.options;if(e!==void 0&&(s.trimValues&&!r&&(e=e.trim()),e.length>0)){o||(e=this.replaceEntitiesValue(e,t,n));let r=s.jPath?n.toString():n,c=s.tagValueProcessor(t,e,r,i,a);return c==null?e:typeof c!=typeof e||c!==e?c:s.trimValues||e.trim()===e?Kt(e,s.parseTagValue,s.numberParseOptions):e}}function Pt(e){if(this.options.removeNSPrefix){let t=e.split(`:`),n=e.charAt(0)===`/`?`/`:``;if(t[0]===`xmlns`)return``;t.length===2&&(e=n+t[1])}return e}let Ft=/* @__PURE__ */ RegExp(`([^\\s=]+)\\s*(=\\s*(['"])([\\s\\S]*?)\\3)?`,`gm`);function It(e,t,n,r=!1){let i=this.options;if(r===!0||i.ignoreAttributes!==!0&&typeof e==`string`){let r=fe(e,Ft),a=r.length,o={},s=Array(a),c=!1,l={};for(let e=0;e<a;e++){let t=this.resolveNameSpace(r[e][1]),a=r[e][4];if(t.length&&a!==void 0){let r=a;i.trimValues&&(r=r.trim()),r=this.replaceEntitiesValue(r,n,this.readonlyMatcher),s[e]=r,l[t]=r,c=!0}}c&&typeof t==`object`&&t.updateCurrent&&t.updateCurrent(l);let u=i.jPath?t.toString():this.readonlyMatcher,d=!1;for(let e=0;e<a;e++){let t=this.resolveNameSpace(r[e][1]);if(this.ignoreAttributesFn(t,u))continue;let n=i.attributeNamePrefix+t;if(t.length){if(i.transformAttributeName&&(n=i.transformAttributeName(n)),n=Jt(n,i),r[e][4]!==void 0){let r=s[e],a=i.attributeValueProcessor(t,r,u);a==null?o[n]=r:typeof a!=typeof r||a!==r?o[n]=a:o[n]=Kt(r,i.parseAttributeValue,i.numberParseOptions),d=!0}else i.allowBooleanAttributes&&(o[n]=!0,d=!0)}}if(!d)return;if(i.attributesGroupName&&!i.preserveOrder){let e={};return e[i.attributesGroupName]=o,e}return o}}let Lt=function(e){e=e.replace(/\r\n?/g,`
+`);let t=new j(`!xml`),n=t,r=``;this.matcher.reset(),this.entityDecoder.reset(),this.entityExpansionCount=0,this.currentExpandedLength=0,this.doctypefound=!1;let i=this.options,a=new qe(i.processEntities),o=e.length;for(let s=0;s<o;s++)if(e[s]===`<`){let c=e.charCodeAt(s+1);if(c===47){let a=R(e,`>`,s,`Closing Tag is not closed.`),o=e.substring(s+2,a).trim();if(i.removeNSPrefix){let e=o.indexOf(`:`);e!==-1&&(o=o.substr(e+1))}o=qt(i.transformTagName,o,``,i).tagName,n&&(r=this.saveTextToParentTag(r,n,this.readonlyMatcher));let c=this.matcher.getCurrentTag();if(o&&i.unpairedTagsSet.has(o))throw Error(`Unpaired tag can not be used as closing tag: </${o}>`);c&&i.unpairedTagsSet.has(c)&&(this.matcher.pop(),this.tagsNodeStack.pop()),this.matcher.pop(),this.isCurrentNodeStopNode=!1,n=this.tagsNodeStack.pop()||t,i.captureMetaData&&n&&n.addEndIndex(a+1),r=``,s=a}else if(c===63){let t=Wt(e,s,!1,`?>`);if(!t)throw Error(`Pi Tag is not closed.`);r=this.saveTextToParentTag(r,n,this.readonlyMatcher);let o=this.buildAttributesMap(t.tagExp,this.matcher,t.tagName,!0);if(o){let e=o[this.options.attributeNamePrefix+`version`];this.entityDecoder.setXmlVersion(Number(e)||1),a.setXmlVersion(Number(e)||1)}if(!(i.ignoreDeclaration&&t.tagName===`?xml`||i.ignorePiTags)){let e=new j(t.tagName);e.add(i.textNodeName,``),t.tagName!==t.tagExp&&t.attrExpPresent&&i.ignoreAttributes!==!0&&(e[`:@`]=o),this.addChild(n,e,this.readonlyMatcher,s),i.captureMetaData&&n.addEndIndex(t.closeIndex+2)}s=t.closeIndex+1}else if(c===33&&e.charCodeAt(s+2)===45&&e.charCodeAt(s+3)===45){let t=R(e,`-->`,s+4,`Comment is not closed.`);if(i.commentPropName){let a=e.substring(s+4,t-2);r=this.saveTextToParentTag(r,n,this.readonlyMatcher),n.add(i.commentPropName,[{[i.textNodeName]:a}])}s=t}else if(c===33&&e.charCodeAt(s+2)===68){if(this.doctypefound)throw Error(`Multiple DOCTYPE declarations found.`);this.doctypefound=!0;let t=a.readDocType(e,s);this.entityDecoder.addInputEntities(t.entities),s=t.i}else if(c===33&&e.charCodeAt(s+2)===91){let t=R(e,`]]>`,s,`CDATA is not closed.`)-2,a=e.substring(s+9,t);r=this.saveTextToParentTag(r,n,this.readonlyMatcher);let o=this.parseTextData(a,n.tagname,this.readonlyMatcher,!0,!1,!0,!0);o??=``,i.cdataPropName?n.add(i.cdataPropName,[{[i.textNodeName]:a}]):n.add(i.textNodeName,o),s=t+2}else{let a=Wt(e,s,i.removeNSPrefix);if(!a){let t=e.substring(Math.max(0,s-50),Math.min(o,s+50));throw Error(`readTagExp returned undefined at position ${s}. Context: "${t}"`)}let c=a.tagName,l=a.rawTagName,u=a.tagExp,d=a.attrExpPresent,f=a.closeIndex;if({tagName:c,tagExp:u}=qt(i.transformTagName,c,u,i),i.strictReservedNames&&(c===i.commentPropName||c===i.cdataPropName||c===i.textNodeName||c===i.attributesGroupName))throw Error(`Invalid tag name: ${c}`);n&&r&&n.tagname!==`!xml`&&(r=this.saveTextToParentTag(r,n,this.readonlyMatcher,!1));let p=n;p&&i.unpairedTagsSet.has(p.tagname)&&(n=this.tagsNodeStack.pop(),this.matcher.pop());let m=!1;u.length>0&&u.lastIndexOf(`/`)===u.length-1&&(m=!0,c[c.length-1]===`/`?(c=c.substr(0,c.length-1),u=c):u=u.substr(0,u.length-1),d=c!==u);let h=null,g;g=jt(l),c!==t.tagname&&this.matcher.push(c,{},g),c!==u&&d&&(h=this.buildAttributesMap(u,this.matcher,c),h&&At(h,i)),c!==t.tagname&&(this.isCurrentNodeStopNode=this.isItStopNode());let _=s;if(this.isCurrentNodeStopNode){let t=``;if(m)s=a.closeIndex;else if(i.unpairedTagsSet.has(c))s=a.closeIndex;else{let n=this.readStopNodeData(e,l,f+1);if(!n)throw Error(`Unexpected end of ${l}`);s=n.i,t=n.tagContent}let r=new j(c);h&&(r[`:@`]=h),r.add(i.textNodeName,t),this.matcher.pop(),this.isCurrentNodeStopNode=!1,this.addChild(n,r,this.readonlyMatcher,_),i.captureMetaData&&n.addEndIndex(s+1)}else{if(m){({tagName:c,tagExp:u}=qt(i.transformTagName,c,u,i));let e=new j(c);h&&(e[`:@`]=h),this.addChild(n,e,this.readonlyMatcher,_),i.captureMetaData&&n.addEndIndex(f+1),this.matcher.pop(),this.isCurrentNodeStopNode=!1}else if(i.unpairedTagsSet.has(c)){let e=new j(c);h&&(e[`:@`]=h),this.addChild(n,e,this.readonlyMatcher,_),i.captureMetaData&&n.addEndIndex(a.closeIndex+1),this.matcher.pop(),this.isCurrentNodeStopNode=!1,s=a.closeIndex;continue}else{let e=new j(c);if(this.tagsNodeStack.length>i.maxNestedTags)throw Error(`Maximum nested tags exceeded`);this.tagsNodeStack.push(n),h&&(e[`:@`]=h),this.addChild(n,e,this.readonlyMatcher,_),n=e}r=``,s=f}}}else r+=e[s];return t.child};function Rt(e,t,n,r){this.options.captureMetaData||(r=void 0);let i=this.options.jPath?n.toString():n,a=this.options.updateTag(t.tagname,i,t[`:@`]);a===!1||(typeof a==`string`&&(t.tagname=a),e.addChild(t,r))}function zt(e,t,n){let r=this.options.processEntities;if(!r||!r.enabled)return e;if(r.allowedTags){let i=this.options.jPath?n.toString():n;if(!(Array.isArray(r.allowedTags)?r.allowedTags.includes(t):r.allowedTags(t,i)))return e}if(r.tagFilter){let i=this.options.jPath?n.toString():n;if(!r.tagFilter(t,i))return e}return this.entityDecoder.decode(e)}function Bt(e,t,n,r){return e&&=(r===void 0&&(r=t.child.length===0),e=this.parseTextData(e,t.tagname,n,!1,t[`:@`]?Object.keys(t[`:@`]).length!==0:!1,r),e!==void 0&&e!==``&&t.add(this.options.textNodeName,e),``),e}function Vt(){return this.stopNodeExpressionsSet.size!==0&&this.matcher.matchesAny(this.stopNodeExpressionsSet)}function Ht(e,t,n=`>`){let r=0,i=e.length,a=n.charCodeAt(0),o=n.length>1?n.charCodeAt(1):-1,s=``,c=t;for(let n=t;n<i;n++){let t=e.charCodeAt(n);if(r)t===r&&(r=0);else if(t===34||t===39)r=t;else if(t===a){if(o!==-1){if(e.charCodeAt(n+1)===o)return s+=e.substring(c,n),{data:s,index:n}}else return s+=e.substring(c,n),{data:s,index:n}}else t===9&&!r&&(s+=e.substring(c,n)+` `,c=n+1)}}function R(e,t,n,r){let i=e.indexOf(t,n);if(i===-1)throw Error(r);return i+t.length-1}function Ut(e,t,n,r){let i=e.indexOf(t,n);if(i===-1)throw Error(r);return i}function Wt(e,t,n,r=`>`){let i=Ht(e,t+1,r);if(!i)return;let a=i.data,o=i.index,s=a.search(/\s/),c=a,l=!0;s!==-1&&(c=a.substring(0,s),a=a.substring(s+1).trimStart());let u=c;if(n){let e=c.indexOf(`:`);e!==-1&&(c=c.substr(e+1),l=c!==i.data.substr(e+1))}return{tagName:c,tagExp:a,closeIndex:o,attrExpPresent:l,rawTagName:u}}function Gt(e,t,n){let r=n,i=1,a=e.length;for(;n<a;n++)if(e[n]===`<`){let a=e.charCodeAt(n+1);if(a===47){let a=Ut(e,`>`,n,`${t} is not closed`);if(e.substring(n+2,a).trim()===t&&(i--,i===0))return{tagContent:e.substring(r,n),i:a};n=a}else if(a===63)n=R(e,`?>`,n+1,`StopNode is not closed.`);else if(a===33&&e.charCodeAt(n+2)===45&&e.charCodeAt(n+3)===45)n=R(e,`-->`,n+3,`StopNode is not closed.`);else if(a===33&&e.charCodeAt(n+2)===91)n=R(e,`]]>`,n,`StopNode is not closed.`)-2;else{let r=Wt(e,n,!1);r&&((r&&r.tagName)===t&&r.tagExp[r.tagExp.length-1]!==`/`&&i++,n=r.closeIndex)}}}function Kt(e,t,n){if(t&&typeof e==`string`){let t=e.trim();return t===`true`||t!==`false`&&it(e,n)}return me(e)?e:``}function qt(e,t,n,r){if(e){let r=e(t);n===t&&(n=r),t=r}return t=Jt(t,r),{tagName:t,tagExp:n}}function Jt(e,t){if(ge.includes(e))throw Error(`[SECURITY] Invalid name: "${e}" is a reserved JavaScript keyword that could cause prototype pollution`);return he.includes(e)?t.onDangerousProperty(e):e}let Yt=j.getMetaDataSymbol();function Xt(e,t){if(!e||typeof e!=`object`)return{};if(!t)return e;let n={};for(let r in e)if(r.startsWith(t)){let i=r.substring(t.length);n[i]=e[r]}else n[r]=e[r];return n}function Zt(e,t,n,r){return Qt(e,t,n,r)}function Qt(e,t,n,r){let i,a={};for(let o=0;o<e.length;o++){let s=e[o],c=$t(s);if(c!==void 0&&c!==t.textNodeName){let e=Xt(s[`:@`]||{},t.attributeNamePrefix);n.push(c,e)}if(c===t.textNodeName)i===void 0?i=s[c]:i+=``+s[c];else if(c===void 0)continue;else if(s[c]){let e=Qt(s[c],t,n,r),i=tn(e,t);if(Object.keys(e).length===0&&t.alwaysCreateTextNode&&(e[t.textNodeName]=``),s[`:@`]?en(e,s[`:@`],r,t):Object.keys(e).length===1&&e[t.textNodeName]!==void 0&&!t.alwaysCreateTextNode?e=e[t.textNodeName]:Object.keys(e).length===0&&(t.alwaysCreateTextNode?e[t.textNodeName]=``:e=``),s[Yt]!==void 0&&typeof e==`object`&&e&&(e[Yt]=s[Yt]),a[c]!==void 0&&Object.prototype.hasOwnProperty.call(a,c))Array.isArray(a[c])||(a[c]=[a[c]]),a[c].push(e);else{let n=t.jPath?r.toString():r;a[c]=t.isArray(c,n,i)?[e]:e}c!==void 0&&c!==t.textNodeName&&n.pop()}}return typeof i==`string`?i.length>0&&(a[t.textNodeName]=i):i!==void 0&&(a[t.textNodeName]=i),a}function $t(e){let t=Object.keys(e);for(let e=0;e<t.length;e++){let n=t[e];if(n!==`:@`)return n}}function en(e,t,n,r){if(t){let i=Object.keys(t),a=i.length;for(let o=0;o<a;o++){let a=i[o],s=a.startsWith(r.attributeNamePrefix)?a.substring(r.attributeNamePrefix.length):a,c=r.jPath?n.toString()+`.`+s:n;e[a]=r.isArray(a,c,!0,!0)?[t[a]]:t[a]}}}function tn(e,t){let{textNodeName:n}=t,r=Object.keys(e).length;return!!(r===0||r===1&&(e[n]||typeof e[n]==`boolean`||e[n]===0))}var nn=class{constructor(e){this.externalEntities={},this.options=Ve(e)}parse(e,t){if(typeof e!=`string`&&e.toString)e=e.toString();else if(typeof e!=`string`)throw Error(`XML data is accepted in String or Bytes[] form.`);if(t){t===!0&&(t={});let n=ve(e,t);if(n!==!0)throw Error(`${n.err.msg}:${n.err.line}:${n.err.col}`)}let n=new Mt(this.options,this.externalEntities),r=n.parseXml(e);return this.options.preserveOrder||r===void 0?r:Zt(r,this.options,n.matcher,n.readonlyMatcher)}addEntity(e,t){if(t.indexOf(`&`)!==-1)throw Error(`Entity value can't have '&'`);if(e.indexOf(`&`)!==-1||e.indexOf(`;`)!==-1)throw Error(`An entity must be set without '&' and ';'. Eg. use '#xD' for '&#xD;'`);if(t===`&`)throw Error(`An entity with value '&' is not permitted`);this.externalEntities[e]=t}static getMetaDataSymbol(){return j.getMetaDataSymbol()}};let rn={validate:ve};function an(e){return e.split(/\r\n|\r|\n/)}function on(e){let t=an(e.text);return{x:e.position[0],y:e.position[1]-e.fontSize,width:Math.max(1,...t.map(e=>[...e].length))*e.fontSize,height:((t.length-1)*1.2+1.3)*e.fontSize}}let sn=(e,t=200)=>Number.isFinite(e)&&e>0?e:t,cn=e=>Array.isArray(e)&&e.length>=2&&typeof e[0]==`number`&&typeof e[1]==`number`&&Number.isFinite(e[0])&&Number.isFinite(e[1]),ln=e=>({x:0,y:0,width:sn(e.paper?.width),height:sn(e.paper?.height)});function un(e,t){if(!e.length)return t;let n=1/0,r=1/0,i=-1/0,a=-1/0;for(let[t,o]of e)n=Math.min(n,t),r=Math.min(r,o),i=Math.max(i,t),a=Math.max(a,o);let o=(e,t)=>Math.max(1,Math.min(Number.MAX_VALUE,t-e));return{x:n,y:r,width:o(n,i),height:o(r,a)}}function dn(e){let t=e.segments.flatMap(e=>[e.a,e.b]).filter(cn);for(let n of e.objects??[])if(n.kind===`circle`)t.push([n.center[0]-n.radius,n.center[1]-n.radius],[n.center[0]+n.radius,n.center[1]+n.radius]);else if(n.kind===`mark`)t.push(n.a,n.b);else{let e=on(n);t.push([e.x,e.y],[e.x+e.width,e.y+e.height])}return un(t,ln(e))}let fn={B:{name:`CutLine`,color:250},M:{name:`MountainLine`,color:1},V:{name:`ValleyLine`,color:5},A:{name:`AuxiliaryLine`,color:4},U:{name:`UnassignedLine`,color:8},F:{name:`FlatLine`,color:3}};function pn(e){r(e);let t=[],n=(e,n)=>{t.push(String(e),String(Object.is(n,-0)?0:n))};n(999,`Zhezhi Workbench: 1 drawing unit = 1 mm; X=x, Y=-y; crease pattern only`),n(0,`SECTION`),n(2,`HEADER`),n(9,`$ACADVER`),n(1,`AC1009`),n(9,`$LUNITS`),n(70,2),n(0,`ENDSEC`),n(0,`SECTION`),n(2,`TABLES`),n(0,`TABLE`),n(2,`LTYPE`),n(70,1),n(0,`LTYPE`),n(2,`CONTINUOUS`),n(70,0),n(3,`Solid line`),n(72,65),n(73,0),n(40,0),n(0,`ENDTAB`),n(0,`TABLE`),n(2,`LAYER`),n(70,7);for(let e of[{name:`0`,color:7},...Object.values(fn)])n(0,`LAYER`),n(2,e.name),n(70,0),n(62,e.color),n(6,`CONTINUOUS`);n(0,`ENDTAB`),n(0,`ENDSEC`),n(0,`SECTION`),n(2,`ENTITIES`);for(let t of e.segments){let e=fn[t.assignment];n(0,`LINE`),n(8,e.name),n(6,`CONTINUOUS`),n(62,e.color),n(10,t.a[0]),n(20,-t.a[1]),n(30,0),n(11,t.b[0]),n(21,-t.b[1]),n(31,0)}n(0,`ENDSEC`),n(0,`EOF`);let i=[`DXF 按 1 绘图单位 = 1 毫米输出（请在 CAD 中核对导入单位）；Y 轴向上，因此坐标为 (x, -y)。不缩放、不平移。`,`DXF 仅导出折痕线段并按线型分图层，不含模型、目标折角、起始面或撤销历史；请同时保存完整工程或模型集合。`];return e.objects?.length&&i.push(`未导出 ${e.objects.length} 个圆、文字或独立标记对象。`),e.background&&i.push(`DXF 不包含参考底图。`),e.segments.some(e=>e.displayColor)&&i.push(`DXF 采用标准图层颜色，不保留自定义显示色。`),e.segments.some(e=>e.assignment===`U`||e.assignment===`F`)&&i.push(`未指派线与平线分别放在 UnassignedLine / FlatLine 图层，不会被猜测为山谷线。`),{text:t.join(`\r
+`)+`\r
+`,warnings:i}}var mn=class extends Error{constructor(e,t,n={}){super(t),this.name=`CPError`,this.code=e,this.details=n}};let z=(e,t,n)=>{throw new mn(e,t,n)},hn=e=>String(e).replace(/[^\x00-\x7f]/g,e=>`\\U+`+e.charCodeAt(0).toString(16).toUpperCase().padStart(4,`0`));function gn(e){typeof e!=`string`&&z(`INPUT`,`DXF 输入必须是文本。`),e.length>33554432&&z(`FILE_TOO_LARGE`,`DXF 超过 32 MB，请先只导出需要加工的折痕。`),e.includes(`�`)&&z(`TEXT_ENCODING`,`DXF 包含文本解码替换字符；请按原码页正确解码后传入，不能在损坏图层名上优化。`),(e.includes(`\0`)||e.startsWith(`AutoCAD Binary DXF`))&&z(`BINARY_DXF`,`只支持 ASCII 文本 DXF，不支持二进制 DXF。`);let t=e.replace(/^\uFEFF/,``).replace(/\r\n?/g,`
+`).split(`
+`);for(;t.length&&!t[t.length-1].trim();)t.pop();t.length%2&&z(`DXF_PAIRS`,`DXF 组码和值没有成对出现。`);let n=[];for(let e=0;e<t.length;e+=2)/^\s*\d+\s*$/.test(t[e])||z(`DXF_GROUP_CODE`,`第 ${e+1} 行不是有效组码。`),n.push({code:Number(t[e]),value:t[e+1]});return n.some(e=>e.code===0&&e.value.trim()===`EOF`)||z(`DXF_EOF`,`DXF 缺少 EOF 结束标记。`),n}function _n(e){let t=/* @__PURE__ */ new Map;for(let n=0;n<e.length;n++)if(e[n].code===0&&e[n].value.trim()===`SECTION`){e[n+1]?.code!==2&&z(`DXF_SECTION`,`SECTION 缺少名称。`);let r=n+2;for(;r<e.length&&(e[r].code!==0||e[r].value.trim()!==`ENDSEC`);)r++;r===e.length&&z(`DXF_SECTION`,`SECTION 缺少 ENDSEC。`);let i=e[n+1].value.trim();t.has(i)&&z(`DXF_SECTION`,`重复的 ${i} SECTION。`),t.set(i,{start:n+2,end:r,pairs:e.slice(n+2,r)}),n=r}return t}let B=(e,t)=>({code:e,value:String(t)});function V(e,t,n){let r=_n(e).get(`HEADER`),i=e.findIndex((e,n)=>n>=r.start&&n<r.end&&e.code===9&&e.value.trim()===t);if(i<0)e.splice(r.end,0,B(9,t),...n);else{let t=i+1;for(;t<r.end&&e[t].code!==9;)t++;e.splice(i+1,t-i-1,...n)}}function vn(e){return e=String(e),(!e||/[\r\n\0<>/\\":;?*|=]/.test(e)||e.length>200)&&z(`LAYER_NAME`,`不支持的输出图层名称：${e}`),hn(e)}function yn(e,t={}){let n=t.format??`LWPOLYLINE`;[`LWPOLYLINE`,`LINE`].includes(n)||z(`FORMAT`,`输出只支持 LWPOLYLINE 或 LINE。`);let r=t.units??0;(!Number.isInteger(r)||r<0||r>24)&&z(`UNITS`,`无效的 DXF INSUNITS 单位代码。`);let i=gn(`  0
+SECTION
+  2
+HEADER
+  9
+$ACADVER
+  1
+AC1015
+  9
+$ACADMAINTVER
+ 70
+6
+  9
+$DWGCODEPAGE
+  3
+ANSI_1252
+  9
+$INSBASE
+ 10
+0.0
+ 20
+0.0
+ 30
+0.0
+  9
+$EXTMIN
+ 10
+1e+20
+ 20
+1e+20
+ 30
+1e+20
+  9
+$EXTMAX
+ 10
+-1e+20
+ 20
+-1e+20
+ 30
+-1e+20
+  9
+$LIMMIN
+ 10
+0.0
+ 20
+0.0
+  9
+$LIMMAX
+ 10
+420.0
+ 20
+297.0
+  9
+$ORTHOMODE
+ 70
+0
+  9
+$REGENMODE
+ 70
+1
+  9
+$FILLMODE
+ 70
+1
+  9
+$QTEXTMODE
+ 70
+0
+  9
+$MIRRTEXT
+ 70
+1
+  9
+$LTSCALE
+ 40
+1.0
+  9
+$ATTMODE
+ 70
+1
+  9
+$TEXTSIZE
+ 40
+2.5
+  9
+$TRACEWID
+ 40
+1.0
+  9
+$TEXTSTYLE
+  7
+Standard
+  9
+$CLAYER
+  8
+0
+  9
+$CELTYPE
+  6
+ByLayer
+  9
+$CECOLOR
+ 62
+256
+  9
+$CELTSCALE
+ 40
+1.0
+  9
+$DISPSILH
+ 70
+0
+  9
+$DIMSCALE
+ 40
+1.0
+  9
+$DIMASZ
+ 40
+2.5
+  9
+$DIMEXO
+ 40
+0.625
+  9
+$DIMDLI
+ 40
+3.75
+  9
+$DIMRND
+ 40
+0.0
+  9
+$DIMDLE
+ 40
+0.0
+  9
+$DIMEXE
+ 40
+1.25
+  9
+$DIMTP
+ 40
+0.0
+  9
+$DIMTM
+ 40
+0.0
+  9
+$DIMTXT
+ 40
+2.5
+  9
+$DIMCEN
+ 40
+2.5
+  9
+$DIMTSZ
+ 40
+0.0
+  9
+$DIMTOL
+ 70
+0
+  9
+$DIMLIM
+ 70
+0
+  9
+$DIMTIH
+ 70
+0
+  9
+$DIMTOH
+ 70
+0
+  9
+$DIMSE1
+ 70
+0
+  9
+$DIMSE2
+ 70
+0
+  9
+$DIMTAD
+ 70
+1
+  9
+$DIMZIN
+ 70
+8
+  9
+$DIMBLK
+  1
+
+  9
+$DIMASO
+ 70
+1
+  9
+$DIMSHO
+ 70
+1
+  9
+$DIMPOST
+  1
+
+  9
+$DIMAPOST
+  1
+
+  9
+$DIMALT
+ 70
+0
+  9
+$DIMALTD
+ 70
+3
+  9
+$DIMALTF
+ 40
+0.03937007874
+  9
+$DIMLFAC
+ 40
+1.0
+  9
+$DIMTOFL
+ 70
+1
+  9
+$DIMTVP
+ 40
+0.0
+  9
+$DIMTIX
+ 70
+0
+  9
+$DIMSOXD
+ 70
+0
+  9
+$DIMSAH
+ 70
+0
+  9
+$DIMBLK1
+  1
+
+  9
+$DIMBLK2
+  1
+
+  9
+$DIMSTYLE
+  2
+ISO-25
+  9
+$DIMCLRD
+ 70
+0
+  9
+$DIMCLRE
+ 70
+0
+  9
+$DIMCLRT
+ 70
+0
+  9
+$DIMTFAC
+ 40
+1.0
+  9
+$DIMGAP
+ 40
+0.625
+  9
+$DIMJUST
+ 70
+0
+  9
+$DIMSD1
+ 70
+0
+  9
+$DIMSD2
+ 70
+0
+  9
+$DIMTOLJ
+ 70
+0
+  9
+$DIMTZIN
+ 70
+8
+  9
+$DIMALTZ
+ 70
+0
+  9
+$DIMALTTZ
+ 70
+0
+  9
+$DIMUPT
+ 70
+0
+  9
+$DIMDEC
+ 70
+2
+  9
+$DIMTDEC
+ 70
+2
+  9
+$DIMALTU
+ 70
+2
+  9
+$DIMALTTD
+ 70
+3
+  9
+$DIMTXSTY
+  7
+Standard
+  9
+$DIMAUNIT
+ 70
+0
+  9
+$DIMADEC
+ 70
+0
+  9
+$DIMALTRND
+ 40
+0.0
+  9
+$DIMAZIN
+ 70
+0
+  9
+$DIMDSEP
+ 70
+44
+  9
+$DIMATFIT
+ 70
+3
+  9
+$DIMFRAC
+ 70
+0
+  9
+$DIMLDRBLK
+  1
+
+  9
+$DIMLUNIT
+ 70
+2
+  9
+$DIMLWD
+ 70
+-2
+  9
+$DIMLWE
+ 70
+-2
+  9
+$DIMTMOVE
+ 70
+0
+  9
+$LUNITS
+ 70
+2
+  9
+$LUPREC
+ 70
+4
+  9
+$SKETCHINC
+ 40
+1.0
+  9
+$FILLETRAD
+ 40
+10.0
+  9
+$AUNITS
+ 70
+0
+  9
+$AUPREC
+ 70
+2
+  9
+$MENU
+  1
+.
+  9
+$ELEVATION
+ 40
+0.0
+  9
+$PELEVATION
+ 40
+0.0
+  9
+$THICKNESS
+ 40
+0.0
+  9
+$LIMCHECK
+ 70
+0
+  9
+$CHAMFERA
+ 40
+0.0
+  9
+$CHAMFERB
+ 40
+0.0
+  9
+$CHAMFERC
+ 40
+0.0
+  9
+$CHAMFERD
+ 40
+0.0
+  9
+$SKPOLY
+ 70
+0
+  9
+$TDCREATE
+ 40
+2461317.0594444443
+  9
+$TDUCREATE
+ 40
+2458532.153996898
+  9
+$TDUPDATE
+ 40
+2461317.0594444443
+  9
+$TDUUPDATE
+ 40
+2458532.1544311
+  9
+$TDINDWG
+ 40
+0.0
+  9
+$TDUSRTIMER
+ 40
+0.0
+  9
+$USRTIMER
+ 70
+1
+  9
+$ANGBASE
+ 50
+0.0
+  9
+$ANGDIR
+ 70
+0
+  9
+$PDMODE
+ 70
+0
+  9
+$PDSIZE
+ 40
+0.0
+  9
+$PLINEWID
+ 40
+0.0
+  9
+$SPLFRAME
+ 70
+0
+  9
+$SPLINETYPE
+ 70
+6
+  9
+$SPLINESEGS
+ 70
+8
+  9
+$HANDSEED
+  5
+32
+  9
+$SURFTAB1
+ 70
+6
+  9
+$SURFTAB2
+ 70
+6
+  9
+$SURFTYPE
+ 70
+6
+  9
+$SURFU
+ 70
+6
+  9
+$SURFV
+ 70
+6
+  9
+$UCSBASE
+  2
+
+  9
+$UCSNAME
+  2
+
+  9
+$UCSORG
+ 10
+0.0
+ 20
+0.0
+ 30
+0.0
+  9
+$UCSXDIR
+ 10
+1.0
+ 20
+0.0
+ 30
+0.0
+  9
+$UCSYDIR
+ 10
+0.0
+ 20
+1.0
+ 30
+0.0
+  9
+$UCSORTHOREF
+  2
+
+  9
+$UCSORTHOVIEW
+ 70
+0
+  9
+$UCSORGTOP
+ 10
+0.0
+ 20
+0.0
+ 30
+0.0
+  9
+$UCSORGBOTTOM
+ 10
+0.0
+ 20
+0.0
+ 30
+0.0
+  9
+$UCSORGLEFT
+ 10
+0.0
+ 20
+0.0
+ 30
+0.0
+  9
+$UCSORGRIGHT
+ 10
+0.0
+ 20
+0.0
+ 30
+0.0
+  9
+$UCSORGFRONT
+ 10
+0.0
+ 20
+0.0
+ 30
+0.0
+  9
+$UCSORGBACK
+ 10
+0.0
+ 20
+0.0
+ 30
+0.0
+  9
+$PUCSBASE
+  2
+
+  9
+$PUCSNAME
+  2
+
+  9
+$PUCSORG
+ 10
+0.0
+ 20
+0.0
+ 30
+0.0
+  9
+$PUCSXDIR
+ 10
+1.0
+ 20
+0.0
+ 30
+0.0
+  9
+$PUCSYDIR
+ 10
+0.0
+ 20
+1.0
+ 30
+0.0
+  9
+$PUCSORTHOREF
+  2
+
+  9
+$PUCSORTHOVIEW
+ 70
+0
+  9
+$PUCSORGTOP
+ 10
+0.0
+ 20
+0.0
+ 30
+0.0
+  9
+$PUCSORGBOTTOM
+ 10
+0.0
+ 20
+0.0
+ 30
+0.0
+  9
+$PUCSORGLEFT
+ 10
+0.0
+ 20
+0.0
+ 30
+0.0
+  9
+$PUCSORGRIGHT
+ 10
+0.0
+ 20
+0.0
+ 30
+0.0
+  9
+$PUCSORGFRONT
+ 10
+0.0
+ 20
+0.0
+ 30
+0.0
+  9
+$PUCSORGBACK
+ 10
+0.0
+ 20
+0.0
+ 30
+0.0
+  9
+$USERI1
+ 70
+0
+  9
+$USERI2
+ 70
+0
+  9
+$USERI3
+ 70
+0
+  9
+$USERI4
+ 70
+0
+  9
+$USERI5
+ 70
+0
+  9
+$USERR1
+ 40
+0.0
+  9
+$USERR2
+ 40
+0.0
+  9
+$USERR3
+ 40
+0.0
+  9
+$USERR4
+ 40
+0.0
+  9
+$USERR5
+ 40
+0.0
+  9
+$WORLDVIEW
+ 70
+1
+  9
+$SHADEDGE
+ 70
+3
+  9
+$SHADEDIF
+ 70
+70
+  9
+$TILEMODE
+ 70
+1
+  9
+$MAXACTVP
+ 70
+64
+  9
+$PINSBASE
+ 10
+0.0
+ 20
+0.0
+ 30
+0.0
+  9
+$PLIMCHECK
+ 70
+0
+  9
+$PEXTMIN
+ 10
+1e+20
+ 20
+1e+20
+ 30
+1e+20
+  9
+$PEXTMAX
+ 10
+-1e+20
+ 20
+-1e+20
+ 30
+-1e+20
+  9
+$PLIMMIN
+ 10
+0.0
+ 20
+0.0
+  9
+$PLIMMAX
+ 10
+420.0
+ 20
+297.0
+  9
+$UNITMODE
+ 70
+0
+  9
+$VISRETAIN
+ 70
+1
+  9
+$PLINEGEN
+ 70
+0
+  9
+$PSLTSCALE
+ 70
+1
+  9
+$TREEDEPTH
+ 70
+3020
+  9
+$CMLSTYLE
+  2
+Standard
+  9
+$CMLJUST
+ 70
+0
+  9
+$CMLSCALE
+ 40
+20.0
+  9
+$PROXYGRAPHICS
+ 70
+1
+  9
+$MEASUREMENT
+ 70
+1
+  9
+$CELWEIGHT
+370
+-1
+  9
+$ENDCAPS
+280
+0
+  9
+$JOINSTYLE
+280
+0
+  9
+$LWDISPLAY
+290
+0
+  9
+$INSUNITS
+ 70
+0
+  9
+$HYPERLINKBASE
+  1
+
+  9
+$STYLESHEET
+  1
+
+  9
+$XEDIT
+290
+1
+  9
+$CEPSNTYPE
+380
+0
+  9
+$PSTYLEMODE
+290
+1
+  9
+$FINGERPRINTGUID
+  2
+{FA6AE2E6-B029-43DD-815F-145F4316B8B5}
+  9
+$VERSIONGUID
+  2
+{A4DFE47E-F057-4338-A658-13DDF40EB412}
+  9
+$EXTNAMES
+290
+1
+  9
+$PSVPSCALE
+ 40
+0.0
+  9
+$OLESTARTUP
+290
+0
+  0
+ENDSEC
+  0
+SECTION
+  2
+CLASSES
+  0
+CLASS
+  1
+ACDBDICTIONARYWDFLT
+  2
+AcDbDictionaryWithDefault
+  3
+ObjectDBX Classes
+ 90
+0
+280
+0
+281
+0
+  0
+CLASS
+  1
+SUN
+  2
+AcDbSun
+  3
+SCENEOE
+ 90
+1153
+280
+0
+281
+0
+  0
+CLASS
+  1
+VISUALSTYLE
+  2
+AcDbVisualStyle
+  3
+ObjectDBX Classes
+ 90
+4095
+280
+0
+281
+0
+  0
+CLASS
+  1
+MATERIAL
+  2
+AcDbMaterial
+  3
+ObjectDBX Classes
+ 90
+1153
+280
+0
+281
+0
+  0
+CLASS
+  1
+SCALE
+  2
+AcDbScale
+  3
+ObjectDBX Classes
+ 90
+1153
+280
+0
+281
+0
+  0
+CLASS
+  1
+TABLESTYLE
+  2
+AcDbTableStyle
+  3
+ObjectDBX Classes
+ 90
+4095
+280
+0
+281
+0
+  0
+CLASS
+  1
+MLEADERSTYLE
+  2
+AcDbMLeaderStyle
+  3
+ACDB_MLEADERSTYLE_CLASS
+ 90
+4095
+280
+0
+281
+0
+  0
+CLASS
+  1
+DICTIONARYVAR
+  2
+AcDbDictionaryVar
+  3
+ObjectDBX Classes
+ 90
+0
+280
+0
+281
+0
+  0
+CLASS
+  1
+CELLSTYLEMAP
+  2
+AcDbCellStyleMap
+  3
+ObjectDBX Classes
+ 90
+1152
+280
+0
+281
+0
+  0
+CLASS
+  1
+MENTALRAYRENDERSETTINGS
+  2
+AcDbMentalRayRenderSettings
+  3
+SCENEOE
+ 90
+1024
+280
+0
+281
+0
+  0
+CLASS
+  1
+ACDBDETAILVIEWSTYLE
+  2
+AcDbDetailViewStyle
+  3
+ObjectDBX Classes
+ 90
+1025
+280
+0
+281
+0
+  0
+CLASS
+  1
+ACDBSECTIONVIEWSTYLE
+  2
+AcDbSectionViewStyle
+  3
+ObjectDBX Classes
+ 90
+1025
+280
+0
+281
+0
+  0
+CLASS
+  1
+RASTERVARIABLES
+  2
+AcDbRasterVariables
+  3
+ISM
+ 90
+0
+280
+0
+281
+0
+  0
+CLASS
+  1
+ACDBPLACEHOLDER
+  2
+AcDbPlaceHolder
+  3
+ObjectDBX Classes
+ 90
+0
+280
+0
+281
+0
+  0
+CLASS
+  1
+LAYOUT
+  2
+AcDbLayout
+  3
+ObjectDBX Classes
+ 90
+0
+280
+0
+281
+0
+  0
+ENDSEC
+  0
+SECTION
+  2
+TABLES
+  0
+TABLE
+  2
+VPORT
+  5
+8
+330
+0
+100
+AcDbSymbolTable
+ 70
+1
+  0
+VPORT
+  5
+23
+330
+8
+100
+AcDbSymbolTableRecord
+100
+AcDbViewportTableRecord
+  2
+*Active
+ 70
+0
+ 10
+0.0
+ 20
+0.0
+ 11
+1.0
+ 21
+1.0
+ 12
+0.0
+ 22
+0.0
+ 13
+0.0
+ 23
+0.0
+ 14
+0.5
+ 24
+0.5
+ 15
+0.5
+ 25
+0.5
+ 16
+0.0
+ 26
+0.0
+ 36
+1.0
+ 17
+0.0
+ 27
+0.0
+ 37
+0.0
+ 40
+1000.0
+ 41
+1.34
+ 42
+50.0
+ 43
+0.0
+ 44
+0.0
+ 50
+0.0
+ 51
+0.0
+ 71
+0
+ 72
+1000
+ 73
+1
+ 74
+3
+ 75
+0
+ 76
+0
+ 77
+0
+ 78
+0
+281
+0
+ 65
+0
+146
+0.0
+  0
+ENDTAB
+  0
+TABLE
+  2
+LTYPE
+  5
+2
+330
+0
+100
+AcDbSymbolTable
+ 70
+3
+  0
+LTYPE
+  5
+24
+330
+2
+100
+AcDbSymbolTableRecord
+100
+AcDbLinetypeTableRecord
+  2
+ByBlock
+ 70
+0
+  3
+
+ 72
+65
+ 73
+0
+ 40
+0.0
+  0
+LTYPE
+  5
+25
+330
+2
+100
+AcDbSymbolTableRecord
+100
+AcDbLinetypeTableRecord
+  2
+ByLayer
+ 70
+0
+  3
+
+ 72
+65
+ 73
+0
+ 40
+0.0
+  0
+LTYPE
+  5
+26
+330
+2
+100
+AcDbSymbolTableRecord
+100
+AcDbLinetypeTableRecord
+  2
+Continuous
+ 70
+0
+  3
+
+ 72
+65
+ 73
+0
+ 40
+0.0
+  0
+ENDTAB
+  0
+TABLE
+  2
+LAYER
+  5
+1
+330
+0
+100
+AcDbSymbolTable
+ 70
+2
+  0
+LAYER
+  5
+27
+330
+1
+100
+AcDbSymbolTableRecord
+100
+AcDbLayerTableRecord
+  2
+0
+ 70
+0
+ 62
+7
+  6
+Continuous
+370
+-3
+390
+13
+  0
+LAYER
+  5
+28
+330
+1
+100
+AcDbSymbolTableRecord
+100
+AcDbLayerTableRecord
+  2
+Defpoints
+ 70
+0
+ 62
+7
+  6
+Continuous
+290
+0
+370
+-3
+390
+13
+  0
+ENDTAB
+  0
+TABLE
+  2
+STYLE
+  5
+5
+330
+0
+100
+AcDbSymbolTable
+ 70
+1
+  0
+STYLE
+  5
+29
+330
+5
+100
+AcDbSymbolTableRecord
+100
+AcDbTextStyleTableRecord
+  2
+Standard
+ 70
+0
+ 40
+0.0
+ 41
+1.0
+ 50
+0.0
+ 71
+0
+ 42
+2.5
+  3
+txt
+  4
+
+  0
+ENDTAB
+  0
+TABLE
+  2
+VIEW
+  5
+7
+330
+0
+100
+AcDbSymbolTable
+ 70
+0
+  0
+ENDTAB
+  0
+TABLE
+  2
+UCS
+  5
+6
+330
+0
+100
+AcDbSymbolTable
+ 70
+0
+  0
+ENDTAB
+  0
+TABLE
+  2
+APPID
+  5
+3
+330
+0
+100
+AcDbSymbolTable
+ 70
+3
+  0
+APPID
+  5
+2A
+330
+3
+100
+AcDbSymbolTableRecord
+100
+AcDbRegAppTableRecord
+  2
+ACAD
+ 70
+0
+  0
+APPID
+  5
+2F
+330
+3
+100
+AcDbSymbolTableRecord
+100
+AcDbRegAppTableRecord
+  2
+HATCHBACKGROUNDCOLOR
+ 70
+0
+  0
+APPID
+  5
+30
+330
+3
+100
+AcDbSymbolTableRecord
+100
+AcDbRegAppTableRecord
+  2
+EZDXF
+ 70
+0
+  0
+ENDTAB
+  0
+TABLE
+  2
+DIMSTYLE
+  5
+4
+330
+0
+100
+AcDbSymbolTable
+ 70
+1
+100
+AcDbDimStyleTable
+  0
+DIMSTYLE
+105
+2B
+330
+4
+100
+AcDbSymbolTableRecord
+100
+AcDbDimStyleTableRecord
+  2
+Standard
+ 70
+0
+  3
+
+  4
+
+ 40
+1.0
+ 41
+2.5
+ 42
+0.625
+ 43
+3.75
+ 44
+1.25
+ 45
+0.0
+ 46
+0.0
+ 47
+0.0
+ 48
+0.0
+140
+2.5
+141
+2.5
+142
+0.0
+143
+0.03937007874
+144
+1.0
+145
+0.0
+146
+1.0
+147
+0.625
+148
+0.0
+ 71
+0
+ 72
+0
+ 73
+0
+ 74
+0
+ 75
+0
+ 76
+0
+ 77
+1
+ 78
+8
+ 79
+3
+170
+0
+171
+3
+172
+1
+173
+0
+174
+0
+175
+0
+176
+0
+177
+0
+178
+0
+179
+2
+271
+2
+272
+2
+273
+2
+274
+3
+275
+0
+276
+0
+277
+2
+278
+44
+279
+0
+280
+0
+281
+0
+282
+0
+283
+0
+284
+8
+285
+0
+286
+0
+288
+0
+289
+3
+371
+-2
+372
+-2
+  0
+ENDTAB
+  0
+TABLE
+  2
+BLOCK_RECORD
+  5
+9
+330
+0
+100
+AcDbSymbolTable
+ 70
+2
+  0
+BLOCK_RECORD
+  5
+17
+330
+9
+100
+AcDbSymbolTableRecord
+100
+AcDbBlockTableRecord
+  2
+*Model_Space
+340
+1A
+  0
+BLOCK_RECORD
+  5
+1B
+330
+9
+100
+AcDbSymbolTableRecord
+100
+AcDbBlockTableRecord
+  2
+*Paper_Space
+340
+1E
+  0
+ENDTAB
+  0
+ENDSEC
+  0
+SECTION
+  2
+BLOCKS
+  0
+BLOCK
+  5
+18
+330
+17
+100
+AcDbEntity
+  8
+0
+100
+AcDbBlockBegin
+  2
+*Model_Space
+ 70
+0
+ 10
+0.0
+ 20
+0.0
+ 30
+0.0
+  3
+*Model_Space
+  1
+
+  0
+ENDBLK
+  5
+19
+330
+17
+100
+AcDbEntity
+  8
+0
+100
+AcDbBlockEnd
+  0
+BLOCK
+  5
+1C
+330
+1B
+100
+AcDbEntity
+  8
+0
+100
+AcDbBlockBegin
+  2
+*Paper_Space
+ 70
+0
+ 10
+0.0
+ 20
+0.0
+ 30
+0.0
+  3
+*Paper_Space
+  1
+
+  0
+ENDBLK
+  5
+1D
+330
+1B
+100
+AcDbEntity
+  8
+0
+100
+AcDbBlockEnd
+  0
+ENDSEC
+  0
+SECTION
+  2
+ENTITIES
+  0
+ENDSEC
+  0
+SECTION
+  2
+OBJECTS
+  0
+DICTIONARY
+  5
+A
+330
+0
+100
+AcDbDictionary
+281
+1
+  3
+ACAD_COLOR
+350
+B
+  3
+ACAD_GROUP
+350
+C
+  3
+ACAD_LAYOUT
+350
+D
+  3
+ACAD_MATERIAL
+350
+E
+  3
+ACAD_MLEADERSTYLE
+350
+F
+  3
+ACAD_MLINESTYLE
+350
+10
+  3
+ACAD_PLOTSETTINGS
+350
+11
+  3
+ACAD_PLOTSTYLENAME
+350
+12
+  3
+ACAD_SCALELIST
+350
+14
+  3
+ACAD_TABLESTYLE
+350
+15
+  3
+ACAD_VISUALSTYLE
+350
+16
+  3
+EZDXF_META
+350
+2D
+  0
+DICTIONARY
+  5
+B
+330
+A
+100
+AcDbDictionary
+281
+1
+  0
+DICTIONARY
+  5
+C
+330
+A
+100
+AcDbDictionary
+281
+1
+  0
+DICTIONARY
+  5
+D
+330
+A
+100
+AcDbDictionary
+281
+1
+  3
+Model
+350
+1A
+  3
+Layout1
+350
+1E
+  0
+DICTIONARY
+  5
+E
+330
+A
+100
+AcDbDictionary
+281
+1
+  3
+ByBlock
+350
+1F
+  3
+ByLayer
+350
+20
+  3
+Global
+350
+21
+  0
+DICTIONARY
+  5
+F
+330
+A
+100
+AcDbDictionary
+281
+1
+  3
+Standard
+350
+2C
+  0
+DICTIONARY
+  5
+10
+330
+A
+100
+AcDbDictionary
+281
+1
+  3
+Standard
+350
+22
+  0
+DICTIONARY
+  5
+11
+330
+A
+100
+AcDbDictionary
+281
+1
+  0
+ACDBDICTIONARYWDFLT
+  5
+12
+330
+A
+100
+AcDbDictionary
+281
+1
+  3
+Normal
+350
+13
+100
+AcDbDictionaryWithDefault
+340
+13
+  0
+ACDBPLACEHOLDER
+  5
+13
+330
+12
+  0
+DICTIONARY
+  5
+14
+330
+A
+100
+AcDbDictionary
+281
+1
+  0
+DICTIONARY
+  5
+15
+330
+A
+100
+AcDbDictionary
+281
+1
+  0
+DICTIONARY
+  5
+16
+330
+A
+100
+AcDbDictionary
+281
+1
+  0
+LAYOUT
+  5
+1A
+330
+D
+100
+AcDbPlotSettings
+  1
+
+  4
+A3
+  6
+
+ 40
+7.5
+ 41
+20.0
+ 42
+7.5
+ 43
+20.0
+ 44
+420.0
+ 45
+297.0
+ 46
+0.0
+ 47
+0.0
+ 48
+0.0
+ 49
+0.0
+140
+0.0
+141
+0.0
+142
+1.0
+143
+1.0
+ 70
+1024
+ 72
+1
+ 73
+0
+ 74
+5
+  7
+
+ 75
+16
+ 76
+0
+ 77
+2
+ 78
+300
+147
+1.0
+148
+0.0
+149
+0.0
+100
+AcDbLayout
+  1
+Model
+ 70
+1
+ 71
+0
+ 10
+0.0
+ 20
+0.0
+ 11
+420.0
+ 21
+297.0
+ 12
+0.0
+ 22
+0.0
+ 32
+0.0
+ 14
+1e+20
+ 24
+1e+20
+ 34
+1e+20
+ 15
+-1e+20
+ 25
+-1e+20
+ 35
+-1e+20
+146
+0.0
+ 13
+0.0
+ 23
+0.0
+ 33
+0.0
+ 16
+1.0
+ 26
+0.0
+ 36
+0.0
+ 17
+0.0
+ 27
+1.0
+ 37
+0.0
+ 76
+1
+330
+17
+  0
+LAYOUT
+  5
+1E
+330
+D
+100
+AcDbPlotSettings
+  1
+
+  4
+A3
+  6
+
+ 40
+7.5
+ 41
+20.0
+ 42
+7.5
+ 43
+20.0
+ 44
+420.0
+ 45
+297.0
+ 46
+0.0
+ 47
+0.0
+ 48
+0.0
+ 49
+0.0
+140
+0.0
+141
+0.0
+142
+1.0
+143
+1.0
+ 70
+0
+ 72
+1
+ 73
+0
+ 74
+5
+  7
+
+ 75
+16
+ 76
+0
+ 77
+2
+ 78
+300
+147
+1.0
+148
+0.0
+149
+0.0
+100
+AcDbLayout
+  1
+Layout1
+ 70
+1
+ 71
+1
+ 10
+0.0
+ 20
+0.0
+ 11
+420.0
+ 21
+297.0
+ 12
+0.0
+ 22
+0.0
+ 32
+0.0
+ 14
+1e+20
+ 24
+1e+20
+ 34
+1e+20
+ 15
+-1e+20
+ 25
+-1e+20
+ 35
+-1e+20
+146
+0.0
+ 13
+0.0
+ 23
+0.0
+ 33
+0.0
+ 16
+1.0
+ 26
+0.0
+ 36
+0.0
+ 17
+0.0
+ 27
+1.0
+ 37
+0.0
+ 76
+1
+330
+1B
+  0
+MATERIAL
+  5
+1F
+102
+{ACAD_REACTORS
+330
+E
+102
+}
+330
+E
+100
+AcDbMaterial
+  1
+ByBlock
+  2
+
+ 70
+0
+ 40
+1.0
+ 71
+1
+ 41
+1.0
+ 91
+-1023410177
+ 42
+1.0
+ 72
+1
+  3
+
+ 73
+1
+ 74
+1
+ 75
+1
+ 44
+0.5
+ 73
+0
+ 45
+1.0
+ 46
+1.0
+ 77
+1
+  4
+
+ 78
+1
+ 79
+1
+170
+1
+ 48
+1.0
+171
+1
+  6
+
+172
+1
+173
+1
+174
+1
+140
+1.0
+141
+1.0
+175
+1
+  7
+
+176
+1
+177
+1
+178
+1
+143
+1.0
+179
+1
+  8
+
+270
+1
+271
+1
+272
+1
+145
+1.0
+146
+1.0
+273
+1
+  9
+
+274
+1
+275
+1
+276
+1
+ 42
+1.0
+ 72
+1
+  3
+
+ 73
+1
+ 74
+1
+ 75
+1
+ 94
+63
+  0
+MATERIAL
+  5
+20
+102
+{ACAD_REACTORS
+330
+E
+102
+}
+330
+E
+100
+AcDbMaterial
+  1
+ByLayer
+  2
+
+ 70
+0
+ 40
+1.0
+ 71
+1
+ 41
+1.0
+ 91
+-1023410177
+ 42
+1.0
+ 72
+1
+  3
+
+ 73
+1
+ 74
+1
+ 75
+1
+ 44
+0.5
+ 73
+0
+ 45
+1.0
+ 46
+1.0
+ 77
+1
+  4
+
+ 78
+1
+ 79
+1
+170
+1
+ 48
+1.0
+171
+1
+  6
+
+172
+1
+173
+1
+174
+1
+140
+1.0
+141
+1.0
+175
+1
+  7
+
+176
+1
+177
+1
+178
+1
+143
+1.0
+179
+1
+  8
+
+270
+1
+271
+1
+272
+1
+145
+1.0
+146
+1.0
+273
+1
+  9
+
+274
+1
+275
+1
+276
+1
+ 42
+1.0
+ 72
+1
+  3
+
+ 73
+1
+ 74
+1
+ 75
+1
+ 94
+63
+  0
+MATERIAL
+  5
+21
+102
+{ACAD_REACTORS
+330
+E
+102
+}
+330
+E
+100
+AcDbMaterial
+  1
+Global
+  2
+
+ 70
+0
+ 40
+1.0
+ 71
+1
+ 41
+1.0
+ 91
+-1023410177
+ 42
+1.0
+ 72
+1
+  3
+
+ 73
+1
+ 74
+1
+ 75
+1
+ 44
+0.5
+ 73
+0
+ 45
+1.0
+ 46
+1.0
+ 77
+1
+  4
+
+ 78
+1
+ 79
+1
+170
+1
+ 48
+1.0
+171
+1
+  6
+
+172
+1
+173
+1
+174
+1
+140
+1.0
+141
+1.0
+175
+1
+  7
+
+176
+1
+177
+1
+178
+1
+143
+1.0
+179
+1
+  8
+
+270
+1
+271
+1
+272
+1
+145
+1.0
+146
+1.0
+273
+1
+  9
+
+274
+1
+275
+1
+276
+1
+ 42
+1.0
+ 72
+1
+  3
+
+ 73
+1
+ 74
+1
+ 75
+1
+ 94
+63
+  0
+MLINESTYLE
+  5
+22
+102
+{ACAD_REACTORS
+330
+10
+102
+}
+330
+10
+100
+AcDbMlineStyle
+  2
+Standard
+ 70
+0
+  3
+
+ 62
+256
+ 51
+90.0
+ 52
+90.0
+ 71
+2
+ 49
+0.5
+ 62
+256
+  6
+BYLAYER
+ 49
+-0.5
+ 62
+256
+  6
+BYLAYER
+  0
+MLEADERSTYLE
+  5
+2C
+102
+{ACAD_REACTORS
+330
+F
+102
+}
+330
+F
+100
+AcDbMLeaderStyle
+179
+2
+170
+2
+171
+1
+172
+0
+ 90
+2
+ 40
+0.0
+ 41
+0.0
+173
+1
+ 91
+-1056964608
+ 92
+-2
+290
+1
+ 42
+2.0
+291
+1
+ 43
+8.0
+  3
+Standard
+ 44
+4.0
+300
+
+342
+29
+174
+1
+175
+1
+176
+0
+178
+1
+ 93
+-1056964608
+ 45
+4.0
+292
+0
+297
+0
+ 46
+4.0
+ 94
+-1056964608
+ 47
+1.0
+ 49
+1.0
+140
+1.0
+294
+1
+141
+0.0
+177
+0
+142
+1.0
+295
+0
+296
+0
+143
+3.75
+271
+0
+272
+9
+273
+9
+  0
+DICTIONARY
+  5
+2D
+330
+A
+100
+AcDbDictionary
+280
+1
+281
+1
+  3
+CREATED_BY_EZDXF
+350
+2E
+  3
+WRITTEN_BY_EZDXF
+350
+31
+  0
+DICTIONARYVAR
+  5
+2E
+330
+2D
+100
+DictionaryVariables
+280
+0
+  1
+1.4.4 @ 2026-10-03T01:25:36.510032+00:00
+  0
+DICTIONARYVAR
+  5
+31
+330
+2D
+100
+DictionaryVariables
+280
+0
+  1
+1.4.4 @ 2026-10-03T01:25:36.512845+00:00
+  0
+ENDSEC
+  0
+EOF
+`),a=256,o=()=>(++a).toString(16).toUpperCase(),s=/* @__PURE__ */ new Map([[`0`,{name:`0`,color:7}]]);for(let t of e)s.set(t.layer,{name:t.layer,color:t.color??7,trueColor:t.trueColor});let c=[];for(let[e,t]of s)c.push(B(0,`LAYER`),B(5,o()),B(330,`1`),B(100,`AcDbSymbolTableRecord`),B(100,`AcDbLayerTableRecord`),B(2,vn(e)),B(70,0),B(62,t.color===0||t.color===256?7:t.color),B(6,`CONTINUOUS`)),t.trueColor!==void 0&&t.trueColor!==null&&c.push(B(420,t.trueColor));let l=_n(i).get(`TABLES`);for(let e=l.start;e<l.end;e++)if(i[e].code===0&&i[e].value.trim()===`TABLE`&&i[e+1]?.value.trim()===`LAYER`){let t=e+2;for(;i[t].code!==0||i[t].value.trim()!==`ENDTAB`;)t++;i=i.slice(0,e+2).concat([B(5,`1`),B(330,`0`),B(100,`AcDbSymbolTable`),B(70,s.size)],c,i.slice(t));break}let u=[],d=[1/0,1/0,-1/0,-1/0];for(let t of e){t.points.length<2&&z(`EMPTY_PATH`,`不能输出少于两个顶点的路径。`);for(let[e,n]of t.points)(!Number.isFinite(e)||!Number.isFinite(n))&&z(`COORDINATE`,`输出坐标不是有限数。`),d[0]=Math.min(d[0],e),d[1]=Math.min(d[1],n),d[2]=Math.max(d[2],e),d[3]=Math.max(d[3],n);let e=e=>{let n=[B(0,e),B(5,o()),B(330,`17`),B(100,`AcDbEntity`),B(8,vn(t.layer)),B(62,t.color??7)];return t.trueColor!=null&&n.push(B(420,t.trueColor)),n};if(n===`LINE`)for(let n=1;n<t.points.length;n++){let r=t.points[n-1],i=t.points[n];u.push(...e(`LINE`),B(100,`AcDbLine`),B(10,r[0]),B(20,r[1]),B(30,0),B(11,i[0]),B(21,i[1]),B(31,0))}else{let n=t.closed?t.points.slice(0,-1):t.points;u.push(...e(`LWPOLYLINE`),B(100,`AcDbPolyline`),B(90,n.length),B(70,+!!t.closed));for(let e of n)u.push(B(10,e[0]),B(20,e[1]))}}let f=_n(i).get(`ENTITIES`);return i=i.slice(0,f.start).concat(u,i.slice(f.end)),V(i,`$ACADVER`,[B(1,`AC1015`)]),V(i,`$INSUNITS`,[B(70,r)]),V(i,`$HANDSEED`,[B(5,(a+1).toString(16).toUpperCase())]),e.length&&(V(i,`$EXTMIN`,[B(10,d[0]),B(20,d[1]),B(30,0)]),V(i,`$EXTMAX`,[B(10,d[2]),B(20,d[3]),B(30,0)])),i.map(e=>`${String(e.code).padStart(3,` `)}\r\n${e.value}\r\n`).join(``)}function H(e){throw Error(`加工导出核验失败：${e}`)}let U=(e,t)=>e[0]===t[0]&&e[1]===t[1],bn=e=>Array.isArray(e)&&e.length===2&&e.every(e=>typeof e==`number`&&Number.isFinite(e)&&Math.abs(e)<=1e6),W=e=>String(Object.is(e,-0)?0:e),G=(e,t)=>JSON.stringify(e)===JSON.stringify(t),xn={M:`#dd3333`,V:`#2255dd`,B:`#222222`,A:`#00a0a0`,U:`#777777`,F:`#33aa55`};function K(e,t){r(e),(!t||!t.options||!Array.isArray(t.paths)||!Array.isArray(t.groups))&&H(`加工计划缺少完整设置、路径或分组。`);let n=y(e,t.options);G(t.options,n.options)||H(`加工计划设置不完整或未经归一化。`),n.overlaps.length&&t.options.overlapPolicy!==`retain`&&H(`检测到重复或重叠线，必须先明确选择保留加工次数。`),G(t.groups,n.groups)||H(`分组与已选择的加工设置不一致。`);let i=new Map(t.groups.map(e=>[e.id,e]));i.size!==t.groups.length&&H(`加工分组标识重复。`);let a=new Map(n.included.map(e=>[e.id,e])),o=/* @__PURE__ */ new Map;for(let e of n.groups)for(let t of e.sourceSegmentIds)o.set(t,e.passes);(a.size!==o.size||[...a.keys()].some(e=>!o.has(e)))&&H(`源线段与加工分组覆盖不一致。`);let s=new Map(t.paths.map(e=>[e.id,e]));(s.size!==t.paths.length||t.paths.some(e=>typeof e.id!=`string`||!e.id||e.id.length>256))&&H(`加工路径标识缺失、重复或过长。`);let c={groups:i,sources:a,paths:s,passes:o,sourceGroups:new Map(n.groups.flatMap(e=>e.sourceSegmentIds.map(t=>[t,e.id]))),options:n.options,independent:t.options.pathMode===`independent`,bounds:dn(e)};Sn(t.paths,c);let l=[];for(let e of n.groups)for(let t of e.sourceSegmentIds){let n=a.get(t);for(let r=0;r<e.passes;r++)l.push({id:`original_${l.length+1}`,groupId:e.id,settingsKey:e.settingsKey,points:[n.a,n.b],sourceSegmentIds:[t],assignments:[n.assignment]})}return(!G(t.before,b(l,n.options.origin))||!G(t.after,b(t.paths,n.options.origin)))&&H(`优化前后路径统计与真实源线或路径不一致。`),c}function Sn(e,t){e.length!==t.paths.size&&H(`连续加工路径数量不一致。`);let n=/* @__PURE__ */ new Map,r=/* @__PURE__ */ new Set,i=[...t.paths.keys()];for(let a=0;a<e.length;a++){let o=e[a];(!o||r.has(o.id))&&H(`加工路径标识重复。`),o.id!==i[a]&&H(`加工路径顺序被修改，空走距离会改变。`),r.add(o.id);let s=t.paths.get(o.id),c=t.groups.get(o.groupId);(!s||!c||s.groupId!==o.groupId||c.settingsKey!==o.settingsKey||s.settingsKey!==o.settingsKey)&&H(`路径被移入其他加工设置分组。`),(!Array.isArray(o.points)||o.points.length<2||!o.points.every(bn))&&H(`路径坐标无效。`);try{_(o.points,t.options)}catch(e){H(e instanceof Error?e.message:String(e))}(!Array.isArray(o.sourceSegmentIds)||!Array.isArray(o.assignments)||o.sourceSegmentIds.length!==o.points.length-1||o.assignments.length!==o.sourceSegmentIds.length)&&H(`路径加工边与来源数量不一致。`),(!G(o.sourceSegmentIds,s.sourceSegmentIds)||!G(o.assignments,s.assignments))&&H(`路径来源或线型被修改。`),G(o.points,s.points)||H(`加工路径位置、方向或点顺序被修改。`);for(let e=0;e<o.sourceSegmentIds.length;e++){let r=o.sourceSegmentIds[e],i=t.sources.get(r),a=o.points[e],s=o.points[e+1];(!i||t.sourceGroups.get(r)!==c.id||i.assignment!==o.assignments[e])&&H(`加工边来源或加工设置不一致。`),(U(a,s)||!(U(a,i.a)&&U(s,i.b)||U(a,i.b)&&U(s,i.a)))&&H(`线段 ${r} 的位置、尺度或覆盖已改变，或新增了跨空白加工。`),o.points.length!==2&&t.independent&&H(`逐边模式出现连续合并路径。`),t.independent&&(!U(a,i.a)||!U(s,i.b))&&H(`逐边模式改变了原线段方向。`),n.set(r,(n.get(r)??0)+1)}}return(n.size!==t.passes.size||[...t.passes].some(([e,t])=>n.get(e)!==t))&&H(`线段遗漏、多加工或加工次数不一致。`),n}function Cn(e,t){let n=[`${t} 保留原毫米坐标；加工设置为分组标签，每条输出路径仅表示实际连续中心线，不包含抬笔空走。`,`本次已自动回读核对几何和加工次数；刻字软件导入与机器试压未验证。`];return e.objects?.length&&n.push(`未加工 ${e.objects.length} 个圆、文字或独立标记对象。`),e.background&&n.push(`参考底图不包含在加工路径中。`),n}function q(e){let t=new Map(e.map(e=>[e.id,fn[e.assignments[0]]]));return new Set([...t.values()].map(e=>e.name)).size!==e.length&&H(`不同加工设置不能共用同一 DXF 图层。`),t}function wn(e){let t=q(e.groups);return yn(e.paths.map(e=>({...t.get(e.groupId),layer:t.get(e.groupId).name,points:e.points.map(([e,t])=>[e,-t]),closed:!1})),{format:`LWPOLYLINE`,units:4})}function Tn(e,t){let n=pn({name:e.name,paper:e.paper,segments:[]}).text,r=q(t.groups),i=[],a=(e,t)=>{i.push(String(e),typeof t==`number`?W(t):t)};for(let{path:e,firstEdge:n,endEdge:i}of v(t)){let t=r.get(e.groupId),o=e.points[n],s=e.points[i];a(0,`LINE`),a(8,t.name),a(6,`CONTINUOUS`),a(62,t.color),a(10,o[0]),a(20,-o[1]),a(30,0),a(11,s[0]),a(21,-s[1]),a(31,0)}let o=`0\r
+SECTION\r
+2\r
+ENTITIES\r
+`;return n.includes(o+`0\r
+ENDSEC`)||H(`普通 DXF 的空实体节结构不可复用。`),n.replace(o,o+(i.length?i.join(`\r
+`)+`\r
+`:``))}function En(e,t){K(e,t);let n=Tn(e,t);return Rn(n,`dxf-lines`,e,t),{text:n,warnings:[...Cn(e,`DXF`),`沿用普通导出的 R12 / AC1009 LINE 格式；共线相连的源边可合成一个 LINE。规划路径与转弯上限不等于设备抬笔指令，下游软件可能重排或重新拼接。按一单位等于一毫米导入。`]}}function Dn(e,t){let n=pn({name:e.name,paper:e.paper,segments:[]}).text,r=q(t.groups),i=[],a=(e,t)=>{i.push(String(e),typeof t==`number`?W(t):t)};for(let e of t.paths){let t=r.get(e.groupId);a(0,`POLYLINE`),a(8,t.name),a(6,`CONTINUOUS`),a(62,t.color),a(66,1),a(10,0),a(20,0),a(30,0),a(70,0);for(let[n,r]of e.points)a(0,`VERTEX`),a(8,t.name),a(10,n),a(20,-r),a(30,0),a(70,0);a(0,`SEQEND`),a(8,t.name)}let o=`0\r
+SECTION\r
+2\r
+ENTITIES\r
+`;return n.includes(o+`0\r
+ENDSEC`)||H(`普通 DXF 的空实体节结构不可复用。`),n.replace(o,o+(i.length?i.join(`\r
+`)+`\r
+`:``))}function On(e,t){K(e,t);let n=Dn(e,t);return Rn(n,`dxf-r12-polyline`,e,t),{text:n,warnings:[...Cn(e,`DXF`),`DXF 使用传统 R12 / AC1009 POLYLINE—VERTEX—SEQEND 连续中心线，保留绝对 (x, -y) 毫米位置；零基点和标高，默认 +Z 法向。闭环以原边及显式首尾重复表示，不添加隐式闭边。文件不含抬笔、落笔或设备命令；实际软件导入与机器试压尚未验证。`]}}function kn(e,t){let n=e[`:@`];(!n||typeof n!=`object`||Array.isArray(n))&&H(`XML 元素缺少属性。`);let r=n;return(Object.keys(r).some(e=>!t.includes(e))||t.some(e=>!Object.hasOwn(r,e))||Object.values(r).some(e=>typeof e!=`string`))&&H(`SVG 包含不受支持的属性或缺少必要属性。`),r}function An(e,t){return(Object.keys(e).some(e=>e!==t&&e!==`:@`)||!Array.isArray(e[t]))&&H(`SVG 包含不受支持的 ${t} 元素。`),e[t].filter(e=>!(Object.keys(e).length===1&&typeof e[`#text`]==`string`&&!e[`#text`].trim()))}function jn(e,t){try{return JSON.parse(e)}catch{return H(`${t} 元数据格式无效。`)}}function J(e){return(!(/* @__PURE__ */ RegExp(`^[+-]?(?:\\d+\\.?\\d*|\\.\\d+)(?:[eE][+-]?\\d+)?$`)).test(e)||!Number.isFinite(Number(e)))&&H(`坐标或尺寸不是有限数值。`),Number(e)}function Mn(e){let t=e.trim().split(/\s+/);(t.length<6||t.length%3!=0)&&H(`SVG 路径不是完整的连续 M/L 线段。`);let n=[];for(let e=0;e<t.length;e+=3)t[e]!==(e?`L`:`M`)&&H(`SVG 路径包含曲线、额外起笔或闭合隐式加工。`),n.push([J(t[e+1]),J(t[e+2])]);return n}function Nn(e,t){(/<!|<\?/i.test(e)||rn.validate(e)!==!0)&&H(`SVG XML 格式无效，或包含不允许的声明。`);let n=new nn({preserveOrder:!0,ignoreAttributes:!1,attributeNamePrefix:``,parseAttributeValue:!1,parseTagValue:!1,processEntities:!0,trimValues:!1}).parse(e);(n.length!==1||!n[0].svg)&&H(`SVG 必须只有一个根元素。`);let r=n[0],i=kn(r,[`xmlns`,`width`,`height`,`viewBox`,`data-cp-format`,`data-units`]);(i.xmlns!==`http://www.w3.org/2000/svg`||i[`data-cp-format`]!==`zhezhi-cp-processing-v1`||i[`data-units`]!==`mm`)&&H(`SVG 格式或单位被修改。`);let a=i.viewBox.trim().split(/\s+/).map(J),o=t.bounds;(!G(a,[o.x,o.y,o.width,o.height])||i.width!==`${W(o.width)}mm`||i.height!==`${W(o.height)}mm`)&&H(`SVG 画布尺度、毫米单位或坐标位置被修改。`);let s=[],c=/* @__PURE__ */ new Set;for(let e of An(r,`svg`)){let n=kn(e,[`data-group-id`,`data-settings-key`,`data-assignments`,`data-passes`]),r=t.groups.get(n[`data-group-id`]);(!r||n[`data-settings-key`]!==r.settingsKey||!G(jn(n[`data-assignments`],`分组线型`),r.assignments)||n[`data-passes`]!==String(r.passes))&&H(`SVG 加工分组或次数被修改。`),c.add(r.id);for(let t of An(e,`g`)){let e=kn(t,[`data-path-id`,`data-source-segment-ids`,`data-assignments`,`d`,`fill`,`stroke`,`stroke-width`]);(An(t,`path`).length||e.fill!==`none`||e.stroke!==xn[r.assignments[0]]||e[`stroke-width`]!==`0.1`)&&H(`SVG 路径出现填充、额外内容或非中心线样式。`),s.push({id:e[`data-path-id`],groupId:r.id,settingsKey:r.settingsKey,points:Mn(e.d),sourceSegmentIds:jn(e[`data-source-segment-ids`],`来源`),assignments:jn(e[`data-assignments`],`线型`)})}}return c.size!==t.groups.size&&H(`SVG 加工分组缺失。`),s}function Y(e,t){let n=e.pairs.filter(e=>e.code===t);return n.length!==1&&H(`DXF ${e.type} 的组码 ${t} 缺失或重复。`),n[0].value}function X(e,t){e.pairs.some(e=>!t.includes(e.code))&&H(`DXF ${e.type} 包含额外实体属性或变形命令。`)}function Z(e){let t=[];for(let n of e)n.code===0?t.push({type:n.value,pairs:[]}):t.length?t[t.length-1].pairs.push(n):H(`DXF 实体缺少起始组码。`);return t}function Q(e){let t=e.replace(/\r\n/g,`
+`).split(`
+`);t[t.length-1]===``&&t.pop(),(t.length%2||t.some(e=>/[\r\0]/.test(e)))&&H(`DXF 组码行数无效。`);let n=[];for(let e=0;e<t.length;e+=2)/^\s*\d+\s*$/.test(t[e])||H(`DXF 组码无效。`),n.push({code:Number(t[e]),value:t[e+1]});let r=/* @__PURE__ */ new Map,i=[],a=0;for(;n[a]?.code===999;)i.push(n[a++]);for(;a<n.length&&(n[a].code!==0||n[a].value!==`EOF`);){(n[a].code!==0||n[a].value!==`SECTION`||n[a+1]?.code!==2)&&H(`DXF 节结构无效。`);let e=n[a+1].value;r.has(e)&&H(`DXF 出现重复的节。`),a+=2;let t=[];for(;a<n.length&&(n[a].code!==0||n[a].value!==`ENDSEC`);)t.push(n[a++]);a>=n.length&&H(`DXF 节未结束。`),r.set(e,t),a++}return(!r.has(`ENTITIES`)||a!==n.length-1||n[a]?.code!==0||n[a].value!==`EOF`)&&H(`DXF 文件缺失实体节或结尾。`),{sections:r,prefix:i}}function Pn(e,t){(!G(e.prefix,t.prefix)||!G([...e.sections.keys()],[...t.sections.keys()]))&&H(`DXF 版本、节结构或前导声明被修改。`);for(let[n,r]of t.sections)n!==`ENTITIES`&&!G(e.sections.get(n),r)&&H(`DXF 单位、范围、标准图层表或模型空间结构被修改。`)}function Fn(e,t,n,r){let i=Q(e);Pn(i,Q(Dn(n,r)));let a=Z(i.sections.get(`ENTITIES`)),o=q([...t.groups.values()]),s=[],c=0;for(let e of t.paths.values()){let t=a[c++],n=o.get(e.groupId);(!t||t.type!==`POLYLINE`)&&H(`R12 DXF 连续路径缺少 POLYLINE，或包含额外实体。`),X(t,[8,6,62,66,10,20,30,70]),(Y(t,8)!==n.name||Y(t,62)!==String(n.color)||Y(t,6)!==`CONTINUOUS`)&&H(`R12 DXF 连续路径的加工图层或线型被修改。`),(Y(t,66)!==`1`||Y(t,10)!==`0`||Y(t,20)!==`0`||Y(t,30)!==`0`||Y(t,70)!==`0`)&&H(`R12 DXF POLYLINE 基点、标高、跟随顶点标记或二维开放标记被修改。`);let r=[];for(;a[c]?.type===`VERTEX`;){let t=a[c++];r.length>=e.points.length&&H(`R12 DXF 包含额外加工顶点。`),X(t,[8,10,20,30,70]),(Y(t,8)!==n.name||Y(t,30)!==`0`||Y(t,70)!==`0`)&&H(`R12 DXF VERTEX 图层、标高或二维标记被修改。`),r.push([J(Y(t,10)),-J(Y(t,20))])}r.length!==e.points.length&&H(`R12 DXF 完整路径顶点数量不一致。`);let i=a[c++];(!i||i.type!==`SEQEND`)&&H(`R12 DXF 路径缺少完整 SEQEND。`),X(i,[8]),Y(i,8)!==n.name&&H(`R12 DXF SEQEND 所属图层被修改。`),s.push({...e,points:r})}return c!==a.length&&H(`R12 DXF 包含额外路径、顶点、序列结束符或其他加工实体。`),{paths:s,serializedPaths:s}}function In(e,t,n,r,i){let a=Q(e),o=Q(i?Tn(n,r):wn(r));Pn(a,o);let s=Z(a.sections.get(`ENTITIES`)),c=[...t.paths.values()],l=q([...t.groups.values()]),u=[],d=[];if(!i){s.length!==c.length&&H(`DXF 连续路径数量不一致，存在遗漏或多加工实体。`);let e=Z(o.sections.get(`ENTITIES`));for(let t=0;t<s.length;t++){let n=s[t],r=c[t],i=l.get(r.groupId);n.type!==`LWPOLYLINE`&&H(`DXF 出现非连续路径、曲线或新增加工实体。`),X(n,[5,330,100,8,62,90,70,10,20]),(Y(n,5)!==Y(e[t],5)||Y(n,330)!==`17`||!G(n.pairs.filter(e=>e.code===100).map(e=>e.value),[`AcDbEntity`,`AcDbPolyline`]))&&H(`DXF 实体句柄、所属模型空间或子类标记无效。`),(Y(n,8)!==i.name||Y(n,62)!==String(i.color))&&H(`DXF 路径被移入其他加工图层。`),Y(n,70)!==`0`&&H(`DXF 路径出现闭合隐式加工边。`);let a=n.pairs.filter(e=>e.code===10||e.code===20),o=[];(a.length<4||a.length%2)&&H(`DXF 顶点坐标数量无效。`);for(let e=0;e<a.length;e+=2)(a[e].code!==10||a[e+1].code!==20)&&H(`DXF 顶点 XY 配对顺序无效。`),o.push([J(a[e].value),-J(a[e+1].value)]);Y(n,90)!==String(o.length)&&H(`DXF 顶点数量与组码 90 不一致。`),u.push({...r,points:o})}return{paths:u,serializedPaths:u}}let f=v(r);s.length!==f.length&&H(`DXF LINE 实体数量不一致，存在遗漏或多加工。`);let p=/* @__PURE__ */ new Map;for(let e of f){let t=p.get(e.path.id);t?t.push(e):p.set(e.path.id,[e])}let m=0;for(let e of c){let t=l.get(e.groupId),n=[];for(let{firstEdge:r,endEdge:i}of p.get(e.id)){let a=s[m++];a.type!==`LINE`&&H(`DXF 出现非 LINE 或新增加工实体。`),X(a,[8,6,62,10,20,30,11,21,31]),(Y(a,8)!==t.name||Y(a,62)!==String(t.color))&&H(`DXF LINE 被移入其他加工图层。`),(Y(a,6)!==`CONTINUOUS`||Y(a,30)!==`0`||Y(a,31)!==`0`)&&H(`DXF LINE 出现虚线或三维变形。`);let o=[J(Y(a,10)),-J(Y(a,20))],c=[J(Y(a,11)),-J(Y(a,21))];(!U(o,e.points[r])||!U(c,e.points[i]))&&H(`DXF LINE 位置、尺度或加工边顺序被修改。`),r?U(n.at(-1),o)||H(`DXF LINE 路径不相连。`):n.push(o),n.push(...e.points.slice(r+1,i),c),d.push({...e,id:e.id+`:edge`+r,points:[o,c],sourceSegmentIds:e.sourceSegmentIds.slice(r,i),assignments:e.assignments.slice(r,i)})}u.push({...e,points:n})}return{paths:u,serializedPaths:d}}function Ln(e){let t=new TextEncoder().encode(JSON.stringify(e)),n=2166136261;for(let e of t)n=Math.imul(n^e,16777619)>>>0;return`fnv1a32:${n.toString(16).padStart(8,`0`)}`}function Rn(e,t,n,r){(typeof e!=`string`||!e||new TextEncoder().encode(e).length>67108864)&&H(`输出内容为空或超过 64 MiB。`);let i=K(n,r);[`svg`,`dxf`,`dxf-lines`,`dxf-r12-polyline`].includes(t)||H(`加工导出格式不受支持。`);let a=t===`svg`?void 0:t===`dxf-r12-polyline`?Fn(e,i,n,r):In(e,i,n,r,t===`dxf-lines`),o=t===`svg`?Nn(e,i):a.paths,s=a?.serializedPaths??o,c=Sn(o,i),l=0,u=0,d=r.options.origin;for(let e of s){u+=Math.hypot(e.points[0][0]-d[0],e.points[0][1]-d[1]);for(let t=0;t<e.points.length-1;t++)l+=Math.hypot(e.points[t+1][0]-e.points[t][0],e.points[t+1][1]-e.points[t][1]);d=e.points[e.points.length-1]}let f=(e,t)=>Math.abs(e-t)<=16*2**-52*Math.max(1,Math.abs(e),Math.abs(t))*Math.max(1,[...c.values()].reduce((e,t)=>e+t,0));(o.length!==r.after.pathCount||!f(l,r.after.drawLength)||!f(u,r.after.travelDistance))&&H(`序列化路径的真实长度或空走距离与优化统计不一致。`);let p={penDownTurns:0,reversedSourceEdges:0,closedPaths:0};for(let e of o)for(let t=0;t<e.sourceSegmentIds.length;t++){let n=i.sources.get(e.sourceSegmentIds[t]);U(e.points[t],n.a)||p.reversedSourceEdges++}for(let e of s)e.points.length>2&&U(e.points[0],e.points.at(-1))&&p.closedPaths++,p.penDownTurns+=g(e.points);return{verified:!0,format:t,units:`mm`,coordinateConvention:t===`svg`?`x,y`:`x,-y`,pathCount:s.length,representation:t===`svg`?`svg-path`:t===`dxf`?`dxf-lwpolyline`:t===`dxf-r12-polyline`?`dxf-polyline`:`dxf-line`,entityCount:s.length,plannedPathCount:o.length,maxPlannedTurns:Math.max(0,...o.map(e=>g(e.points))),continuousPathsPreserved:t!==`dxf-lines`,processedEdgeCount:[...c.values()].reduce((e,t)=>e+t,0),downLength:l,travelLength:u,bounds:i.bounds,sourcePasses:Object.fromEntries(c),checksum:Ln(s),geometryCoverage:`exact`,physicalImportVerified:!1,machineTrialVerified:!1,motion:p}}let $=self;$.onmessage=e=>{try{let{doc:t,options:n}=e.data,r=y(t,n);if(r.overlaps.length&&n.overlapPolicy!==`retain`){$.postMessage({status:`blocked`,analysis:r,message:`检测到重复或局部重叠线。请先在折痕编辑中修正，或明确选择保留重复加工。`});return}let i=ue(t,n),a=i.options.pathMode===`continuous`,o=a?On(t,i):En(t,i),s=Rn(o.text,a?`dxf-r12-polyline`:`dxf-lines`,t,i);$.postMessage({status:`ready`,plan:i,files:{dxf:o.text,report:s,warnings:o.warnings}})}catch(e){$.postMessage({status:`error`,message:e instanceof Error?e.message:String(e)})}}})();
