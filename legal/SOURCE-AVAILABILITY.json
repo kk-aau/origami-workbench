@@ -1,10 +1,12 @@
 {
   "edition": "browser",
   "version": "0.13.53",
+  "candidate": "tauri.57",
+  "releaseId": "0.13.53-tauri.57",
   "source": {
     "file": "origami-web-source.zip",
-    "bytes": 7246916,
-    "sha256": "36470129903993365ff329695f811561ef4686b48a26166989e859a50206012b"
+    "bytes": 7343098,
+    "sha256": "4339a8f6a4037603e99238589ab1fdcdacd059cf04e800187cad1c68b9022d15"
   },
   "repository": "https://github.com/kk-aau/origami-workbench",
   "npmPackages": [
