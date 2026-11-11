@@ -5,16 +5,18 @@ import {isDiagramPaperPoseIsometric} from './diagramPaperPose';
 /** Illustration parameters, independent of physical crease angles. */
 export interface DiagramDepth {amount:number;direction:number}
 export const defaultDiagramDepth=():DiagramDepth=>({amount:.05,direction:135});
-const isometryCache=new WeakMap<FlatFoldResult['geometry'],WeakMap<DiagramPose['sourceDoc'],boolean>>();
+const isometryCache=new WeakMap<FlatFoldResult['geometry'],WeakMap<DiagramPose['sourceDoc'],{spatial:DiagramPose['spatial'];valid:boolean}>>();
 export function diagramDepthAvailable(pose:Pick<DiagramPose,'result'|'sourceDoc'|'spatial'|'paperDeformation'>):boolean {
  const {result}=pose,order=result.layers.faceOrder,n=result.geometry.faces.length;
- if(pose.spatial||pose.paperDeformation?.nodes.length||result.geometry.status!=='ready'||result.layers.status!=='solved'||n<=1||!order||order.length!==n||new Set(order).size!==n||!order.every(f=>Number.isInteger(f)&&f>=0&&f<n))return false;
+ if(pose.paperDeformation?.nodes.length||result.geometry.status!=='ready'||result.layers.status!=='solved'||n<=1||!order||order.length!==n||new Set(order).size!==n||!order.every(f=>Number.isInteger(f)&&f>=0&&f<n))return false;
  // Imported snapshots carry `modified` even when their material is still
  // exactly flat. Check isometry once instead of disabling every reopened file.
- if(result.geometry.modified){
+ // A rigid spatial face is generally foreshortened on screen. Validate its
+ // actual material/3D transform, rather than rejecting that projection as strain.
+ if(result.geometry.modified||pose.spatial){
   let entries=isometryCache.get(result.geometry);if(!entries){entries=new WeakMap();isometryCache.set(result.geometry,entries);}
-  let valid=entries.get(pose.sourceDoc);if(valid===undefined){try{valid=isDiagramPaperPoseIsometric(pose as DiagramPose);}catch{valid=false;}entries.set(pose.sourceDoc,valid);}
-  return valid;
+  let entry=entries.get(pose.sourceDoc);if(!entry||entry.spatial!==pose.spatial){let valid=false;try{valid=isDiagramPaperPoseIsometric(pose as DiagramPose);}catch{/* Invalid physical poses never receive a display deformation. */}entry={spatial:pose.spatial,valid};entries.set(pose.sourceDoc,entry);}
+  return entry.valid;
  }
  return true;
 }
@@ -46,12 +48,17 @@ export function diagramDepthVertices(pose:Pick<DiagramPose,'result'|'sourceDoc'|
  order.forEach((face,rank)=>{for(const v of new Set(triangles[face].flat())){heights[v]+=rank/(order.length-1)-.5;weights[v]++;}});
  let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
  vertices.forEach(([x,y],i)=>{minX=Math.min(minX,x);minY=Math.min(minY,y);maxX=Math.max(maxX,x);maxY=Math.max(maxY,y);if(weights[i])heights[i]/=weights[i];});
+ // Exactly edge-on material has no invertible screen interior. Keep its whole
+ // indexed boundary (including shared hinges) at the physical position. Other
+ // faces can still expand, without opening a fake selectable area in that face.
+ const edgeOn=new Set((pose.result.geometry.graph?.zhezhi_spatialEdgeOnFaces as number[]|undefined)??[]);
+ for(const face of edgeOn)for(const v of triangles[face]?.flat()??[])heights[v]=0;
  const scale=Math.max(maxX-minX,maxY-minY)*amount,angle=direction*Math.PI/180,dx=Math.cos(angle)*scale,dy=Math.sin(angle)*scale;
  const moved=vertices.map(([x,y],i):Point=>[x+dx*heights[i],y+dy*heights[i]]);
  let factor=1;
- for(const row of triangles)for(const ids of row){
+ for(const [face,row] of triangles.entries())for(const ids of row){
   const [a,b,c]=ids,area=cross(vertices[a],vertices[b],vertices[c]),changed=cross(moved[a],moved[b],moved[c]);
-  if(!area){factor=0;continue;}
+  if(!area){if(!edgeOn.has(face))factor=0;continue;}
   const ratio=changed/area;if(ratio<.2)factor=Math.min(factor,.8/(1-ratio));
  }
  const result={vertices:factor===1?moved:vertices.map(([x,y],i):Point=>[x+dx*heights[i]*factor,y+dy*heights[i]*factor]),effectiveAmount:amount*factor};

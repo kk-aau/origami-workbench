@@ -1,0 +1,103 @@
+/* Tablet sheets are opt-in to the browser target. Desktop panels keep their DOM/layout. */
+.tablet-tool-sheet{display:contents}
+.app.web-tablet{min-width:0;min-height:0;height:100dvh;overflow:hidden}
+.app.web-tablet .app-header{height:56px;min-height:56px;padding-left:10px;gap:6px}
+.app.web-tablet .document-name{flex:1;min-width:80px;padding-left:8px}
+.app.web-tablet .header-drag-space,.app.web-tablet .header-open,.app.web-tablet .header-overview,.app.web-tablet .header-save-artwork{display:none}
+.app.web-tablet .header-actions>button,.app.web-tablet .header-menu-trigger{min-height:44px}
+.app.web-tablet .header-menu-trigger.icon-menu-trigger{width:44px}
+.app.web-tablet .header-menu-panel button{min-height:44px;font-size:13px}
+.app.web-tablet .app-shell{flex-direction:column-reverse}
+.app.web-tablet .app-shell>.workspaces{width:100%;flex:0 0 auto;flex-direction:row;align-items:center;justify-content:center;gap:4px;padding:4px 8px max(4px,env(safe-area-inset-bottom));border-right:0;border-top:1px solid var(--line);overflow:visible}
+.app.web-tablet .workspaces .workspace-tab{width:auto;min-width:96px;min-height:44px;flex-direction:row;padding:6px 12px;gap:7px;font-size:12px}
+.app.web-tablet .workspaces .workspace-tab:disabled{min-width:76px;padding-inline:5px}
+.app.web-tablet .workspaces .workspace-tab>.chrome-icon{width:20px;height:20px}
+.app.web-tablet .workspaces .nav-spacer,.app.web-tablet .workspaces .local-badge,.app.web-tablet .workspaces .workspace-view-control{display:none}
+.app.web-tablet .statusbar{display:none}
+.app.web-tablet .web-edition-notice summary{min-height:28px;font-size:11px}
+.app.web-tablet .workbench-main{position:relative;min-height:0;min-width:0}
+.app.web-tablet .workbench-main>.panel-divider{display:none}
+.tablet-panel-bar{display:flex;align-items:center;gap:5px;padding:4px 8px;flex:0 0 auto;background:var(--paper);border-bottom:1px solid var(--line);overflow-x:auto;overscroll-behavior-x:contain}
+.app.web-tablet .tablet-panel-bar>button{flex:0 0 auto;min-height:44px;padding:7px 13px;font-size:13px;white-space:nowrap}
+.app.web-tablet .tablet-panel-bar>button[aria-expanded=true]{background:var(--accent);color:white;border-color:var(--accent)}
+.tablet-panel-dismiss{margin-left:auto}
+.tablet-panel-heading{display:flex;align-items:center;justify-content:space-between;gap:8px;position:sticky;top:0;z-index:3;background:var(--paper);border-bottom:1px solid var(--line);padding:5px 10px;flex:0 0 auto}
+.app.web-tablet .tablet-panel-heading button{min-height:44px;min-width:64px}
+.app.web-tablet .tablet-tool-sheet,.app.web-tablet .workbench-main>.inspector{display:none}
+.app.web-tablet[data-tablet-panel=tools] .tablet-tool-sheet,.app.web-tablet[data-tablet-panel=inspector] .workbench-main>.inspector{display:flex;flex-direction:column;position:absolute;z-index:16;top:4px;bottom:4px;width:min(340px,85vw)!important;background:var(--paper);border:1px solid var(--line);border-radius:7px;box-shadow:0 6px 24px #233b2929;overflow:auto;overscroll-behavior:contain}
+.app.web-tablet .tablet-tool-sheet{left:8px}
+.app.web-tablet .workbench-main>.inspector{right:8px}
+.app.web-tablet .tablet-tool-sheet .tool-rail{width:100%!important;min-height:0;flex:1;border:0}
+.app.web-tablet .tablet-tool-sheet button,.app.web-tablet .inspector button,.app.web-tablet .inspector select{min-height:44px}
+.app.web-tablet .fold-dock{flex-wrap:nowrap;min-height:52px;overflow-x:auto;flex-shrink:0;align-items:center}
+.app.web-tablet .fold-dock>*{flex-shrink:0}
+.app.web-tablet .fold-dock button,.app.web-tablet .fold-dock select{min-height:40px}
+.app.web-tablet .fold-dock>small{display:none}
+/* Folding diagrams: keep the canvas mounted while tools move into sheets. */
+.app.web-tablet .diagram-workspace.diagram-compact-workspace:not(.is-library){display:flex;min-width:0;position:relative;padding:0}
+.app.web-tablet .diagram-workspace .diagram-main{container-type:normal;flex:1;min-width:0;min-height:0}
+.app.web-tablet .diagram-workspace .diagram-step-rail,.app.web-tablet .diagram-workspace .diagram-context-shelf,.app.web-tablet .diagram-workspace .diagram-symbol-dock,.app.web-tablet .diagram-workspace .diagram-cp-shelf,.app.web-tablet .diagram-workspace .diagram-drafting-bar{display:none}
+.app.web-tablet .diagram-workspace .diagram-body{grid-template-columns:minmax(0,1fr);min-height:0;padding:4px}
+.app.web-tablet .diagram-workspace .diagram-body>.panel-divider{display:none}
+.app.web-tablet .diagram-workspace .diagram-edit-layout{grid-template-columns:minmax(0,1fr)}
+.app.web-tablet .diagram-workspace .diagram-document-heading{gap:4px;padding:4px 8px;flex-wrap:nowrap;min-height:44px}
+.app.web-tablet .diagram-workspace .diagram-document-name{flex:0 0 auto;max-width:32%;min-width:0;flex-wrap:wrap}
+.app.web-tablet .diagram-workspace .diagram-document-name strong{max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.app.web-tablet .diagram-workspace .diagram-toolbar-end{flex-wrap:nowrap;overflow-x:auto;min-width:0;justify-content:flex-start}
+.app.web-tablet .diagram-workspace .diagram-toolbar-end button{flex:0 0 auto;min-height:40px;font-size:12px}
+.app.web-tablet .diagram-workspace .diagram-unified-tools{flex-wrap:nowrap;overflow-x:auto;min-height:48px;flex-shrink:0;gap:6px}
+.app.web-tablet .diagram-workspace .diagram-unified-tools>div{flex-shrink:0;flex-wrap:nowrap}
+.app.web-tablet .diagram-workspace .diagram-unified-tools button,.app.web-tablet .diagram-workspace .diagram-unified-tools select{min-height:40px;font-size:12px}
+.app.web-tablet .diagram-workspace[data-tablet-panel=steps] .diagram-step-rail,
+.app.web-tablet .diagram-workspace[data-tablet-panel=layers] .diagram-context-shelf,
+.app.web-tablet .diagram-workspace[data-tablet-panel=symbols] .diagram-symbol-dock,
+.app.web-tablet .diagram-workspace[data-tablet-panel=cp]:not(.is-comparison) .diagram-cp-shelf,
+.app.web-tablet .diagram-workspace[data-tablet-panel=styles] .diagram-drafting-bar{display:flex;position:absolute;inset:54px auto 8px 8px;z-index:25;width:min(320px,85vw);max-width:none;max-height:none;flex-direction:column;background:var(--paper);border:1px solid var(--line);border-radius:7px;box-shadow:0 6px 24px #233b2929;overflow:auto;overscroll-behavior:contain;margin:0}
+.app.web-tablet .diagram-workspace[data-tablet-panel=cp] .diagram-cp-shelf{left:auto;right:8px;width:min(360px,85vw)}
+.app.web-tablet .diagram-workspace[data-tablet-panel=styles] .diagram-drafting-bar{padding:10px;align-items:stretch}
+.app.web-tablet .diagram-workspace .diagram-drafting-bar>div{flex-wrap:wrap}
+.app.web-tablet .diagram-workspace .diagram-step-rail button,.app.web-tablet .diagram-workspace .diagram-context-shelf button,.app.web-tablet .diagram-workspace .diagram-cp-shelf button,.app.web-tablet .diagram-workspace .diagram-drafting-bar button{min-height:44px;font-size:12px}
+.app.web-tablet .diagram-workspace .diagram-step-rail nav{display:grid;grid-template-columns:1fr 1fr;align-content:start;gap:8px;padding:8px}
+.app.web-tablet .diagram-workspace .diagram-step-card{width:auto}
+.app.web-tablet .diagram-workspace .diagram-step-caption{display:flex;flex-wrap:nowrap;min-height:48px;padding:4px;gap:6px}
+.app.web-tablet .diagram-workspace .diagram-step-caption>label{flex:1;min-width:0}
+.app.web-tablet .diagram-workspace .diagram-step-caption input,.app.web-tablet .diagram-workspace .diagram-step-caption textarea{min-width:0;width:100%}
+.app.web-tablet .diagram-workspace .diagram-step-caption button{min-height:44px;white-space:nowrap}
+.app.web-tablet .diagram-workspace .diagram-footer{display:none}
+.app.web-tablet .diagram-workspace.is-comparison .diagram-body{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+.app.web-tablet .diagram-workspace .diagram-comparison-heading{flex-wrap:wrap}
+.app.web-tablet .diagram-workspace .diagram-comparison-heading button{display:none}
+.app.web-tablet .diagram-workspace .diagram-properties{position:absolute;inset:54px 8px 8px auto;z-index:26;width:min(340px,85vw);max-height:none}
+@media(max-width:800px){
+  .app.web-tablet .brand>span{display:none}
+  .app.web-tablet .app-header .brand{min-width:28px}
+  .app.web-tablet .document-name small{display:none}
+  .app.web-tablet .web-edition-notice summary>span:not(.web-edition-more){display:none}
+  .app.web-tablet .workspaces .workspace-tab{min-width:0;padding:6px 8px;font-size:11px}
+  .app.web-tablet .workspaces .workspace-tab:disabled{min-width:0}
+  .app.web-tablet .diagram-workspace .diagram-document-name{max-width:30%}
+  .app.web-tablet .diagram-workspace .diagram-document-name>button{display:none}
+  .app.web-tablet .diagram-workspace .diagram-step-caption{overflow-x:auto}
+  .app.web-tablet .diagram-workspace .diagram-step-caption>label{min-width:150px}
+  .app.web-tablet .diagram-workspace.is-comparison .diagram-body{grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(200px,1fr) minmax(200px,1fr);overflow:auto}
+}
+
+/* Keep nested sheets and precision popovers outside the canvas/toolbar clipping. */
+.app.web-tablet .diagram-workspace[data-tablet-panel=layers] .diagram-context-shelf,
+.app.web-tablet .diagram-workspace[data-tablet-panel=symbols] .diagram-symbol-dock{position:fixed;inset:var(--tablet-sheet-top,148px) auto calc(62px + env(safe-area-inset-bottom)) 8px}
+.app.web-tablet .diagram-workspace[data-tablet-panel=cp]:not(.is-comparison) .diagram-cp-shelf{left:auto;right:8px;width:min(360px,85vw)}
+.app.web-tablet .tablet-panel-bar>button[aria-expanded=true],
+.app.web-tablet .diagram-workspace .tablet-panel-bar>button[aria-expanded=true]:hover{background:#355f4c;color:#fff;border-color:#355f4c}
+.app.web-tablet .diagram-workspace .diagram-symbol-dock-body{grid-template-columns:minmax(0,1fr) 70px}
+.app.web-tablet .diagram-workspace .diagram-symbol-dock-symbols{grid-template-columns:repeat(2,minmax(0,1fr))}
+.app.web-tablet .diagram-workspace .diagram-symbol-dock-categories button{min-height:48px;font-size:12px;word-break:normal}
+.app.web-tablet .diagram-workspace .diagram-symbol-dock-search{min-height:40px;font-size:13px}
+.app.web-tablet .diagram-workspace .diagram-symbol-dock-item span{font-size:11px}
+.app.web-tablet .diagram-workspace .diagram-symbol-auto-arrow button{min-height:44px;font-size:12px}
+.app.web-tablet .diagram-workspace .diagram-drafting-bar input:not([type=checkbox]),
+.app.web-tablet .diagram-workspace .diagram-drafting-bar select,
+.app.web-tablet .diagram-workspace .diagram-context-shelf select{min-height:40px;font-size:13px}
+.app.web-tablet .diagram-workspace .diagram-precision-panel{position:fixed;top:calc(var(--tablet-sheet-top,148px) + 100px);left:12px;transform:none;z-index:40;width:min(390px,calc(100vw - 24px));max-height:calc(100dvh - var(--tablet-sheet-top,148px) - 174px);overflow:auto}
+.app.web-tablet .diagram-workspace .diagram-precision-panel input,.app.web-tablet .diagram-workspace .diagram-precision-panel select{min-height:44px;font-size:14px}
+.app.web-tablet .diagram-workspace .diagram-precision-close{min-width:44px;min-height:44px}
+.app.web-tablet .diagram-workspace .diagram-comparison-cp button{min-height:40px;font-size:12px}

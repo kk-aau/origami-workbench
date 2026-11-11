@@ -6,13 +6,14 @@ import {zipSync} from 'fflate';
 // This is a web-only source delivery. No desktop engine, private project,
 // recovery database, cache or executable is copied into the public website.
 const root=path.resolve(import.meta.dirname,'..'),out=path.join(root,'build/web');
+const pkg=JSON.parse(await readFile(path.join(root,'package.json'),'utf8')),release=JSON.parse(await readFile(path.join(root,'desktop-tauri/release.json'),'utf8')),releaseId=`${pkg.version}-${release.candidate}`;
 const legal=path.join(out,'legal'),source={},manifest=[];
 const sha=data=>createHash('sha256').update(data).digest('hex');
 const posix=value=>value.split(path.sep).join('/');
 const excluded=new Set(['.git','node_modules','__pycache__','target','.toolchain','.runtime']);
 async function files(dir){const result=[];for(const entry of await readdir(dir,{withFileTypes:true})){if(excluded.has(entry.name)||entry.name.endsWith('.pyc'))continue;const file=path.join(dir,entry.name);if(entry.isSymbolicLink())throw Error('Unexpected source symlink: '+file);if(entry.isDirectory())result.push(...await files(file));else if(entry.isFile())result.push(file);}return result.sort();}
 async function include(relative){const file=path.join(root,relative),list=(await stat(file)).isDirectory()?await files(file):[file];for(const name of list){const key=posix(path.relative(root,name)),bytes=await readFile(name);source[key]=bytes;manifest.push({path:key,bytes:bytes.length,sha256:sha(bytes)});}}
-for(const name of ['src','simulator','public','vendor/simulator','vendor/cp-path-optimizer','tests/browser','scripts/prepare-web-release.mjs','vite.config.ts','tsconfig.json','package.json','package-lock.json','index.html','LICENSE','THIRD_PARTY_NOTICES.md','docs/网页版部署与使用.md'])await include(name);
+for(const name of ['src','simulator','public','vendor/simulator','vendor/cp-path-optimizer','tests/browser','scripts/prepare-web-release.mjs','vite.config.ts','tsconfig.json','package.json','package-lock.json','desktop-tauri/release.json','index.html','LICENSE','THIRD_PARTY_NOTICES.md','docs/网页版部署与使用.md'])await include(name);
 const packages=[],seen=new Set(),queue=['react','react-dom','earcut','fast-xml-parser','rabbit-ear','fflate'].map(name=>({name,from:root}));
 await mkdir(legal,{recursive:true});
 while(queue.length){
@@ -32,7 +33,7 @@ for(const base of ['vendor/simulator','vendor/cp-path-optimizer'])for(const file
 source['README-WEB.txt']=Buffer.from('网页版对应源码。构建说明见 docs/网页版部署与使用.md。使用 Node.js 24、npm ci、npm run build:web；无需 Rust 或 Python。third-party/npm 保留所捆绑前端依赖的包源码及许可；开发依赖由 package-lock.json 锁定。此归档不包含桌面本机引擎，桌面完整源码请从 GitHub Release 获取。\n');
 source['WEB-SOURCE-MANIFEST.json']=Buffer.from(JSON.stringify({files:manifest,npmPackages:packages},null,2)+'\n');
 const archive=zipSync(source,{level:6}),archiveName='origami-web-source.zip';await writeFile(path.join(out,archiveName),archive);
-const info={edition:'browser',version:JSON.parse(await readFile(path.join(root,'package.json'),'utf8')).version,source:{file:archiveName,bytes:archive.length,sha256:sha(archive)},repository:'https://github.com/kk-aau/origami-workbench',npmPackages:packages};
+const info={edition:'browser',version:pkg.version,candidate:release.candidate,releaseId,source:{file:archiveName,bytes:archive.length,sha256:sha(archive)},repository:'https://github.com/kk-aau/origami-workbench',npmPackages:packages};
 await writeFile(path.join(legal,'SOURCE-AVAILABILITY.json'),JSON.stringify(info,null,2)+'\n');
 await writeFile(path.join(out,'.nojekyll'),'');
 console.log(JSON.stringify({webSourceBytes:archive.length,sourceFiles:manifest.length,frontendPackages:packages.length}));

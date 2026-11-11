@@ -1,0 +1,40 @@
+.diagram-diagnostic-trigger{color:#96522e!important;border-color:#d6b091!important;background:#fff8ef!important}
+.diagram-spatial-diagnostic.ui-dialog{width:min(1220px,calc(100vw - 32px));height:min(900px,calc(100dvh - 32px));max-height:calc(100dvh - 32px)}
+.diagram-spatial-diagnostic .diagram-diagnostic-body{display:flex;flex-direction:column;gap:12px;min-height:0;padding:16px 20px;overflow:auto}
+.diagram-diagnostic-summary{border-left:3px solid #b76536;padding:8px 12px;background:#fff8ee;color:#754325;font-size:13px;flex:none}
+.diagram-diagnostic-summary strong{font-size:14px}
+.diagram-diagnostic-summary p{margin:4px 0 0;line-height:1.5}
+.diagram-diagnostic-toolbar{display:flex;align-items:center;flex-wrap:wrap;gap:8px 14px;flex:none}
+.diagram-diagnostic-toolbar label{display:inline-flex;align-items:center;gap:5px;font-size:13px;min-height:36px;cursor:pointer}
+.diagram-spatial-diagnostic button{cursor:pointer;min-height:34px}
+.diagram-diagnostic-views{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:12px;flex:1;min-height:280px}
+.diagram-diagnostic-pane{display:flex;flex-direction:column;min-height:0;min-width:0;border:1px solid #d8e1d9;border-radius:5px;overflow:hidden;background:#fafbf8}
+.diagram-diagnostic-pane-heading{display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:5px;padding:10px 12px;font-size:13px;border-bottom:1px solid #e0e5de;flex:none}
+.diagram-diagnostic-pane-heading span{color:#677365;font-size:12px}
+.diagram-diagnostic-stage{flex:1;min-height:220px;position:relative;overflow:hidden}
+.diagram-diagnostic-stage>svg{display:block;width:100%;height:100%;position:absolute;inset:0}
+.diagram-diagnostic-spatial{touch-action:none;cursor:grab;outline-offset:-3px}
+.diagram-diagnostic-spatial:active{cursor:grabbing}
+.diagram-diagnostic-paper{fill:#c7d5c8;fill-opacity:.2;stroke:#839187;stroke-width:1;cursor:pointer;transition:fill-opacity .12s}
+.diagram-diagnostic-paper.is-context.fade-context{fill-opacity:.08;stroke-opacity:.24}
+.diagram-diagnostic-paper.is-related{fill:#d47c41;fill-opacity:.21;stroke:#b65b2d;stroke-width:1.6}
+.diagram-diagnostic-paper.is-selected{fill:#d47c41;fill-opacity:.4;stroke:#753d26;stroke-width:3}
+.diagram-diagnostic-paper:hover{stroke:#382c21;stroke-opacity:1}
+.diagram-diagnostic-region{fill:#b74430;fill-opacity:.25;stroke:#a83525;stroke-width:2.3;stroke-dasharray:5 3;pointer-events:none}
+.diagram-diagnostic-face-label{font-family:inherit;fill:#743d24;stroke:#fffdf6;stroke-width:3px;paint-order:stroke;vector-effect:non-scaling-stroke;text-anchor:middle;dominant-baseline:middle;pointer-events:none;font-weight:650}
+.diagram-diagnostic-pane-note{margin:0;padding:8px 12px;font-size:12px;line-height:1.4;color:#657063;flex:none}
+.diagram-diagnostic-zoom{position:absolute;right:10px;bottom:10px;display:flex;gap:4px}
+.diagram-diagnostic-zoom button{width:36px;background:#fffdf6;border:1px solid #cdd8cd;border-radius:4px}
+.diagram-spatial-diagnostic .diagram-rotation-gizmo{width:144px;left:8px;bottom:8px}
+.diagram-spatial-diagnostic .diagram-rotation-gizmo>svg{width:120px;height:120px}
+.diagram-diagnostic-details{display:flex;flex-direction:column;gap:7px;flex:none;font-size:12px}
+.diagram-diagnostic-details p{margin:0;line-height:1.5;color:#6c7168}
+.diagram-diagnostic-face-list,.diagram-diagnostic-cycle{display:flex;align-items:center;flex-wrap:wrap;gap:5px;max-height:92px;overflow:auto}
+.diagram-diagnostic-face-list>span,.diagram-diagnostic-cycle>span:first-child{margin-right:5px;color:#5e695f}
+.diagram-diagnostic-face-button{border:1px solid #d8c1ad;border-radius:4px;background:#fffaf2;color:#794c31;padding:4px 9px;font-size:12px}
+.diagram-diagnostic-face-button[aria-pressed=true]{background:#f2deca;border-color:#9e603d;color:#57301c;font-weight:650}
+.diagram-diagnostic-readonly{font-size:12px;color:#6d756b;margin-right:auto;line-height:1.5}
+.diagram-spatial-diagnostic .ui-dialog-footer{gap:12px}
+@media(pointer:coarse){.diagram-spatial-diagnostic button,.diagram-diagnostic-toolbar label{min-height:44px}.diagram-diagnostic-zoom button{width:44px}}
+@media(max-width:700px){.diagram-spatial-diagnostic.ui-dialog{width:calc(100vw - 12px);height:calc(100dvh - 12px);max-height:calc(100dvh - 12px)}.diagram-spatial-diagnostic .diagram-diagnostic-body{padding:12px}.diagram-diagnostic-views{grid-template-columns:1fr;flex:none;min-height:0}.diagram-diagnostic-stage{height:300px;flex:none}.diagram-diagnostic-readonly{max-width:65%}}
+@media(prefers-reduced-motion:reduce){.diagram-diagnostic-paper{transition:none}}

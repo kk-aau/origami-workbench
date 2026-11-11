@@ -84,6 +84,7 @@ export type SimulatorCommand =
   | { type: 'zhezhi-sim-solver-settings'; settings:Partial<SimulationSolverSettings> }
   | { type: 'zhezhi-sim-crease-style'; style: SimulationCreaseStyle }
   | { type: 'zhezhi-sim-camera'; preset: SimulationCameraPreset }
+  | { type: 'zhezhi-sim-camera-pose'; view: import('./simPose').SimulationPose['view'] }
   | { type: 'zhezhi-sim-camera-frame'; revision:string; center:[number,number,number]; radius:number }
   | { type: 'zhezhi-sim-material'; creaseStiffness:number; damping:number }
   | { type: 'zhezhi-sim-layer-gap'; multiplier:number }

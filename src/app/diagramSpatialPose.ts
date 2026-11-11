@@ -8,6 +8,7 @@ import {modelSurfacePrecision} from './modelSurfacePrecision';
 import type {DiagramPose} from './diagramProject';
 import type {DiagramFoldAnchor,DiagramFoldMatrix} from './diagramFoldLinkTypes';
 import {solveSpatialLayerContacts,type SpatialLayerRequest} from './diagramSpatialLayerSolver';
+import {spatialDiagnosticError,findDiagramSpatialCycle,type DiagramSpatialDiagnostic} from './diagramSpatialDiagnostic';
 
 export interface DiagramSpatialPose {
   version:1;vertices:RigidFoldPoint3[];faceTransforms:RigidFoldTransform3D[];
@@ -184,10 +185,19 @@ function parentFaces(source:FoldGraph,old:FoldGraph):number[]{
 interface SpatialInheritance {graph:FoldGraph;parents:number[];orders:ContactOrders;faceTransforms:RigidFoldTransform3D[]}
 function spatialLayers(result:FlatFoldResult,spatial:DiagramSpatialPose,source:FoldGraph,previous?:DiagramPose,prepared?:SpatialInheritance,chosen?:ContactOrders):FlatFoldResult['layers']{
   if(previous?.spatial&&!prepared)validateDiagramSpatialPose(previous,true);
-  const selected=chosen??(spatial.layerContacts?.length||spatial.layerConstraints?.length?solveSpatialLayerContacts(source,spatial,[]).contacts:[]);
-  const selectedPairs=new Map(selected.map(([a,b,s])=>[a+':'+b,s]));
+  let selected=chosen??(spatial.layerContacts?.length||spatial.layerConstraints?.length?solveSpatialLayerContacts(source,spatial,[]).contacts:[]);
+  let selectedPairs=new Map(selected.map(([a,b,s])=>[a+':'+b,s]));
   const selectedSign=(a:number,b:number)=>selectedPairs.has(a+':'+b)?selectedPairs.get(a+':'+b)!*Math.sign(polygonArea(result.geometry.faces[b].map(v=>result.geometry.vertices[v]))):selectedPairs.has(b+':'+a)?-selectedPairs.get(b+':'+a)!*Math.sign(polygonArea(result.geometry.faces[a].map(v=>result.geometry.vertices[v]))):0;
   const planes=depthPlanes(spatial),regions=planes.some(Boolean)?completeRegions(result):{cells:[]},faces=result.geometry.faces,vertices=result.geometry.vertices,relations=new Map<string,[number,number]>();
+  const diagnostic=(kind:DiagramSpatialDiagnostic['kind'],message:string,faceIds:number[],polygon?:Point[],cycle?:number[])=>{
+    // Build the two material footprints only on failure. A projected overlap
+    // cell itself is not a world-space collision polygon.
+    return spatialDiagnosticError(source,spatial,{kind,message,faceIds,...(cycle?{cycle}:{}),...(polygon?{region:[...new Set(faceIds)].map(faceId=>{
+      const m=spatialFaceMatrix(spatial,faceId),det=m[0]*m[3]-m[1]*m[2];
+      const verticesCP=polygon.map(([x,y]):Point=>[(m[3]*(x-m[4])-m[2]*(y-m[5]))/det,(-m[1]*(x-m[4])+m[0]*(y-m[5]))/det]);
+      return {faceId,verticesCP,vertices3D:verticesCP.map(p=>applyRigidFoldTransform(spatial.faceTransforms[faceId],p))};
+    })}:{})});
+  };
   // A real fully folded hinge determines its two material banks even when
   // those banks were edge-on in the predecessor camera. Rebuild this local
   // contact from the verified angle and assignment, never a saved screen rank.
@@ -217,12 +227,25 @@ function spatialLayers(result:FlatFoldResult,spatial:DiagramSpatialPose,source:F
     const currentNormal=Math.sign(polygonArea(faces[child].map(v=>vertices[v]))),currentCP=Math.sign(polygonArea(source.faces_vertices![child].map(v=>source.vertices_coords[v]))),oldCP=Math.sign(polygonArea(graph.faces_vertices![parent].map(v=>graph.vertices_coords[v])));
     return (forward?1:-1)*row[2]*currentNormal*currentCP*oldCP;
   };
+  // A new fold can reorder touching stacks. Previous relations are preferences,
+  // not certificates for the new geometry: solve each actual coplanar group
+  // against its current hinges before combining contacts with strict depth.
+  // Camera-only projections already carry verified contacts and need no solve.
+  if(previous&&!prepared&&!chosen){
+    const preferences:ContactOrders=[];
+    for(let a=0;a<faces.length;a++)for(let b=a+1;b<faces.length;b++){
+      const sign=inherited(a,b),normal=Math.sign(polygonArea(faces[b].map(v=>vertices[v])));
+      if(sign&&normal)preferences.push([a,b,sign*normal]);
+    }
+    selected=solveSpatialLayerContacts(source,spatial,preferences,undefined,result,true).contacts;
+    selectedPairs=new Map(selected.map(([a,b,s])=>[a+':'+b,s]));
+  }
   let magnitude=1;for(const p of spatial.vertices)for(const n of p)magnitude=Math.max(magnitude,Math.abs(n));
   const roundoff=magnitude*Number.EPSILON*512;
   const contacts=new Map<string,ContactOrders[number]>(selected.map(row=>[[row[0],row[1]].sort((a,b)=>a-b).join(':'),row]));
   const addRelation=(a:number,b:number,sign:number,contact:boolean)=>{
     const pair:[number,number]=sign>0?[b,a]:[a,b],key=[a,b].sort((x,y)=>x-y).join(':'),prior=relations.get(key);
-    if(prior&&(prior[0]!==pair[0]||prior[1]!==pair[1]))throw Error('同一对纸面在不同区域的前后关系相反，当前纸层格式不能完整表示。');
+    if(prior&&(prior[0]!==pair[0]||prior[1]!==pair[1]))throw diagnostic('layer-conflict','同一对纸面在不同区域的前后关系相反，当前纸层格式不能完整表示。',[a,b]);
     relations.set(key,pair);
     if(contact)contacts.set(key,[pair[1],pair[0],Math.sign(polygonArea(faces[pair[0]].map(v=>vertices[v])))]);
     return pair;
@@ -234,7 +257,7 @@ function spatialLayers(result:FlatFoldResult,spatial:DiagramSpatialPose,source:F
     if(!planeA||!planeB)throw Error('侧立纸面出现非零面积投影，无法确认遮挡。');
     const depths=cell.polygon.map(p=>planeA.at(p)-planeB.at(p)),tolerance=roundoff*(planeA.condition+planeB.condition),positive=depths.some(d=>d>tolerance),negative=depths.some(d=>d< -tolerance);
     if(depths.some(d=>!Number.isFinite(d)))throw Error('空间深度精度无效。');
-    if(positive&&negative)throw Error('空间纸面 F'+(a+1)+' 与 F'+(b+1)+' 在重叠区域内部相交，请调整折角。');
+    if(positive&&negative)throw diagnostic('intersection','空间纸面 F'+(a+1)+' 与 F'+(b+1)+' 在重叠区域内部相交，请调整折角。',[a,b],cell.polygon);
     const sign=positive?1:negative?-1:adjacent.get(a+':'+b)??(selectedSign(a,b)||inherited(a,b));
     if(!sign){unresolved.push([a,b]);continue;}
     const [bottom,top]=addRelation(a,b,sign,!positive&&!negative),above=local.get(bottom)??[];above.push(top);local.set(bottom,above);
@@ -247,12 +270,16 @@ function spatialLayers(result:FlatFoldResult,spatial:DiagramSpatialPose,source:F
      let found=reach.get(face);if(found)return found;
      found=new Set<number>();const queue=[...(local.get(face)??[])];
      for(let head=0;head<queue.length;head++){const next=queue[head];if(found.has(next))continue;found.add(next);queue.push(...(local.get(next)??[]));}
-     if(found.has(face))throw Error('同一重叠区域的纸层关系形成循环，无法确认遮挡。');
+     if(found.has(face)){
+       const cycle=findDiagramSpatialCycle(cell.faces,local);
+       throw diagnostic('layer-cycle','同一重叠区域的纸层关系形成循环，无法确认遮挡。',cycle?[...new Set(cycle)]:cell.faces,cell.polygon,cycle);
+     }
      reach.set(face,found);return found;
    };
+   for(const face of cell.faces)above(face);
    for(const [a,b] of unresolved){
      const ab=above(a).has(b),ba=above(b).has(a);
-     if(!ab&&!ba)throw Error('空间纸面 F'+(a+1)+' 与 F'+(b+1)+' 共面，缺少已验证的前一步纸层；请按步骤顺序恢复。');
+     if(!ab&&!ba)throw diagnostic('missing-layer-order','空间纸面 F'+(a+1)+' 与 F'+(b+1)+' 共面，缺少已验证的前一步纸层；请按步骤顺序恢复。',[a,b],cell.polygon);
      addRelation(a,b,ab?-1:1,true);
    }
   }
@@ -290,6 +317,13 @@ export function createDiagramSpatialPose(doc:Doc,startingFace=0,fixed?:DiagramFo
   checkCamera(camera);const graph=buildDiagramFold(doc).graph;
   const solved=solveRigidFoldGeometry(graph,{startingFace,edgesFoldAngle:solveAdaptiveFoldAngles(graph),...(fixed?{fixedFaceTransform:fixed.spatialTransform??liftDiagramFoldMatrix(fixed.matrix)}:{})});
   if(solved.status!=='ready')throw Error(solved.message);
+  if(previous?.spatial&&fixed&&!worldCamera&&camera.frame){
+    const old=camera.frame,next=solved.faceTransforms[startingFace],r=camera.rotation??(()=>{const y=camera.yaw*Math.PI/180,e=camera.elevation*Math.PI/180,c=Math.cos(y),s=Math.sin(y),ce=Math.cos(e),se=Math.sin(e);return [c,s,0,-s*ce,c*ce,-se,-s*se,c*se,ce];})();
+    const multiply=(a:readonly number[],b:readonly number[])=>Array.from({length:9},(_,k)=>{const i=Math.floor(k/3),j=k%3;return a[3*i]*b[j]+a[3*i+1]*b[j+3]+a[3*i+2]*b[j+6];});
+    const transpose=(a:readonly number[])=>[a[0],a[3],a[6],a[1],a[4],a[7],a[2],a[5],a[8]];
+    const worldPivot=applyRigidFoldTransform(old,camera.pivot??[0,0,0]),delta=worldPivot.map((v,k)=>v-next.translation[k]),t=transpose(next.rotation);
+    camera={...camera,rotation:multiply(multiply(r,transpose(old.rotation)),next.rotation),pivot:[0,1,2].map(i=>t[3*i]*delta[0]+t[3*i+1]*delta[1]+t[3*i+2]*delta[2]) as [number,number,number]};
+  }
   camera={...camera,frame:structuredClone(worldCamera?{rotation:[1,0,0,0,1,0,0,0,1],translation:[0,0,0]}:solved.faceTransforms[startingFace])};
   const spatial:DiagramSpatialPose={version:1,vertices:solved.vertices,faceTransforms:solved.faceTransforms,measuredAngles:solved.measuredAngles,camera:{...camera}},vertices=spatial.vertices.map(p=>projectDiagramSpatialPoint(p,camera)).map(([x,y]):Point=>[x,y]);
   const result:FlatFoldResult={geometry:{status:'ready',message:'已按设定折角生成真实空间姿态。',vertices,faces:structuredClone(graph.faces_vertices!),graph:{...structuredClone(graph),vertices_coords:vertices},startingFace},layers:{status:'unknown',message:'正在确认空间遮挡。'},warnings:[]};

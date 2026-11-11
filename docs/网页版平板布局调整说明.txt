@@ -1,0 +1,33 @@
+网页版平板布局调整（2026-11-10）
+
+目标：横屏优先，减少常驻侧栏挤占画布；不改变折叠求解、工程数据与桌面发布版本。
+
+实现：
+- 只对 WEB_APP 启用。窗口宽度不超过 1180px，或主指针为触控且宽度不超过 1440px 时进入平板布局；窗口变化实时切换。
+- 工作区导航移到底部；顶部保留保存、导出。保存完整作品在“文件”菜单，桌面头部按钮保留。
+- 折痕编辑：工具与属性使用可收起面板，默认画布占满可用宽度；选择工具后收起工具面板。
+- 折序绘图：步骤、纸层、符号、CP、样式按需展开；步骤及符号选定后收起对应面板。面板保留挂载，不因显示切换丢失内部状态。
+- 保留主图与 CP 对照；横屏左右并排，窄竖屏上下排列。样式、参数和说明仍可访问。
+- 常用操作扩大触控区域；长工具栏可以横向滚动。精确取点参数浮在工具栏外，避免被滚动容器裁切。
+
+源码变更：
+src/app/useWebTablet.ts
+src/components/TabletPanelBar.tsx
+src/components/tabletLayout.css
+src/App.tsx
+src/main.tsx
+src/components/DiagramWorkspace.tsx
+src/components/DiagramSymbolDock.tsx
+
+验证：
+TypeScript --noEmit 通过。
+vite build --mode web 通过；仍有既有大体积 JS 分块提示。本次未调整分块或依赖。
+独立 Edge/Chromium 上下文：1024×768、768×1024、1366×1024 触控视口及 1440×900 鼠标桌面视口。
+完成新建、计算空白纸张折图、面板开关、CP 对照、精确角度参数、触控选符号并自动收起、更多属性关闭、横竖屏变化与宽屏恢复检查。
+四种视口没有整体水平溢出，检查目标可见且可命中，无页面运行异常。桌面宽屏保留侧栏布局。
+这是浏览器触控模拟验证，未连接实体 iPad / Safari；不声称已完成所有平台实机测试。
+
+证据：output/playwright/tablet-layout/report.json、verify.cjs 与截图。
+App.tsx、main.tsx、DiagramWorkspace.tsx 修改前快照及 SHA256：output/playwright/tablet-layout/source-before/。
+
+交付状态：源码与本地前端构建完成；未生成桌面发行包，未推送 GitHub/Gitee，未部署线上站点。

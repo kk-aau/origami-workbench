@@ -1,0 +1,24 @@
+三轴旋转环（2026-11-10）
+
+范围
+- 折序绘图立体主图的“转动视角”默认显示左下三色 X/Y/Z 旋转环，可收起。
+- 保留原来的自由拖转；拖环固定世界轴，Shift 慢速，方向键微调选中轴，Esc 取消当前手势。
+- 共享组件供错误诊断与曲面视角复用。曲面接入与诊断接入由对应模块记录。
+
+实现
+- diagramAxisRotation.ts 将世界轴转换到固定纸面参考系，再右乘相机旋转矩阵，保持观察中心和屏幕位置。
+- 沿 Z 轴同样写入完整 3×3 矩阵，包含真正的滚转。没有把三个轴映射到两个欧拉角。
+- 圆环和纸张使用一致的翻面、绘图旋转，鼠标角度从投影椭圆逆算；侧立环使用稳定切线，避免除以趋近零的行列式。
+- DiagramRotationGizmo 使用 pointer capture，鼠标和触摸共用操作；以 requestAnimationFrame 合并移动消息。
+- DiagramSpatialOrbit 松手后沿用空间 Worker 的遮挡确认流程；取消或失败保留旧视角，不改 CP、折角或空间顶点。
+
+验证
+- tests/app/diagramAxisRotation.test.ts（4 项）与既有 diagramArcball.test.ts（2 项）通过。
+- 覆盖旋转固定纸面 frame、世界轴上不动点、固定中心、反向还原、真 Z 轴滚转、多次混合旋转正交性、翻面/页面转角、侧立环和跨 ±π 连续角度。
+- output/playwright/orbit-axis/ 使用生产 DiagramSpatialOrbit + 真实 Worker 的隔离合成三纸面：真实拖 Z 环后提交、顶点/折角不变、JSON 保存恢复及重新打开保持矩阵、Esc 取消不提交、显示开关通过。
+- output/playwright/spatial-diagnostic-viewer/ 另包含诊断视图 X/Y/Z 三环实际拖动证据。
+- 未操作用户正在使用的桌面实例或工程；本次没有打包或发布。
+
+留档
+- output/axis-rotation/before-hashes.json / after-hashes.json
+- output/axis-rotation/DiagramSpatialOrbit.before.tsx / .before.css

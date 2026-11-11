@@ -109,7 +109,7 @@ export default function DiagramStepAnimation({clip,revision,title,onClose,onCapt
       connection.send({type:'zhezhi-sim-load',fold:playbackFold,revision,animation:result.animation});
       connection.send({type:'zhezhi-sim-colors',front:clip.colors.front,back:clip.colors.back,line:clip.colors.line});
       connection.send({type:'zhezhi-sim-view',mode:'paper'});
-      connection.send({type:'zhezhi-sim-camera',preset:'isometric'});
+      connection.send(clip.camera?{type:'zhezhi-sim-camera-pose',view:clip.camera}:{type:'zhezhi-sim-camera',preset:'isometric'});
       if(result.animation.layerTimeline){
         const faceOrders=result.animation.layerTimeline.at(-1)!.faceOrders;
         const order=faceOrders.length?{sourceSignature:result.animation.sourceSignature,sourceFaceCount:clip.initialGeometry?.geometry.faces.length??clip.fold.faces_vertices!.length,faceOrders}:null;

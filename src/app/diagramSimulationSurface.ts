@@ -1,5 +1,5 @@
 import {validateDoc,type Doc} from '../core/types';
-import {validateSimulationPose,type SimulationPose} from '../engine/simPose';
+import {validateSimulationPose,validateSimulationView,type SimulationPose} from '../engine/simPose';
 import {prepareSimulationDocument} from '../engine/simmodel';
 import {matchesDiagramSimulationSurfaceSource} from './diagramSimulationGraph';
 import {validateModelColors,type ModelColors} from './modelColors';
@@ -19,9 +19,7 @@ export interface DiagramSimulationSurface {
 }
 
 export function validateDiagramSimulationSurfaceView(view:unknown):asserts view is SimulationPose['view'] {
-  if(!view||typeof view!=='object'||Array.isArray(view)||Object.keys(view).sort().join(',')!=='pitch,yaw,zoom')throw Error('曲面视角格式无效。');
-  const v=view as SimulationPose['view'];
-  if(![v.yaw,v.pitch,v.zoom].every(n=>typeof n==='number'&&Number.isFinite(n))||v.zoom<.15||v.zoom>5)throw Error('曲面视角或缩放无效。');
+  try{validateSimulationView(view);}catch{throw Error('曲面视角或缩放无效。');}
 }
 
 export function validateDiagramSimulationSurface(value:unknown,checkGeometry=true):asserts value is DiagramSimulationSurface {

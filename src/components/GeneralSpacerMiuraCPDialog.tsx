@@ -1,3 +1,4 @@
+import {useRigidPreviewAxes} from './useRigidPreviewAxes';
 import {useEffect,useMemo,useRef,useState,type PointerEvent as ReactPointerEvent} from 'react';
 import {openAppDialog} from './AppDialog';
 import type {Doc} from '../core/types';
@@ -24,7 +25,8 @@ function recipeFor(d:Draft):GeneralSpacerMiuraRecipe{
 function StaticMiuraPlot({scene,current}:{scene:GeneralSpacerMiuraScene|null;current:boolean}){
  const svg=useRef<SVGSVGElement>(null),gesture=useRef<{id:number;x:number;y:number;az:number;el:number;pan:[number,number];inverse:DOMMatrix;mode:'orbit'|'pan'}|null>(null);
  const [az,setAz]=useState(-25),[el,setEl]=useState(48),[zoom,setZoom]=useState(1),[pan,setPan]=useState<[number,number]>([0,0]);
- const drawing=useMemo(()=>scene?projectRigidQuad(scene,az,el,false,0):null,[scene,az,el]);
+ const previewAxes=useRigidPreviewAxes(az,el);
+ const drawing=useMemo(()=>scene?projectRigidQuad(previewAxes.rotateScene(scene),az,el,false,0):null,[scene,az,el,previewAxes.rotateScene]);
  useEffect(()=>{const element=svg.current;if(!element)return;const wheel=(e:WheelEvent)=>{e.preventDefault();if(!gesture.current)setZoom(z=>Math.max(.2,Math.min(16,z*Math.exp(-Math.max(-1000,Math.min(1000,e.deltaY))*.0015))));};element.addEventListener('wheel',wheel,{passive:false});return()=>element.removeEventListener('wheel',wheel);},[scene]);
  const begin=(e:ReactPointerEvent<SVGSVGElement>)=>{if(!scene||(e.button!==0&&e.button!==1))return;const inverse=e.currentTarget.getScreenCTM()?.inverse();if(!inverse)return;e.preventDefault();gesture.current={id:e.pointerId,x:e.clientX,y:e.clientY,az,el,pan:[...pan],inverse,mode:e.shiftKey||e.button===1?'pan':'orbit'};e.currentTarget.setPointerCapture(e.pointerId);};
  const finish=(e:ReactPointerEvent<SVGSVGElement>)=>{if(gesture.current?.id===e.pointerId)gesture.current=null;if(e.currentTarget.hasPointerCapture(e.pointerId))e.currentTarget.releasePointerCapture(e.pointerId);};
@@ -35,7 +37,7 @@ function StaticMiuraPlot({scene,current}:{scene:GeneralSpacerMiuraScene|null;cur
    <title>使用已核验的实际空间顶点；旋转和缩放仅改变相机。</title><g transform={transform}>{drawing.surfaceOrderReliable?drawing.faceOrder.map(f=><g key={f} data-static-face={f}><polygon points={scene.faces[f].map(v=>drawing.points[v].join(',')).join(' ')} fill={drawing.frontFacing[f]?'#d5e2d4':'#e9dfc8'} stroke="none"/>{scene.faces[f].map((a,k)=>{const b=scene.faces[f][(k+1)%scene.faces[f].length];return line(a,b,edgeStyles.get(`${Math.min(a,b)}:${Math.max(a,b)}`)??'U',k);})}</g>):scene.edges.map(([a,b],i)=>line(a,b,scene.assignments[i],i))}</g>
   </svg>:<div className="sgm-empty">当前 CP 未提供经核验的静态三维构形。</div>}
   <nav><button aria-label="Miura 三维缩小" onClick={()=>setZoom(z=>Math.max(.2,z/1.25))} disabled={!scene}>−</button><button aria-label="Miura 三维复位视角" onClick={()=>{setAz(-25);setEl(48);setZoom(1);setPan([0,0]);}}>复位视角</button><button aria-label="Miura 三维放大" onClick={()=>setZoom(z=>Math.min(16,z*1.25))} disabled={!scene}>＋</button><span>拖动旋转 · Shift 拖动平移 · 滚轮缩放</span></nav>
- </section>;
+ {previewAxes.controls}</section>;
 }
 function SeedAngles({sectors}:{sectors:[string,string,string,string]}){
  let a:number[];try{a=sectors.map(decimal);if(a.some(n=>n<=0||n>=180))return null;}catch{return null;}

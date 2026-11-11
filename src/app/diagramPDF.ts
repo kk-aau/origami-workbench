@@ -80,7 +80,7 @@ export function normalizeDiagramPDFSVG(svg:string):string {
   return svg.replace(/<svg\b([^>]*)>/,(_,attributes:string)=>`<svg${attributes.replace(/\s(?:width|height)="[^"]*"/g,'')} width="${width}" height="${height}">`);
 }
 const pdfOutputUnits=(frame:Pick<DiagramPDFRect,'width'|'height'>,size:Pick<DiagramPDFRect,'width'|'height'>)=>Math.max(frame.width/(size.width*96/72),frame.height/(size.height*96/72));
-export function diagramPDFStepSVG(project:DiagramProject,step:DiagramStep,size?:Pick<DiagramPDFRect,'width'|'height'>,palette:DiagramLineDefaults=readDiagramLineDefaults(),adaptiveLines=readAdaptiveLineStyle()):string {
+export function diagramPDFStepSVG(project:DiagramProject,step:DiagramStep,size?:Pick<DiagramPDFRect,'width'|'height'>,palette:DiagramLineDefaults=project.basicSettings?.lineDefaults??readDiagramLineDefaults(),adaptiveLines=project.basicSettings?.adaptiveLines??readAdaptiveLineStyle()):string {
   const zoom=diagramStepZoom(project,step.id)?.region;
   return diagramPDFStepArtwork(step,project.states,size,palette,adaptiveLines,zoom);
 }
@@ -125,7 +125,7 @@ export function diagramPDFStepArtwork(step:DiagramStep,states:readonly DiagramCP
 /** The completion illustration uses only the saved paper pose. Instruction
  * arrows and the next action's projected creases belong to the step panels,
  * never to the finished-model overview. Export never calculates a new pose. */
-export function diagramPDFCoverSVG(project:DiagramProject,step?:DiagramStep|null,palette:DiagramLineDefaults=readDiagramLineDefaults(),adaptiveLines=readAdaptiveLineStyle(),size?:Pick<DiagramPDFRect,'width'|'height'>):string {
+export function diagramPDFCoverSVG(project:DiagramProject,step?:DiagramStep|null,palette:DiagramLineDefaults=project.basicSettings?.lineDefaults??readDiagramLineDefaults(),adaptiveLines=project.basicSettings?.adaptiveLines??readAdaptiveLineStyle(),size?:Pick<DiagramPDFRect,'width'|'height'>):string {
   const zoom=step?diagramStepZoom(project,step.id)?.region:undefined;
   const drawingRotation=step?.canvas?.drawingRotation??0,finish=(svg:string)=>normalizeDiagramPDFSVG(rotateDiagramDrawingSVG(svg,drawingRotation));
   if(step&&(step.pose||step.simulationSurface||step.images?.length||step.paperVisible===false)){
@@ -139,9 +139,9 @@ export function diagramPDFCoverSVG(project:DiagramProject,step?:DiagramStep|null
 }
 /** Pages retain SVG paths, clips, masks and embedded searchable text. Only
  * original raster artwork remains raster; file saving is owned by api.ts. */
-export async function exportDiagramPDF(project:DiagramProject,options:DiagramPDFOptions,onProgress?:(completed:number,total:number)=>void,palette:DiagramLineDefaults=readDiagramLineDefaults(),preparation:DiagramPDFPreparationOptions={}):Promise<Blob> {
+export async function exportDiagramPDF(project:DiagramProject,options:DiagramPDFOptions,onProgress?:(completed:number,total:number)=>void,palette:DiagramLineDefaults=project.basicSettings?.lineDefaults??readDiagramLineDefaults(),preparation:DiagramPDFPreparationOptions={}):Promise<Blob> {
   checkCancelled(preparation.signal);
-  const adaptiveLines=readAdaptiveLineStyle(),savedOptions=structuredClone(options),linePalette=structuredClone(palette);
+  const adaptiveLines=project.basicSettings?.adaptiveLines??readAdaptiveLineStyle(),savedOptions=structuredClone(options),linePalette=structuredClone(palette);
   const snapshot=await prepareDiagramPDFProject(project,savedOptions,preparation),plan=planDiagramPDF(snapshot,savedOptions),runtime=await loadPDFRuntime();
   options=savedOptions;checkCancelled(preparation.signal);
   if(document.fonts?.ready)await document.fonts.ready;

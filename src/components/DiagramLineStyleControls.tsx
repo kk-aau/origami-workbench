@@ -36,9 +36,11 @@ interface Props {
   onLine:(style:DiagramLineStyle)=>void;
   onChange:(style:DiagramLineStyle,patch:Partial<DiagramLineAppearance>)=>void;
   disabled?:boolean;
+  compact?:boolean;
+  adaptiveLineStyle?:boolean;
 }
-export function DiagramLineStyleControls({lineStyle,defaults,onLine,onChange,disabled=false}:Props) {
-  const [adaptiveLines,setAdaptiveLines]=useAdaptiveLineStyle();
+export function DiagramLineStyleControls({lineStyle,defaults,onLine,onChange,disabled=false,compact=false,adaptiveLineStyle}:Props) {
+  const [globalAdaptiveLines,setAdaptiveLines]=useAdaptiveLineStyle(),adaptiveLines=adaptiveLineStyle??globalAdaptiveLines;
   const [adaptiveError,setAdaptiveError]=useState('');
   return <div className="diagram-line-style-controls" data-diagram-line-style-controls="true">
     <div className="diagram-line-category-controls" role="group" aria-label="选择绘图线条类别">
@@ -50,8 +52,8 @@ export function DiagramLineStyleControls({lineStyle,defaults,onLine,onChange,dis
         </button>;
       })}
     </div>
-    <DiagramLineAppearanceControls key={lineStyle} value={defaults[lineStyle]} onChange={patch=>onChange(lineStyle,patch)} disabled={disabled} ariaLabel={`${LINE_LABELS[lineStyle]}全局`}/>
-    <label className="diagram-adaptive-line-control" title="按显示长度调整虚线密度和粗细，帮助区分短折痕；与折痕编辑共用设置"><input type="checkbox" aria-label="自适应线型" checked={adaptiveLines} disabled={disabled} onChange={event=>{try{setAdaptiveLines(event.currentTarget.checked);setAdaptiveError('');}catch{setAdaptiveError('显示设置未保存，请检查本机存储后重试。');}}}/>自适应线型</label>
+    {!compact&&<><DiagramLineAppearanceControls key={lineStyle} value={defaults[lineStyle]} onChange={patch=>onChange(lineStyle,patch)} disabled={disabled} ariaLabel={`${LINE_LABELS[lineStyle]}全局`}/>
+    <label className="diagram-adaptive-line-control" title="按显示长度调整虚线密度和粗细，帮助区分短折痕"><input type="checkbox" aria-label="自适应线型" checked={adaptiveLines} disabled={disabled} onChange={event=>{try{setAdaptiveLines(event.currentTarget.checked);setAdaptiveError('');}catch{setAdaptiveError('显示设置未保存，请检查本机存储后重试。');}}}/>自适应线型</label></>}
     {adaptiveError&&<span role="alert">{adaptiveError}</span>}
   </div>;
 }

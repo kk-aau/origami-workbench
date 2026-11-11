@@ -1,3 +1,4 @@
+import {useRigidPreviewAxes} from './useRigidPreviewAxes';
 import {useEffect,useMemo,useRef,useState,type PointerEvent} from 'react';
 import type {TessResult} from '../app/tessellation';
 import {projectRigidQuad,rigidQuadScene,type RigidQuadScene} from '../app/rigidQuadView';
@@ -30,11 +31,12 @@ export default function TessRigidPane({result,current,view,fitToken,open,sceneOv
   const [pan,setPan]=useState<[number,number]>([0,0]),[zoom,setZoom]=useState(1);
   const svg=useRef<SVGSVGElement|null>(null),drag=useRef<Drag|null>(null);
   const colors=view.colors??defaultModelColors();
+  const previewAxes=useRigidPreviewAxes(azimuth,elevation,view.side==='back',view.rotation);
   const comparison=useMemo(()=>embedded&&scene===embedded.scene
-    ?projectEmbeddedSpatialTile(embedded,azimuth,elevation,view.side==='back',view.rotation):null,
-    [embedded,scene,azimuth,elevation,view.side,view.rotation]);
-  const drawing=useMemo(()=>comparison?.projection??(scene?projectRigidQuad(scene,azimuth,elevation,view.side==='back',view.rotation):null),
-    [comparison,scene,azimuth,elevation,view.side,view.rotation]);
+    ?projectEmbeddedSpatialTile({...embedded,scene:previewAxes.rotateScene(embedded.scene),referenceScene:previewAxes.rotateScene(embedded.referenceScene)},azimuth,elevation,view.side==='back',view.rotation):null,
+    [embedded,scene,azimuth,elevation,view.side,view.rotation,previewAxes.rotateScene]);
+  const drawing=useMemo(()=>comparison?.projection??(scene?projectRigidQuad(previewAxes.rotateScene(scene),azimuth,elevation,view.side==='back',view.rotation):null),
+    [comparison,scene,azimuth,elevation,view.side,view.rotation,previewAxes.rotateScene]);
   const placedVertexOffset=comparison?.placedVertexOffset??0;
   const sampleIndex=Math.min(sampleVertex,Math.max(0,(embedded?.scene.vertices.length??1)-1));
   const formatPoint=(point:readonly number[])=>point.map(value=>Number(value.toPrecision(6))).join(', ');
@@ -109,5 +111,6 @@ export default function TessRigidPane({result,current,view,fitToken,open,sceneOv
       </g>
     </svg>:<div className="tess-rigid-empty" role="status">{current?'当前候选没有可用的静态等距三维构形。':'正在重新计算当前网格的三维构形…'}</div>}
     <div className="tess-rigid-hint">拖动旋转 · Shift／中键平移 · 滚轮缩放 · 仅静态构形</div>
+    {previewAxes.controls}
   </section>;
 }

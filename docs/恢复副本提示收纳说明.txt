@@ -1,0 +1,13 @@
+恢复副本提示收纳（2026-11-10）
+
+将 App.tsx 的整行恢复提示改为顶部“文件”旁的“恢复副本”菜单，默认收起。
+副本名称、来源、时间、恢复工作、保留当前工程，以及存在其他副本时的导出入口保持原逻辑。
+使用现有 HeaderMenu：点击外部或 Escape 收起，不在打开时挤动画布。
+实际保存冲突、导入进度及错误提示未改动。
+
+修改文件：src/App.tsx、src/components/applicationChrome.css。
+修改前快照及 SHA256：output/playwright/recovery-menu/source-before/。
+验证：TypeScript 检查通过；1440×900、1024×768、768×1024 独立浏览器验证通过。
+默认无恢复横条，菜单展开不改变工作区边界；恢复工作与保留当前工程均验证，无页面异常。
+证据：output/playwright/recovery-menu/report.json、verify.cjs 及截图。
+未打包、未发布。

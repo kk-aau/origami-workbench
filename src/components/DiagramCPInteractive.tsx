@@ -15,6 +15,7 @@ import './DiagramCPInteractive.css';
 
 export type DiagramCPHit={kind:'face'|'vertex'|'edge';index:number};
 export interface DiagramCPInteractiveProps {
+  adaptiveLineStyle?:boolean;
   doc:Doc;
   presentation?:DiagramCPPresentationContext;
   graph?:FoldGraph;
@@ -33,13 +34,13 @@ const equal=(a:DiagramCPHit|null|undefined,b:DiagramCPHit)=>a?.kind===b.kind&&a.
 const color=(assignment:string)=>COLORS[assignment as keyof typeof COLORS]??COLORS.U;
 const assignmentLabel=(assignment:string)=>assignment==='M'?'峰折（山折）':assignment==='V'?'谷折':assignment==='F'?'已有折痕':assignment==='B'?'纸边':'未定折痕';
 
-export default function DiagramCPInteractive({doc,presentation,graph:supplied,hovered,selected,fixed,highlightedEdges,disabled=false,expanded=false,onHover,onSelect}:DiagramCPInteractiveProps){
+export default function DiagramCPInteractive({adaptiveLineStyle,doc,presentation,graph:supplied,hovered,selected,fixed,highlightedEdges,disabled=false,expanded=false,onHover,onSelect}:DiagramCPInteractiveProps){
   const svg=useRef<SVGSVGElement>(null);
   const [camera,setCamera]=useState({x:0,y:0,size:256});
   const pan=useRef<{id:number;x:number;y:number;camera:typeof camera;inverse:DOMMatrix}|null>(null);
   const zoom=(factor:number,anchor?:Point)=>setCamera(old=>{const size=Math.max(8,Math.min(2048,old.size*factor)),p=anchor??[old.x+old.size/2,old.y+old.size/2];return {x:p[0]-(p[0]-old.x)*size/old.size,y:p[1]-(p[1]-old.y)*size/old.size,size};});
   useEffect(()=>{setCamera({x:0,y:0,size:256});pan.current=null;},[doc,expanded]);
-  const [adaptive]=useAdaptiveLineStyle(),[units,setUnits]=useState(1);
+  const [globalAdaptive]=useAdaptiveLineStyle(),adaptive=adaptiveLineStyle??globalAdaptive,[units,setUnits]=useState(1);
   const pose=presentation?.pose,appearanceKey=JSON.stringify({...pose?.view??defaultModelView(),cameras:undefined});
   // The main drawing's pan/zoom cannot change these CP cards. Retain the
   // presentation (and its graph/label/hit-area cache) across camera-only shells.
@@ -129,7 +130,7 @@ export default function DiagramCPInteractive({doc,presentation,graph:supplied,ho
     onPointerUp={e=>{if(pan.current?.id===e.pointerId){pan.current=null;if(e.currentTarget.hasPointerCapture(e.pointerId))e.currentTarget.releasePointerCapture(e.pointerId);}}}
     onPointerCancel={()=>{pan.current=null;}} onLostPointerCapture={()=>{pan.current=null;}} onAuxClick={e=>{if(expanded)e.preventDefault();}}
     onKeyDown={e=>{if(!expanded||e.target!==e.currentTarget)return;if(e.key==='Home'){e.preventDefault();setCamera({x:0,y:0,size:256});}else if(e.key==='+'||e.key==='='||e.key==='-'){e.preventDefault();zoom(e.key==='-'?1.25:.8);}}}>
-    {faces.map((face,index)=>{const hit:DiagramCPHit={kind:'face',index};return <g key={index} className={`diagram-cp-face ${state(hit)}`} style={{'--cp-face-stroke':Math.min(1.5,face.clearance*.4)} as CSSProperties} data-cp-face={index} {...interaction(hit)}>
+    {faces.map((face,index)=>{const hit:DiagramCPHit={kind:'face',index};return <g key={index} className={`diagram-cp-face ${state(hit)}`} style={{'--cp-face-stroke':Math.min(1.5,face.clearance*.4)} as CSSProperties} data-cp-face={index} data-teach-cp-x={face.label?project(face.label)[0]:undefined} data-teach-cp-y={face.label?project(face.label)[1]:undefined} {...interaction(hit)}>
       <title>{`纸面 F${index+1}${equal(fixed,hit)?' · 固定纸面':''}`}</title>
       <path d={face.path} fillRule="evenodd" className="diagram-cp-face-region"/>
     </g>;})}

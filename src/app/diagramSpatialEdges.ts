@@ -9,6 +9,8 @@ import {diagramPiecesStrictlyCoverPoint} from './diagramFoldOcclusion';
 import {flatLayerEdges} from '../core/flatLayerOrder';
 import {polygonArea} from '../core/geometry';
 import type {DiagramSpatialPose} from './diagramSpatialPose';
+import {diagramDepthActive} from './diagramDepth';
+import {diagramIllustrationMesh} from './diagramIllustrationMesh';
 import earcut from 'earcut';
 
 const cross=(a:Point,b:Point)=>a[0]*b[1]-a[1]*b[0];
@@ -22,13 +24,30 @@ export function diagramSpatialEdgeMarkup(pose:DiagramPose,view:ModelViewState,co
   const spatial=pose.spatial,graph=pose.result.geometry.graph,marked=graph?.zhezhi_spatialEdgeOnFaces as number[]|undefined;
   if(!spatial||view.xray||pose.paperDeformation?.nodes.length||pose.result.layers.status!=='solved')return '';
   let cached=cache.get(pose.result);if(!cached||cached.spatial!==spatial){cached={spatial,variants:new Map()};cache.set(pose.result,cached);}
-  const cacheKey=JSON.stringify([view.side,view.rotation,color,[...new Set(pose.hiddenFaces??[])].sort((a,b)=>a-b)]),prior=cached.variants.get(cacheKey);if(prior!==undefined)return prior;
-  const {vertices,faces}=pose.result.geometry,hidden=new Set(pose.hiddenFaces??[]),edgeOn=new Set(marked??[]),projected=spatial.vertices.map(p=>projectDiagramSpatialPoint(p,spatial.camera));
-  const side=view.side==='back'?-1:1,projection=modelProjection(vertices,side<0,view.rotation,view?.projectionCenter),scale=Math.max(1,...projected.flat().map(Math.abs)),epsilon=Number.EPSILON*scale*512;
+  const cacheKey=JSON.stringify([view.side,view.rotation,view.projectionCenter,view.depth,color,[...new Set(pose.hiddenFaces??[])].sort((a,b)=>a-b)]),prior=cached.variants.get(cacheKey);if(prior!==undefined)return prior;
+  const mesh=diagramDepthActive({...pose,view})?diagramIllustrationMesh({...pose,view}):null;
+  const {faces}=pose.result.geometry,vertices=mesh?.vertices??pose.result.geometry.vertices,hidden=new Set(pose.hiddenFaces??[]),edgeOn=new Set(marked??[]),projected=spatial.vertices.map(p=>projectDiagramSpatialPoint(p,spatial.camera));
+  // Display relief must not recenter the actual spatial camera.
+  const side=view.side==='back'?-1:1,projection=modelProjection(pose.result.geometry.vertices,side<0,view.rotation,view?.projectionCenter),scale=Math.max(1,...projected.flat().map(Math.abs)),epsilon=Number.EPSILON*scale*512;
   const above=new Map<number,number[]>();
   for(const pair of flatLayerEdges(pose.result.layers.faceOrders??[],faces.map(face=>polygonArea(face.map(v=>vertices[v]))>0?1:-1))){const [below,top]=side>0?pair:[pair[1],pair[0]],row=above.get(below)??[];row.push(top);above.set(below,row);}
   const covers=faces.flatMap((_,face)=>{
     if(hidden.has(face)||edgeOn.has(face))return [];
+    if(mesh)return mesh.triangles[face].map(ids=>{
+      // Each display cell maps to the same real material triangle. Interpolate
+      // its physical camera depth over its shifted screen area, so even a
+      // pinned side-on edge keeps precise partial occlusion. A whole-face
+      // paint rank alone cannot certify the visibility of a zero-area edge.
+      const [a,b,c]=ids.map(v=>vertices[v]),area=cross(sub(b,a),sub(c,a)),source=ids.map(v=>mesh.graph.vertices_coords[v]),materialArea=cross(sub(source[1],source[0]),sub(source[2],source[0]));
+      if(!materialArea||Math.abs(area/materialArea)<=Number.EPSILON*64)throw Error('展开后的空间纸面投影退化，请减小展开量或调整视角。');
+      const [za,zb,zc]=ids.map(v=>projected[v][2]),u=zb-za,v=zc-za;
+      const dx=(u*(c[1]-a[1])-v*(b[1]-a[1]))/area,dy=((b[0]-a[0])*v-(c[0]-a[0])*u)/area;
+      const rings=[[a,b,c]],pieces=[{shown:rings[0]}],touches=(p:Point)=>diagramPiecesStrictlyCoverPoint(pieces,p,epsilon)||rings[0].some((a,i)=>{
+        const b=rings[0][(i+1)%3],d=sub(b,a),q=sub(p,a),length=Math.hypot(...d),along=q[0]*d[0]+q[1]*d[1];
+        return length>epsilon&&Math.abs(cross(d,q))<=epsilon*length&&along>=-epsilon*length&&along<=length*length+epsilon*length;
+      });
+      return {face,rings,pieces,touches,depth:(p:Point)=>za+dx*(p[0]-a[0])+dy*(p[1]-a[1]),condition:1+Math.abs(dx)+Math.abs(dy)};
+    });
     const t=spatial.faceTransforms[face],m=spatialFaceMatrix(spatial,face),det=m[0]*m[3]-m[1]*m[2];if(Math.abs(det)<Number.EPSILON*64)return [];
     const o=projectDiagramSpatialPoint(applyRigidFoldTransform(t,[0,0,0]),spatial.camera),u=projectDiagramSpatialPoint(applyRigidFoldTransform(t,[1,0,0]),spatial.camera)[2]-o[2],v=projectDiagramSpatialPoint(applyRigidFoldTransform(t,[0,1,0]),spatial.camera)[2]-o[2];
     const dx=(u*m[3]-v*m[1])/det,dy=(-u*m[2]+v*m[0])/det,rings=modelFaceRings(pose.result,face).map(ring=>ring.map(v=>vertices[v]));
@@ -84,6 +103,6 @@ export function diagramSpatialEdgeMarkup(pose:DiagramPose,view:ModelViewState,co
     }
     flush();
   }
-  const markup=lines.length?`<g data-diagram-spatial-edges="true">${lines.join('')}</g>`:'';
+  const markup=lines.length?`<g data-diagram-spatial-edges="true"${mesh?' data-diagram-spatial-depth="true"':''}>${lines.join('')}</g>`:'';
   cached.variants.set(cacheKey,markup);if(cached.variants.size>8)cached.variants.delete(cached.variants.keys().next().value!);return markup;
 }

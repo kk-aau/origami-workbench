@@ -4,6 +4,8 @@ import type {FlatFoldResult,FlatLayerAdjustment,FlatLayerPreference,FoldGraph,Po
 import type {DiagramSpatialPose} from './diagramSpatialPose';
 import {modelOverlapRegions} from './modelOverlapRegions';
 import {modelSurfacePrecision} from './modelSurfacePrecision';
+import {applyRigidFoldTransform} from '../core/rigidFoldGeometry';
+import {findDiagramSpatialCycle,spatialDiagnosticError} from './diagramSpatialDiagnostic';
 
 type Orders=NonNullable<FlatFoldResult['layers']['faceOrders']>;
 export interface SpatialLayerRequest {relativeConstraints?:FlatLayerPreference[];layerAdjustment?:FlatLayerAdjustment}
@@ -12,7 +14,7 @@ const key=(a:number,b:number)=>[Math.min(a,b),Math.max(a,b)].join(':');
 /** Solve actual touching planes in their own orthonormal frame. A camera's
  * flattened projection is not a flat-fold model: tilted faces and depth gaps
  * must never be handed to the planar solver as if they were touching. */
-export function solveSpatialLayerContacts(source:FoldGraph,spatial:DiagramSpatialPose,current:Orders,request?:SpatialLayerRequest,shown?:FlatFoldResult):{contacts:Orders;constraints:Orders;message:string}{
+export function solveSpatialLayerContacts(source:FoldGraph,spatial:DiagramSpatialPose,current:Orders,request?:SpatialLayerRequest,shown?:FlatFoldResult,resolveAll=false):{contacts:Orders;constraints:Orders;message:string}{
   const count=source.faces_vertices!.length;
   const validRows=(rows:Orders)=>{if(!Array.isArray(rows)||rows.some(r=>!Array.isArray(r)||r.length!==3||r[0]===r[1]||r.slice(0,2).some(f=>!Number.isSafeInteger(f)||f<0||f>=count)||Math.abs(r[2])!==1))throw Error('保存的立体纸层关系无效。');};
   const saved=spatial.layerContacts??[],required=spatial.layerConstraints??[];validRows(saved);validRows(required);validRows(current);
@@ -32,11 +34,12 @@ export function solveSpatialLayerContacts(source:FoldGraph,spatial:DiagramSpatia
       return [above,below,normal];
     });
   }
-  for(const [a,b] of [...saved,...constraints])if(owner[a]!==owner[b])throw Error(`纸面 F${a+1} 与 F${b+1} 存在真实空间夹角或间距，不能只交换层序；请调整折角。`);
+  for(const [a,b] of [...saved,...constraints])if(owner[a]!==owner[b])throw spatialDiagnosticError(source,spatial,{kind:'layer-conflict',faceIds:[a,b],message:`纸面 F${a+1} 与 F${b+1} 存在真实空间夹角或间距，不能只交换层序；请调整折角。`});
   const target=request?.layerAdjustment;
   if(target&&(!Number.isSafeInteger(target.face)||target.face<0||target.face>=count))throw Error('请选择有效纸面。');
   const selected=new Set([...saved,...constraints].map(([a])=>owner[a]));if(target)selected.add(owner[target.face]);
-  const contacts=new Map(current.map(row=>[key(row[0],row[1]),row]));let message='指定的立体纸层关系已通过求解。';
+  const contacts=new Map(resolveAll?[]:current.map(row=>[key(row[0],row[1]),row]));let message='指定的立体纸层关系已通过求解。';
+  if(resolveAll)groups.forEach((ids,i)=>{if(ids.length>1)selected.add(i);});
   for(const gi of selected){
     const ids=groups[gi],faceIndex=new Map(ids.map((f,i)=>[f,i])),root=ids[0];
     const edgeIds=[...new Set(ids.flatMap(f=>[...(source.faces_edges?.[f]??[]),...(source.faces_holeEdges?.[f]??[]).flat()]))];
@@ -57,23 +60,35 @@ export function solveSpatialLayerContacts(source:FoldGraph,spatial:DiagramSpatia
     while(regions.omittedThinRegions){const next=Math.max(precision.minimumEpsilon,epsilon/8);if(next>=epsilon)throw Error('共面接触区域低于坐标精度，未省略纸层。');epsilon=next;regions=modelOverlapRegions(regionInput,epsilon);}
     const pairs=new Set<string>();for(const cell of regions.cells)for(const a of cell.faces)for(const b of cell.faces)if(a!==b)pairs.add(key(ids[a],ids[b]));
     const rows=(orders:Orders)=>orders.filter(([a,b])=>owner[a]===gi&&owner[b]===gi&&pairs.has(key(a,b)));
-    for(const [a,b] of constraints)if(owner[a]===gi&&!pairs.has(key(a,b)))throw Error(`纸面 F${a+1} 与 F${b+1} 没有面积重叠，请选择实际重叠的纸面。`);
+    for(const [a,b] of constraints)if(owner[a]===gi&&!pairs.has(key(a,b)))throw spatialDiagnosticError(source,spatial,{kind:'layer-conflict',faceIds:[a,b],message:`纸面 F${a+1} 与 F${b+1} 没有面积重叠，请选择实际重叠的纸面。`});
     const preferences=(orders:Orders)=>rows(orders).map(([a,b,s])=>s*normal(b)>0?{above:faceIndex.get(a)!,below:faceIndex.get(b)!}:{above:faceIndex.get(b)!,below:faceIndex.get(a)!});
     // On file load every saved relation is a requirement to solve anew, never
     // a certificate. During an edit it is merely the old candidate/preference.
     const want=request?preferences(constraints):preferences([...saved,...constraints]);
+    const failure=(message:string)=>{
+      // A failed group is not automatically a cycle. Only label it as such
+      // when the requested relations contain a closed path in one real cell.
+      for(const cell of regions.cells){
+        const localOrder=new Map<number,number[]>();
+        for(const {above,below} of want)if(cell.faces.includes(above)&&cell.faces.includes(below))localOrder.set(below,[...(localOrder.get(below)??[]),above]);
+        const cycle=findDiagramSpatialCycle(cell.faces,localOrder);if(!cycle)continue;
+        const faceIds=[...new Set(cycle.map(f=>ids[f]))],vertices3D=cell.polygon.map(p=>applyRigidFoldTransform(spatial.faceTransforms[root],p));
+        return spatialDiagnosticError(source,spatial,{kind:'layer-cycle',message,faceIds,cycle:cycle.map(f=>ids[f]),region:faceIds.map(faceId=>({faceId,vertices3D,verticesCP:vertices3D.map(p=>local(faceId,p).slice(0,2) as Point)}))});
+      }
+      return spatialDiagnosticError(source,spatial,{kind:'layer-conflict',message,faceIds:ids});
+    };
     const old=rows(current),result:FlatFoldResult={geometry:{status:'ready',message:'',vertices:points,faces,graph},layers:{status:'solved',message:'',faceOrders:old.map(([a,b,s])=>[faceIndex.get(a)!,faceIndex.get(b)!,s])},warnings:[]};
     let adjustment:FlatLayerAdjustment|undefined;
     if(target&&owner[target.face]===gi){const sign=screenNormal(target.face)*normal(target.face);if(!sign)throw Error('所选纸面当前侧立成线，请转动视角后调整层序。');adjustment={...target,face:faceIndex.get(target.face)!,side:sign>0?target.side:target.side==='front'?'back':'front'};}
     let initial=result;
     if(adjustment){
       initial=recomputeFlatLayers(result,{relativeConstraints:[...want,...preferences(old)]});
-      if(initial.layers.status!=='solved')throw Error(initial.layers.message);
+      if(initial.layers.status!=='solved')throw failure(initial.layers.message);
       delete initial.layers.solutionIndex;delete initial.layers.solutionCount;delete initial.layers.solutionCountExact;
       initial.layers.relativeConstraints=want;
     }
     const solved=recomputeFlatLayers(initial,{relativeConstraints:want,...(adjustment?{layerAdjustment:adjustment}:{layerPreferences:preferences(old)})});
-    if(solved.layers.status!=='solved')throw Error(solved.layers.message);
+    if(solved.layers.status!=='solved')throw failure(solved.layers.message);
     if(adjustment)message=solved.layers.message;
     for(const [a,b] of old)contacts.delete(key(a,b));
     for(const [a,b,s] of solved.layers.faceOrders??[])contacts.set(key(ids[a],ids[b]),[ids[a],ids[b],s]);

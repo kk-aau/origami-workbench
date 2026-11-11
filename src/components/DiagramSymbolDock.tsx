@@ -1,3 +1,4 @@
+import {TabletPanelHeading} from './TabletPanelBar';
 import {useMemo,useState} from 'react';
 import type {DiagramSymbolKind} from '../app/diagramAnnotations';
 import {diagramSymbolPreview} from '../app/diagramAnnotationSVG';
@@ -8,6 +9,7 @@ import {SYMBOL_MIME} from './DiagramDrawingCanvas';
 import './DiagramSymbolDock.css';
 
 interface DiagramSymbolDockProps {
+  onClose?:()=>void;
   selectedSymbol:DiagramSymbolKind;
   placing:boolean;
   disabled:boolean;
@@ -29,7 +31,7 @@ const PREVIEWS=new Map(SYMBOL_CATALOG.map(item=>[item.kind,diagramSymbolPreview(
 
 /** A permanent category rail beside the drawing, with the same source geometry
  * used by placed symbols. It has no effect on selected-object properties. */
-export default function DiagramSymbolDock({selectedSymbol,placing,disabled,onChoose,onChooseCallout,onGenerateArrow,autoArrowUnavailable}:DiagramSymbolDockProps) {
+export default function DiagramSymbolDock({onClose,selectedSymbol,placing,disabled,onChoose,onChooseCallout,onGenerateArrow,autoArrowUnavailable}:DiagramSymbolDockProps) {
   const [group,setGroup]=useState(()=>SYMBOL_CATALOG.find(item=>item.kind===selectedSymbol)?.group??'折叠动作');
   const [search,setSearch]=useState('');
   const symbols=useMemo(()=>{
@@ -42,6 +44,7 @@ export default function DiagramSymbolDock({selectedSymbol,placing,disabled,onCho
   },[group,search]);
 
   return <aside className="diagram-symbol-dock" aria-label="折纸符号库">
+    {onClose&&<TabletPanelHeading title="符号" onClose={onClose}/>}
     <header><strong>折纸符号</strong><small>{SYMBOL_CATALOG.length+DIAGRAM_CALLOUT_SYMBOLS.length} 种</small></header>
     <input type="search" className="diagram-symbol-dock-search" aria-label="搜索当前分类的折纸符号" placeholder="搜索符号…" value={search} disabled={disabled} onChange={event=>setSearch(event.target.value)}/>
     {onGenerateArrow&&<div className="diagram-symbol-auto-arrow"><button type="button" disabled={disabled||!!autoArrowUnavailable} title={autoArrowUnavailable??'根据本步单轴动作生成可编辑、绑定纸面的主箭头'} onClick={onGenerateArrow}>生成主箭头</button>{autoArrowUnavailable&&<small>{autoArrowUnavailable}</small>}</div>}

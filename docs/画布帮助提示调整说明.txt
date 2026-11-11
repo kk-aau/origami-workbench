@@ -1,0 +1,23 @@
+画布帮助提示修正（2026-11-10，按用户更正）
+
+用户明确：提示与 CP 必须共享整块画布，只按文字自适应宽度，不能分成上下区域或挤占画布高度。
+此前独立提示行方案已撤销。此前 output/playwright/canvas-help 的验证属于被替换方案，不作为现行布局依据。
+
+当前实现：
+- 帮助与工作区标题回到画布绝对定位浮层，不参与布局高度。
+- 折叠说明保持单行、宽度按文字内容；只对实际文字区域响应点击，右侧空白不展开说明。
+- 按 CP 在当前视图中的包围框选择左、右、上、下空白区域，与 CP 留 16px 间距。
+- 宽度不足时单行省略，不增加提示高度。放大后没有足够空白时收成“操作说明”紧凑入口；不强行移动或缩小用户的 CP。用户主动展开时仍是浮层。
+- 保留“帮助提示”开关和既有显示设置持久化；不影响鼠标旁悬浮提示。
+- 工具参数、图层和缩放控件仍在原画布中。
+
+修改文件：src/components/CreaseCanvas.tsx、CanvasToolHelp.css；新增 CanvasGuidanceOverlay.tsx、src/app/canvasHelpPlacement.ts、tests/app/canvasHelpPlacement.test.ts。
+本次修改前快照与 SHA256：output/playwright/shared-canvas-help/source-before/。
+
+验证：TypeScript 检查通过；位置算法回归测试通过，覆盖 CP 平移、缩放、纸张出界与满屏情况。
+独立浏览器上下文验证桌面与平板视口的折痕编辑区、细长 CP 编辑区：
+- 展开、关闭和切换帮助显示前后，SVG 画布尺寸与 viewBox 完全一致。
+- 单击提示右侧空白不展开；提示在可用空白内避开纸张。
+- 无页面运行异常。
+证据：output/playwright/shared-canvas-help/report.json、verify.cjs 和截图。
+未打包、未发布；未自动刷新用户当前已打开的编辑窗口。

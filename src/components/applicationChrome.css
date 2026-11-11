@@ -76,3 +76,10 @@
  .chrome-workbench .statusbar{gap:8px}
 }
 @media(max-height:690px){.chrome-workbench .workspaces .workspace-tab{min-height:56px;gap:5px}.chrome-workbench .workspaces .workspace-view-control{min-height:64px}.chrome-workbench .workspaces .nav-spacer{min-height:8px}}
+
+/* Recovery stays available without reserving a workspace banner row. */
+.header-recovery{flex:0 0 auto}
+.chrome-workbench .header-recovery .header-menu-trigger{color:var(--ink);border-color:var(--line);background:var(--surface);white-space:nowrap}
+.header-recovery-info{padding:8px 10px 12px;max-width:300px;font-size:12px;line-height:1.65;overflow-wrap:anywhere;border-bottom:1px solid var(--line);margin-bottom:4px}
+.header-recovery-info strong,.header-recovery-info small{display:block;margin-top:4px}
+.header-recovery-info small{font-size:11px;color:var(--muted)}

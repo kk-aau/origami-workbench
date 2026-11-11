@@ -56,6 +56,8 @@ export function diagramModelMarkup(pose:DiagramPose,view=diagramPoseView(pose),o
     const local=diagramLocalSurfaceMarkup(pose,view,colors,omitFlatCreases);if(local!==null)return local+diagramSpatialEdgeMarkup(pose,view,colors.line);
   }
   const graph=pose.result.geometry.graph,flatEdges=new Set<string>(),mesh=diagramIllustrationMesh({...pose,view}),depth=diagramDepthActive({...pose,view});
+  // Side-on outlines still need their own precise depth clipping. The spatial
+  // edge renderer uses these same display cells when relief is enabled.
   const spatialEdges=pose.spatial&&!view.xray&&!pose.paperDeformation?.nodes.length&&!cutaway.definitions?new Set(graph?.zhezhi_spatialEdgeOnFaces as number[]|undefined):null;
   if(omitFlatCreases&&graph)graph.edges_vertices.forEach(([a,b],index)=>{if(graph.edges_assignment[index]==='F'||['M','V'].includes(graph.edges_assignment[index])&&pose.spatial&&typeof pose.spatial.measuredAngles[index]==='number'&&Math.abs(pose.spatial.measuredAngles[index]!)<=1e-5)flatEdges.add([Math.min(a,b),Math.max(a,b)].join('-'));});
   const faces=p.visibleOrder.map(index=>{

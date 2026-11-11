@@ -1,4 +1,4 @@
-import {viewRotation,type OrbitView} from '../../vendor/simulator/oristudio/packages/origami-simulator/src/webgl/camera';
+import {viewRotationFor,type OrbitView} from '../../vendor/simulator/oristudio/packages/origami-simulator/src/webgl/camera';
 import type {SimulationCameraPreset} from './simDisplay';
 
 type V3=readonly [number,number,number];
@@ -18,8 +18,8 @@ const sides:Array<{preset:SimulationCameraPreset;label:string;normal:V3;corners:
    {preset:'bottom',label:'下',normal:[0,0,-1],corners:[[-1,-1,-1],[1,-1,-1],[1,1,-1],[-1,1,-1]]}];
 
 /** Uses the exact model camera basis, including its reflection. */
-export function simulationViewCubeFaces(view:Pick<OrbitView,'yaw'|'pitch'>){
-  const m=viewRotation(view.yaw,view.pitch),dot=(row:number,p:V3)=>m[row*3]*p[0]+m[row*3+1]*p[1]+m[row*3+2]*p[2];
+export function simulationViewCubeFaces(view:Pick<OrbitView,'yaw'|'pitch'|'roll'|'orient'>){
+  const m=viewRotationFor({...view,zoom:1}),dot=(row:number,p:V3)=>m[row*3]*p[0]+m[row*3+1]*p[1]+m[row*3+2]*p[2];
   return sides.map(side=>{
     const points=side.corners.map(p=>[52+dot(0,p)*21,51-dot(1,p)*21] as const),depth=dot(2,side.normal);
     return {...side,points,depth,visible:depth>1e-7,cx:52+dot(0,side.normal)*21,cy:51-dot(1,side.normal)*21};
@@ -55,7 +55,7 @@ export function mountSimulationViewCube(root:HTMLElement,onChoose:(preset:Simula
   });
   const finish=()=>{if(drag&&moved)onFinish?.();drag=null;};
   root.addEventListener('pointerup',finish);root.addEventListener('pointercancel',finish);root.addEventListener('lostpointercapture',finish);
-  return (view:Pick<OrbitView,'yaw'|'pitch'>)=>{
+  return (view:Pick<OrbitView,'yaw'|'pitch'|'roll'|'orient'>)=>{
     for(const side of simulationViewCubeFaces(view)){
       const {group,polygon,text}=groups.get(side.preset)!;group.style.display=side.visible?'':'none';group.setAttribute('tabindex',side.visible?'0':'-1');
       polygon.setAttribute('points',side.points.map(p=>p.join(',')).join(' '));text.setAttribute('x',String(side.cx));text.setAttribute('y',String(side.cy));

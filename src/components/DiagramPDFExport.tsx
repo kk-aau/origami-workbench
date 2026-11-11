@@ -33,7 +33,7 @@ export default function DiagramPDFExport({editorDoc,project,onClose,onMessage,li
 
   const [retry,setRetry]=useState(0),[preparation,setPreparation]=useState<{source:DiagramProject;key:string;project:DiagramProject|null;progress:string;error:string}|null>(null);
   const dialog=useRef<HTMLDivElement>(null),mounted=useRef(true),prepareController=useRef<AbortController|null>(null),exportController=useRef<AbortController|null>(null);
-  const palette=useMemo(()=>structuredClone(lineDefaults??readDiagramLineDefaults()),[lineDefaults]);
+  const palette=useMemo(()=>structuredClone(lineDefaults??project.basicSettings?.lineDefaults??readDiagramLineDefaults()),[lineDefaults,project.basicSettings?.lineDefaults]);
   const planned=useMemo(()=>{try{return {plan:planDiagramPDF(project,options),error:''};}catch(error){return {plan:null,error:error instanceof Error?error.message:'PDF 选项无效。'};}},[project,options]);
   const imagePanels=useMemo(()=>planned.plan?diagramStepImagePanels(project,options):[],[project,options,planned.plan]);
   const preparationKey=!cpExport&&planned.plan?format+JSON.stringify(format==='images'?imagePanels.map(panel=>project.steps[panel.stepIndex]).filter(step=>step.pose&&step.paperVisible!==false).map(step=>step.id):diagramPDFPaperStepIds(project,options)):null;
@@ -113,12 +113,12 @@ export default function DiagramPDFExport({editorDoc,project,onClose,onMessage,li
 }
 
 function DiagramStepImagePreview({project,panel,palette}:{project:DiagramProject;panel:ReturnType<typeof diagramStepImagePanels>[number];palette:DiagramLineDefaults}) {
-  const svg=useMemo(()=>{const step=project.steps[panel.stepIndex];return diagramStepImageSVG(step,project.states,panel.size,palette,readAdaptiveLineStyle(),diagramStepZoom(project,step.id)?.region);},[project,panel,palette]);
+  const svg=useMemo(()=>{const step=project.steps[panel.stepIndex];return diagramStepImageSVG(step,project.states,panel.size,palette,project.basicSettings?.adaptiveLines??readAdaptiveLineStyle(),diagramStepZoom(project,step.id)?.region);},[project,panel,palette]);
   return <svg className="diagram-pdf-page" viewBox={`0 0 ${panel.size.width} ${panel.size.height}`} role="img" aria-label={'第 '+(panel.stepIndex+1)+' 步图片预览'} style={{aspectRatio:panel.size.width+'/'+panel.size.height}} dangerouslySetInnerHTML={{__html:svg.slice(svg.indexOf('>')+1,svg.lastIndexOf('</svg>'))}}/>;
 }
 
 /** Pure page composition; the dialog supplies its prepared layer snapshot. */
 export function DiagramPDFPagePreview({project,options,plan,pageIndex,palette}:{project:DiagramProject;options:DiagramPDFOptions;plan:DiagramPDFPlan;pageIndex:number;palette:DiagramLineDefaults}) {
-  const svg=useMemo(()=>diagramPDFPageSVG(project,options,plan,pageIndex,palette,readAdaptiveLineStyle()),[project,options,plan,pageIndex,palette]);
+  const svg=useMemo(()=>diagramPDFPageSVG(project,options,plan,pageIndex,palette,project.basicSettings?.adaptiveLines??readAdaptiveLineStyle()),[project,options,plan,pageIndex,palette]);
   return <svg className="diagram-pdf-page" viewBox={`0 0 ${plan.width} ${plan.height}`} role="img" aria-label={'PDF 第 '+(pageIndex+1)+' 页预览'} style={{aspectRatio:plan.width+'/'+plan.height}} dangerouslySetInnerHTML={{__html:svg.slice(svg.indexOf('>')+1,svg.lastIndexOf('</svg>'))}}/>;
 }

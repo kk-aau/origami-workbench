@@ -1,0 +1,38 @@
+折序空间错误可视化与三轴旋转
+日期：2026-11-10
+项目：workbench-tauri（源代码开发；未在本次任务打包、发布）
+
+空间错误可视化
+1. 空间折图生成、层序调整、视角应用失败时，求解器返回结构化诊断。
+   纸面相交：保留冲突纸面对和重叠区域。
+   局部层序循环：保留同一区域内实际证实的有向循环，不把全局局部叠层关系误报为循环。
+   共面缺失：保留无法确定上下关系的纸面对。
+   层序冲突：对于子求解器已确认无解但没有唯一局部冲突区域的情况，显示涉及纸面，明确定位范围的限制。
+2. 顶部工具栏仅在有效诊断存在时显示“查看问题”，不增加常驻整行提示。
+3. 独立诊断窗口左右对照失败候选的三维位置与展开 CP，同编号纸面联动选择；支持旋转、缩放、定位问题、只看相关纸面和淡化其他纸面。
+4. 诊断区域用世界三维坐标及材料 CP 坐标分别保存。三维窗口透明显示所有涉事纸面，不再次依赖已失败的层序求解。
+5. 诊断仅为临时错误证据，不写入工程、不替换成功折图、不放宽闭合/相交/层序校验。一次显示首先遇到的问题；未有几何证据的其他错误继续使用原有文字提示。
+6. 当前步骤、CP 或工程来源变化后，清除过期诊断；停止与重新计算也会清除。单纯更新其他步骤缩略图缓存不会关闭当前诊断。
+
+三轴旋转
+1. 在折序绘图“转动视角”中增加三色 X/Y/Z 旋转环，保留画布自由拖转。
+2. 控件悬浮在画布角落，可以收起。拖动圆环绕对应世界轴旋转；Shift 微调，方向键调整所选轴，Esc 取消本次拖动。
+3. 旋转只调整观察相机。成功松开后才提交视角；失败或取消保留先前视角与折痕。
+4. 同一控件用于诊断窗口、刚性空间折图，以及模拟姿态应用到下一步后的曲面绘图。
+5. 曲面姿态补齐相机滚转/完整方向的保存与读取；旧工程缺失字段时保持原来视角。
+
+实现及证据
+- 求解诊断：src/app/diagramSpatialDiagnostic.ts、diagramSpatialPose.ts、diagramSpatialLayerSolver.ts。
+- 线程传递：src/app/diagramSpatialTask.ts、src/workers/diagramSpatial.worker.ts。
+- 入口及生命周期：src/components/DiagramWorkspace.tsx。
+- 查看器：src/components/DiagramSpatialDiagnosticView.tsx / .css。
+- 三轴控件：src/components/DiagramRotationGizmo.tsx / .css、src/app/diagramAxisRotation.ts。
+- 针对性测试与修改前哈希：output/spatial-diagnostics/；三轴数学与浏览器证据见对应 output 子目录。
+- 实际工作区 Worker 失败入口：output/playwright/spatial-diagnostics/。
+- 诊断窗口桌面/横屏平板交互：output/playwright/spatial-diagnostic-viewer/。
+- 最终 TypeScript 全项目检查通过；本次集中针对性测试 20/20 通过，日志 output/spatial-diagnostics/final-focused-tests.log。
+- 工作区实际导入合成工程并触发空间 Worker 错误，验证入口、关闭重开、手动停止、重算、步骤编辑失效、文档库清除，无页面异常。
+- 刚性立体主图与真实 Worker 的旋转提交及保存恢复：output/playwright/orbit-axis/results.json。
+- 曲面真实 XYZ 环拖动、自由拖转、Esc 取消、导出 JSON 后重新导入：output/playwright/surface-axis/results.json；确认完整相机、CP、顶点及最终渲染一致。
+- 曲面相关回归 34/34 通过：output/surface-axis-orbit/tests.log；原始源码哈希同目录 before-hashes.json。
+- 空间后端相关回归 34 项中有 1 项旧平折前置夹具失败（遗漏 4 组关系），已通过不导入空间诊断代码的 core-only 脚本独立复现；本次未修改该平折求解行为。记录在 output/spatial-diagnostics/backend-tests.log 与 flat-precondition-baseline.log。

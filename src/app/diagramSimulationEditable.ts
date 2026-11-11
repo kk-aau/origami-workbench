@@ -3,7 +3,7 @@ import type {Doc,Point} from '../core/types';
 import type {RigidFoldPoint3,RigidFoldTransform3D} from '../core/rigidFoldGeometry';
 import {prepareSimulationDocument} from '../engine/simmodel';
 import type {SimulationPose} from '../engine/simPose';
-import {viewRotation} from '../../vendor/simulator/oristudio/packages/origami-simulator/src/webgl/camera';
+import {viewRotationFor} from '../../vendor/simulator/oristudio/packages/origami-simulator/src/webgl/camera';
 import {fitDiagramSimulationAngles,measuredDiagramSimulationAngles} from './diagramSimulationAngles';
 import {createDiagramSpatialPose} from './diagramSpatialPose';
 import {adoptDiagramPose,appendDiagramStep,updateDiagramCP,updateDiagramFoldLink,selectDiagramStep,type DiagramProject} from './diagramProject';
@@ -24,7 +24,7 @@ function capturedFrame(doc:Doc,pose:SimulationPose,face:number):RigidFoldTransfo
  const area=(v:number)=>(points[b][0]-points[a][0])*(points[v][1]-points[a][1])-(points[b][1]-points[a][1])*(points[v][0]-points[a][0]);
  const c=ring.reduce((best,v)=>Math.abs(area(v))>Math.abs(area(best))?v:best,a);
  const {prepared}=prepareSimulationDocument(pose.source,{mesh:pose.mesh}),cp=prepared.fold.vertices_coords.map(p=>[p[0],-p[2]] as Point);
- const rotation=viewRotation(pose.view.yaw,pose.view.pitch),positions=pose.solver.positions;
+ const rotation=viewRotationFor(pose.view),positions=pose.solver.positions;
  const min=[Infinity,Infinity,Infinity],max=[-Infinity,-Infinity,-Infinity];
  prepared.originalPositions.forEach((v,i)=>{min[i%3]=Math.min(min[i%3],v);max[i%3]=Math.max(max[i%3],v);});
  const center=min.map((v,k)=>(v+max[k])/2);let radius=0;

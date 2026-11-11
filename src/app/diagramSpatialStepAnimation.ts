@@ -1,3 +1,4 @@
+import {diagramSimulationSurfaceViewFromCamera} from './diagramSimulationSurfaceCamera';
 import {buildDiagramFold,buildFold,distance,epsilonFor,pointOnSegment,polygonArea,splitIntersections} from '../core/geometry';
 import {hasMaterialTopology} from '../core/materialTopology';
 import {applyRigidFoldTransform,solveRigidFoldGeometry,type RigidFoldTransform3D} from '../core/rigidFoldGeometry';
@@ -218,5 +219,13 @@ export function buildDiagramSpatialStepAnimation(project:DiagramProject,stepId:s
       }
     }
   }
-  return {fold,animation,...(rows.length?{initialContactOrder:{sourceFaceCount:materialFold.faces_vertices!.length,faceOrders:rows}}:{}),colors:structuredClone(step.pose?.view?.colors??defaultModelColors()),beforeLabel:`CP${index}`,afterLabel:`CP${index+1}`,...(warnings.length?{warnings}:{})};
+  // Convert the authored world projection into the simulator basis (x,z,-y).
+  let camera:import('../engine/simPose').SimulationPose['view']|undefined;
+  if(pose?.spatial){
+    const source=pose.spatial.camera,o=projectDiagramSpatialPoint([0,0,0],source),axes=([[1,0,0],[0,0,1],[0,-1,0]] as [number,number,number][]).map(p=>projectDiagramSpatialPoint(p,source).map((v,k)=>v-o[k]));
+    const a=((step.canvas?.drawingRotation??0)+(pose.view?.rotation??0))*Math.PI/180,c=Math.cos(a),s=Math.sin(a),flip=pose.view?.side==='back'?-1:1;
+    const r=Array.from({length:9},(_,k)=>{const row=Math.floor(k/3),p=axes[k%3];return row===0?c*flip*p[0]-s*p[1]:row===1?s*flip*p[0]+c*p[1]:flip*p[2];});
+    camera=diagramSimulationSurfaceViewFromCamera({yaw:0,pitch:0,zoom:1},{yaw:0,elevation:0,rotation:r});
+  }
+  return {fold,animation,...(camera?{camera}:{}),...(rows.length?{initialContactOrder:{sourceFaceCount:materialFold.faces_vertices!.length,faceOrders:rows}}:{}),colors:structuredClone(step.pose?.view?.colors??defaultModelColors()),beforeLabel:`CP${index}`,afterLabel:`CP${index+1}`,...(warnings.length?{warnings}:{})};
 }

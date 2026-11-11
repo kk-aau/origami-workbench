@@ -18,6 +18,7 @@ import './DiagramCPWorkspace.css';
 import {canSwapGeneratedLines} from '../app/drawingSwap';
 
 interface Props {
+  adaptiveLineStyle?:boolean;
   doc:Doc;
   presentation?:DiagramCPPresentationContext;
   gridSettings:{grid:boolean;snap:boolean;diagonalGrid:boolean;divisions:number};
@@ -29,6 +30,8 @@ interface Props {
   onCommit:(doc:Doc)=>boolean;
   showCursorHint?:boolean;
   onCursorHintChange?:(enabled:boolean)=>void;
+  showToolGuide?:boolean;
+  onToolGuideChange?:(enabled:boolean)=>void;
   onReturn:()=>void;
   onMessage:(message:string)=>void;
   recovery?:{label:string;onClick:()=>void};
@@ -44,7 +47,7 @@ function CPNames({geometry,viewport,show,selected}:{geometry:DiagramCPLabelGeome
 
 /** The CP is edited in the project transaction history, so exchanging views
  * never leaves an unapplied draft behind. Read-only CPs retain pan and zoom. */
-export default function DiagramCPWorkspace({doc,presentation,gridSettings,onGridSettings,index,editable,reason,disabled,onCommit,onReturn,onMessage,recovery,showCursorHint=true,onCursorHintChange}:Props){
+export default function DiagramCPWorkspace({adaptiveLineStyle,doc,presentation,gridSettings,onGridSettings,index,editable,reason,disabled,onCommit,onReturn,onMessage,recovery,showCursorHint=true,onCursorHintChange,showToolGuide=true,onToolGuideChange}:Props){
   const surface=useRef<HTMLElement>(null);
   const [selected,setSelected]=useState<Set<string>>(new Set()),[tool,setTool]=useState<Tool>('select'),[preset,setPreset]=useState<Assignment>('V');
   const [drawingSwap,setDrawingSwap]=useState(false);
@@ -128,6 +131,6 @@ export default function DiagramCPWorkspace({doc,presentation,gridSettings,onGrid
     </div>
     {names.error&&<p className="diagram-cp-name-warning" role="status">{names.error}</p>}
     <DiagramCPLegend detail={selectedDetails}/>
-    <div className="diagram-cp-edit-canvas"><CreaseCanvas display={{...defaultCreaseDisplay(),showCursorHint}} onCursorHintChange={onCursorHintChange} solidCreases segmentPresentation={presented.segments} svgOverlay={renderNames} doc={doc} selected={selected} onSelect={setSelected} selectedCircles={selectedCircles} onSelectCircles={setSelectedCircles} onChange={change} tool={readOnly?'pan':tool} preset={preset} drawingAngle={drawingAngle} drawingSwap={drawingSwap} onDrawingSwapChange={setDrawingSwap} grid={gridSettings.grid} diagonalGrid={gridSettings.diagonalGrid} divisions={gridSettings.divisions} gridAppearance={gridAppearance} snap={gridSettings.snap} lockBoundary={false} displayLayers={displayLayers} onDisplayLayersChange={setDisplayLayers} measurements={measurements} lengthDetails={{}} onMeasurement={(register,value)=>setMeasurements(old=>({...old,[register]:value}))} onPoint={()=>{}} onMessage={onMessage} fitToken={fit} readOnly={readOnly} workspaceLabel={`折序 · CP${index}${editable?'':' · 只读'}`}/><FoldAnglePanel unknownLabel="自适应" value={angleSelection.value} selectionKey={selected} selectedCount={angleSelection.editableCount} ignoredCount={angleSelection.ignoredCount} disabled={readOnly} disabledReason={readOnly?'当前 CP 不可编辑。':undefined} onApply={applySelectedAngle}/></div>
+    <div className="diagram-cp-edit-canvas"><CreaseCanvas adaptiveLineStyle={adaptiveLineStyle} display={{...defaultCreaseDisplay(),showCursorHint,showToolGuide}} onToolGuideChange={onToolGuideChange} onCursorHintChange={onCursorHintChange} solidCreases segmentPresentation={presented.segments} svgOverlay={renderNames} doc={doc} selected={selected} onSelect={setSelected} selectedCircles={selectedCircles} onSelectCircles={setSelectedCircles} onChange={change} tool={readOnly?'pan':tool} preset={preset} drawingAngle={drawingAngle} drawingSwap={drawingSwap} onDrawingSwapChange={setDrawingSwap} grid={gridSettings.grid} diagonalGrid={gridSettings.diagonalGrid} divisions={gridSettings.divisions} gridAppearance={gridAppearance} snap={gridSettings.snap} lockBoundary={false} displayLayers={displayLayers} onDisplayLayersChange={setDisplayLayers} measurements={measurements} lengthDetails={{}} onMeasurement={(register,value)=>setMeasurements(old=>({...old,[register]:value}))} onPoint={()=>{}} onMessage={onMessage} fitToken={fit} readOnly={readOnly} workspaceLabel={`折序 · CP${index}${editable?'':' · 只读'}`}/><FoldAnglePanel unknownLabel="自适应" value={angleSelection.value} selectionKey={selected} selectedCount={angleSelection.editableCount} ignoredCount={angleSelection.ignoredCount} disabled={readOnly} disabledReason={readOnly?'当前 CP 不可编辑。':undefined} onApply={applySelectedAngle}/></div>
   </section>;
 }

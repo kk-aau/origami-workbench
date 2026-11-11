@@ -20,6 +20,7 @@ import {assertDiagramReturnTargetRemovable,syncDiagramReturnAnnotationCaches,syn
 import {validateDiagramSimulationSurface,validateDiagramSimulationSurfaceView,type DiagramSimulationSurface} from './diagramSimulationSurface';
 import {validateSimulationPose,type SimulationPose} from '../engine/simPose';
 import {defaultModelColors,validateModelColors,type ModelColors} from './modelColors';
+import {validateDiagramBasicSettings,type DiagramBasicSettings} from './diagramBasicSettings';
 export type {DiagramSimulationSurface} from './diagramSimulationSurface';
 export type {DiagramAnnotation,DiagramLineAnnotation,DiagramSymbolAnnotation,DiagramLineStyle,DiagramStrokePattern,DiagramSymbolKind,DiagramSymbolParams} from './diagramAnnotations';
 export type {DiagramImage} from './diagramImages';
@@ -103,6 +104,7 @@ export interface DiagramProject {
   format:'zhezhi-diagram';version:1;name:string;
   /** Ordered boundary states: N steps always reference N + 1 CP states. */
   states:DiagramCPState[];steps:DiagramStep[];activeStepId:string;
+  basicSettings?:DiagramBasicSettings;
 }
 export type DiagramIdFactory=()=>string;
 const newId:DiagramIdFactory=()=>crypto.randomUUID();
@@ -318,6 +320,7 @@ export function getDiagramStepInitialView(project:DiagramProject,stepId:string):
     }
     else view=copyModelView(undefined);
   }
+  if(!view.colors&&project.basicSettings)view.colors={...project.basicSettings.colors};
   view.cameras={};return view;
 }
 
@@ -391,7 +394,8 @@ export function resyncDiagramStepViews(project:DiagramProject,reference:DiagramP
 }
 
 function validateProject(value:unknown,checkGeometry:boolean):asserts value is DiagramProject {
-  const project=record(value,['format','version','name','states','steps','activeStepId'],[],'折序工程');
+  const project=record(value,['format','version','name','states','steps','activeStepId'],['basicSettings'],'折序工程');
+  if(project.basicSettings!==undefined)validateDiagramBasicSettings(project.basicSettings);
   if(project.format!=='zhezhi-diagram'||project.version!==1)throw new Error('不支持的折序工程格式或版本。');
   if(typeof project.name!=='string'||!Array.isArray(project.states)||!Array.isArray(project.steps)||
       !project.steps.length||project.states.length!==project.steps.length+1)throw new Error('折序工程必须为 N 个步骤对应 N＋1 个 CP 状态。');
@@ -765,7 +769,7 @@ export function updateDiagramSimulationSurfaceView(project:DiagramProject,stepId
   validateProject(project,false);validateDiagramSimulationSurfaceView(view);
   const {next,step}=copyStepForEdit(project,stepId),surface=step.simulationSurface;
   if(!surface)throw Error('当前步骤没有可转动的模拟曲面。');
-  step.simulationSurface={...surface,pose:{...surface.pose,view:{...view}}};
+  step.simulationSurface={...surface,pose:{...surface.pose,view:structuredClone(view)}};
   return next;
 }
 

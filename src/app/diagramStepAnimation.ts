@@ -18,6 +18,7 @@ import {hasSpatialFoldAngles} from './diagramSpatialPose';
 import {buildDiagramSpatialStepAnimation} from './diagramSpatialStepAnimation';
 
 export interface DiagramStepAnimationClip {
+  camera?:import('../engine/simPose').SimulationPose['view'];
   fold:FoldGraph;
   animation:SimulationStepAnimation;
   beforeLabel:string;

@@ -1,3 +1,4 @@
+import DiagramDepthCamera from './DiagramDepthCamera';
 import {memo,useEffect,useId,useMemo,useRef,useState,type PointerEvent as ReactPointerEvent,type ReactNode} from 'react';
 import type {DiagramSimulationSurface} from '../app/diagramSimulationSurface';
 import {renderDiagramSimulationSurface} from '../app/diagramSimulationSurfaceRender';
@@ -100,12 +101,13 @@ const DiagramFoldPreviewLayer=memo(function DiagramFoldPreviewLayer({segments,un
   })}</g>;
 });
 
-export default function DiagramDrawingCanvas({showCursorHint=true,onCursorHintChange,pose,simulationSurface,zoomRegion,zoomSelectionRegion,lineDefaults=readDiagramLineDefaults(),callouts=EMPTY_CALLOUTS,selectedCalloutId,onSelectCallout,onCalloutsChange,onCreateCallout,calloutCPMarkup=emptyCPMarkup,gridPaper,annotations,images=EMPTY_IMAGES,paperVisible=true,onImagesChange,selectedImageId,onSelectImage,fitToken=0,canvas,tool,lineStyle,foldAction='fold',foldAngle=180,symbol,color,width,strokePattern,selection,onSelect,onMove,onViewChange,onDrawingRotationChange,orientationLocked=false,onAnnotationsChange,selectedIds,selectedLineFaces={},onSelectedIds,onClearSelection,onDeleteInBox,commandToken=0,mirrorSource=[],onMirrorCopy,onCancelMirrorCopy,onSymbolPlaced,onCancelSymbolPlacement,disabled,active,paperLocked=false,precision={ratioA:1,ratioB:1,expression:'√2-1'},onPrecisionPoint,showSymbolBaseline=false,foldLinkEnabled=false,foldLinkPreview=EMPTY_FOLD_PREVIEW,foldLinkCP,foldLinkFixed,selectedFoldFaces=[],onPickFixed,onPickLayerPoint,cpHighlight,cpSelectedHighlight,cpFixedHighlight,onHoverPaper,creaseActions,creaseActionPoints}:{
+export default function DiagramDrawingCanvas({depthPreview,depthCameraVisible=false,onDepthPreview,onDepthCommit,onDepthViewport,adaptiveLineStyle,showCursorHint=true,onCursorHintChange,pose,simulationSurface,zoomRegion,zoomSelectionRegion,lineDefaults=readDiagramLineDefaults(),callouts=EMPTY_CALLOUTS,selectedCalloutId,onSelectCallout,onCalloutsChange,onCreateCallout,calloutCPMarkup=emptyCPMarkup,gridPaper,annotations,images=EMPTY_IMAGES,paperVisible=true,onImagesChange,selectedImageId,onSelectImage,fitToken=0,canvas,tool,lineStyle,foldAction='fold',foldAngle=180,symbol,color,width,strokePattern,selection,onSelect,onMove,onViewChange,onDrawingRotationChange,orientationLocked=false,onAnnotationsChange,selectedIds,selectedLineFaces={},onSelectedIds,onClearSelection,onDeleteInBox,commandToken=0,mirrorSource=[],onMirrorCopy,onCancelMirrorCopy,onSymbolPlaced,onCancelSymbolPlacement,disabled,active,paperLocked=false,precision={ratioA:1,ratioB:1,expression:'√2-1'},onPrecisionPoint,showSymbolBaseline=false,foldLinkEnabled=false,foldLinkPreview=EMPTY_FOLD_PREVIEW,foldLinkCP,foldLinkFixed,selectedFoldFaces=[],onPickFixed,onPickLayerPoint,cpHighlight,cpSelectedHighlight,cpFixedHighlight,onHoverPaper,creaseActions,creaseActionPoints}:{
   pose:DiagramPose|null;simulationSurface?:DiagramSimulationSurface;zoomRegion?:DiagramZoomRegion|null;zoomSelectionRegion?:DiagramZoomRegion|null;callouts?:DiagramCallout[];selectedCalloutId?:string;onSelectCallout?:(id:string|null)=>void;onCalloutsChange?:(callouts:DiagramCallout[])=>void;onCreateCallout?:(type:'paper'|'cp',point:Point)=>void;calloutCPMarkup?:(stateId:string,sourceUnits?:number,hideExistingCreases?:boolean)=>string;annotations:DiagramAnnotation[];canvas:DiagramCanvasSettings;tool:DiagramDrawingTool;
+  depthPreview?:import('../app/diagramDepth').DiagramDepth;depthCameraVisible?:boolean;onDepthPreview?:(depth:import('../app/diagramDepth').DiagramDepth|null)=>void;onDepthCommit?:(depth:import('../app/diagramDepth').DiagramDepth)=>void;onDepthViewport?:(cameras:ModelViewState['cameras'])=>void;
   gridPaper?:Doc;
   images?:DiagramImage[];paperVisible?:boolean;onImagesChange?:(images:DiagramImage[])=>void;selectedImageId?:string;onSelectImage?:(id:string|null)=>void;
   fitToken?:number;
-  showCursorHint?:boolean;onCursorHintChange?:(enabled:boolean)=>void;
+  adaptiveLineStyle?:boolean;showCursorHint?:boolean;onCursorHintChange?:(enabled:boolean)=>void;
   paperLocked?:boolean;
   commandToken?:number;
   precision?:DiagramPrecisionSettings;onPrecisionPoint?:(point:Point)=>boolean;
@@ -127,7 +129,7 @@ export default function DiagramDrawingCanvas({showCursorHint=true,onCursorHintCh
 }) {
   const editLocked=paperVisible&&paperLocked;
   const surfaceMarkup=useMemo(()=>simulationSurface&&paperVisible?renderDiagramSimulationSurface(simulationSurface).markup:'',[simulationSurface,paperVisible]);
-  const [adaptiveLines]=useAdaptiveLineStyle();
+  const [globalAdaptiveLines]=useAdaptiveLineStyle(),adaptiveLines=adaptiveLineStyle??globalAdaptiveLines;
   const [blankView,setBlankView]=useState(defaultModelView),[draftView,setDraftView]=useState<ModelViewState|null>(null);
   const queuedView=useRef<ModelViewState|null>(null),viewFrame=useRef(0);
   const wheelView=useRef<ModelViewState|null>(null),wheelTimer=useRef<ReturnType<typeof setTimeout>|undefined>(undefined);
@@ -139,13 +141,15 @@ export default function DiagramDrawingCanvas({showCursorHint=true,onCursorHintCh
   const saved=zoomRegion?{...normalView,cameras:focusCamera?.key===zoomStateKey?focusCamera.cameras:{}}:normalView,view=queuedView.current??draftView??saved;
   // Panning and zooming only change the SVG viewport. Keep geometry and paper
   // artwork stable until an actual presentation setting or drawing changes.
-  const drawingView=useMemo(()=>({...view,cameras:{}}),[view.depth,view.side,view.rotation,view.projectionCenter,view.showExistingCreases,view.xray,view.colors,view.shadows,view.antiAlias,view.displayNumbers,view.layout,view.displayStyle,view.board]);
+  const baseDrawingView=useMemo(()=>({...view,cameras:{}}),[view.depth,view.side,view.rotation,view.projectionCenter,view.showExistingCreases,view.xray,view.colors,view.shadows,view.antiAlias,view.displayNumbers,view.layout,view.displayStyle,view.board]);
+  const drawingView=useMemo(()=>depthPreview?{...baseDrawingView,depth:depthPreview}:baseDrawingView,[baseDrawingView,depthPreview]);
   const inZoom=useMemo(()=>zoomRegion?prepareDiagramZoomRegionContains(zoomRegion):(_point:Point)=>true,[zoomStateKey]);
   const paintAnnotation=(a:DiagramAnnotation)=>a.kind==='line'?applyDiagramLineAppearance(a,lineDefaults):a;
-  const frame=useMemo(()=>diagramDrawingFrame(pose,annotations.map(a=>a.kind==='line'?applyDiagramLineAppearance(a,lineDefaults):a),drawingView,images,paperVisible,callouts,zoomRegion,simulationSurface),[pose,annotations,lineDefaults,drawingView,images,paperVisible,callouts,zoomStateKey,simulationSurface]);
+  const frame=useMemo(()=>diagramDrawingFrame(pose,annotations.map(a=>a.kind==='line'?applyDiagramLineAppearance(a,lineDefaults):a),baseDrawingView,images,paperVisible,callouts,zoomRegion,simulationSurface),[pose,annotations,lineDefaults,baseDrawingView,images,paperVisible,callouts,zoomStateKey,simulationSurface]);
   const fitFrame=useMemo(()=>diagramViewportRotatedBounds(frame,viewportAngle),[frame,viewportAngle]),rect=view.cameras[cameraKey(view)]??fitFrame;
   const svg=useRef<SVGSVGElement>(null),scene=useRef<SVGGElement>(null),drag=useRef<Drag|null>(null),line=useRef<{a:Point;pointer:number|null;client:Point}|null>(null);
   const [size,setSize]=useState({width:600,height:500}),visible=diagramVisibleRect(rect,size),units=visible.width/Math.max(1,size.width),radius=units*4.4;
+  useEffect(()=>{if(depthPreview&&onDepthViewport)onDepthViewport({...view.cameras,[cameraKey(view)]:{...rect,rotation:view.rotation}});},[depthPreview,onDepthViewport,rect,view.side,view.rotation]);
   const zoomInteraction=useMemo(()=>zoomRegion?prepareDiagramZoomInteraction(zoomRegion,units*.25):null,[zoomStateKey,units]);
   const lineDisplay={enabled:adaptiveLines,units};
   const paperGrid=useMemo(()=>diagramPaperGrid(canvas,pose?.sourceDoc??gridPaper),[canvas,pose?.sourceDoc,gridPaper]);
@@ -215,13 +219,13 @@ export default function DiagramDrawingCanvas({showCursorHint=true,onCursorHintCh
     const creases=foldLinkEnabled?foldLinkPreview:annotations.flatMap(a=>a.kind==='line'&&a.foldFaces?.length?a.foldFaces.map(face=>({a:a.a,b:a.b,face})):[]);
     return diagramStretchEdges(vertexPose,creases);
   },[tool,stretchSegments,vertexPose,foldLinkEnabled,foldLinkPreview,annotations]);
-  const livePose=useMemo(()=>vertexPose&&vertexDraft?moveDiagramPaperVertices(vertexPose,vertexDraft.selection,vertexDraft.destination):pose,[pose,vertexPose,vertexDraft]);
-  const liveAnnotations=useMemo(()=>{if(!vertexPose||!livePose||!vertexDraft)return annotations;try{return followDiagramPaperAnnotations(vertexPose,livePose,annotations.filter(a=>!foldLinkEnabled||!isDiagramCPLine(a)&&(a.kind!=='line'||!['valley','mountain'].includes(a.style)||a.foldFaces?.length===0)));}catch{return annotations;}},[vertexPose,livePose,vertexDraft,annotations,foldLinkEnabled]);
+  const livePose=useMemo(()=>depthPreview&&pose?{...pose,view:drawingView}:vertexPose&&vertexDraft?moveDiagramPaperVertices(vertexPose,vertexDraft.selection,vertexDraft.destination):pose,[pose,vertexPose,vertexDraft,depthPreview,drawingView]);
+  const liveAnnotations=useMemo(()=>{if(depthPreview&&pose&&livePose){try{return followDiagramPaperAnnotations(pose,livePose,annotations,true);}catch{return annotations;}}if(!vertexPose||!livePose||!vertexDraft)return annotations;try{return followDiagramPaperAnnotations(vertexPose,livePose,annotations.filter(a=>!foldLinkEnabled||!isDiagramCPLine(a)&&(a.kind!=='line'||!['valley','mountain'].includes(a.style)||a.foldFaces?.length===0)));}catch{return annotations;}},[vertexPose,livePose,vertexDraft,annotations,foldLinkEnabled,depthPreview,pose]);
   const liveFoldPreview=useMemo(()=>{
-    if(!vertexDraft||!livePose||!foldLinkEnabled||!foldLinkCP)return foldLinkPreview;
+    if((!vertexDraft&&!depthPreview)||!livePose||!foldLinkEnabled||!foldLinkCP)return foldLinkPreview;
     try{return projectDiagramFoldCP(livePose,foldLinkCP.before.doc,foldLinkCP.after,foldLinkCP.before,foldLinkCP.precreases).preview.map((part,index)=>({id:'fold-preview-'+index,a:part.a,b:part.b,face:part.face,visibility:part.visibility,existing:part.existing,unfolding:part.unfolding,strokeSpan:part.strokeSpan,style:part.style??(part.assignment==='V'?'valley':part.assignment==='M'?'mountain':part.assignment==='F'?'crease':'auxiliary')}));}
     catch{return [];}
-  },[vertexDraft,livePose,foldLinkEnabled,foldLinkCP,foldLinkPreview]);
+  },[vertexDraft,livePose,foldLinkEnabled,foldLinkCP,foldLinkPreview,depthPreview]);
   const calloutPaperMarkup=useMemo(()=>{
     if(!callouts.some(callout=>callout.source.kind==='paper'))return '';
     const preview=foldLinkEnabled?liveFoldPreview.map(part=>({...part,assignment:part.style==='valley'?'V' as const:part.style==='mountain'?'M' as const:part.style==='crease'?'F' as const:'U' as const})):undefined;
@@ -603,7 +607,7 @@ export default function DiagramDrawingCanvas({showCursorHint=true,onCursorHintCh
     {a.kind==='line'&&<line x1={a.a[0]} y1={a.a[1]} x2={a.b[0]} y2={a.b[1]} stroke="transparent" strokeWidth={Math.max(radius*3,a.width)} fill="none">{showCursorHint&&<title>{`${LINE_LABELS[a.style]} · 放大可查看线型细节`}</title>}</line>}
   </g>);
   return <>
-    <svg ref={svg} className={'diagram-model-svg diagram-tool-'+tool+(dropOver?' is-drop-over':'')} data-diagram-model="true" data-diagram-dragging={imageGestureMoving?'grabbing':gestureCursor??(hint?.dragging?'grabbing':undefined)} data-diagram-disabled={disabled||!active?true:undefined} data-diagram-viewport-angle={viewportAngle} data-diagram-paper-visible={paperVisible} data-model-history="true" tabIndex={0} aria-label="折序绘图画布；绘图、框选、右拖删除、拖角；滚轮缩放，中键平移，可旋转整个画布" viewBox={`${visible.x} ${visible.y} ${visible.width} ${visible.height}`} style={{cursor:box?.deleting?'crosshair':tool==='pan'?'grab':['erase','fixed','layer','ratio-point','special-point','line','polyline','mirror-copy'].includes(tool)?'crosshair':undefined}}
+    <svg ref={svg} className={'diagram-model-svg diagram-tool-'+tool+(dropOver?' is-drop-over':'')} data-diagram-model="true" data-diagram-depth={JSON.stringify(pose?.view?.depth)} data-depth-preview={depthPreview?JSON.stringify(depthPreview):undefined} data-teach-line-start={lineDraft?lineDraft.a.join(','):undefined} data-diagram-dragging={imageGestureMoving?'grabbing':gestureCursor??(hint?.dragging?'grabbing':undefined)} data-diagram-disabled={disabled||!active?true:undefined} data-diagram-viewport-angle={viewportAngle} data-diagram-paper-visible={paperVisible} data-model-history="true" tabIndex={0} aria-label="折序绘图画布；绘图、框选、右拖删除、拖角；滚轮缩放，中键平移，可旋转整个画布" viewBox={`${visible.x} ${visible.y} ${visible.width} ${visible.height}`} style={{cursor:box?.deleting?'crosshair':tool==='pan'?'grab':['erase','fixed','layer','ratio-point','special-point','line','polyline','mirror-copy'].includes(tool)?'crosshair':undefined}}
       onDoubleClick={e=>{
         if(disabled||!active||tool!=='select'||turnEditorRef.current||divisionEditorRef.current)return;
         const p=point(e.clientX,e.clientY);if(!p)return;
@@ -840,6 +844,8 @@ export default function DiagramDrawingCanvas({showCursorHint=true,onCursorHintCh
       {stretchSegments&&<button type="button" disabled={disabled} onClick={()=>{setVertexDraft(null);setStretchReset(n=>n+1);}}>重选线段</button>}
       <span role="status">{stretchSegments?'点选已有线段，再点共线的相连段延长选择；拖动两端圆点，中间节点跟随。':'拖动单个纸角。'}</span>
     </div>}
+    {depthPreview&&<><div style={{position:'absolute',inset:0,zIndex:4}} onPointerDown={e=>{e.preventDefault();e.stopPropagation();}}/><span className="diagram-depth-preview-status" role="status">预览中 · 松开应用</span></>}
+    {depthCameraVisible&&paperVisible&&pose&&drawingView.depth&&onDepthPreview&&onDepthCommit&&<DiagramDepthCamera value={drawingView.depth} width={size.width} height={size.height} side={drawingView.side} viewRotation={drawingView.rotation} drawingRotation={viewportAngle} onPreview={onDepthPreview} onCommit={onDepthCommit}/>}
     <div className="diagram-canvas-controls" role="group" aria-label="主图视图控制">
       {hover&&<span className="diagram-canvas-position">X {hover[0].toFixed(1)} · Y {hover[1].toFixed(1)}</span>}
       <div className="diagram-canvas-actions">

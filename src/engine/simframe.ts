@@ -1,3 +1,5 @@
+import {mountSimulationRotationGizmo} from './simRotationGizmo';
+import {validateSimulationView} from './simPose';
 import { OrigamiModel } from '../../vendor/simulator/oristudio/packages/origami-simulator/src/model';
 import { ReferenceSolver } from '../../vendor/simulator/oristudio/packages/origami-simulator/src/referenceSolver';
 import { WebglSolver } from '../../vendor/simulator/oristudio/packages/origami-simulator/src/webgl/webglSolver';
@@ -135,7 +137,7 @@ function capturePose(finishGesture=true):SimulationPose{
   if(!backend||!prepared||failed||stepAnimation)throw new Error('请先载入有效的普通三维模型再保存姿态。');
   if(!finishGesture&&isPointerInteractionActive())throw new Error('三维交互进行中，稍后暂存');
   releaseActiveGrab();
-  return {version:1,source:structuredClone(sourceFold),...(meshQuality==='original'?{}:{mesh:meshQuality}),...(collisionEnabled?{collision:true}:{}),solver:backend.capturePose(),progress:targetProgress,settings:{...solverSettings},view:{yaw:view.yaw,pitch:view.pitch,zoom:view.zoom}};
+  return {version:1,source:structuredClone(sourceFold),...(meshQuality==='original'?{}:{mesh:meshQuality}),...(collisionEnabled?{collision:true}:{}),solver:backend.capturePose(),progress:targetProgress,settings:{...solverSettings},view:structuredClone(view)};
 }
 function updatePinMarkers(){
   const container=document.querySelector<HTMLElement>('#pinned-vertices')!;
@@ -149,9 +151,13 @@ let stepAnimation:SimulationStepAnimation|null=null;
 let seekStepDynamic:((progress:number)=>void)|undefined;
 const cpuRaster=new SimulationRasterizer();
 let cpuImage:ImageData|null=null;
-const updateViewCube=mountSimulationViewCube(document.querySelector<HTMLElement>('#orientation-cube')!,chooseCameraPreset,(dx,dy)=>{releaseActiveGrab();orbitCamera(dx,dy);},()=>{
+let updateGizmo=()=>{};
+const updateCube=mountSimulationViewCube(document.querySelector<HTMLElement>('#orientation-cube')!,chooseCameraPreset,(dx,dy)=>{releaseActiveGrab();orbitCamera(dx,dy);},()=>{
   if(backend&&!failed)report(running?'running':'paused','已旋转视角。');
 });
+
+function updateViewCube(value:SimulationPose['view']){updateCube(value);updateGizmo();}
+updateGizmo=mountSimulationRotationGizmo(()=>view,next=>{delete view.roll;delete view.orient;Object.assign(view,structuredClone(next));cameraPreset='free';updateViewCube(view);dirty=true;});
 
 function orbitCamera(dx:number,dy:number){
   Object.assign(view,orbitSimulationView(view,dx,dy));cameraPreset='free';
@@ -161,6 +167,7 @@ function orbitCamera(dx:number,dy:number){
 function chooseCameraPreset(preset:SimulationCameraPreset){
   releaseActiveGrab();
   const angles=simulationCameraAngles[preset];view.yaw=angles[0];view.pitch=angles[1];
+  delete view.roll;delete view.orient;
   if(preset==='isometric')Object.assign(view,DEFAULT_SIMULATION_VIEW);
   cameraPreset=preset;canvas.dataset.view=preset;canvas.dataset.yaw=String(view.yaw);canvas.dataset.pitch=String(view.pitch);
   updateViewCube(view);dirty=true;
@@ -576,7 +583,7 @@ function load(fold: unknown, nextRevision: string | number,animation?:Simulation
     canvas.dataset.stepMethod=stepAnimation?.dynamic?'dynamic':stepAnimation?.flex?'local-flex':stepAnimation?.motion?.method??'';
     canvas.dataset.stepSettleStart=stepAnimation?.dynamic?.settleStart===undefined?'':String(stepAnimation.dynamic.settleStart);
     canvas.dataset.stepEndAngleError=stepAnimation?.dynamic?String(stepAnimation.dynamic.endAngleError):'';
-    if(pose){restorePoseEdit(pose);Object.assign(view,pose.view);cameraPreset='free';updateViewCube(view);}
+    if(pose){restorePoseEdit(pose);delete view.roll;delete view.orient;Object.assign(view,structuredClone(pose.view));cameraPreset='free';updateViewCube(view);}
     running = !stepAnimation&&!pose;
     rebuildContactGuard();
     dirty = true;
@@ -919,6 +926,10 @@ window.addEventListener('message', (event: MessageEvent) => {
   if(message.type==='zhezhi-sim-crease-style'){
     if(!['assignment','crease','diagram'].includes(message.style))return;
     creaseStyle=message.style;canvas.dataset.creaseStyle=creaseStyle;dirty=true;return;
+  }
+  if(message.type==='zhezhi-sim-camera-pose'){
+    try{validateSimulationView(message.view);}catch{return;}
+    delete view.roll;delete view.orient;Object.assign(view,structuredClone(message.view));cameraPreset='free';updateViewCube(view);dirty=true;return;
   }
   if(message.type==='zhezhi-sim-camera'){
     if(!Object.hasOwn(simulationCameraAngles,message.preset))return;

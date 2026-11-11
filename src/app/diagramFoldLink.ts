@@ -119,9 +119,9 @@ function prepare(pose:DiagramPose,source?:DiagramCPState,rigidOnly=false):Prepar
       if(pose.spatial){
         if(matrix.some(n=>!Number.isFinite(n)))throw Error('空间投影无效。');
         if(Math.abs(det(matrix))<Number.EPSILON*64)return null;
-        if(Math.abs(det(matrix))<1e-10||Math.abs(polygonArea(face.map(v=>raw[v])))<=eps*eps)throw Error('纸面接近侧立，无法可靠映射折痕，请调整空间视角。');
+        if(Math.abs(det(matrix))<1e-10||Math.abs(polygonArea(face.map(v=>physical[v])))<=eps*eps)throw Error('纸面接近侧立，无法可靠映射折痕，请调整空间视角。');
         inverse(matrix);
-        for(const v of face){budget.tick();if(distance(applyDiagramFoldMatrix(matrix,cp[v]),raw[v])>eps*20)throw Error('空间纸面的投影与真实姿态不一致，请重新计算。');}
+        for(const v of face){budget.tick();if(distance(applyDiagramFoldMatrix(matrix,cp[v]),physical[v])>eps*20)throw Error('空间纸面的投影与真实姿态不一致，请重新计算。');}
       }
       // A pulled F endpoint can live inside a physically unsplit face. Its
       // boundary still looks rigid, but every illustration cell must agree.
@@ -135,7 +135,7 @@ function prepare(pose:DiagramPose,source?:DiagramCPState,rigidOnly=false):Prepar
   const camera:DiagramFoldMatrix=[x[0]-o[0],x[1]-o[1],y[0]-o[0],y[1]-o[1],o[0],o[1]],shown=raw.map(projection.project),displayMatrices=matrices.map(m=>m&&!depth?compose(camera,m):null);
   const pieces=faces.map((face,f):FacePiece[]=>{
     const matrix=displayMatrices[f];if(matrix)return [{cp:rings[f][0].map(v=>cp[v]),shown:rings[f][0].map(v=>shown[v]),matrix,cpHoles:(holes[f]??[]).map(r=>r.map(v=>cp[v])),shownHoles:(holes[f]??[]).map(r=>r.map(v=>shown[v]))}];
-    if(pose.spatial||edgeOn.has(f))return []; // An edge-on face has no invertible screen interior.
+    if(pose.spatial&&!depth||edgeOn.has(f))return []; // An edge-on face has no invertible screen interior.
     const ids=triangles[f];validateIllustrationFace(graph,raw,rings[f],ids,eps,budget,flatFoldCells[f]);
     return ids.map(t=>({cp:t.map(v=>cp[v]),shown:t.map(v=>shown[v]),matrix:compose(camera,triangleMatrix(cp,raw,t,eps))}));
   });

@@ -74,7 +74,7 @@ test('display settings survive export, keep physical results and CP revisions, a
  delete original.steps[0].pose!.view!.depth;assert.equal(importDiagramProject(exportDiagramProject(original)).steps[0].pose!.view!.depth,undefined);
 });
 
-test('unknown layer order, pulled poses and real spatial poses do not receive cosmetic displacement',()=>{
+test('unknown layer order, pulled poses and invalid spatial data do not receive cosmetic displacement',()=>{
  const {pose}=fixture();
  for(const other of [{...pose,result:{...pose.result,layers:{status:'unknown' as const,message:'unknown'}}},{...pose,result:{...pose.result,geometry:{...pose.result.geometry,modified:true,vertices:pose.result.geometry.vertices.map(([x,y],i):Point=>[x+(i===0?5:0),y])}}}]){
   assert.equal(diagramDepthAvailable(other),false);assert.deepEqual(diagramIllustrationMesh(other).vertices,other.result.geometry.vertices);

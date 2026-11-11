@@ -45,9 +45,10 @@ export default function DiagramFullAnimation({project,initialIndex,onClose}:{pro
       if(!alive.current||ticket.current!==current)return;
       prefetch.current=null;loadingRef.current=false;setEntry(result);setPreparing('正在载入纸面…');
       const revision=`diagram-full:${crypto.randomUUID()}`;revisionRef.current=revision;
-      frameRef.current??=result.cameraFrame;
+      const firstCamera=!frameRef.current;frameRef.current??=result.cameraFrame;
       const connection=bridge.current!;
       connection.send({type:'zhezhi-sim-load',revision,fold:result.plan.fold??result.clip.fold,animation:result.plan.animation});
+      if(firstCamera&&result.clip.camera)connection.send({type:'zhezhi-sim-camera-pose',view:result.clip.camera});
       connection.send({type:'zhezhi-sim-camera-frame',revision,...frameRef.current});
       connection.send({type:'zhezhi-sim-colors',...result.clip.colors});
       connection.send({type:'zhezhi-sim-view',mode:'paper'});

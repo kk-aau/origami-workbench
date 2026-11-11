@@ -4,6 +4,7 @@ import App from './App';
 import './styles.css';
 import './ui/dialog.css';
 import './components/applicationChrome.css';
+import './components/tabletLayout.css';
 import {connect} from './app/api';
 import {initializeStoragePreferences} from './app/storageSettings';
 import {WEB_APP} from './app/webRuntime';

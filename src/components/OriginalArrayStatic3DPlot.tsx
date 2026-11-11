@@ -1,3 +1,4 @@
+import {useRigidPreviewAxes} from './useRigidPreviewAxes';
 import {useEffect,useMemo,useRef,useState,type PointerEvent,type Dispatch,type SetStateAction} from 'react';
 import {projectRigidQuad} from '../app/rigidQuadView';
 import type {OriginalArrayStatic3D} from '../app/originalArrayStatic3D';
@@ -11,8 +12,9 @@ export default function OriginalArrayStatic3DPlot({reference,current,camera,onCa
  const svg=useRef<SVGSVGElement>(null),drag=useRef<{id:number;x:number;y:number;a:number;e:number}|null>(null),
   [localCamera,setLocalCamera]=useState<OriginalArrayCamera>(()=>({...INITIAL_ORIGINAL_ARRAY_CAMERA})),[font,setFont]=useState(22),[vertex,setVertex]=useState(0),scene=reference.scene;
  const {azimuth,elevation,zoom}=camera??localCamera,setCamera=onCameraChange??setLocalCamera;
+ const previewAxes=useRigidPreviewAxes(azimuth,elevation);
  const axisStep=useMemo(()=>{const ranges=[0,1,2].map(k=>Math.max(...scene.vertices.map(p=>p[k]))-Math.min(...scene.vertices.map(p=>p[k]))),span=Math.max(...ranges),base=10**Math.floor(Math.log10(span/4));return [1,2,5,10].map(n=>n*base).find(n=>n>=span/4)??base;},[scene]),
-  drawing=useMemo(()=>projectRigidQuad({...scene,vertices:[...scene.vertices,[0,0,0],[axisStep,0,0],[0,axisStep,0],[0,0,axisStep]]},azimuth,elevation,false,0),[scene,axisStep,azimuth,elevation]),
+  drawing=useMemo(()=>projectRigidQuad(previewAxes.rotateScene({...scene,vertices:[...scene.vertices,[0,0,0],[axisStep,0,0],[0,axisStep,0],[0,0,axisStep]]}),azimuth,elevation,false,0),[scene,axisStep,azimuth,elevation,previewAxes.rotateScene]),
   selected=Math.min(vertex,scene.vertices.length-1),fmt=(x:number)=>Number(x.toPrecision(6)).toString(),transform=`translate(500 350) scale(${zoom}) translate(-500 -350)`;
  useEffect(()=>{if(!camera)setLocalCamera({...INITIAL_ORIGINAL_ARRAY_CAMERA});setVertex(0);},[reference.source.construction]);
  useEffect(()=>{const el=svg.current;if(!el)return;const update=()=>{const m=el.getScreenCTM(),s=m?Math.hypot(m.a,m.b):0;if(s>0)setFont(12.1/s);};const o=new ResizeObserver(update);o.observe(el);update();
@@ -36,5 +38,5 @@ export default function OriginalArrayStatic3DPlot({reference,current,camera,onCa
   </svg>
   <figcaption>{current?'当前原参数':'上次已核验参数'} · {scene.faces.length} 面 · {solid?'当前视角表面绘制':'遮挡次序不确定，显示线框'}；不作为层序证书。</figcaption>
   <label className="original-array-spatial-query">空间顶点 <input type="number" aria-label="静态三维顶点索引" min={0} max={scene.vertices.length-1} step={1} value={selected} onChange={e=>{const v=Number(e.target.value);if(Number.isSafeInteger(v)&&v>=0&&v<scene.vertices.length)setVertex(v);}}/><output data-spatial-vertex={selected}>[{scene.vertices[selected].map(fmt).join(', ')}] mm</output></label>
- </figure>;
+ {previewAxes.controls}</figure>;
 }
