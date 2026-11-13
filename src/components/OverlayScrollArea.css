@@ -1,0 +1,14 @@
+.overlay-scroll-area{position:relative;display:flex;flex:1 1 auto;flex-direction:column;min-width:0;min-height:0;overflow:hidden}
+.overlay-scroll-area.inspector{flex:0 0 auto}
+.chrome-workbench .overlay-scroll-area.canvas-inspector{overflow:hidden}
+.overlay-scroll-area>.overlay-scroll-viewport.overlay-scroll-viewport{flex:1 1 auto;min-width:0;min-height:0;overflow:auto;overscroll-behavior:contain;scrollbar-width:none;scrollbar-gutter:auto}
+.overlay-scroll-area>.overlay-scroll-viewport::-webkit-scrollbar{width:0;height:0;display:none}
+.overlay-scroll-content{display:flow-root;min-width:0}
+.overlay-scroll-viewport:focus-visible{outline:2px solid var(--accent,#416f5e);outline-offset:-2px}
+.overlay-scrollbar{position:absolute;z-index:3;top:3px;right:1px;bottom:3px;width:10px;opacity:0;pointer-events:none;transition:opacity .16s ease-out;touch-action:none;user-select:none}
+.overlay-scrollbar[data-scrollable=false]{visibility:hidden}
+.overlay-scroll-thumb{position:absolute;top:0;left:2px;width:6px;min-height:0;border-radius:4px;background:color-mix(in srgb,var(--accent,#416f5e) 60%,var(--surface,#f4f3ef));cursor:default;touch-action:none}
+.overlay-scroll-area:is(:hover,:focus-within,.is-scrolling,.is-dragging)>.overlay-scrollbar[data-scrollable=true]{opacity:1;pointer-events:auto}
+.overlay-scroll-thumb:hover,.overlay-scroll-area.is-dragging .overlay-scroll-thumb{background:var(--accent,#416f5e)}
+@media(prefers-reduced-motion:reduce){.overlay-scrollbar{transition:none}}
+@media(forced-colors:active){.overlay-scroll-thumb{background:CanvasText;forced-color-adjust:none}.overlay-scroll-viewport:focus-visible{outline-color:Highlight}}

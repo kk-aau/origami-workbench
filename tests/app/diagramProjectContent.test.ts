@@ -39,6 +39,14 @@ test('unchanged immutable CP branches are not traversed for a selected-step chan
   assert.equal(sameDiagramProjectContent(first,second),true);
 });
 
+test('restoring and checkpointing a shared prepared snapshot does not serialize or visit its large geometry bank',()=>{
+  const original=fixture(),steps=new Proxy(original.steps,{ownKeys(){throw Error('must not scan shared prepared steps');}});
+  const prepared={...original,steps},checkpoint={...prepared};
+  assert.equal(sameDiagramProjectContent(prepared,checkpoint),true);
+  assert.equal(sameDiagramProjectContent({...prepared,activeStepId:'browsed'},checkpoint),true);
+  const edited={...prepared,name:'已修改工程名'};assert.equal(sameDiagramProjectContent(edited,checkpoint),false);
+});
+
 test('opening an external drawing from the library does not invent a current editing draft',()=>{
   const placeholder=createDiagramProject(blankDoc('折序工程',300,300));
   assert.equal(diagramProjectNeedsReplacementConfirmation(placeholder,null,false),false);

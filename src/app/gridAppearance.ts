@@ -1,5 +1,5 @@
 import {preferenceStorage} from './preferenceStorage';
-import {DEFAULT_GRID_DIVISIONS} from './gridControls';
+import {DEFAULT_GRID_DIVISIONS,GRID_MIN,GRID_MAX} from './gridControls';
 import {validateGridRotation,type GridPattern} from './gridGeometry';
 export interface GridAppearance {gridColor:string;diagonalColor:string;lineWidth:number;defaultDivisions:number;minGridPixelSize:number;pattern?:GridPattern;squareRotation?:number}
 export const GRID_APPEARANCE_KEY='zhezhi.grid-appearance.v1';
@@ -11,7 +11,7 @@ export function validateGridAppearance(value:unknown):GridAppearance{
   if(!color(v.gridColor)||!color(v.diagonalColor))throw new Error('网格颜色须为六位十六进制颜色。');
   if(typeof v.lineWidth!=='number'||!Number.isFinite(v.lineWidth)||v.lineWidth<.1||v.lineWidth>4)throw new Error('网格线宽须为 0.1—4 像素。');
   const defaultDivisions=!Object.hasOwn(v,'defaultDivisions')?defaultGridAppearance().defaultDivisions:typeof v.defaultDivisions==='number'?v.defaultDivisions:NaN;
-  if(!Number.isInteger(defaultDivisions)||defaultDivisions<1||defaultDivisions>128)throw new Error('默认网格等分须为 1—128 的整数。');
+  if(!Number.isInteger(defaultDivisions)||defaultDivisions<GRID_MIN||defaultDivisions>GRID_MAX)throw new Error(`默认网格等分须为 ${GRID_MIN}—${GRID_MAX} 的整数。`);
   const minGridPixelSize=!Object.hasOwn(v,'minGridPixelSize')?defaultGridAppearance().minGridPixelSize:typeof v.minGridPixelSize==='number'?v.minGridPixelSize:NaN;
   if(!Number.isFinite(minGridPixelSize)||minGridPixelSize<1||minGridPixelSize>20)throw new Error('网格最小屏幕间距须为 1—20 像素。');
   const pattern=Object.hasOwn(v,'pattern')?v.pattern:'square';

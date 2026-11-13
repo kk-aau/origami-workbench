@@ -45,7 +45,7 @@ test('legacy saved dense grid settings remain exact instead of being replaced by
 });
 
 test('paper divisions persist per step, copy independently and do not alter legacy settings or paper geometry',()=>{
-  for(const gridDivisions of [1,4,7,8,128]){
+  for(const gridDivisions of [1,4,7,8,128,129,256,512]){
     const {project,factory}=fixture(),before=structuredClone(project);
     const changed=updateDiagramCanvas(project,project.activeStepId,{...defaultDiagramCanvas(100),gridDivisions,anglePreset:17.3});
     const copied=duplicateDiagramStep(changed,changed.activeStepId,factory),loaded=importDiagramProject(exportDiagramProject(copied));
@@ -85,7 +85,7 @@ test('grid ranges validate boundaries and reject malformed settings atomically o
     {...base,gridSpacing:NaN},{...base,gridSpacing:Infinity},{...base,gridSpacing:'20'},
     {...base,gridSubdivisions:0},{...base,gridSubdivisions:33},{...base,gridSubdivisions:1.5},
     {...base,gridSubdivisions:Infinity},{...base,gridSubdivisions:null},
-    ...[0,129,1.5,NaN,Infinity,null,'4'].map(gridDivisions=>({...base,gridDivisions}))];
+    ...[0,513,1.5,NaN,Infinity,null,'4'].map(gridDivisions=>({...base,gridDivisions}))];
   for(const canvas of bad) {
     assert.throws(()=>updateDiagramCanvas(project,project.steps[0].id,canvas as DiagramCanvasSettings));
     const saved=structuredClone(project);saved.steps[0].canvas=canvas as DiagramCanvasSettings;

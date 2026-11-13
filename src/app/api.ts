@@ -1,17 +1,20 @@
 import {WEB_APP} from './webRuntime';
+import {documentScopeHeaders} from './documentRequestScope';
 let sessionToken='';
 export function storageSessionToken(){return sessionToken;}
 export async function connect(){if(WEB_APP){const result=await (await import('./browserApi')).browserRequest('health','GET');sessionToken=result.token;return result;}try{const r=await fetch('/api/health',{signal:AbortSignal.timeout(5000)});if(!r.ok)throw new Error();const j=await r.json();sessionToken=j.token;return j;}catch{throw new Error('本地服务未连接，请从启动入口打开工作台。');}}
-async function request<T=any>(url:string,method:'GET'|'POST'|'DELETE',value?:unknown,signal?:AbortSignal,serialized?:string,rawText=false):Promise<T>{
-  if(WEB_APP){const result=await (await import('./browserApi')).browserRequest(url,method,serialized===undefined?value:JSON.parse(serialized),signal);return (rawText?JSON.stringify(result):result) as T;}
+async function request<T=any>(url:string,method:'GET'|'POST'|'DELETE',value?:unknown,signal?:AbortSignal,serialized?:string,rawText:boolean|'blob'=false):Promise<T>{
+  if(WEB_APP){const result=await (await import('./browserApi')).browserRequest(url,method,serialized===undefined?value:JSON.parse(serialized),signal);return (rawText==='blob'?new Blob([JSON.stringify(result)],{type:'application/json'}):rawText?JSON.stringify(result):result) as T;}
   let res:Response;
-  try{res=await fetch('/api/'+url,{method,headers:method==='GET'?(/^(storage|activity)([/?]|$)/.test(url)?{'X-Zhezhi-Token':sessionToken}:undefined):{'Content-Type':'application/json','X-Zhezhi-Token':sessionToken},body:serialized??(value===undefined?undefined:JSON.stringify(value)),signal:signal??AbortSignal.timeout(70000)});}catch(e){if((e as Error).name==='AbortError')throw e;throw new Error((e as Error).name==='TimeoutError'?'本地操作等待超时，请重试或检查启动窗口。':'无法连接本地服务。请重新运行启动入口，再刷新页面；当前作品可先导出完整工程。');}
-  if(rawText&&res.ok)return await res.text() as T;
+  try{res=await fetch('/api/'+url,{method,headers:{...documentScopeHeaders(),...(method==='GET'?(/^(storage|activity)([/?]|$)/.test(url)?{'X-Zhezhi-Token':sessionToken}:{}):{'Content-Type':'application/json','X-Zhezhi-Token':sessionToken})},body:serialized??(value===undefined?undefined:JSON.stringify(value)),signal:signal??AbortSignal.timeout(70000)});}catch(e){if((e as Error).name==='AbortError')throw e;throw new Error((e as Error).name==='TimeoutError'?'本地操作等待超时，请重试或检查启动窗口。':'无法连接本地服务。请重新运行启动入口，再刷新页面；当前作品可先导出完整工程。');}
+  if(rawText&&res.ok)return (rawText==='blob'?await res.blob():await res.text()) as T;
   let data:any;try{data=await res.json();}catch{throw new Error('本地服务返回格式异常，请检查启动日志。');}if(!res.ok)throw Object.assign(new Error(data.error||'本地操作未完成，请重试。'),{status:res.status,code:data.code});return data;
 }
 export function api<T=any>(url:string,value?:unknown,signal?:AbortSignal):Promise<T>{return request<T>(url,value===undefined?'GET':'POST',value,signal);}
 /** Keep large saved records as HTTP text until the existing import Worker parses them. */
 export function apiText(url:string,signal?:AbortSignal):Promise<string>{return request<string>(url,'GET',undefined,signal,undefined,true);}
+/** Keep recovery bytes out of the UI parser; Workers read the immutable Blob. */
+export function apiBlob(url:string,signal?:AbortSignal):Promise<Blob>{return request<Blob>(url,'GET',undefined,signal,undefined,'blob');}
 /** Reuse an already serialized immutable document instead of walking it again. */
 export function apiSerialized<T=any>(url:string,text:string,signal?:AbortSignal):Promise<T>{return request<T>(url,'POST',undefined,signal,text);}
 export function deleteProject(id:string,signal?:AbortSignal):Promise<{id:string;deleted:boolean;warning?:string}>{return request('projects/'+encodeURIComponent(id),'DELETE',undefined,signal);}

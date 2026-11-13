@@ -1,8 +1,9 @@
-import {useEffect,useId,useRef,useState,type PointerEvent as Pointer,type KeyboardEvent} from 'react';
+import {useEffect,useId,useMemo,useRef,useState,type PointerEvent as Pointer,type KeyboardEvent} from 'react';
 import {createPortal} from 'react-dom';
 import type {BaseDesignProject,DesignResult,XY} from '../app/baseDesign';
 import {constrainDesignDelta,designEdges,designNodes,designSubtree,type DesignCamera,type DesignEditCommand,type DesignSelection,type DesignView} from '../app/baseDesignInteraction';
 import type {Doc} from '../core/types';
+import {chunkDesignEdges,chunkDesignMarkers,designCirclePath,indexDesignGraph,pickDesignGraph,readableDesignLabels} from '../app/designCanvasRendering';
 
 export interface DesignLayers {labels:boolean;lengths:boolean;grid:boolean;regions:boolean;rivers:boolean}
 export const defaultDesignLayers=():DesignLayers=>({labels:true,lengths:true,grid:true,regions:true,rivers:true});
@@ -20,7 +21,10 @@ interface Props {
 const color:Record<string,string>={B:'var(--ink)',M:'#c64242',V:'#366fc4',A:'var(--muted)',F:'var(--muted)',U:'var(--warn)'};
 export default function DesignCanvas(props:Props){
  const {project,result,cp,view,selection,camera,onCamera,layers,tool,active,disabled}=props;
- const nodes=designNodes(project),edges=designEdges(project),tree=project.kind==='tree'?project.model:null,box=project.kind==='box'?project.model:null;
+ const nodes=useMemo(()=>designNodes(project),[project]),edges=useMemo(()=>designEdges(project),[project]),tree=project.kind==='tree'?project.model:null,box=project.kind==='box'?project.model:null;
+ const graphIndex=useMemo(()=>indexDesignGraph(nodes,edges),[nodes,edges]),flapIndex=useMemo(()=>new Map(box?.design.layout.flaps.map(f=>[f.id,f])??[]),[box]);
+ const selectedNodes=useMemo(()=>new Set(selection.nodes),[selection.nodes]),selectedEdges=useMemo(()=>new Set(selection.edges),[selection.edges]);
+ const batched=view!=='cp'&&nodes.length+edges.length>600&&(!!tree||view==='tree');
  const sheet=tree?tree.paper:box!.design[view==='tree'?'tree':'layout'].sheet;
  const width=view==='cp'&&cp?cp.paper.width:sheet.width,height=view==='cp'&&cp?cp.paper.height:sheet.height,unit=Math.max(width,height),pad=unit*.075;
  const id=useId().replaceAll(':',''),svg=useRef<SVGSVGElement>(null),root=useRef<HTMLDivElement>(null),drag=useRef<Drag|null>(null);
@@ -36,7 +40,10 @@ export default function DesignCanvas(props:Props){
  const clamp=(p:XY):XY=>({x:Math.max(0,Math.min(width,p.x)),y:Math.max(0,Math.min(height,p.y))});
  const setDrag=(d:Drag|null)=>{drag.current=d;setGesture(d);};
  const selectNode=(n:number,extend=false)=>props.onSelect(n,'node',extend);
- const moved=(n:number,p:XY):XY=>gesture?.type==='move'&&gesture.ids.includes(n)?{x:p.x+gesture.delta.x,y:p.y+gesture.delta.y}:p;
+ const moving=useMemo(()=>new Set(gesture?.type==='move'?gesture.ids:[]),[gesture]);
+ const moved=(n:number,p:XY):XY=>gesture?.type==='move'&&moving.has(n)?{x:p.x+gesture.delta.x,y:p.y+gesture.delta.y}:p;
+ const drawnNodes=useMemo(()=>nodes.map(n=>({...n,...moved(n.id,n)})),[nodes,gesture]),drawnIndex=useMemo(()=>new Map(drawnNodes.map(n=>[n.id,n])),[drawnNodes]);
+ const pick=(p:XY)=>pickDesignGraph(drawnNodes,edges,drawnIndex,p,radius*2.2,screenUnit*6);
  function cancel(){const d=drag.current;setDrag(null);setGhost(null);if(d?.type==='move'||d?.type==='resize')latest.current.onCancel();}
  useEffect(()=>{if(!active){cancel();setSpace(false);setMenu(null);}},[active]);
  useEffect(()=>{const blur=()=>{cancel();setSpace(false);};window.addEventListener('blur',blur);return()=>window.removeEventListener('blur',blur);},[]);
@@ -52,9 +59,9 @@ export default function DesignCanvas(props:Props){
   let ids=selection.nodes.includes(id)?selection.nodes:[id];
   if(e.altKey&&view==='tree')ids=designSubtree(project,id);
   if(!selection.nodes.includes(id)||e.altKey)props.onSelection({nodes:ids,edges:[]});
-  const item=view==='packing'&&box?box.design.layout.flaps.find(f=>f.id===id):nodes.find(n=>n.id===id);if(!item||!props.onBegin())return;
+  const item=view==='packing'&&box?flapIndex.get(id):graphIndex.byId.get(id);if(!item||!props.onBegin())return;
   if(view==='packing'&&box)ids=ids.filter(n=>box.design.layout.flaps.some(f=>f.id===n));
-  const positions=ids.map(n=>{const p=view==='packing'&&box?box.design.layout.flaps.find(f=>f.id===n)!:nodes.find(p=>p.id===n)!;return{id:n,x:p.x,y:p.y,width:'width'in p?p.width:0,height:'height'in p?p.height:0};});
+  const positions=ids.map(n=>{const p=view==='packing'&&box?flapIndex.get(n)!:graphIndex.byId.get(n)!;return{id:n,x:p.x,y:p.y,width:'width'in p?p.width:0,height:'height'in p?p.height:0};});
   setDrag({type:'move',id,ids:[id,...ids.filter(n=>n!==id)],start:point(e),origin:{x:item.x,y:item.y},delta:{x:0,y:0},positions});
   setGhost(null);svg.current?.setPointerCapture(e.pointerId);
  }
@@ -68,6 +75,7 @@ export default function DesignCanvas(props:Props){
   if(menu){setMenu(null);return;}
   if(e.button===1||e.button===0&&space){e.preventDefault();svg.current?.focus();setDrag({type:'pan',start:{x:e.clientX,y:e.clientY},camera});svg.current?.setPointerCapture(e.pointerId);return;}
   if(e.button!==0||disabled||props.gesturing||view==='cp')return;
+  if(batched){const hit=pick(point(e));if(hit.node!==undefined){startMove(e,hit.node);return;}if(hit.edge!==undefined){e.preventDefault();svg.current?.focus();props.onSelect(hit.edge,'edge',e.shiftKey||e.ctrlKey||e.metaKey);return;}}
   svg.current?.focus();const start=point(e);setDrag({type:'marquee',start,point:start,extend:e.shiftKey||e.ctrlKey||e.metaKey});svg.current?.setPointerCapture(e.pointerId);
  }
  function move(e:Pointer){
@@ -109,7 +117,7 @@ export default function DesignCanvas(props:Props){
   if(e.key==='F2'){e.preventDefault();props.onRename('node');return;}
   if(e.shiftKey&&e.key==='F10'){e.preventDefault();const r=root.current!.getBoundingClientRect();setMenu({x:r.x+40,y:r.y+55,node:selection.nodes[0],edge:selection.edges[0]});return;}
   const direction=({ArrowLeft:[-1,0],ArrowRight:[1,0],ArrowUp:[0,1],ArrowDown:[0,-1]} as Record<string,number[]>)[e.key];
-  if(direction&&view!=='cp'&&selection.nodes.length){e.preventDefault();const amount=(box?1:unit*.01)*(e.shiftKey?10:1),items=selection.nodes.map(id=>(view==='packing'&&box?box.design.layout.flaps:nodes).find(n=>n.id===id)).filter((p):p is typeof nodes[number]=>!!p);
+  if(direction&&view!=='cp'&&selection.nodes.length){e.preventDefault();const amount=(box?1:unit*.01)*(e.shiftKey?10:1),items=selection.nodes.map(id=>view==='packing'&&box?flapIndex.get(id):graphIndex.byId.get(id)).filter((p):p is typeof nodes[number]=>!!p);
    const first=items[0];if(!first)return;const delta=constrainDesignDelta(items,{x:direction[0]*amount,y:direction[1]*amount},width,height);
    if(props.onBegin())props.onCommit(view==='packing'&&box?{type:'moveFlaps',ids:items.map(p=>p.id),x:first.x+delta.x,y:first.y+delta.y}:{type:'moveNodes',positions:items.map(p=>({id:p.id,x:p.x+delta.x,y:p.y+delta.y}))});
   }
@@ -117,15 +125,25 @@ export default function DesignCanvas(props:Props){
  function context(e:React.MouseEvent,node?:number,edge?:number){e.preventDefault();e.stopPropagation();if(disabled||props.gesturing)return;if(node!==undefined&&!selection.nodes.includes(node))selectNode(node);if(edge!==undefined&&!selection.edges.includes(edge))props.onSelect(edge,'edge',false);setMenu({x:Math.min(e.clientX,window.innerWidth-208),y:Math.min(e.clientY,window.innerHeight-240),node,edge});}
  const allFlaps=box?.design.layout.flaps.map(f=>{const p=moved(f.id,f);if(gesture?.type==='resize'&&gesture.id===f.id)return {...f,...reshape(gesture,gesture.point)} as typeof f;return {...f,x:p.x,y:p.y};})??[];
  const ghostParent=selection.nodes.length===1?nodes.find(n=>n.id===selection.nodes[0]):null;
+ const leafEdges=useMemo(()=>{if(!tree)return [];const incident=new Map<number,typeof tree.edges[number]>();for(const edge of tree.edges){incident.set(edge.nodes[0],edge);incident.set(edge.nodes[1],edge);}return tree.nodes.filter(node=>graphIndex.degree.get(node.id)===1).map(node=>({node,edge:incident.get(node.id)!}));},[tree,graphIndex]);
+ const packingCircles=useMemo(()=>tree&&view==='packing'&&layers.regions?<g clipPath={`url(#${id}-paper)`}>{leafEdges.map(({node,edge})=>{const p=moved(node.id,node.loc);return <circle key={node.id} cx={p.x} cy={height-p.y} r={edge.length*(1+edge.strain)*tree.paper.scale} className="design-packing-circle"/>;})}</g>:null,[tree,view,layers.regions,leafEdges,id,height,gesture]);
+ const batch=useMemo(()=>{
+  if(!batched)return null;const normalEdges:string[]=[],chosenEdges:string[]=[],normalNodes:string[]=[],chosenNodes:string[]=[],midpoints:{id:number;x:number;y:number;length:number}[]=[];
+  for(const edge of edges){const a=drawnIndex.get(edge.n1),b=drawnIndex.get(edge.n2);if(!a||!b)continue;(selectedEdges.has(edge.id)?chosenEdges:normalEdges).push(`M${a.x} ${height-a.y}L${b.x} ${height-b.y}`);if(layers.lengths)midpoints.push({id:edge.id,x:(a.x+b.x)/2,y:(a.y+b.y)/2,length:edge.length});}
+  for(const node of drawnNodes)(selectedNodes.has(node.id)?chosenNodes:normalNodes).push(designCirclePath(node.x,height-node.y,radius));
+  const bounds={minX:left,maxX:left+cameraWidth,minY:height-top-cameraHeight,maxY:height-top};
+  return {normalEdges:chunkDesignEdges(normalEdges),chosenEdges:chunkDesignEdges(chosenEdges),normalNodes:chunkDesignMarkers(normalNodes),chosenNodes:chunkDesignMarkers(chosenNodes),nodeLabels:layers.labels?readableDesignLabels(drawnNodes,bounds,90*screenUnit,24*screenUnit,selection.nodes.length===1?selection.nodes[0]:undefined):[],edgeLabels:layers.lengths?readableDesignLabels(midpoints,bounds,70*screenUnit,24*screenUnit,selection.edges.length===1?selection.edges[0]:undefined):[]};
+ },[batched,edges,drawnIndex,drawnNodes,selectedEdges,selectedNodes,height,radius,left,top,cameraWidth,cameraHeight,screenUnit,layers.labels,layers.lengths]);
  return <div className={'design-canvas-pane'+(space?' is-panning':'')+(tool==='branch'&&view==='tree'?' is-drawing':'')} ref={root} onKeyDown={key} onKeyUp={e=>{if(e.key===' ')setSpace(false);}}>
   <div className="design-pane-title"><strong>{view==='tree'?'树形骨架':view==='packing'?'纸张布局':'折痕图'}</strong><span>{view==='cp'&&cp?`${cp.segments.length} 条线`:view==='tree'?`${nodes.length} 节点 · ${edges.length} 分支`:box?`${box.design.layout.flaps.length} 个纸瓣`:'圆打包'}</span></div>
-  <div className="design-canvas"><svg ref={svg} tabIndex={0} role={view==='cp'?'img':'group'} aria-label={view==='tree'?'基础形树形骨架':view==='packing'?'基础形纸张布局':'生成的折痕图'} viewBox={`${left} ${top} ${cameraWidth} ${cameraHeight}`} onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={cancel} onLostPointerCapture={()=>{if(drag.current)cancel();}} onContextMenu={e=>context(e)} onPointerLeave={()=>{if(!drag.current)setGhost(null);}}>
+  <div className="design-canvas"><svg ref={svg} tabIndex={0} role={view==='cp'?'img':'group'} aria-label={view==='tree'?'基础形树形骨架':view==='packing'?'基础形纸张布局':'生成的折痕图'} viewBox={`${left} ${top} ${cameraWidth} ${cameraHeight}`} onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={cancel} onLostPointerCapture={()=>{if(drag.current)cancel();}} onContextMenu={e=>{const hit=batched?pick(point(e)):{node:undefined,edge:undefined};context(e,hit.node,hit.edge);}} onDoubleClick={e=>{if(!batched||disabled||props.gesturing)return;const hit=pick(point(e));if(hit.node!==undefined)props.onRename('node');else if(hit.edge!==undefined)props.onRename('edge');}} onPointerLeave={()=>{if(!drag.current)setGhost(null);}}>
    <defs><pattern id={`${id}-grid`} width={box?1:width/10} height={box?1:height/10} patternUnits="userSpaceOnUse"><path d={`M ${box?1:width/10} 0 H0 V${box?1:height/10}`} fill="none" className="design-grid-line" vectorEffect="non-scaling-stroke"/></pattern><clipPath id={`${id}-paper`}><rect width={width} height={height}/></clipPath></defs>
    <rect width={width} height={height} className="design-paper"/>{layers.grid&&view!=='cp'&&<rect width={width} height={height} fill={`url(#${id}-grid)`} pointerEvents="none"/>}
    {box&&view==='packing'&&box.design.layout.sheet.type==='diag'&&<path d={`M${width/2} 0 ${width} ${height/2} ${width/2} ${height} 0 ${height/2}Z`} className="design-diagonal-border"/>}
    {view==='cp'&&cp&&cp.segments.map(s=><line key={s.id} x1={s.a[0]} y1={s.a[1]} x2={s.b[0]} y2={s.b[1]} stroke={color[s.assignment]} strokeWidth={s.assignment==='B'?1.8:1} strokeDasharray={s.assignment==='A'?'4 4':undefined} vectorEffect="non-scaling-stroke"/>)}
-   {tree&&view==='packing'&&layers.regions&&<g clipPath={`url(#${id}-paper)`}>{tree.nodes.filter(n=>tree.edges.filter(e=>e.nodes.includes(n.id)).length===1).map(n=>{const p=moved(n.id,n.loc),e=tree.edges.find(e=>e.nodes.includes(n.id))!;return <circle key={n.id} cx={p.x} cy={height-p.y} r={e.length*(1+e.strain)*tree.paper.scale} className="design-packing-circle"/>;})}</g>}
-   {view!=='cp'&&(tree||view==='tree')&&<>
+   {packingCircles}
+   {batch&&view!=='cp'&&<g pointerEvents="none" className="design-batch">{batch.normalEdges.map((d,index)=><path key={`edge-${index}`} d={d} className="design-batch-edge"/>)}{batch.chosenEdges.map((d,index)=><path key={`selected-edge-${index}`} d={d} className="design-batch-edge selected"/>)}{batch.normalNodes.map((d,index)=><path key={`normal-${index}`} d={d} className="design-batch-node"/>)}{batch.chosenNodes.map((d,index)=><path key={`selected-${index}`} d={d} className="design-batch-node selected"/>)}{batch.edgeLabels.map(edge=><text key={edge.id} x={edge.x} y={height-edge.y-unit*.012/camera.zoom} fontSize={fontSize} className="design-batch-label">{Number(edge.length.toFixed(3))}</text>)}{batch.nodeLabels.map(node=><text key={node.id} x={node.x+radius*1.7} y={height-node.y-radius*1.7} fontSize={fontSize} className="design-batch-label">{node.name||`N${node.id}`}</text>)}</g>}
+   {view!=='cp'&&(tree||view==='tree')&&!batched&&<>
     {edges.map(e=>{const a=nodes.find(n=>n.id===e.n1)!,b=nodes.find(n=>n.id===e.n2)!,p=moved(a.id,a),q=moved(b.id,b);return <g key={e.id} className={'design-edge'+(selection.edges.includes(e.id)?' selected':'')} role="button" aria-label={`选择分支 N${e.n1} 到 N${e.n2}`} tabIndex={0} onPointerDown={event=>{if(event.button!==0||space)return;event.stopPropagation();if(!disabled)props.onSelect(e.id,'edge',event.shiftKey||event.ctrlKey||event.metaKey);}} onDoubleClick={()=>props.onRename('edge')} onKeyDown={event=>{if(event.key==='Enter'){event.preventDefault();props.onSelect(e.id,'edge',false);}}} onContextMenu={event=>context(event,undefined,e.id)}><line x1={p.x} y1={height-p.y} x2={q.x} y2={height-q.y} className="design-edge-hit"/><line x1={p.x} y1={height-p.y} x2={q.x} y2={height-q.y}/>{layers.lengths&&<text x={(p.x+q.x)/2} y={height-(p.y+q.y)/2-unit*.012/camera.zoom} fontSize={fontSize}>{Number(e.length.toFixed(3))}</text>}</g>;})}
     {nodes.map(n=>{const p=moved(n.id,n);return <g key={n.id} className={'design-node'+(selection.nodes.includes(n.id)?' selected':'')} role="button" aria-label={`选择节点 N${n.id}`} tabIndex={0} onPointerDown={e=>startMove(e,n.id)} onDoubleClick={()=>props.onRename('node')} onKeyDown={e=>{if(e.key==='Enter'){e.preventDefault();selectNode(n.id,e.shiftKey);}}} onContextMenu={e=>context(e,n.id)}><circle cx={p.x} cy={height-p.y} r={radius*2.2} className="design-node-hit"/><circle cx={p.x} cy={height-p.y} r={radius}/>{layers.labels&&<text x={p.x+radius*1.7} y={height-p.y-radius*1.7} fontSize={fontSize}>{n.name||`N${n.id}`}</text>}</g>;})}
    </>}

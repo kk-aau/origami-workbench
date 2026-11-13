@@ -4,6 +4,8 @@ import type {Doc} from '../../src/core/types';
 import {blankDoc} from '../../src/app/state';
 import {startSavedProjectImport} from '../../src/app/projectImportTask';
 import {PROJECT_IMPORT_CHUNK,type ProjectImportReply,type SavedProjectImportInfo} from '../../src/app/projectImportProtocol';
+import {createArtworkTransferReceiver} from '../../src/app/artworkImportTransfer';
+import {getPreparedEditorSignature,type PreparedEditorImportData} from '../../src/app/editorImportPreparation';
 
 function harness(){
   const worker={onmessage:null as ((event:{data:ProjectImportReply})=>void)|null,
@@ -30,6 +32,7 @@ test('saved raw text and signatures survive ACK chunks, and publication waits fo
   assert.deepEqual(await applied,{kind:'crease',doc:source,warnings:[],savedProject});assert.deepEqual(published,source);
   assert.deepEqual(worker.posted.slice(1),Array.from({length:3},()=>({type:'continue-crease'})));
   assert.equal(worker.terminated,1);
+  assert.equal(getPreparedEditorSignature(published),undefined,'legacy segment replies cannot grant prepared trust');
 });
 
 test('cancel, bad chunk order, truncation and worker failure leave the current saved document untouched and ignore late data',async()=>{
@@ -81,23 +84,23 @@ test('actual saved worker preserves a large source record and sends only one ack
     const handle=scope.onmessage as (event:{data:unknown})=>Promise<void>;
     const running=handle({data:{type:'prepare-saved-project',text}});
     await tick();
-    const begin=replies.find((r):r is Extract<ProjectImportReply,{type:'crease-begin'}>=>r.type==='crease-begin');
-    assert.ok(begin);assert.equal(begin.count,count);assert.equal(replies.some(r=>r.type==='crease-segments'),false);
-    assert.deepEqual((begin.doc as typeof source).largeSourceRecord,source.largeSourceRecord);
-    assert.deepEqual(begin.doc.metadata?.nativeExtras,{olderExtension:'仍在原处'});
-    assert.deepEqual(begin.savedProject,{draft:true,revision:'revision-full',sourceSignature:JSON.stringify(source),preparedSignature:JSON.stringify(source),upgraded:false});
-    await handle({data:{type:'continue-crease'}});await tick();
-    assert.equal(replies.filter(r=>r.type==='crease-segments').length,1);
+    const begin=replies.find(r=>r.type==='editor-begin');
+    assert.ok(begin);assert.deepEqual(Object.keys(begin),['type']);assert.equal(replies.some(r=>r.type==='editor-chunk'),false);
+    await handle({data:{type:'continue-editor'}});await tick();
+    assert.equal(replies.filter(r=>r.type==='editor-chunk').length,1);
     const pausedCount=replies.length;await tick();assert.equal(replies.length,pausedCount,'a second chunk must not be queued before ACK');
-    for(let i=0;i<Math.ceil(count/PROJECT_IMPORT_CHUNK)+1&&!replies.some(r=>r.type==='crease-complete');i++){
-      await handle({data:{type:'continue-crease'}});await tick();
+    while(!replies.some(r=>r.type==='editor-complete')){
+      await handle({data:{type:'continue-editor'}});await tick();
     }
     await running;
-    const chunks=replies.filter((r):r is Extract<ProjectImportReply,{type:'crease-segments'}>=>r.type==='crease-segments');
-    assert.equal(chunks.length,Math.ceil(count/PROJECT_IMPORT_CHUNK));
-    assert.deepEqual(chunks.map(c=>c.offset),chunks.map((_,i)=>i*PROJECT_IMPORT_CHUNK));
-    assert.deepEqual(chunks.flatMap(c=>c.segments),source.segments);
-    assert.equal(replies.at(-1)?.type,'crease-complete');
+    const chunks=replies.filter((r):r is Extract<ProjectImportReply,{type:'editor-chunk'}>=>r.type==='editor-chunk');
+    assert.ok(chunks.length>4);assert.deepEqual(chunks.map(c=>c.index),chunks.map((_,i)=>i));
+    const receiver=createArtworkTransferReceiver();for(const chunk of chunks)receiver.receive(chunk.operations);
+    const complete=receiver.finish() as PreparedEditorImportData;
+    assert.deepEqual(complete.doc,source);assert.deepEqual((complete.doc as typeof source).largeSourceRecord,source.largeSourceRecord);
+    assert.deepEqual(complete.savedProject,{draft:true,revision:'revision-full',sourceSignature:JSON.stringify(source),preparedSignature:JSON.stringify(source),upgraded:false});
+    assert.equal(Object.hasOwn(complete,'signature'),false,'reuse the saved preparedSignature without a third copy');
+    assert.equal(replies.at(-1)?.type,'editor-complete');
     await t.test('legacy saved records retain property order and exact baseline signatures through actual Worker and task ACK reconstruction',async()=>{
       const legacy:Doc&{authorExtension:{sourceId:string;labels:string[]}}={
         schemaVersion:2,name:'旧大工程的原始字段顺序',paper:{width:PROJECT_IMPORT_CHUNK*4+2,height:2},
@@ -111,7 +114,7 @@ test('actual saved worker preserves a large source record and sends only one ack
         acknowledgments:0,terminated:0,
         postMessage(message:unknown){
           const data=structuredClone(message);
-          if((data as {type?:string}).type==='continue-crease')this.acknowledgments++;
+          if((data as {type?:string}).type==='continue-editor')this.acknowledgments++;
           queueMicrotask(()=>{void handle({data}).catch(error=>this.onerror?.({message:String(error)}));});
         },terminate(){this.terminated++;}};
       const previousPost=scope.postMessage;
@@ -123,8 +126,8 @@ test('actual saved worker preserves a large source record and sends only one ack
         const result=await startSavedProjectImport(JSON.stringify({doc:legacy,draft:false,revision:'legacy-record-revision'}),undefined,()=>worker as unknown as Worker).promise;
         assert.equal(result.kind,'crease');
         if(result.kind!=='crease')return;
-        assert.ok(delivered.some(reply=>reply.type==='crease-begin'),'the real Worker must use the large-record chunk path');
-        assert.equal(worker.acknowledgments,Math.ceil(legacy.segments.length/PROJECT_IMPORT_CHUNK)+1);
+        assert.ok(delivered.some(reply=>reply.type==='editor-begin'),'the real Worker must use the bounded full-record path');
+        assert.equal(worker.acknowledgments,delivered.filter(reply=>reply.type==='editor-chunk').length+1);
         assert.equal(worker.terminated,1);
         assert.deepEqual(result.doc,legacy);
         assert.deepEqual(Object.keys(result.doc),Object.keys(legacy));
@@ -132,6 +135,7 @@ test('actual saved worker preserves a large source record and sends only one ack
         assert.equal(JSON.stringify(result.doc),result.savedProject?.preparedSignature);
         assert.equal(result.savedProject?.preparedSignature,result.savedProject?.sourceSignature);
         assert.equal(result.savedProject?.upgraded,false);
+        assert.equal(getPreparedEditorSignature(result.doc),result.savedProject?.preparedSignature);
         assert.deepEqual((result.doc as typeof legacy).authorExtension,legacy.authorExtension);
       }finally{scope.postMessage=previousPost;}
     });

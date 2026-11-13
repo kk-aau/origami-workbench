@@ -2,9 +2,12 @@ import type {Point,Segment} from '../core/types';
 import type {CreaseDisplay} from '../app/creaseDisplay';
 import {DISPLAY_PIXEL_MM} from '../app/creaseDisplay';
 import {creaseVertexShape} from '../app/creaseVertices';
-import {creaseLineStyle,creaseLineStroke,creaseShortLineTitle} from '../app/creaseLineStyle';
+import {creaseLineStroke,creaseShortLineTitle} from '../app/creaseLineStyle';
 import {DIAGNOSTIC_HIGHLIGHT_COLOR} from '../app/diagnosticHighlights';
 import type {CreaseSegmentPresentation} from '../app/diagramCPPresentation';
+import {CREASE_GPU_STRIDE,packCreaseGpuScene,creaseGpuRgba as rgba,runCreaseGpuBatches,sameCreaseGpuLines,type PackedCreaseGpuScene,type CreaseGpuPreparationOptions} from './creaseGpuScenePreparation';
+export {CREASE_GPU_STRIDE,packCreaseGpuScene} from './creaseGpuScenePreparation';
+export type {PackedCreaseGpuScene} from './creaseGpuScenePreparation';
 
 export interface CreaseGpuView {x:number;y:number;w:number;h:number}
 export interface CreaseGpuScene {
@@ -19,11 +22,6 @@ export interface CreaseGpuScene {
   segmentPresentation?:ReadonlyMap<string,CreaseSegmentPresentation>;
 }
 export const CREASE_GPU_THRESHOLD=2000;
-export const CREASE_GPU_STRIDE=23;
-const rgba=(hex:string):number[]=>{
-  if(!/^#[\da-f]{6}$/i.test(hex))throw new Error('Unsupported GPU stroke color');
-  return [parseInt(hex.slice(1,3),16)/255,parseInt(hex.slice(3,5),16)/255,parseInt(hex.slice(5,7),16)/255,1];
-};
 
 /** Native SVG titles need a small hit overlay when strokes live on the GPU.
  * Call only after the pointer settles, never during camera navigation. */
@@ -41,34 +39,6 @@ export function creaseGpuHoverTitle(scene:CreaseGpuScene,point:Point,units:numbe
     return info?.title??creaseShortLineTitle(s,stroke.limited);
   }
   return undefined;
-}
-
-/** Float high/low pairs keep small creases accurate even far from the origin.
- * This is a presentation copy; source coordinates and paint order are untouched. */
-export function packCreaseGpuScene(scene:CreaseGpuScene):{lines:Float32Array;count:number;points:Float32Array}{
-  const data=new Float32Array(scene.segments.length*CREASE_GPU_STRIDE);let count=0;
-  for(const segment of scene.segments){
-    if(segment.id===scene.hiddenId||!(segment.assignment==='A'?scene.auxiliary:scene.main))continue;
-    const base=creaseLineStyle(segment,scene.display.lineStyle,1,scene.display.auxLineStyle,scene.solidCreases);
-    const coords=[...segment.a,...segment.b];let offset=count*CREASE_GPU_STRIDE;
-    for(let i=0;i<4;i++){
-      if(!Number.isFinite(coords[i]))throw new Error('Invalid GPU coordinate');
-      const high=Math.fround(coords[i]);if(!Number.isFinite(high))throw new Error('GPU coordinate outside representable range');data[offset+i]=high;data[offset+4+i]=coords[i]-high;
-    }
-    data.set(rgba(base.color),offset+8);
-    const dash=base.dash?.split(' ').map(Number)??[];
-    if(dash.length>6)throw new Error('Unsupported GPU dash pattern');
-    data.set(dash,offset+12);
-    data[offset+18]=(segment.assignment==='A'?scene.display.auxLineWidth:scene.display.lineWidth)*(scene.segmentPresentation?.get(segment.id)?.emphasis?1.3:1);
-    data[offset+19]=scene.selected.has(segment.id)?1:0;
-    data[offset+20]=scene.diagnostic?.has(segment.id)?1:0;
-    data[offset+21]=dash.length;
-    // Reserve a final float so each attribute remains naturally aligned.
-    count++;
-  }
-  const points=new Float32Array(scene.vertices.length*4);
-  scene.vertices.forEach((p,i)=>{for(let axis=0;axis<2;axis++){const high=Math.fround(p[axis]);points[i*4+axis]=high;points[i*4+2+axis]=p[axis]-high;}});
-  return {lines:data.subarray(0,count*CREASE_GPU_STRIDE),count,points};
 }
 
 const lineVertex=`#version 300 es
@@ -206,9 +176,10 @@ export class CreaseGpuRenderer {
   private lineVao:WebGLVertexArrayObject;private pointVao:WebGLVertexArrayObject;
   private lineBuffer:WebGLBuffer;private pointBuffer:WebGLBuffer;
   private count=0;private pointCount=0;private scene:CreaseGpuScene|null=null;
+  private generation=0;private packedLines:Float32Array<ArrayBuffer>|null=null;
   private maxBufferSize:number;
   private uniforms=new Map<WebGLProgram,Map<string,WebGLUniformLocation|null>>();
-  uploads=0;draws=0;
+  uploads=0;draws=0;lineUploads=0;
   constructor(private canvas:HTMLCanvasElement){
     const gl=canvas.getContext('webgl2',{alpha:true,premultipliedAlpha:true,antialias:false,depth:false,stencil:false,preserveDrawingBuffer:false});
     if(!gl)throw new Error('WebGL2 unavailable');this.gl=gl;this.maxBufferSize=gl.getParameter(gl.MAX_RENDERBUFFER_SIZE) as number;
@@ -227,12 +198,52 @@ export class CreaseGpuRenderer {
   }
   private location(p:WebGLProgram,name:string){let locations=this.uniforms.get(p);if(!locations){locations=new Map();this.uniforms.set(p,locations);}if(!locations.has(name))locations.set(name,this.gl.getUniformLocation(p,name));return locations.get(name)!;}
   setScene(scene:CreaseGpuScene){
-    const packed=packCreaseGpuScene(scene),gl=this.gl;
+    const packed=packCreaseGpuScene(scene);this.setPackedScene(scene,packed);
+  }
+  clearScene(){
+    this.generation++;this.count=0;this.pointCount=0;this.scene=null;this.packedLines=null;
+    this.gl.clearColor(0,0,0,0);this.gl.clear(this.gl.COLOR_BUFFER_BIT);this.canvas.dataset.segmentCount='0';this.canvas.dataset.sceneState='empty';
+  }
+  private validatePacked(scene:CreaseGpuScene,packed:PackedCreaseGpuScene){
+    if(!Number.isSafeInteger(packed.count)||packed.count<0||packed.count>scene.segments.length||!(packed.lines instanceof Float32Array)||packed.lines.length!==packed.count*CREASE_GPU_STRIDE||!(packed.points instanceof Float32Array)||packed.points.length!==scene.vertices.length*4)throw new Error('Incomplete GPU scene');
+  }
+  private publish(scene:CreaseGpuScene,packed:PackedCreaseGpuScene,lineUpload=true){
+    this.count=packed.count;this.pointCount=scene.vertices.length;this.scene=scene;this.packedLines=packed.lines;this.uploads++;
+    this.canvas.dataset.bufferUploads=String(this.uploads);this.canvas.dataset.segmentCount=String(this.count);this.canvas.dataset.sceneState='ready';
+    if(lineUpload)this.lineUploads++;this.canvas.dataset.lineBufferUploads=String(this.lineUploads);
+  }
+  setPackedScene(scene:CreaseGpuScene,packed:PackedCreaseGpuScene){
+    this.validatePacked(scene,packed);this.clearScene();const gl=this.gl;
     gl.bindBuffer(gl.ARRAY_BUFFER,this.lineBuffer);gl.bufferData(gl.ARRAY_BUFFER,packed.lines,gl.STATIC_DRAW);
     gl.bindBuffer(gl.ARRAY_BUFFER,this.pointBuffer);gl.bufferData(gl.ARRAY_BUFFER,packed.points,gl.STATIC_DRAW);
     if(gl.isContextLost()||gl.getError()!==gl.NO_ERROR)throw new Error('GPU upload failed');
-    this.count=packed.count;this.pointCount=scene.vertices.length;this.scene=scene;this.uploads++;
-    this.canvas.dataset.bufferUploads=String(this.uploads);this.canvas.dataset.segmentCount=String(this.count);
+    this.publish(scene,packed);
+  }
+  async setPackedSceneAsync(scene:CreaseGpuScene,packed:PackedCreaseGpuScene,options:CreaseGpuPreparationOptions={}):Promise<void>{
+    this.validatePacked(scene,packed);
+    const keepLines=this.scene!==null&&sameCreaseGpuLines(this.scene,scene)&&this.packedLines===packed.lines;
+    if(keepLines){this.generation++;this.pointCount=0;}else this.clearScene();
+    const generation=this.generation,gl=this.gl;let allocated=false,part=keepLines?1:0,offset=0,written=0;
+    const buffers=[packed.lines,packed.points],total=(keepLines?0:packed.lines.byteLength)+packed.points.byteLength;
+    this.canvas.dataset.sceneState='uploading';
+    await runCreaseGpuBatches(()=>{
+      if(generation!==this.generation)throw new DOMException('折痕显示已更新。','AbortError');
+      if(!allocated){
+        if(!keepLines){gl.bindBuffer(gl.ARRAY_BUFFER,this.lineBuffer);gl.bufferData(gl.ARRAY_BUFFER,packed.lines.byteLength,gl.STATIC_DRAW);}
+        gl.bindBuffer(gl.ARRAY_BUFFER,this.pointBuffer);gl.bufferData(gl.ARRAY_BUFFER,packed.points.byteLength,gl.STATIC_DRAW);allocated=true;
+      }else{
+        const deadline=performance.now()+4;
+        for(let chunks=0;part<2&&chunks<4&&performance.now()<deadline;){
+          const data=buffers[part];if(offset===data.length){part++;offset=0;continue;}
+          const end=Math.min(offset+262144,data.length);gl.bindBuffer(gl.ARRAY_BUFFER,part===0?this.lineBuffer:this.pointBuffer);
+          gl.bufferSubData(gl.ARRAY_BUFFER,offset*4,data.subarray(offset,end));written+=(end-offset)*4;offset=end;chunks++;
+        }
+      }
+      if(gl.isContextLost()||gl.getError()!==gl.NO_ERROR)throw new Error('GPU upload failed');
+      options.onProgress?.(total?written/total:1);
+      if(options.signal?.aborted||generation!==this.generation)throw new DOMException('折痕显示已更新。','AbortError');
+      if(part===2){this.publish(scene,packed,!keepLines);return true;}return undefined;
+    },options);
   }
   draw(view:CreaseGpuView,size:{w:number;h:number},drag:Point,adaptive:boolean,showMarkers:boolean){
     const gl=this.gl,scene=this.scene;if(!scene)return;
@@ -264,5 +275,5 @@ export class CreaseGpuRenderer {
     gl.bindVertexArray(null);if(gl.getError()!==gl.NO_ERROR)throw new Error('GPU draw failed');
     this.draws++;this.canvas.dataset.draws=String(this.draws);
   }
-  dispose(){const gl=this.gl;gl.deleteBuffer(this.lineBuffer);gl.deleteBuffer(this.pointBuffer);gl.deleteVertexArray(this.lineVao);gl.deleteVertexArray(this.pointVao);gl.deleteProgram(this.lines);gl.deleteProgram(this.points);}
+  dispose(){this.generation++;this.scene=null;this.packedLines=null;this.count=0;this.pointCount=0;const gl=this.gl;gl.deleteBuffer(this.lineBuffer);gl.deleteBuffer(this.pointBuffer);gl.deleteVertexArray(this.lineVao);gl.deleteVertexArray(this.pointVao);gl.deleteProgram(this.lines);gl.deleteProgram(this.points);}
 }

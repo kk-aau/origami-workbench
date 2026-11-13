@@ -1,0 +1,23 @@
+/* The existing tool tag owns selection commands without reserving a toolbar row. */
+.canvas-tag.canvas-selection-actions,
+.soft-workbench .canvas-tag.canvas-selection-actions{display:flex;align-items:center;max-width:calc(100% - 40px);padding:0;color:var(--ink);background:var(--paper);pointer-events:auto;z-index:14}
+.canvas-selection-actions>.canvas-tool-options{display:inline-flex;flex-shrink:0}
+.canvas-selection-actions .header-menu-trigger{min-height:26px;padding:3px 7px;gap:5px;font-size:11px;border-radius:3px;color:var(--ink)}
+.canvas-selection-actions .header-menu-trigger>.chrome-icon{width:12px;height:12px;transform:rotate(180deg)}
+.canvas-selection-actions .header-menu-trigger:hover,
+.canvas-selection-actions .header-menu-trigger[aria-expanded=true]{background:var(--tint)}
+.canvas-selection-actions .header-menu-trigger:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.app.native-document .canvas-selection-actions .header-menu-panel button{min-height:30px;padding:5px 9px;font-size:12px}
+.canvas-selection-actions .header-menu[data-align=left]>.header-menu-panel{top:auto;bottom:calc(100% + 7px);left:0;right:auto;min-width:min(210px,calc(100vw - 48px));max-width:calc(100vw - 48px);max-height:min(240px,calc(100dvh - 160px));}
+.canvas-selection-actions .canvas-selection-note{margin:3px 8px 5px;color:var(--muted);font-size:11px;line-height:1.6;max-width:240px;white-space:normal}
+.canvas-selection-status{min-width:0;padding-right:7px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.canvas-selection-status:empty{display:none}
+.canvas-tag:not(.canvas-selection-actions)>.canvas-selection-status{padding-right:0}
+.canvas-tool-options-panel{position:absolute;bottom:calc(100% + 7px);left:0;width:max-content;max-width:min(560px,calc(100vw - 48px));max-height:min(360px,calc(100dvh - 140px));overflow:auto;overscroll-behavior:contain;background:var(--paper);border:1px solid var(--line);border-radius:5px;box-shadow:0 4px 14px #27372d18;white-space:normal;color:var(--ink)}
+.canvas-tool-options-panel[hidden]{display:none}
+.canvas-tool-options-panel>.canvas-parameter-panel,
+.soft-workbench .canvas-tool-options-panel>.canvas-parameter-panel{width:auto;max-width:100%;max-height:none;overflow:visible}
+.canvas-tool-options-panel .construction-parameters{padding:9px 10px;gap:8px;background:transparent;border-bottom:0;line-height:1.6}
+.canvas-tool-options-panel>button{display:flex;align-items:center;justify-content:space-between;gap:24px;min-height:30px;width:100%;padding:5px 10px;text-align:left;font-size:12px}
+.canvas-tool-options-panel>button:hover{background:var(--tint)}
+.canvas-tool-options-panel kbd{color:var(--muted);font-size:10px}

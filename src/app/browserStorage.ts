@@ -21,6 +21,13 @@ export async function browserRead<T>(key:string):Promise<T|undefined>{
     request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(storageError(request.error));
   });
 }
+/** Existence checks must not structured-clone a potentially huge IDB value. */
+export async function browserHasRecord(key:string):Promise<boolean>{
+  const db=await browserDatabase();return new Promise((resolve,reject)=>{
+    const request=db.transaction('records').objectStore('records').getKey(key);
+    request.onsuccess=()=>resolve(request.result!==undefined);request.onerror=()=>reject(storageError(request.error));
+  });
+}
 export async function browserEntries<T>(prefix:string):Promise<[string,T][]>{
   const db=await browserDatabase();return new Promise((resolve,reject)=>{
     const entries:[string,T][]=[],tx=db.transaction('records'),request=tx.objectStore('records').openCursor(IDBKeyRange.bound(prefix,prefix+'\uffff'));

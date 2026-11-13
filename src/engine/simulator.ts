@@ -3,7 +3,7 @@ import type {SimulationSolverSettings} from './simSettings';
 import type {SimulationMeshQuality} from './simFlexibleMesh';
 import type {SimulationLayerOrder} from './simLayerOrder';
 import type {SimulationStepAnimation} from './simStepAnimation';
-import {validateSimulationPose,type SimulationPose} from './simPose';
+import {validateSimulationPose,validateSimulationView,type SimulationPose} from './simPose';
 import type {SimulationAngleDiagnostics,SimulationSolveState} from './simConvergence';
 
 export interface SimulationImageCapture {
@@ -63,6 +63,7 @@ export interface SimulatorStatus {
   canUndoPose?:boolean;
   canRedoPose?:boolean;
   poseEditRevision?:number;
+  poseView?:SimulationPose['view'];
   interactionActive?:boolean;
   /** Numerical rest is distinct from reaching the requested crease angles. */
   solveState?:SimulationSolveState;
@@ -108,7 +109,7 @@ export class SimulatorBridge {
   private readonly imageSession=++bridgeSession;
   private imageCaptures=new Map<string,PendingImageCapture>();
   private poseCaptures=new Map<string,{revision:string|number;resolve:(pose:SimulationPose)=>void;reject:(error:Error)=>void;timer:ReturnType<typeof setTimeout>}>();
-  constructor(private iframe: HTMLIFrameElement, private onStatus: (status: SimulatorStatus) => void) {
+  constructor(private iframe: HTMLIFrameElement, private onStatus: (status: SimulatorStatus) => void,private onContentChange?:(value:{revision:string|number;steps:number;view:SimulationPose['view']})=>void) {
     window.addEventListener('message', this.receive);
     iframe.addEventListener('load', this.frameLoaded);
     this.ping();
@@ -122,6 +123,10 @@ export class SimulatorBridge {
   };
   private receive = (event: MessageEvent) => {
     if (this.disposed || event.origin !== location.origin || event.source !== this.iframe.contentWindow) return;
+    if(event.data?.type==='zhezhi-sim-content'){
+      const value=event.data;if(value.revision!==this.currentRevision||!Number.isSafeInteger(value.steps)||value.steps<0)return;
+      try{validateSimulationView(value.view);this.onContentChange?.({revision:value.revision,steps:value.steps,view:value.view});}catch{/* Invalid view metadata cannot affect document state. */}return;
+    }
     if(event.data?.type==='zhezhi-sim-pose'){
       const reply=event.data,capture=this.poseCaptures.get(reply.requestId);
       if(!capture||reply.revision!==capture.revision||reply.revision!==this.currentRevision)return;

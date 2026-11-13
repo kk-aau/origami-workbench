@@ -1,5 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
+import {BACKGROUND_TOOLS} from '../../src/app/orieditaToolLayout';
 import {serializeToolLayoutFile,parseToolLayoutFile,mergeToolLayoutPreferences} from '../../src/app/toolLayoutFile';
 import {TOOL_LAYOUT_ITEM_IDS,MAX_TOOL_LAYOUT_TEMPLATES,defaultToolLayoutPreferences,createToolLayoutTemplate,copyToolLayoutTemplate,moveToolLayoutItem,returnToolLayoutItemToPool,updateToolLayoutTemplate,activeToolLayoutTemplate} from '../../src/app/toolLayoutPreferences';
 
@@ -18,6 +19,24 @@ test('layout file roundtrip keeps every template, selection, empty categories, p
   reopened.templates[0].groups[0].name='changed';assert.deepEqual(original,snapshot);
 });
 
+test('background tools remain selectable in custom imported groups instead of being forced into the dedicated panel',()=>{
+ let value=customized();for(const [index,item] of BACKGROUND_TOOLS.entries())value=moveToolLayoutItem(value,item,'transform',index);
+ const before=structuredClone(value),loaded=parseToolLayoutFile(serializeToolLayoutFile(value));
+ assert.deepEqual(loaded,before);assert.deepEqual(activeToolLayoutTemplate(loaded).groups.find(group=>group.id==='transform')!.items.slice(0,3),BACKGROUND_TOOLS);
+ const merged=mergeToolLayoutPreferences(defaultToolLayoutPreferences(),loaded);assert.deepEqual(activeToolLayoutTemplate(merged),activeToolLayoutTemplate(loaded));assert.deepEqual(value,before);
+});
+
+test('old custom layout files move background tools to the pool once while retaining other group placement and columns',()=>{
+ let old=customized();for(const [index,item] of BACKGROUND_TOOLS.entries())old=moveToolLayoutItem(old,item,'transform',index);
+ delete old.backgroundPanelVersion;const before=structuredClone(old);
+ const loaded=parseToolLayoutFile(JSON.stringify({format:'zhezhi-tool-layout',version:1,preferences:old})),active=activeToolLayoutTemplate(loaded),original=activeToolLayoutTemplate(before);
+ assert.equal(loaded.backgroundPanelVersion,1);assert.equal(loaded.activeId,before.activeId);assert.deepEqual(active.columns,original.columns);assert.equal(active.name,original.name);
+ assert.deepEqual(active.groups,original.groups.map(group=>({...group,items:group.items.filter(item=>!BACKGROUND_TOOLS.includes(item as never))})));
+ assert.deepEqual(active.unassigned.filter(item=>!BACKGROUND_TOOLS.includes(item as never)),original.unassigned);assert.deepEqual(active.unassigned.slice(-3),BACKGROUND_TOOLS);
+ for(const template of loaded.templates)assert.ok(template.groups.every(group=>group.items.every(item=>!BACKGROUND_TOOLS.includes(item as never))));
+ assert.deepEqual(parseToolLayoutFile(serializeToolLayoutFile(loaded)),loaded);assert.deepEqual(old,before);
+});
+
 test('file export rejects incomplete data instead of quietly changing the layout',()=>{
   const value=customized();activeToolLayoutTemplate(value).unassigned.pop();
   assert.throws(()=>serializeToolLayoutFile(value),/缺少工具/);
@@ -30,6 +49,7 @@ test('wrong documents, unsupported versions, malformed groups and missing active
   const changes=[
     (value:any)=>{value.preferences.version=2;},
     (value:any)=>{value.preferences.columnSizingVersion=2;},
+    (value:any)=>{value.preferences.backgroundPanelVersion=2;},
     (value:any)=>{value.preferences.templates[0].groups[0].side='center';},
     (value:any)=>{value.preferences.templates[0].groups[0].items=[1];},
     (value:any)=>{value.preferences.templates[0].groups.push(value.preferences.templates[0].groups[0]);},

@@ -48,3 +48,22 @@ export function applyDiagramCPEdit(project:DiagramProject,stepId:string,stateId:
   }
   return next;
 }
+
+/** A returned before-CP also belongs to the previous step when it is shared. */
+export function applyReturnedDiagramCP(project:DiagramProject,stepId:string,stateId:string,revision:number,doc:Doc):DiagramProject {
+  const step=project.steps.find(item=>item.id===stepId),state=project.states.find(item=>item.id===stateId);
+  if(!step||!state||stateId!==step.beforeId&&stateId!==step.afterId)throw Error('来源步骤或 CP 已被移除。');
+  if(state.revision!==revision)throw Error('来源 CP 已修改，请从折序重新打开 CP，以免覆盖新修改。');
+  if(same(state.doc,doc))return project;
+  const access=getDiagramCPEditAccess(project,stepId,stateId);
+  if(access.ownerStepId)return applyDiagramCPEdit(project,access.ownerStepId,stateId,doc);
+  if(stateId===step.beforeId&&step.foldLink?.enabled){
+    // Replacing the initial source invalidates its references to old edges/faces.
+    // Apply the ordinary before-state cleanup, then restore the user's link mode.
+    const unlocked=updateDiagramFoldLink(project,stepId,{...step.foldLink,enabled:false});
+    const updated=applyDiagramCPEdit(unlocked,stepId,stateId,doc);
+    const link=updated.steps.find(item=>item.id===stepId)!.foldLink!;
+    return updateDiagramFoldLink(updated,stepId,{...link,enabled:true});
+  }
+  return applyDiagramCPEdit(project,stepId,stateId,doc);
+}

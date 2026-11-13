@@ -58,6 +58,7 @@ let dirty = true;
 let lastStatusTime = 0;
 let failed = false;
 let frameRequest = 0;
+let lastContentKey='';
 let displayMode:SimulationDisplayMode='paper';
 let displayOptions:SimulationDisplayOptions={...DEFAULT_SIMULATION_DISPLAY_OPTIONS};
 let creaseStyle:SimulationCreaseStyle='assignment';
@@ -202,7 +203,7 @@ function report(status: SimulatorStatus['status'], message: string, error?: stri
     animation:!!stepAnimation,progress:targetProgress,solverSettings:{...solverSettings},displayOptions:{...displayOptions},poseRestored,
     meshQuality,meshVertices:prepared?.vertexCount,meshTriangles:prepared?.faceCount,
     collisionEnabled,collisionMessage,
-    pinnedVertices:pinnedVertices.size,canUndoPose:poseUndo.length>0,canRedoPose:poseRedo.length>0,poseEditRevision,interactionActive:grabbedVertex,
+    pinnedVertices:pinnedVertices.size,canUndoPose:poseUndo.length>0,canRedoPose:poseRedo.length>0,poseEditRevision,poseView:structuredClone(view),interactionActive:grabbedVertex,
     solveState,angleDiagnostics:readAngleDiagnostics(),
     ...(diagnostics?.meanNodalStrain===undefined?{}:{meanNodalStrain:diagnostics.meanNodalStrain}),
     ...(frameSteps===undefined?{}:{frameSteps}),...(maxVelocity===undefined?{}:{maxVelocity}),
@@ -833,6 +834,9 @@ function tick(now: number) {
         dirty = false;
         if(previousLayerDisplay!==layerDisplayState||previousGapError!==layerGapError)report(running?'running':'paused',lastMessage);
       }
+      // A small notification tracks real solver/camera changes without reading
+      // geometry back from the GPU or rerendering the parent App per frame.
+      if(prepared&&window.parent!==window){const content={revision,steps:backend.stepCount,view};const key=JSON.stringify(content);if(key!==lastContentKey){lastContentKey=key;window.parent.postMessage({type:'zhezhi-sim-content',...content},location.origin);}}
     } catch (error) { fail(error); }
   }
   frameRequest = requestAnimationFrame(tick);

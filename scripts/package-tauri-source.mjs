@@ -48,6 +48,9 @@ if(!await exists(rustVendor)||!await exists(vendorStamp)||(await readFile(vendor
 }
 const metadata=JSON.parse(command(cargo,['metadata','--manifest-path','src-tauri/Cargo.toml','--locked','--offline','--format-version','1'],{env}));
 const rustPackages=metadata.packages.filter(p=>p.source).map(p=>({name:p.name,version:p.version,license:p.license,licenseFile:p.license_file,repository:p.repository,source:p.source}));
+const patchedRuntime=metadata.packages.find(p=>p.name==='tauri-runtime-wry'&&!p.source);
+if(patchedRuntime&&(patchedRuntime.version!=='2.12.3'||path.resolve(patchedRuntime.manifest_path)!==path.join(root,'vendor','tauri-runtime-wry','Cargo.toml')))throw Error('Unexpected local Tauri runtime source');
+const localRustPackages=patchedRuntime?[{name:patchedRuntime.name,version:patchedRuntime.version,license:patchedRuntime.license,repository:patchedRuntime.repository,source:'path:vendor/tauri-runtime-wry',patched:true}]:[];
 for(const item of rustPackages){if(!await exists(path.join(rustVendor,`${item.name}-${item.version}`,'Cargo.toml')))throw Error(`Cargo vendor missing ${item.name} ${item.version}`);}
 const npmPackages=[],seen=new Set(),queue=['react','react-dom','earcut','fast-xml-parser','rabbit-ear','fflate'].map(name=>({name,from:root}));
 function packageDirectory(name,from){
@@ -66,7 +69,7 @@ while(queue.length){
 }
 const python=path.join(root,'.venv','Scripts','python.exe');
 const pythonInfo=JSON.parse(command(python,['-c','import sys,json;print(json.dumps({"version":sys.version,"base":sys.base_prefix}))'],{env}));
-const prepared={version:pkg.version,candidate,id,cargoLockSha256:lockHash,rustPackages:rustPackages.length,npmPackages:npmPackages.map(({directory,...p})=>p),pythonVersion:pythonInfo.version};
+const prepared={version:pkg.version,candidate,id,cargoLockSha256:lockHash,rustPackages:rustPackages.length+localRustPackages.length,npmPackages:npmPackages.map(({directory,...p})=>p),pythonVersion:pythonInfo.version};
 await writeFile(path.join(base,'PREPARED.json'),JSON.stringify(prepared,null,2)+'\n');
 if(prepareOnly){console.log(JSON.stringify(prepared,null,2));process.exit(0);}
 
@@ -93,7 +96,14 @@ for(const item of rustPackages){
  const selected=available.filter(file=>licensePattern.test(path.basename(file))||/^Cargo\.toml(?:\.orig)?$/.test(path.basename(file))||!hasLicense&&/^README/i.test(path.basename(file)));
  for(const file of selected)await copy(file,path.join(target,path.relative(directory,file)));
 }
-await writeFile(path.join(licenses,'RUST-PACKAGES.json'),JSON.stringify(rustPackages,null,2)+'\n');
+for(const item of localRustPackages){
+ const directory=path.join(root,'vendor','tauri-runtime-wry'),target=path.join(licenses,'rust',`${item.name}-${item.version}`);
+ for(const name of ['LICENSE-MIT','LICENSE-APACHE-2.0','Cargo.toml','UPSTREAM.md']){
+  if(!await exists(path.join(directory,name)))throw Error(`Local Tauri runtime notice missing: ${name}`);
+  await copy(path.join(directory,name),path.join(target,name));
+ }
+}
+await writeFile(path.join(licenses,'RUST-PACKAGES.json'),JSON.stringify([...rustPackages,...localRustPackages],null,2)+'\n');
 // Local path crates are not emitted by `cargo vendor`. Their original notices
 // must reach the runtime license directory as well as the corresponding source.
 const designUpstream=path.join(root,'vendor','design','ori-studio');
@@ -124,7 +134,7 @@ if(await exists(extra))await copy(extra,path.join(licenses,'additional'));
 const extraSource=path.join(preparation,'additional-source');
 if(await exists(extraSource))await copy(extraSource,path.join(stage,'third-party','additional'));
 const toolInfo={node:process.version,cargo:command(cargo,['--version'],{env}),rustc:command(path.join(root,'.toolchain','cargo','bin','rustc.exe'),['--version'],{env}),python:pythonInfo.version};
-const info={app:pkg.version,candidate,architecture:'Tauri / Rust / Windows WebView2',platform:'Windows x64',created:new Date().toISOString(),tools:toolInfo,cargoLockSha256:lockHash,npmLockSha256:await sha(path.join(root,'package-lock.json')),pythonLockSha256:await sha(path.join(root,'requirements-lock.txt')),sourceInputs:inputHashes,rustPackages:rustPackages.length,npmPackages:npmPackages.length};
+const info={app:pkg.version,candidate,architecture:'Tauri / Rust / Windows WebView2',platform:'Windows x64',created:new Date().toISOString(),tools:toolInfo,cargoLockSha256:lockHash,npmLockSha256:await sha(path.join(root,'package-lock.json')),pythonLockSha256:await sha(path.join(root,'requirements-lock.txt')),sourceInputs:inputHashes,rustPackages:rustPackages.length+localRustPackages.length,localRustPackages,npmPackages:npmPackages.length};
 await writeFile(path.join(stage,'BUILD-INFO.json'),JSON.stringify(info,null,2)+'\n');
 await writeFile(path.join(stage,'TAURI-THIRD-PARTY-NOTICES.txt'),`折纸工坊 ${id} Tauri / Rust 发行材料\n\n本次宿主不分发或运行 Electron、Node；原源码内相关文件仅供迁移追溯。\n锁定的 Rust crate 原始源码（含包内许可、版权、元数据）位于 third-party/rust，许可索引为 licenses/RUST-PACKAGES.json。\n已捆绑前端包及其传递依赖原始 npm 内容位于 third-party/npm，许可索引为 licenses/NPM-PACKAGES.json。\nPython 运行时许可与原始包元数据保留在 licenses/python-runtime 和 licenses/python-packages；包括保留的开发依赖声明，不代表所有开发包进入运行引擎。\n上游包若未随包提供独立 LICENSE，不伪造原作者声明；保留其原始 Cargo.toml/package.json 与 README。\nMicrosoft WebView2 为系统共享运行时，本源码包不包含其浏览器二进制；其许可由 Microsoft 原安装提供。\n本项目许可证和第三方既有许可不因迁移而改变。\n`);
 await writeFile(path.join(stage,'REBUILD-TAURI.txt'),`重建说明\n\n1. 使用 Windows x64、Rust/MSVC 与 Windows SDK，实际版本见 BUILD-INFO.json。工具链和下载路径自行设置到非 C 盘。\n2. npm ci；按 requirements-lock.txt 与 requirements-build.txt 建立独立 Python 环境。\n3. npm run build；npm run package:icon；按 scripts/build-tessellation.ps1 构建完整 Python 引擎。\n4. cargo build --manifest-path src-tauri/Cargo.toml --locked --release --bin zhezhi-workbench-tauri。归档自带 .cargo/config.toml 与完整 Cargo vendor，可用 --offline 验证 Rust 依赖。\n5. 完整打包顺序和校验见 docs/打包与体积控制要求.md 及迁移版发布说明。\n\nthird-party/npm 保存浏览器中实际用到的包源码；npm 构建工具按 package-lock.json 另行准备。third-party/rust 原样包含锁文件所有平台 crate，Windows 构建仅选用适用子集。\nSOURCE-MANIFEST.json 记录除自身外每个文件的 SHA256；ZIP 与 7z 含完全相同文件。\n`);

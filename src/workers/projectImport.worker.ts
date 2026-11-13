@@ -1,50 +1,71 @@
 import {importParsedDocument} from '../core/formats';
 import {readProjectFile} from '../app/importFile';
 import {prepareProjectImport,prepareSavedProjectImport} from '../app/prepareProjectImport';
-import {prepareArtworkProject} from '../app/artworkProject';
+import {prepareArtworkImport,type PreparedArtworkImport} from '../app/artworkImportPreparation';
+import {artworkTransferChunks} from '../app/artworkImportTransfer';
 import {parseCurveDesign} from '../app/curveDesign';
 import {curveDesignDocument,curveDesignFromDocument} from '../app/curveDesignProject';
-import {PROJECT_IMPORT_CHUNK,type ProjectImportReply,type ProjectImportRequest,type SavedProjectImportInfo} from '../app/projectImportProtocol';
+import {type ProjectImportReply,type ProjectImportRequest,type SavedProjectImportInfo} from '../app/projectImportProtocol';
 import type {Doc} from '../core/types';
 import {appendImportedSegments} from '../app/appendImport';
 import {prepareEditorCommit} from '../app/editorCommit';
+import {createDiagramProjectSaveBlob} from '../app/diagramProjectTransport';
+import {decodeArtworkArchive} from '../app/artworkArchive';
+import type {PreparedEditorImportData} from '../app/editorImportPreparation';
 
 const scope=globalThis as unknown as {
-  onmessage:((event:MessageEvent<ProjectImportRequest|{type:'continue-crease'}>)=>void)|null;
+  onmessage:((event:MessageEvent<ProjectImportRequest|{type:'continue-crease'}|{type:'continue-artwork'}|{type:'continue-editor'}>)=>void)|null;
   postMessage(reply:ProjectImportReply):void;
 };
 let nextChunk:(()=>void)|undefined;
+let nextArtworkChunk:(()=>void)|undefined;
+let nextEditorChunk:(()=>void)|undefined;
+async function publishArtwork(value:PreparedArtworkImport):Promise<void>{
+  const send=async(reply:ProjectImportReply)=>{const received=new Promise<void>(resolve=>{nextArtworkChunk=resolve;});scope.postMessage(reply);await received;};
+  // A Blob crosses workers as immutable backing bytes. The UI can forward it
+  // to its save Worker without stringifying or cloning this large graph again.
+  const diagramSaveBlob=value.project.diagram?createDiagramProjectSaveBlob(value.project.diagram):undefined;
+  await send({type:'artwork-begin',...(diagramSaveBlob?{diagramSaveBlob}:{})});let chunks=0;
+  for(const operations of artworkTransferChunks(value))await send({type:'artwork-chunk',index:chunks++,operations});
+  scope.postMessage({type:'artwork-complete',chunks});
+}
 async function publishCrease(doc:Doc,warnings:string[],savedProject?:SavedProjectImportInfo):Promise<void>{
-  const saved=savedProject?{savedProject}:{};
-  if(doc.segments.length<PROJECT_IMPORT_CHUNK*4){scope.postMessage({type:'result',result:{kind:'crease',doc,warnings,...saved}});return;}
-  // Acknowledged chunks keep the UI responsive while receiving a complete
-  // million-line document, with only one serialized chunk queued at a time.
-  const send=async(reply:ProjectImportReply)=>{
-    const received=new Promise<void>(resolve=>{nextChunk=resolve;});scope.postMessage(reply);await received;
-  };
-  const {segments,...withoutSegments}=doc;
-  // Saved signatures also drive dirty/undo state. Keep the segments key in
-  // its original position without sending the large array in this header.
-  const header=savedProject?{...doc,segments:[]}:withoutSegments;
-  await send({type:'crease-begin',doc:header,count:segments.length,warnings,...saved});
-  for(let offset=0;offset<segments.length;offset+=PROJECT_IMPORT_CHUNK){await send({type:'crease-segments',offset,segments:segments.slice(offset,offset+PROJECT_IMPORT_CHUNK)});}
-  scope.postMessage({type:'crease-complete'});
+  // Segments alone are not the large part of every file. Metadata, warnings
+  // and saved baselines need the same bounded protocol, preserving key order.
+  // Saved data already owns its exact prepared signature: do not send it twice.
+  const value:PreparedEditorImportData={doc,warnings,...(savedProject?{savedProject}:{signature:JSON.stringify(doc)})};
+  const send=async(reply:ProjectImportReply)=>{const received=new Promise<void>(resolve=>{nextEditorChunk=resolve;});scope.postMessage(reply);await received;};
+  await send({type:'editor-begin'});let chunks=0;
+  for(const operations of artworkTransferChunks(value))await send({type:'editor-chunk',index:chunks++,operations});
+  scope.postMessage({type:'editor-complete',chunks});
 }
 scope.onmessage=async event=>{
   if('type' in event.data&&event.data.type==='continue-crease'){const resume=nextChunk;nextChunk=undefined;resume?.();return;}
+  if('type' in event.data&&event.data.type==='continue-artwork'){const resume=nextArtworkChunk;nextArtworkChunk=undefined;resume?.();return;}
+  if('type' in event.data&&event.data.type==='continue-editor'){const resume=nextEditorChunk;nextEditorChunk=undefined;resume?.();return;}
   try {
     if('type' in event.data){
+      if(event.data.type==='prepare-artwork'){
+        const prepared=prepareArtworkImport(event.data.text,message=>scope.postMessage({type:'stage',message}));event.data.text='';
+        await publishArtwork(prepared);return;
+      }
       scope.postMessage({type:'stage',message:'正在读取本地工程并整理完整交点'});
-      const result=prepareSavedProjectImport(event.data.text);event.data.text='';
+      const result=prepareSavedProjectImport(typeof event.data.text==='string'?event.data.text:await event.data.text.text());event.data.text='';
       await publishCrease(result.doc,[],result.savedProject);return;
     }
     const {file,prepare,appendPlacement}=event.data;
-    const text=prepare===true&&file.name.toLowerCase().endsWith('.json')?await file.text():null;
-    const raw=text===null?null:JSON.parse(text) as {format?:unknown}|null;
+    if(file.name.toLowerCase().endsWith('.oriw')){
+      if(prepare!==true)throw Error('ORIW 包含多个工作区，请使用“打开文件”恢复完整作品。');
+      scope.postMessage({type:'stage',message:'正在解包 ORIW 完整作品'});
+      const raw=decodeArtworkArchive(new Uint8Array(await file.arrayBuffer()));
+      await publishArtwork(prepareArtworkImport(raw,message=>scope.postMessage({type:'stage',message})));return;
+    }
+    let text=prepare===true&&file.name.toLowerCase().endsWith('.json')?await file.text():null;
+    let raw=text===null?null:JSON.parse(text) as {format?:unknown}|null;
     if(raw?.format==='zhezhi-artwork'){
-      scope.postMessage({type:'stage',message:'正在检查完整作品与整理交点'});
-      const project=prepareArtworkProject(text!);curveDesignFromDocument(project.editor);
-      scope.postMessage({type:'result',result:{kind:'artwork',project}});return;
+      const prepared=prepareArtworkImport(raw,message=>scope.postMessage({type:'stage',message}));
+      raw=null;text=null;
+      await publishArtwork(prepared);return;
     }
     const result=raw?.format==='zhezhi-curve-design'
       ?{doc:curveDesignDocument(parseCurveDesign(raw)),warnings:[]}

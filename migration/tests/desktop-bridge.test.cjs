@@ -5,8 +5,8 @@ const fs=require('node:fs');
 const path=require('node:path');
 const source=fs.readFileSync(path.join(__dirname,'../../src-tauri/src/bridge.js'),'utf8');
 
-function bridge({nested=false, file=null, windowState={maximized:false,fullscreen:false}}={}) {
-  const calls=[],entries=new Map();
+function bridge({nested=false, file=null, windowState={maximized:false,fullscreen:false},context=null}={}) {
+  const calls=[],entries=new Map(),requests=[];
   const native=new Map();
   const window={
     addEventListener(type,callback){if(!native.has(type))native.set(type,new Set());native.get(type).add(callback);},
@@ -14,9 +14,10 @@ function bridge({nested=false, file=null, windowState={maximized:false,fullscree
     confirm(){return true;},
     __TAURI_INTERNALS__:{async invoke(command,args){calls.push({command,args});if(command==='desktop_open_project')return file??new ArrayBuffer(0);if(command==='desktop_window_state')return windowState;}},
   };
+  if(context)window.__zhezhiHostContext=context;
   window.top=nested?{}:window;
   class XMLHttpRequest {
-    open(method,url,async){assert.equal(async,false);this.method=method;this.url=url;}
+    open(method,url,async){assert.equal(async,false);requests.push({method,url,synchronous:true});this.method=method;this.url=url;}
     setRequestHeader(){}
     send(body){
       this.status=200;
@@ -31,9 +32,53 @@ function bridge({nested=false, file=null, windowState={maximized:false,fullscree
       this.responseText=JSON.stringify(result);
     }
   }
-  vm.runInNewContext(source,{window,location:{pathname:'/'},XMLHttpRequest,Event,Set,Object,console,Uint8Array,DataView,TextDecoder});
-  return {window,calls,entries,native};
+  async function fetch(url,options={}){
+    requests.push({method:options.method??'GET',url,synchronous:false});let status=200,result;
+    if(url==='/api/health')result={token:'test-token'};
+    else if(url.endsWith('/snapshot'))result={values:Object.fromEntries([...entries].filter(([key])=>key!=='zhezhi.diagram-project.v1'))};
+    else if((options.method??'GET')==='GET')result={value:entries.get(new URL(url,'http://127.0.0.1').searchParams.get('key'))??null};
+    else{const data=JSON.parse(options.body);if('expectedValue'in data&&(entries.get(data.key)??null)!==data.expectedValue){status=409;result={error:'conflict'};}else{entries.set(data.key,data.value);result={value:null};}}
+    return {ok:status===200,status,json:async()=>result};
+  }
+  vm.runInNewContext(source,{window,addEventListener:window.addEventListener.bind(window),location:{pathname:'/'},XMLHttpRequest,fetch,Event,Set,Object,console,Uint8Array,DataView,TextDecoder});
+  return {window,calls,entries,native,requests};
 }
+
+test('desktop settings preload asynchronously and repeated UI reads never issue requests',async()=>{
+  const {window,entries,requests}=bridge(),prefs=window.desktop.preferences;
+  entries.set('zhezhi.theme.v1','dark');entries.set('zhezhi.diagram-project.v1','large drawing');await prefs.refresh();
+  assert(requests.every(request=>!request.synchronous));const count=requests.length;
+  for(let i=0;i<100;i++)assert.equal(prefs.getItem('zhezhi.theme.v1'),'dark');
+  assert.equal(prefs.getItem('zhezhi.diagram-project.v1'),null);assert.equal(requests.length,count);
+  assert.equal(await prefs.getItemAsync('zhezhi.diagram-project.v1'),'large drawing');assert.equal(prefs.getItem('zhezhi.diagram-project.v1'),'large drawing');
+  assert(requests.every(request=>!request.synchronous));
+});
+test('desktop unchanged small-setting sets skip startup requests but explicit CAS still checks the service',async()=>{
+  const {window,entries,requests}=bridge(),prefs=window.desktop.preferences;entries.set('zhezhi.theme.v1','dark');await prefs.refresh();const before=requests.length;
+  prefs.setItem('zhezhi.theme.v1','dark');assert.equal(requests.length,before);
+  assert.equal(prefs.compareAndSet('zhezhi.theme.v1','dark','dark'),true);assert.equal(requests.length,before+1);
+  prefs.setItem('zhezhi.theme.v1','light');assert.equal(requests.length,before+2);assert.equal(entries.get('zhezhi.theme.v1'),'light');
+  entries.set('zhezhi.theme.v1','other window');prefs.setItem('zhezhi.theme.v1','light');assert.equal(requests.length,before+2);assert.equal(entries.get('zhezhi.theme.v1'),'other window');
+  assert.throws(()=>prefs.setItem('zhezhi.theme.v1','changed'),/其他窗口/);
+});
+
+test('desktop async CAS preserves conflicts and directory refresh invalidates cached documents',async()=>{
+  const {window,entries}=bridge(),prefs=window.desktop.preferences;entries.set('zhezhi.theme.v1','dark');await prefs.refresh();
+  assert.equal(await prefs.compareAndSetAsync('zhezhi.theme.v1',null,'ours'),false);assert.equal(prefs.getItem('zhezhi.theme.v1'),'dark');
+  assert.equal(await prefs.compareAndSetAsync('zhezhi.theme.v1','dark','light'),true);assert.equal(entries.get('zhezhi.theme.v1'),'light');assert.equal(prefs.getItem('zhezhi.theme.v1'),'light');
+  entries.set('zhezhi.theme.v1','other window');assert.throws(()=>prefs.setItem('zhezhi.theme.v1','stale'),/其他窗口/);assert.equal(entries.get('zhezhi.theme.v1'),'other window');
+  entries.set('zhezhi.diagram-project.v1','body');await prefs.getItemAsync('zhezhi.diagram-project.v1');await prefs.refresh(true);assert.equal(prefs.getItem('zhezhi.diagram-project.v1'),null);
+});
+
+test('desktop document cache is bounded and pins preserve transactional reads without touching disk records',async()=>{
+  const {window,entries}=bridge(),prefs=window.desktop.preferences;entries.set('zhezhi.theme.v1','dark');await prefs.refresh();
+  const keys=Array.from({length:8},(_,i)=>'zhezhi.diagram-library-doc-'+String.fromCharCode(97+i).repeat(32)+'.v1');
+  const release=prefs.retainRecords([keys[0]]);
+  for(const key of keys){entries.set(key,'body');await prefs.getItemAsync(key);}
+  assert.equal(prefs.getItem(keys[0]),'body');assert.throws(()=>prefs.getItem(keys[1]),/缓存已释放/);assert.equal(entries.get(keys[1]),'body');
+  assert.throws(()=>prefs.setItem(keys[1],'body'),/缓存已释放/);
+  release();assert.equal(prefs.getItem('zhezhi.theme.v1'),'dark');
+});
 
 test('synchronous preferences preserve compare-and-set conflict semantics',()=>{
   const {window,entries}=bridge();const prefs=window.desktop.preferences;
@@ -177,4 +222,47 @@ test('native export waits for acknowledged writes and final commit without time 
 test('incorrect acknowledgements abort; zero-byte exports commit without a fake write',async()=>{
   const bad=exportBridge({write:async()=>999});await assert.rejects(bad.window.desktop.saveExport(new Blob(['x']),'x.bin'),/进度不匹配/);assert.equal(bad.calls.at(-1).command,'desktop_cancel_export');
   const empty=exportBridge();assert.equal((await empty.window.desktop.saveExport(new Blob([]),'empty.bin')).status,'saved');assert.equal(empty.calls.filter(c=>c.command==='desktop_write_export').length,0);
+});
+
+
+test('native document working draft keys are UUID-scoped while shared libraries and preferences remain shared',async()=>{
+  const id='01234567-89ab-4cde-8fab-0123456789ab';
+  const f=bridge({context:{role:'document',documentId:id}}),prefs=f.window.desktop.preferences;
+  const scoped='zhezhi.document-'+id.replaceAll('-','').replace(/[0-9a-f]/g,d=>String.fromCharCode(97+parseInt(d,16)))+'-diagram-project.v1';
+  assert.equal(f.window.desktop.role,'document');assert.equal(f.window.desktop.documentId,id);
+  await prefs.compareAndSetAsync('zhezhi.diagram-project.v1',null,'own draft');
+  assert.equal(f.entries.get(scoped),'own draft');assert.equal(f.entries.has('zhezhi.diagram-project.v1'),false);
+  assert.equal(prefs.getItem('zhezhi.diagram-project.v1'),'own draft');assert.equal(await prefs.getItemAsync('zhezhi.diagram-project.v1'),'own draft');
+  assert.equal(prefs.compareAndSet('zhezhi.diagram-project.v1','own draft','updated'),true);assert.equal(f.entries.get(scoped),'updated');
+  for(const key of ['zhezhi.theme.v1','zhezhi.diagram-library.v1','zhezhi.base-design-library.v1']){await prefs.compareAndSetAsync(key,null,'shared');assert.equal(f.entries.get(key),'shared');}
+  const other=bridge({context:{role:'document',documentId:'11111111-1111-4111-8111-111111111111'}});assert.equal(other.window.desktop.preferences.getItem('zhezhi.diagram-project.v1'),null);
+});
+
+test('document events preserve stable identity, dispatch whitelisted commands, and unsubscribe after reparent',async()=>{
+  const f=bridge({context:{role:'document',documentId:'11111111-1111-4111-8111-111111111111'}}),docs=f.window.desktop.documents;
+  const states=[],commands=[];const off=docs.subscribe(s=>states.push(s)),uncommand=docs.onCommand(c=>commands.push(c));
+  f.window.__zhezhiDocumentsChanged({windowId:'main',windows:[],documents:[]});
+  f.window.__zhezhiDocumentsChanged({windowId:'window-detached',windows:[],documents:[]});
+  assert.equal(states[1].windowId,'window-detached');assert.equal(f.window.desktop.documentId,'11111111-1111-4111-8111-111111111111');
+  f.window.__zhezhiDocumentCommand('save-artwork');f.window.__zhezhiDocumentCommand('print');f.window.__zhezhiDocumentCommand('eval');assert.deepEqual(commands,['save-artwork','print']);
+  off();uncommand();f.window.__zhezhiDocumentsChanged({windowId:'main',windows:[],documents:[]});f.window.__zhezhiDocumentCommand('new');assert.equal(states.length,2);assert.equal(commands.length,2);
+  await assert.rejects(docs.sendCommand('id','eval'),/不支持/);
+  await docs.sendCommand('id','undo');assert.equal(f.calls.at(-1).command,'desktop_documents');assert.equal(f.calls.at(-1).args.action,'command');assert.equal(f.calls.at(-1).args.input.command,'undo');
+});
+
+test('native shell sends actual OS-menu requests without serializing a document or synthesizing a selected result',async()=>{
+  const f=bridge({context:{role:'shell',documentId:null}}),docs=f.window.desktop.documents;
+  await docs.popupMenu([{id:'layout:grid',label:'平铺',checked:true}],{x:80,y:40});
+  const call=f.calls.at(-1);assert.equal(call.command,'desktop_documents');assert.equal(call.args.action,'popup');assert.equal(call.args.input.items[0].id,'layout:grid');assert.equal(call.args.input.x,80);assert.equal(call.args.input.y,40);
+  await docs.report({dirty:true});assert.equal(f.calls.at(-1).args.action,'report');
+});
+
+
+test('document and shell creation keep initial open/new commands in the native handshake instead of client polling',async()=>{
+  for(const role of ['shell','document']){const f=bridge({context:{role,documentId:role==='document'?'11111111-1111-4111-8111-111111111111':null}}),docs=f.window.desktop.documents;
+    await docs.create('open');assert.equal(f.calls.at(-1).args.action,'create');assert.equal(f.calls.at(-1).args.input.initialCommand,'open');
+    await docs.create('new');assert.equal(f.calls.at(-1).args.input.initialCommand,'new');
+    await docs.create();assert.deepEqual(Object.keys(f.calls.at(-1).args.input),[]);
+    await assert.rejects(docs.create('eval'),/新建或打开/);
+  }
 });

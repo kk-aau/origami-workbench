@@ -10,6 +10,21 @@ import {getPaperBounds,getGridReferenceBounds} from '../../src/app/paper';
 import {blankDoc,exampleDoc,line} from '../../src/app/state';
 const parse=(text:string)=>new XMLParser({ignoreAttributes:false}).parse(text).svg;
 
+test('square and triangular export grids retain exact spacing through 512 divisions and reject 513',()=>{
+ const doc=blankDoc('密网格导出',320,160),before=structuredClone(doc),display=defaultCreaseDisplay();
+ for(const pattern of ['square','triangular'] as const){
+  for(const divisions of [128,129,256,512]){
+   const svg=parse(creasePatternSVG(doc,display,undefined,undefined,undefined,{divisions,pattern})),tile=svg.g.defs.pattern,step=320/divisions;
+   assert.equal(Number(tile['@_width']),step);
+   const height=pattern==='square'?step:step*Math.sqrt(3);
+   assert.ok(Math.abs(Number(tile['@_height'])-height)<1e-12);
+   assert.equal(tile['@_patternTransform'],'translate(0 0)');assert.equal(svg.g.path['@_d'],svg.path['@_d']);
+  }
+  assert.throws(()=>creasePatternSVG(doc,display,undefined,undefined,undefined,{divisions:513,pattern}),/1—512/);
+ }
+ assert.deepEqual(doc,before);
+});
+
 test('grid reference stays fixed through removed, partial, distant and reclosed boundaries',()=>{
  const initial=blankDoc('固定网格参考',300,300),display=defaultCreaseDisplay();
  const empty={...initial,segments:[]},single={...empty,segments:[line([40,50],[210,50],'B')]};
@@ -117,7 +132,7 @@ test('triangular export preserves holes and uses one bounded periodic tile even 
  doc.segments.push(line([50,50],[150,50],'B'),line([150,50],[150,150],'B'),line([150,150],[50,150],'B'),line([50,150],[50,50],'B'));
  const paper=parse(creasePatternSVG(doc,display,undefined,undefined,undefined,{divisions:8,pattern:'triangular'}));
  assert.equal(paper.g.path['@_fill-rule'],'evenodd');assert.equal(paper.g.path['@_d'],paper.path['@_d']);
- const crop={x:-1e8,y:-1e8,width:2e8,height:2e8},text=creasePatternSVG(doc,display,crop,undefined,undefined,{divisions:128,pattern:'triangular',scope:'canvas'}),canvas=parse(text);
+ const crop={x:-1e8,y:-1e8,width:2e8,height:2e8},text=creasePatternSVG(doc,display,crop,undefined,undefined,{divisions:512,pattern:'triangular',scope:'canvas'}),canvas=parse(text);
  assert.ok(text.length<20000);assert.ok(!Array.isArray(canvas.g.defs.pattern));
  assert.deepEqual(canvas.g.rect,{'@_x':'-100000000','@_y':'-100000000','@_width':'200000000','@_height':'200000000','@_fill':'url(#cp-export-grid)'});
  for(const pattern of ['hexagon','',null])assert.throws(()=>creasePatternSVG(doc,display,undefined,undefined,undefined,{divisions:8,pattern:pattern as never}),/网格/);
@@ -167,13 +182,13 @@ test('full-area grid covers export bounds and paper grid preserves holes without
  assert.deepEqual(canvas.g.rect,{'@_x':'-20','@_y':'-10','@_width':'250','@_height':'230','@_fill':'url(#cp-export-grid)'});
  doc.segments=doc.segments.filter(s=>s.assignment!=='B');
  const open=parse(creasePatternSVG(doc,defaultCreaseDisplay(),crop,undefined,undefined,{divisions:4}));assert.equal(open.path['@_d'],'');assert.ok(open.g.rect);
- for(const divisions of [0,129,1.5,NaN])assert.throws(()=>creasePatternSVG(doc,defaultCreaseDisplay(),undefined,undefined,undefined,{divisions}),/网格/);
+ for(const divisions of [0,513,1.5,NaN])assert.throws(()=>creasePatternSVG(doc,defaultCreaseDisplay(),undefined,undefined,undefined,{divisions}),/网格/);
 });
 test('crease image export with adaptation disabled shares exact legacy styles and physical widths, preserving document data',()=>{
  const doc=exampleDoc();doc.segments.push({...line([20,20],[40,40],'A'),displayColor:'#abcdef'});const before=structuredClone(doc);
  const svg=parse(creasePatternSVG(doc,{...defaultCreaseDisplay(),lineWidth:4,auxLineWidth:2,roundedEnds:true,lineStyle:'BLACK_TWO_DOT'},undefined,undefined,{enabled:false}));
  assert.equal(svg['@_width'],'200mm');assert.equal(svg['@_viewBox'],'0 0 200 200');
- const mountain=svg.line[4],aux=svg.line.at(-1);
+ const mountain=svg.line.find((stroke:Record<string,string>)=>stroke['@_x1']==='50'&&stroke['@_x2']==='50'),aux=svg.line.find((stroke:Record<string,string>)=>stroke['@_x1']==='20'&&stroke['@_y1']==='20'&&stroke['@_x2']==='40'&&stroke['@_y2']==='40');
  assert.equal(mountain['@_stroke'],'#000000');assert.equal(mountain['@_stroke-linecap'],'round');assert.equal(Number(mountain['@_stroke-width']),4*DISPLAY_PIXEL_MM);
  assert.deepEqual(mountain['@_stroke-dasharray'].split(' ').map(Number),[10,3,3,3,3,3].map(n=>n*DISPLAY_PIXEL_MM));
  assert.equal(aux['@_stroke'],'#abcdef');assert.equal(Number(aux['@_stroke-width']),2*DISPLAY_PIXEL_MM);assert.deepEqual(doc,before);
@@ -187,13 +202,14 @@ test('auxiliary image strokes follow the selected display style without changing
  const doc=exampleDoc();doc.segments.push({...line([20,20],[40,40],'A'),displayColor:'#abcdef'});
  const before=structuredClone(doc),display={...defaultCreaseDisplay(),auxLineWidth:3};
  const solid=parse(creasePatternSVG(doc,display)),dashed=parse(creasePatternSVG(doc,{...display,auxLineStyle:'dashed'},undefined,undefined,{enabled:false}));
- assert.equal(solid.line.at(-1)['@_stroke-dasharray'],undefined);
- assert.deepEqual(dashed.line.at(-1)['@_stroke-dasharray'].split(' ').map(Number),[2,5].map(n=>n*DISPLAY_PIXEL_MM));
+ const isAux=(stroke:Record<string,string>)=>stroke['@_x1']==='20'&&stroke['@_y1']==='20'&&stroke['@_x2']==='40'&&stroke['@_y2']==='40';
+ assert.equal(solid.line.find(isAux)['@_stroke-dasharray'],undefined);
+ assert.deepEqual(dashed.line.find(isAux)['@_stroke-dasharray'].split(' ').map(Number),[2,5].map(n=>n*DISPLAY_PIXEL_MM));
  for(const svg of [solid,dashed]){
-  assert.equal(svg.line.at(-1)['@_stroke'],'#abcdef');
-  assert.equal(Number(svg.line.at(-1)['@_stroke-width']),3*DISPLAY_PIXEL_MM);
+  assert.equal(svg.line.find(isAux)['@_stroke'],'#abcdef');
+  assert.equal(Number(svg.line.find(isAux)['@_stroke-width']),3*DISPLAY_PIXEL_MM);
  }
- assert.deepEqual(solid.line.slice(0,-1),dashed.line.slice(0,-1));assert.deepEqual(doc,before);
+ assert.deepEqual(solid.line.filter((stroke:Record<string,string>)=>!isAux(stroke)),dashed.line.filter((stroke:Record<string,string>)=>!isAux(stroke)));assert.deepEqual(doc,before);
 });
 test('export rejects invalid bounds and unvalidated geometry or display values',()=>{
  const doc=exampleDoc(),display=defaultCreaseDisplay();

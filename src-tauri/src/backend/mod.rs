@@ -8,6 +8,7 @@ pub mod server;
 pub mod operations;
 pub mod design;
 pub mod pdf;
+pub mod document_workers;
 
 pub use server::{start, AppState, RunningServer, ServerConfig};
 pub use validation::validate_doc;

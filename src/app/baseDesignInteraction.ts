@@ -67,9 +67,10 @@ export function deleteTreeSelection(model:TreeDesign,ids:number[]):TreeDesign {
 }
 export function designSubtree(project:BaseDesignProject,id:number):number[] {
  const nodes=designNodes(project),edges=designEdges(project),root=nodes[0]?.id;if(root===undefined)return [];
- const parent=new Map<number,number|null>([[root,null]]),todo=[root];
- while(todo.length){const n=todo.pop()!;for(const e of edges){const other=e.n1===n?e.n2:e.n2===n?e.n1:null;if(other!==null&&!parent.has(other)){parent.set(other,n);todo.push(other);}}}
- const selected=[id];for(let i=0;i<selected.length;i++)for(const [child,p]of parent)if(p===selected[i])selected.push(child);
+ const parent=new Set<number>([root]),todo=[root],adjacent=new Map<number,number[]>(),children=new Map<number,number[]>();
+ for(const edge of edges){if(!adjacent.has(edge.n1))adjacent.set(edge.n1,[]);if(!adjacent.has(edge.n2))adjacent.set(edge.n2,[]);adjacent.get(edge.n1)!.push(edge.n2);adjacent.get(edge.n2)!.push(edge.n1);}
+ while(todo.length){const n=todo.pop()!;for(const other of adjacent.get(n)??[])if(!parent.has(other)){parent.add(other);todo.push(other);if(!children.has(n))children.set(n,[]);children.get(n)!.push(other);}}
+ const selected=[id];for(let i=0;i<selected.length;i++)for(const child of children.get(selected[i])??[])selected.push(child);
  return selected;
 }
 /** One common displacement preserves the shape of a selected group. */

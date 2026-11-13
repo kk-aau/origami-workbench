@@ -7,6 +7,8 @@ import {defaultCreaseDisplay} from './creaseDisplay';
 import {projectDiagramFoldCP} from './diagramFoldLink';
 import {diagramDrawingRotationFrame,rotateDiagramDrawingSVG} from './diagramDrawingRotation';
 import {sameDiagramProjectContent} from './diagramProjectContent';
+import {api} from './api';
+import {WEB_APP} from './webRuntime';
 
 export const DIAGRAM_LIBRARY_KEY='zhezhi.diagram-library.v1';
 export const DIAGRAM_LEGACY_DRAFT_KEY='zhezhi.diagram-project.v1';
@@ -27,7 +29,7 @@ export interface DiagramLibraryIndex {
    * best-effort payload cleanup fails or browser preferences migrate later. */
   deletedLegacy?:string[];
 }
-type StorageAccess=Pick<Storage,'getItem'|'setItem'>&{compareAndSet?:(key:string,expectedValue:string|null,value:string)=>boolean};
+type StorageAccess=Pick<Storage,'getItem'|'setItem'>&{compareAndSet?:(key:string,expectedValue:string|null,value:string)=>boolean;getItemAsync?:(key:string)=>Promise<string|null>;retainRecords?:(keys:readonly string[])=>()=>void};
 export class DiagramLibraryConflictError extends Error {readonly code='DIAGRAM_LIBRARY_CONFLICT';constructor(){super('绘图已在其他窗口修改或删除，本次保存未覆盖原内容。请下载当前工程备份，或另存为新绘图后继续。');}}
 interface StoredDocument {format:'zhezhi-diagram-library-document';version:1;project:DiagramProject;thumbnail:string|null}
 export type DiagramLibraryBackgroundRequest=({project:DiagramProject}|{promoteDraftKey:string})&{settings:DiagramLibrarySaveOptions;openedHead?:string;legacyDraft?:boolean};
@@ -38,8 +40,9 @@ interface LibraryOptions {
    * external revision falsely adopted as this window's base. */
   openedHeads?:ReadonlyMap<string,string>;
   backgroundSave?:(request:DiagramLibraryBackgroundRequest)=>Promise<DiagramLibraryBackgroundResult>;
+  prepareThumbnail?:(storedText:string)=>Promise<string|null>;
 }
-export interface DiagramLibrarySaveOptions {id?:string;folderId?:string|null;kind:'draft'|'saved'}
+export interface DiagramLibrarySaveOptions {id?:string;folderId?:string|null;kind:'draft'|'saved';onlyIfLibraryMissing?:boolean}
 export interface DiagramLibraryDeleteResult {index:DiagramLibraryIndex;warning:string|null}
 export const emptyDiagramLibrary=():DiagramLibraryIndex=>({format:'zhezhi-diagram-library',version:1,documents:[],folders:[],lastOpenId:null});
 export const diagramLibraryIsDraft=(entry:DiagramLibraryEntry)=>entry.draftKey!==entry.savedKey||entry.savedKey===null;
@@ -112,6 +115,8 @@ export function createDiagramLibrary(storage:StorageAccess=preferenceStorage,opt
   const now=options.now??Date.now,idFactory=options.idFactory??(()=>crypto.randomUUID());
   let cachedIndex:DiagramLibraryIndex|undefined;
   let readRaw:string|null=null;
+  let committedDirectory:{baseline:string|null;text:string}|undefined;
+  let legacyMigration:Promise<DiagramLibraryIndex>|undefined;
   const openedHeads=new Map<string,string>(options.openedHeads);
   const confirmedContent=new Map<string,{project:DiagramProject;entry:DiagramLibraryEntry}>();
   const rememberContent=(id:string,project:DiagramProject,entry:DiagramLibraryEntry)=>{
@@ -132,17 +137,21 @@ export function createDiagramLibrary(storage:StorageAccess=preferenceStorage,opt
   // The desktop bridge reads its preference file on every getItem. Keep small
   // thumbnail strings for the library grid and at most two parsed snapshots.
   // Explicit document opens always re-read and validate the current payload.
-  const documentCache=new Map<string,StoredDocument>(),thumbnailCache=new Map<string,string|null>();
-  const discardCache=(snapshotKey:string)=>{documentCache.delete(snapshotKey);thumbnailCache.delete(snapshotKey);};
+  const documentCache=new Map<string,StoredDocument>(),thumbnailCache=new Map<string,string|null>(),thumbnailLoads=new Map<string,Promise<string|null>>();
+  const discardCache=(snapshotKey:string)=>{documentCache.delete(snapshotKey);thumbnailCache.delete(snapshotKey);thumbnailLoads.delete(snapshotKey);};
   const cacheDocument=(snapshotKey:string,value:StoredDocument)=>{documentCache.delete(snapshotKey);documentCache.set(snapshotKey,value);thumbnailCache.set(snapshotKey,value.thumbnail);while(documentCache.size>2)documentCache.delete(documentCache.keys().next().value!);};
   const read=():DiagramLibraryIndex=>{
-    const raw=storage.getItem(DIAGRAM_LIBRARY_KEY);readRaw=raw;if(raw===null||raw===''){cachedIndex=emptyDiagramLibrary();return emptyDiagramLibrary();}
+    const stored=storage.getItem(DIAGRAM_LIBRARY_KEY);
+    const raw=committedDirectory&&stored===committedDirectory.baseline?committedDirectory.text:stored;
+    if(committedDirectory&&stored!==committedDirectory.baseline)committedDirectory=undefined;
+    readRaw=raw;if(raw===null||raw===''){cachedIndex=emptyDiagramLibrary();return emptyDiagramLibrary();}
     let index:unknown;try{index=JSON.parse(raw);}catch{throw new Error('折序文档目录损坏，请先导出当前工程。');}
     validateIndex(index);
     for(const entry of index.documents){const previous=cachedIndex?.documents.find(doc=>doc.id===entry.id);if(previous&&previous.modifiedAt!==entry.modifiedAt){if(entry.draftKey)discardCache(entry.draftKey);if(entry.savedKey)discardCache(entry.savedKey);}}
     cachedIndex=structuredClone(index);return structuredClone(index);
   };
-  const write=(index:DiagramLibraryIndex,expected=readRaw)=>{if(hasPendingSave())throw Error('绘图正在后台保存，请等待完成后重试。');validateIndex(index);const text=JSON.stringify(index);if(!compare(DIAGRAM_LIBRARY_KEY,expected,text))throw new DiagramLibraryConflictError();readRaw=text;cachedIndex=structuredClone(index);};
+  const readAsync=async()=>{if(storage.getItemAsync)await storage.getItemAsync(DIAGRAM_LIBRARY_KEY);return read();};
+  const write=(index:DiagramLibraryIndex,expected=readRaw)=>{if(hasPendingSave())throw Error('绘图正在后台保存，请等待完成后重试。');validateIndex(index);const text=JSON.stringify(index);if(!compare(DIAGRAM_LIBRARY_KEY,expected,text))throw new DiagramLibraryConflictError();committedDirectory=undefined;readRaw=text;cachedIndex=structuredClone(index);};
   const requireEntry=(index:DiagramLibraryIndex,id:string)=>{const entry=index.documents.find(doc=>doc.id===id);if(!entry)throw new Error('找不到这个折序绘图。');return entry;};
   const newId=(index:DiagramLibraryIndex)=>{const id=idFactory();if(!validId(id)||index.documents.some(doc=>doc.id===id)||index.folders.some(folder=>folder.id===id))throw new Error('绘图编号重复，请重试。');return id;};
   const newKey=()=>`zhezhi.diagram-library-doc-${Array.from(crypto.getRandomValues(new Uint8Array(16)),n=>'abcdefghijklmnop'[n>>4]+'abcdefghijklmnop'[n&15]).join('')}.v1`;
@@ -160,6 +169,7 @@ export function createDiagramLibrary(storage:StorageAccess=preferenceStorage,opt
     let staged:{key:string;body:string;snapshot:StoredDocument;thumbnail:string}|undefined;
     try{for(let attempt=0;attempt<4;attempt++){
       const index=read(),expected=readRaw,previous=settings.id?index.documents.find(entry=>entry.id===settings.id):null;
+      if(settings.onlyIfLibraryMissing&&expected!==null)throw new DiagramLibraryConflictError();
       if(settings.id&&!previous)throw new DiagramLibraryConflictError();
       const existingKey=previous?.draftKey??previous?.savedKey;
       const previousBodies=new Map<string,string|null>();
@@ -238,6 +248,7 @@ export function createDiagramLibrary(storage:StorageAccess=preferenceStorage,opt
         rememberContent(confirmed.entry.id,job.project,confirmed.entry);
         for(const waiter of job.waiters)waiter.resolve(structuredClone(confirmed.entry));return;
       }
+      const directoryBaseline=storage.getItem(DIAGRAM_LIBRARY_KEY);
       const result=await options.backgroundSave({...unchanged&&confirmed.entry.draftKey?{promoteDraftKey:confirmed.entry.draftKey}:{project:job.project},settings:job.settings,openedHead:job.settings.id?openedHeads.get(job.settings.id):undefined,legacyDraft:job.legacyDraft});
       validateIndex(result.index);
       if(!result.entry||!result.index.documents.some(entry=>entry.id===result.entry.id&&JSON.stringify(entry)===JSON.stringify(result.entry))||job.settings.id&&result.entry.id!==job.settings.id||result.thumbnail!==null&&typeof result.thumbnail!=='string'||!Array.isArray(result.warnings)||result.warnings.some(warning=>typeof warning!=='string'))throw Error('后台绘图保存返回了无效结果。');
@@ -246,6 +257,10 @@ export function createDiagramLibrary(storage:StorageAccess=preferenceStorage,opt
       openedHeads.set(result.entry.id,head(result.entry));
       rememberContent(result.entry.id,job.project,result.entry);
       cachedIndex=structuredClone(result.index);readRaw=JSON.stringify(result.index);
+      committedDirectory={baseline:directoryBaseline,text:readRaw};
+      // The exact worker receipt already confirms persistence. A later optional
+      // cache refresh must not turn that successful save into an error.
+      if(storage.getItemAsync)try{await storage.getItemAsync(DIAGRAM_LIBRARY_KEY);}catch{try{options.onWarning?.('绘图已保存，目录刷新暂未完成；当前内容仍保留。');}catch{/* A notification cannot undo the confirmed commit. */}}
       documentCache.clear();
       const liveKeys=new Set(result.index.documents.flatMap(entry=>[entry.draftKey,entry.savedKey]));
       for(const key of thumbnailCache.keys())if(!liveKeys.has(key))thumbnailCache.delete(key);
@@ -269,7 +284,52 @@ export function createDiagramLibrary(storage:StorageAccess=preferenceStorage,opt
     void runBackground();
   });
   return {
-    read,save,saveAsync,hasPendingSave,promoteDraft,
+    read,readAsync,save,saveAsync,hasPendingSave,promoteDraft,
+    migrateLegacyAsync(prepare:(text:string)=>Promise<DiagramProject>):Promise<DiagramLibraryIndex>{
+      if(legacyMigration)return legacyMigration;
+      const task=(async()=>{
+        await readAsync();if(storage.getItem(DIAGRAM_LIBRARY_KEY)!==null)return read();
+        const legacy=storage.getItemAsync?await storage.getItemAsync(DIAGRAM_LEGACY_DRAFT_KEY):storage.getItem(DIAGRAM_LEGACY_DRAFT_KEY);
+        if(legacy){
+          const project=await prepare(legacy);await readAsync();if(storage.getItem(DIAGRAM_LIBRARY_KEY)!==null)return read();
+          try{await saveAsync(project,{kind:'draft',onlyIfLibraryMissing:true});}
+          catch(error){if(!(error instanceof DiagramLibraryConflictError))throw error;await readAsync();if(storage.getItem(DIAGRAM_LIBRARY_KEY)===null)throw error;}
+          return readAsync();
+        }
+        return emptyDiagramLibrary();
+      })();
+      legacyMigration=task;void task.finally(()=>{if(legacyMigration===task)legacyMigration=undefined;}).catch(()=>{});return task;
+    },
+    async loadAsync(id:string,prepare:(text:string)=>Promise<DiagramProject>,version:'latest'|'saved'='latest'):Promise<DiagramProject>{
+      const entry=requireEntry(await readAsync(),id),snapshotKey=version==='saved'?entry.savedKey:entry.draftKey??entry.savedKey;
+      if(!snapshotKey)throw new Error('这个绘图尚无手动保存版本。');
+      const raw=storage.getItemAsync?await storage.getItemAsync(snapshotKey):storage.getItem(snapshotKey);
+      if(!raw)throw new Error('绘图内容缺失，请导入备份工程。');
+      let project=await prepare(raw);const latest=requireEntry(await readAsync(),id);
+      if(head(entry)!==head(latest))throw new DiagramLibraryConflictError();
+      if(project.name!==entry.name)project={...project,name:entry.name};openedHeads.set(id,head(entry));
+      if(version==='latest'||snapshotKey===entry.draftKey)rememberContent(id,project,entry);else confirmedContent.delete(id);
+      return project;
+    },
+    async getThumbnailAsync(id:string):Promise<string|null>{
+      const entry=requireEntry(cachedIndex??read(),id),snapshotKey=(entry.draftKey??entry.savedKey)!;
+      if(thumbnailCache.has(snapshotKey))return thumbnailCache.get(snapshotKey)??null;
+      const loading=thumbnailLoads.get(snapshotKey);if(loading)return loading;
+      const task=(async()=>{
+        if(storage===preferenceStorage&&!WEB_APP){
+          const result=await api<{thumbnail:string|null}>('storage/thumbnail?key='+encodeURIComponent(snapshotKey));
+          if(result.thumbnail!==null&&typeof result.thumbnail!=='string')throw Error('绘图缩略图格式无效。');
+          if(result.thumbnail!==null||!options.prepareThumbnail)return result.thumbnail;
+          const raw=storage.getItemAsync?await storage.getItemAsync(snapshotKey):storage.getItem(snapshotKey);
+          return raw?options.prepareThumbnail(raw):null;
+        }
+        if(storage.getItemAsync)await storage.getItemAsync(snapshotKey);
+        const document=decode(snapshotKey);return document.thumbnail??diagramLibraryThumbnail(document.project);
+      })();
+      thumbnailLoads.set(snapshotKey,task);
+      try{const thumbnail=await task;if(thumbnailLoads.get(snapshotKey)===task)thumbnailCache.set(snapshotKey,thumbnail);return thumbnail;}
+      finally{if(thumbnailLoads.get(snapshotKey)===task)thumbnailLoads.delete(snapshotKey);}
+    },
     getCachedThumbnail:(snapshotKey:string|null):string|null=>snapshotKey?thumbnailCache.get(snapshotKey)??null:null,
     waitForPendingSaves:():Promise<void>=>hasPendingSave()?new Promise(resolve=>backgroundIdle.push(resolve)):Promise.resolve(),
     hasExternalChanges(id:string):boolean {
@@ -311,6 +371,15 @@ export function createDiagramLibrary(storage:StorageAccess=preferenceStorage,opt
     },
     moveDocument(id:string,folderId:string|null):void {const index=read(),entry=requireEntry(index,id);if(folderId!==null&&!index.folders.some(folder=>folder.id===folderId))throw new Error('找不到目标文件夹。');entry.folderId=folderId;write(index);},
     async deleteDocument(id:string):Promise<DiagramLibraryDeleteResult> {
+      let release=()=>{};
+      try{
+      if(storage.getItemAsync){
+        await readAsync();
+        const entry=requireEntry(read(),id);
+        const keys=[...new Set([entry.draftKey,entry.savedKey,...(entry.spareKeys??[]),DIAGRAM_LEGACY_DRAFT_KEY])].filter((key):key is string=>!!key);
+        release=storage.retainRecords?.(keys)??release;
+        await Promise.all(keys.map(key=>storage.getItemAsync!(key)));
+      }
       const index=read(),originalIndex=readRaw,entry=requireEntry(index,id),legacy=storage.getItem(DIAGRAM_LEGACY_DRAFT_KEY);
       const keys=new Set([entry.draftKey,entry.savedKey,...(entry.spareKeys??[])]);
       const otherKeys=new Set(index.documents.filter(doc=>doc.id!==id).flatMap(doc=>[doc.draftKey,doc.savedKey,...(doc.spareKeys??[])])),ownedBodies=new Map<string,string|null>();
@@ -345,6 +414,7 @@ export function createDiagramLibrary(storage:StorageAccess=preferenceStorage,opt
       const warning=cleanupFailed?'绘图已删除，但部分旧修订暂未清理；请检查本机存储空间。这些修订不会重新出现在文档库。':null;
       if(warning)try{options.onWarning?.(warning);}catch{/* Cleanup/reporting cannot undo a committed deletion. */}
       return {index:structuredClone(index),warning};
+      }finally{release();}
     },
   };
 }

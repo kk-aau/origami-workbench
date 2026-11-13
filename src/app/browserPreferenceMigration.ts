@@ -1,7 +1,8 @@
 import {createDiagramLibrary,emptyDiagramLibrary,diagramLibraryThumbnail,DIAGRAM_LIBRARY_KEY,DIAGRAM_LEGACY_DRAFT_KEY,type DiagramLibraryIndex,type DiagramLibraryEntry,type DiagramLibraryFolder} from './diagramLibrary';
 import {importDiagramProject,type DiagramProject} from './diagramProject';
+import type {Preferences} from './preferenceStorage';
 
-type StorageAccess=Pick<Storage,'getItem'|'setItem'>&{compareAndSet?:(key:string,expectedValue:string|null,value:string)=>boolean};
+type StorageAccess=Preferences;
 const DOCUMENT_KEY=/^zhezhi\.diagram-library-doc-[a-p]{32}\.v1$/;
 const ID=(value:unknown):value is string=>typeof value==='string'&&value.length>0&&value.length<=160;
 interface ImportReceipts {version:1;documents:Record<string,string>;folders:Record<string,string>;legacy:Record<string,string>}
@@ -17,7 +18,11 @@ async function fingerprint(value:string):Promise<string> {
 }
 function cachedStorage(storage:StorageAccess) {
   const values=new Map<string,string|null>();
-  return {getItem(key:string){if(!values.has(key))values.set(key,storage.getItem(key));return values.get(key)!;},setItem(){throw new Error('迁移规划期间不能写入存储。');}};
+  return {
+    getItem(key:string){if(!values.has(key)){if(storage.getItemAsync)throw new Error('迁移内容尚未异步读取，原数据未改动。');values.set(key,storage.getItem(key));}return values.get(key)!;},
+    async getItemAsync(key:string){if(!values.has(key))values.set(key,storage.getItemAsync?await storage.getItemAsync(key):storage.getItem(key));return values.get(key)!;},
+    setItem(){throw new Error('迁移规划期间不能写入存储。');},
+  };
 }
 function receiptsOf(index:MigrationIndex):ImportReceipts {
   if(index.browserImports===undefined)return {version:1,documents:{},folders:{},legacy:{}};
@@ -28,13 +33,13 @@ function receiptsOf(index:MigrationIndex):ImportReceipts {
   return structuredClone(value);
 }
 async function readLibrary(storage:StorageAccess) {
-  const cached=cachedStorage(storage),raw=cached.getItem(DIAGRAM_LIBRARY_KEY),library=createDiagramLibrary(cached),index=library.read() as MigrationIndex;
+  const cached=cachedStorage(storage),raw=await cached.getItemAsync(DIAGRAM_LIBRARY_KEY),library=createDiagramLibrary(cached),index=library.read() as MigrationIndex;
   const snapshots=new Map<string,{raw:string;signature:string}>();
   for(const entry of index.documents)for(const [key,version] of [[entry.savedKey,'saved'],[entry.draftKey??entry.savedKey,'latest']] as const) {
     if(!key||snapshots.has(key))continue;
     // Reuse the library's wrapper and complete project validation. The encoded
     // project name is retained for identity; an index rename is only a label.
-    library.load(entry.id,version);
+    await cached.getItemAsync(key);library.load(entry.id,version);
     const body=cached.getItem(key)!;const project=importDiagramProject(JSON.stringify(JSON.parse(body).project));
     snapshots.set(key,{raw:body,signature:await fingerprint(JSON.stringify(project))});
   }
@@ -51,12 +56,20 @@ function distinctName(name:string,siblings:readonly {name:string}[],suffix='浏�
  * never falsely mark an unreferenced payload as imported. Ordinary library
  * operations preserve this optional internal index field unchanged. */
 export async function migrateBrowserPreferenceStorage(source:StorageAccess,target:StorageAccess,options:BrowserPreferenceMigrationOptions={}):Promise<BrowserPreferenceMigrationResult> {
-  const compare=(key:string,expected:string|null,value:string)=>{
+  const compare=async(key:string,expected:string|null,value:string)=>{
+    if(target.compareAndSetAsync)return target.compareAndSetAsync(key,expected,value);
     if(target.compareAndSet)return target.compareAndSet(key,expected,value);
     // Read-only validation/embedded synchronous stores have no inter-process
     // writers. Official service/desktop targets always supply atomic CAS.
     if(target.getItem(key)!==expected)return false;target.setItem(key,value);return target.getItem(key)===value;
   };
+  // Ordinary settings do not need the service's entire drawing library. This
+  // is the common startup path after installing the disk-backed cache.
+  if(options.keys&&!options.keys.some(key=>(key===DIAGRAM_LIBRARY_KEY||key===DIAGRAM_LEGACY_DRAFT_KEY||DOCUMENT_KEY.test(key))&&source.getItem(key)!==null)){
+    let copiedValues=0;
+    for(const key of options.keys){const value=source.getItem(key);if(value!==null&&await compare(key,null,value))copiedValues++;}
+    return {importedDocuments:0,importedFolders:0,copiedValues,indexChanged:false};
+  }
   const local=await readLibrary(source),disk=await readLibrary(target),merged=structuredClone(disk.index) as MigrationIndex;
   const deletedLegacy=new Set([...(local.index.deletedLegacy??[]),...(disk.index.deletedLegacy??[])]);
   if(deletedLegacy.size)merged.deletedLegacy=[...deletedLegacy];
@@ -77,11 +90,11 @@ export async function migrateBrowserPreferenceStorage(source:StorageAccess,targe
     // identical orphan/spare body may still be awaiting another writer's cleanup.
     if(liveTargetKeys.has(sourceKey)&&disk.cached.getItem(sourceKey)===raw){bodyMap.set(identity,sourceKey);return sourceKey;}
     let key=sourceKey,n=0;
-    while(occupiedKeys.has(key)||disk.cached.getItem(key)!==null) {
+    while(occupiedKeys.has(key)||await disk.cached.getItemAsync(key)!==null) {
       const digest=await fingerprint(`payload:${sourceKey}:${signature}:${n++}`);
       key=`zhezhi.diagram-library-doc-${Array.from(digest.slice(0,32),digit=>'abcdefghijklmnop'[parseInt(digit,16)]).join('')}.v1`;
     }
-    const previous=disk.cached.getItem(key);if(previous!==raw)writes.push({key,value:raw,previous});
+    const previous=await disk.cached.getItemAsync(key);if(previous!==raw)writes.push({key,value:raw,previous});
     occupiedKeys.add(key);bodyMap.set(identity,key);targetSnapshots.set(key,{raw,signature});return key;
   }
   const folderSignatures=new Map<string,string>();
@@ -132,7 +145,7 @@ export async function migrateBrowserPreferenceStorage(source:StorageAccess,targe
     merged.documents.push({id,name,folderId:null,createdAt:stamp,modifiedAt:stamp,openedAt:stamp,stepCount:project.steps.length,savedAt:null,draftKey,savedKey:null});receipts.legacy[receipt]=id;importedDocuments++;
     return {id,signature};
   }
-  const diskLegacy=disk.cached.getItem(DIAGRAM_LEGACY_DRAFT_KEY),localLegacy=source.getItem(DIAGRAM_LEGACY_DRAFT_KEY);
+  const diskLegacy=await disk.cached.getItemAsync(DIAGRAM_LEGACY_DRAFT_KEY),localLegacy=source.getItem(DIAGRAM_LEGACY_DRAFT_KEY);
   await preserveLegacy(diskLegacy,'service');const importedLegacy=await preserveLegacy(localLegacy,'browser');
   if(localLegacy!==null&&diskLegacy===null&&(!localLegacy||importedLegacy)) {
     writes.unshift({key:DIAGRAM_LEGACY_DRAFT_KEY,value:localLegacy,previous:null});
@@ -157,17 +170,17 @@ export async function migrateBrowserPreferenceStorage(source:StorageAccess,targe
   for(const entry of check.read().documents){check.load(entry.id);if(entry.savedKey)check.load(entry.id,'saved');}
   for(const key of options.keys??[]) {
     if(key===DIAGRAM_LIBRARY_KEY||key===DIAGRAM_LEGACY_DRAFT_KEY||DOCUMENT_KEY.test(key))continue;
-    const value=source.getItem(key);if(value!==null)compare(key,null,value);
+    const value=source.getItem(key);if(value!==null)await compare(key,null,value);
   }
   let copiedValues=0;
   for(const write of writes) {
-    const current=target.getItem(write.key);
+    const current=target.getItemAsync?await target.getItemAsync(write.key):target.getItem(write.key);
     if(current===write.value)continue;
-    if(current!==write.previous||!compare(write.key,write.previous,write.value))throw new Error('保存目录在其他窗口中发生变化，迁移尚未提交，请重试。');
+    if(current!==write.previous||!await compare(write.key,write.previous,write.value))throw new Error('保存目录在其他窗口中发生变化，迁移尚未提交，请重试。');
     copiedValues++;
   }
   if(indexChanged) {
-    if(!compare(DIAGRAM_LIBRARY_KEY,disk.raw,indexText))throw new Error('绘图库在其他窗口中发生变化，迁移尚未提交，原浏览器绘图仍已保留，请重试。');
+    if(!await compare(DIAGRAM_LIBRARY_KEY,disk.raw,indexText))throw new Error('绘图库在其他窗口中发生变化，迁移尚未提交，原浏览器绘图仍已保留，请重试。');
     copiedValues++;
   }
   return {importedDocuments,importedFolders,copiedValues,indexChanged};

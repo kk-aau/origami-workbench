@@ -80,6 +80,46 @@ test('disabled diagram rendering is exactly the legacy markup and adds no fragme
   }
 });
 
+test('projected folds on different layers share one dash pattern through overlaps, reversed ends and touching intervals',()=>{
+  for(const style of ['valley','mountain'] as const){
+    const source=annotation(style,80,{width:.7,color:'#293d35'}),assignment=style==='valley'?'V':'M';
+    const pieces:DiagramFoldPreviewSegment[]=[
+      {face:0,a:[20,30],b:[53,30],assignment,visibility:'visible'},
+      {face:1,a:[76,30],b:[41,30],assignment,visibility:'visible'},
+      {face:2,a:[76,30],b:[100,30],assignment,visibility:'visible'},
+    ];
+    const saved=structuredClone(pieces);
+    for(const enabled of [false,true])for(const units of [.15,3]){
+      const reference=lines(render(null,[source],enabled,units))[0],period=dash(reference).reduce((a,b)=>a+b);
+      const independent=pieces.map((part,i)=>({...source,id:'layer-'+i,a:part.a,b:part.b,foldFaces:[part.face]}));
+      for(const markup of [render(null,[],enabled,units,pieces),render(null,independent,enabled,units)]){
+        const ink=lines(markup);assert.equal(ink.length,3);
+        for(const [i,node] of ink.entries()){
+          const start=[20,41,76][i];
+          near(number(node,'x1'),start);
+          assert.equal(node['@_stroke-dasharray'],reference['@_stroke-dasharray']);
+          assert.equal(node['@_stroke-width'],reference['@_stroke-width']);
+          near(Number(node['@_stroke-dashoffset']??0)%period,(Number(reference['@_stroke-dashoffset']??0)+start-20)%period);
+        }
+      }
+    }
+    assert.deepEqual(pieces,saved);
+  }
+});
+
+test('crossings, gaps, nearby parallels and different fold appearances keep independent dash origins',()=>{
+  const base=annotation('valley',15);
+  const others=[
+    {...base,a:[36,30],b:[50,30]}, {...base,a:[20,30.001],b:[35,30.001]},
+    {...base,a:[22,26],b:[22,34]}, {...base,style:'mountain'}, {...base,color:'#000000'},
+    {...base,width:2}, {...base,strokePattern:'dotted'}
+  ] as DiagramLineAnnotation[];
+  for(const other of others){
+    const single=lines(render(null,[other],true))[0];
+    assert.deepEqual(lines(render(null,[base,{...other,id:'other'}],true))[1],single);
+  }
+});
+
 test('linked occlusion fragments share the full stroke pattern and phase instead of individually degrading to solid',()=>{
   const source=annotation(),pose=projectFixture([]).steps[0].pose!,fragments:DiagramFoldPreviewSegment[]=[
     {face:0,a:[20,30],b:[20.2,30],assignment:'M',visibility:'hidden',strokeSpan:{length:12,offset:0}},

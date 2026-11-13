@@ -12,6 +12,19 @@ function project(name='同名绘图',description=''){let id=0;const p=createDiag
 function repo(ids:string[]=[]){const backing=store();let id=0;return {backing,library:createDiagramLibrary(backing,{idFactory:()=>ids[id++]??`doc-${id}`,now:()=>100+id})};}
 const names=(backing:ReturnType<typeof store>)=>createDiagramLibrary(backing).read().documents.map(entry=>entry.name);
 
+test('ordinary browser settings migrate without reading any target drawing payload',async()=>{
+  const local=store();local.setItem('zhezhi.theme.v1','dark');const reads:string[]=[],writes:string[]=[];
+  const target={getItem(){throw Error('synchronous read forbidden');},setItem(){throw Error('synchronous write forbidden');},async getItemAsync(key:string){reads.push(key);throw Error('drawing read forbidden');},async compareAndSetAsync(key:string,expected:string|null,value:string){assert.equal(expected,null);assert.equal(value,'dark');writes.push(key);return true;}};
+  const result=await migrateBrowserPreferenceStorage(local,target,{keys:['zhezhi.theme.v1']});
+  assert.deepEqual(reads,[]);assert.deepEqual(writes,['zhezhi.theme.v1']);assert.equal(result.copiedValues,1);
+});
+
+test('legacy drawing migration uses asynchronous target reads and acknowledged CAS throughout',async()=>{
+  const local=repo(['a']),disk=repo(['b']);local.library.save(project('A'),{kind:'saved'});disk.library.save(project('B'),{kind:'saved'});
+  const target={getItem(){throw Error('synchronous read forbidden');},setItem(){throw Error('synchronous write forbidden');},async getItemAsync(key:string){return disk.backing.getItem(key);},async compareAndSetAsync(key:string,expected:string|null,value:string){if(disk.backing.getItem(key)!==expected)return false;disk.backing.setItem(key,value);return true;}};
+  await migrateBrowserPreferenceStorage(local.backing,target,{keys:[...local.backing.values.keys()]});assert.deepEqual(names(disk.backing),['B','A']);
+});
+
 test('local index A and service index B are merged with both drawings accessible and local untouched',async()=>{
   const local=repo(['local-a']),disk=repo(['service-b']);local.library.save(project('浏览器绘图 A'),{kind:'saved'});const old=disk.library.save(project('磁盘绘图 B'),{kind:'saved'}),before=[...local.backing.values];
   const result=await migrateBrowserPreferenceStorage(local.backing,disk.backing);assert.equal(result.importedDocuments,1);assert.deepEqual(names(disk.backing),['磁盘绘图 B','浏览器绘图 A']);assert.equal(disk.library.load(old.id).name,'磁盘绘图 B');assert.deepEqual([...local.backing.values],before);
@@ -162,11 +175,22 @@ async function withBrowserService(source:ReturnType<typeof store>,target:ReturnT
   const names=['window','localStorage','fetch','XMLHttpRequest'] as const,original=new Map(names.map(name=>[name,Object.getOwnPropertyDescriptor(globalThis,name)]));
   const status={configured:false,paths:{projectsDir:'D:/test/projects',diagramsDir:'D:/test/diagrams',dataDir:'D:/test/data'},defaults:{projectsDir:'D:/test/projects',diagramsDir:'D:/test/diagrams',dataDir:'D:/test/data'},busy:false,platform:'win32',pickerAvailable:true};
   class PreferenceRequest {
-    status=200;responseText='';method='GET';url='';open(method:string,url:string){this.method=method;this.url=url;}setRequestHeader(){}
+    status=200;responseText='';method='GET';url='';open(method:string,url:string){assert.equal(method,'POST','settings reads must use asynchronous fetch');this.method=method;this.url=url;}setRequestHeader(){}
     send(body?:string){try{if(this.method==='GET'){const key=new URL(this.url,'http://isolated.test').searchParams.get('key')!;this.responseText=JSON.stringify({value:target.getItem(key)});}else{const value=JSON.parse(body!);if(Object.hasOwn(value,'expectedValue')&&target.getItem(value.key)!==value.expectedValue){this.status=409;this.responseText=JSON.stringify({error:'绘图库已在其他窗口修改'});return;}target.setItem(value.key,value.value);this.responseText=JSON.stringify({value:null});}}catch(error){this.status=507;this.responseText=JSON.stringify({error:(error as Error).message});}}
   }
   try {
-    for(const [name,value] of [['window',{}],['localStorage',source],['XMLHttpRequest',PreferenceRequest],['fetch',async(url:string)=>new Response(JSON.stringify(statusCode===200?(url.endsWith('/storage/apply')?{...status,configured:true,copiedFiles:0,retainedSource:true}:status):{error:'旧服务未提供设置路由'}),{status:statusCode,headers:{'content-type':'application/json'}})]] as const)Object.defineProperty(globalThis,name,{configurable:true,writable:true,value});
+    const fetch=async(url:string,options?:RequestInit)=>{
+      let code=statusCode,result:unknown={error:'旧服务未提供设置路由'};
+      try{if(code===200){
+        if(url.endsWith('/storage/preferences/snapshot'))result={values:Object.fromEntries([...target.values].filter(([key])=>key!==DIAGRAM_LEGACY_DRAFT_KEY&&!key.startsWith('zhezhi.diagram-library-doc-')&&key!=='zhezhi.base-design-library.v1'))};
+        else if(url.includes('/storage/preferences?'))result={value:target.getItem(new URL(url,'http://isolated.test').searchParams.get('key')!)};
+        else if(url.endsWith('/storage/preferences')&&options?.method==='POST'){
+          const value=JSON.parse(String(options.body));if(Object.hasOwn(value,'expectedValue')&&target.getItem(value.key)!==value.expectedValue){code=409;result={error:'绘图库已在其他窗口修改'};}else{target.setItem(value.key,value.value);result={value:null};}
+        }else result=url.endsWith('/storage/apply')?{...status,configured:true,copiedFiles:0,retainedSource:true}:status;
+      }}catch(error){code=507;result={error:(error as Error).message};}
+      return new Response(JSON.stringify(result),{status:code,headers:{'content-type':'application/json'}});
+    };
+    for(const [name,value] of [['window',{}],['localStorage',source],['XMLHttpRequest',PreferenceRequest],['fetch',fetch]] as const)Object.defineProperty(globalThis,name,{configurable:true,writable:true,value});
     await run();
   }finally{setPreferenceService(undefined);for(const name of names){const descriptor=original.get(name);if(descriptor)Object.defineProperty(globalThis,name,descriptor);else Reflect.deleteProperty(globalThis,name);}}
 }

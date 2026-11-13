@@ -1,8 +1,12 @@
 import {storageSessionToken} from './api';
 import {DiagramLibraryConflictError,type DiagramLibraryBackgroundRequest,type DiagramLibraryBackgroundResult} from './diagramLibrary';
 import {WEB_APP} from './webRuntime';
+import {getDiagramProjectSaveBlob} from './diagramProjectTransport';
+import {currentDocumentOwner} from './documentRequestScope';
 
-export interface DiagramLibrarySaveRequest {id:number;request:DiagramLibraryBackgroundRequest;url:string;token:string;webPreferences?:[string,string][]}
+export type DiagramLibrarySaveTransport=DiagramLibraryBackgroundRequest|(
+  Omit<Extract<DiagramLibraryBackgroundRequest,{project:unknown}>,'project'>&{projectBlob:Blob});
+export interface DiagramLibrarySaveRequest {id:number;request:DiagramLibrarySaveTransport;url:string;token:string;documentId?:string;webPreferences?:[string,string][]}
 export type DiagramLibrarySaveReply={id:number;type:'result';result:DiagramLibraryBackgroundResult;webUpdates?:[string,string][]}|{id:number;type:'error';message:string;conflict?:boolean};
 
 /** The worker owns the expensive validator and synchronous disk bridge. The
@@ -41,7 +45,13 @@ export function createDiagramLibrarySaveClient(factory:()=>Worker=()=>new Worker
         }
         const token=storageSessionToken();if(!token)throw new Error('本地存储尚未连接，未提交绘图。');
         if(webPreferences)webBaselines.set(id,webPreferences);
-        worker.postMessage({id,request,url:new URL('/api/storage/preferences',location.href).href,token,webPreferences} satisfies DiagramLibrarySaveRequest);
+        const projectBlob='project' in request?getDiagramProjectSaveBlob(request.project):undefined;
+        // Only a locally registered immutable snapshot can use Worker-produced
+        // bytes. Ordinary edits retain the original detached-object transport.
+        let transport:DiagramLibrarySaveTransport=request;
+        if(projectBlob&&'project' in request){const {project:_,...rest}=request;transport={...rest,projectBlob};}
+        const documentId=currentDocumentOwner();
+        worker.postMessage({id,request:transport,url:new URL('/api/storage/preferences',location.href).href,token,webPreferences,...(documentId?{documentId}:{})} satisfies DiagramLibrarySaveRequest);
       }catch(error){pending.delete(id);webBaselines.delete(id);reject(error instanceof Error?error:new Error(String(error)));finish();}
     });
   };

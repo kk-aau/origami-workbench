@@ -76,6 +76,11 @@ impl ExportStore {
         let cancelled=entry.pending.lock().map_err(|_|"导出文件状态不可用。")?.take().is_some();
         self.remove(ticket); Ok(cancelled)
     }
+    pub fn has_owner(&self, owner:&str)->bool {self.entries.lock().map(|entries|entries.values().any(|entry|entry.owner==owner)).unwrap_or(true)}
+    pub fn cancel_owner(&self, owner:&str) {
+        let entries=match self.entries.lock(){Ok(mut entries)=>{let tickets=entries.iter().filter(|(_,e)|e.owner==owner).map(|(id,_)|id.clone()).collect::<Vec<_>>();tickets.into_iter().filter_map(|id|entries.remove(&id)).collect::<Vec<_>>()},Err(_)=>return};
+        for entry in entries {if let Ok(mut pending)=entry.pending.lock(){pending.take();}}
+    }
     pub fn clear(&self) {
         self.closed.store(true,Ordering::SeqCst);
         let entries=match self.entries.lock(){Ok(mut entries)=>entries.drain().map(|(_,e)|e).collect::<Vec<_>>(),Err(_)=>return};
@@ -120,4 +125,12 @@ mod tests {
     }
     #[test] fn closing_store_rejects_late_preparation_without_leaving_parts(){let dir=tempfile::tempdir().unwrap();let store=ExportStore::default();store.clear();assert!(store.prepare("main",dir.path().join("late.bin"),100).is_err());assert_eq!(fs::read_dir(dir.path()).unwrap().count(),0);}
     #[test] fn rejects_path_names(){for name in ["../a","D:\\a","","..","a\0b"]{assert!(validate_name(name).is_err());}assert!(validate_name("龙神.dxf").is_ok());}
+    #[test] fn closing_one_owner_removes_only_its_staging_and_does_not_close_the_export_store(){
+        let dir=tempfile::tempdir().unwrap();let a=dir.path().join("a.txt");let b=dir.path().join("b.txt");fs::write(&a,b"old-a").unwrap();fs::write(&b,b"old-b").unwrap();
+        let store=ExportStore::default();let first=store.prepare("doc-a",a.clone(),3).unwrap();let second=store.prepare("doc-b",b.clone(),3).unwrap();
+        store.write("doc-a",&first,0,b"a").unwrap();store.cancel_owner("doc-a");
+        assert!(store.write("doc-a",&first,1,b"bc").is_err());assert_eq!(fs::read(&a).unwrap(),b"old-a");
+        store.write("doc-b",&second,0,b"new").unwrap();store.commit("doc-b",&second).unwrap();assert_eq!(fs::read(&b).unwrap(),b"new");
+        assert_eq!(fs::read_dir(dir.path()).unwrap().count(),2);assert!(store.prepare("doc-c",dir.path().join("c.txt"),0).is_ok());
+    }
 }

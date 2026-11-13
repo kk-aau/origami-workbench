@@ -1,6 +1,9 @@
 import {blankDoc} from './state';
 import {computeFlatFold} from '../core/flatFold';
 import type {Doc,Point} from '../core/types';
+import {validateDoc} from '../core/types';
+import {pointBounds} from '../core/pointBounds';
+import {paperPath} from './paper';
 import type {DiagramProject,DiagramPose} from './diagramProject';
 import {defaultModelView} from './modelViewState';
 import {defaultModelColors,validateModelColors,type ModelColors} from './modelColors';
@@ -17,7 +20,7 @@ export function defaultDiagramBasicSettings(width=200,height=200):DiagramBasicSe
 export function validateDiagramBasicSettings(value:unknown):asserts value is DiagramBasicSettings {
  if(!value||typeof value!=='object'||Array.isArray(value))throw Error('绘图基本信息无效。');
  const s=value as DiagramBasicSettings,p=s.paper;
- if(!p||!['square','rectangle','triangle','regular','custom'].includes(p.shape)||![p.width,p.height].every(v=>Number.isFinite(v)&&v>0&&v<=100000)||!Number.isSafeInteger(p.sides)||p.sides<3||p.sides>64||typeof s.adaptiveLines!=='boolean')throw Error('纸张尺寸、形状或边数无效。');
+ if(!p||!['square','rectangle','triangle','regular','custom'].includes(p.shape)||![p.width,p.height].every(v=>Number.isFinite(v)&&v>0&&v<=(p.shape==='custom'?1_000_000:100000))||!Number.isSafeInteger(p.sides)||p.sides<3||p.sides>64||typeof s.adaptiveLines!=='boolean')throw Error('纸张尺寸、形状或边数无效。');
  validateModelColors(s.colors);validateDiagramLineDefaults(s.lineDefaults);
 }
 function regularPoints(sides:number):Point[]{return Array.from({length:sides},(_,i)=>{const angle=-Math.PI/2+i*2*Math.PI/sides;return [Math.cos(angle),Math.sin(angle)];});}
@@ -40,6 +43,42 @@ export function diagramBasicPaperDoc(name:string,input:DiagramBasicSettings):Doc
   const boundary:Point[]=points.map(q=>[(q[0]-minX)*scale,(q[1]-minY)*scale]);
   doc.segments=boundary.map((a,i)=>({id:crypto.randomUUID(),a,b:boundary[(i+1)%boundary.length],assignment:'B',angle:0}));
  }return doc;
+}
+/** New blank drawings accept proportions. Keep persisted dimensions and legacy
+ * appearance-only edits unchanged; normalisation happens only at creation. */
+export function diagramBasicPaperFromRatio(name:string,input:DiagramBasicSettings):{doc:Doc;settings:DiagramBasicSettings} {
+ const settings=normalizeDiagramBasicSettings(input),paper=settings.paper;
+ if(paper.shape==='custom')throw Error('自定义纸张需要采用真实的闭合边界。');
+ const longest=Math.max(paper.width,paper.height);
+ paper.width=paper.width/longest*200;paper.height=paper.height/longest*200;
+ return {doc:diagramBasicPaperDoc(name,settings),settings};
+}
+/** Copy only actual paper boundary loops, including holes. CP artwork and
+ * construction metadata cannot turn into paper or leak into the new drawing. */
+export function diagramCustomPaperDoc(name:string,source:Doc):Doc {
+ const doc:Doc={schemaVersion:2,name,paper:{width:200,height:200},objects:[],segments:source.segments.filter(segment=>segment.assignment==='B').map(segment=>({id:crypto.randomUUID(),a:[...segment.a] as Point,b:[...segment.b] as Point,assignment:'B',angle:0}))};
+ validateDoc(doc);
+ if(!paperPath(doc))throw Error('纸张没有合法的闭合边界，请检查边界是否缺失、断开、重合或自交。');
+ const bounds=pointBounds(doc.segments.flatMap(segment=>[segment.a,segment.b])),width=bounds.maxX-bounds.minX,height=bounds.maxY-bounds.minY;
+ doc.paper={width,height};
+ for(const segment of doc.segments)for(const point of [segment.a,segment.b]){point[0]-=bounds.minX;point[1]-=bounds.minY;}
+ validateDoc(doc);
+ const result=computeFlatFold(doc,undefined,{flatCreases:'marks'});
+ if(result.geometry.status!=='ready'||result.layers.status!=='solved')throw Error('无法采用当前纸张边界：'+(result.geometry.status!=='ready'?result.geometry.message:result.layers.message));
+ return doc;
+}
+/** Ordered vertex coordinates are proportions, including negative coordinates.
+ * Normalise before document validation so finite ratio input is not mistaken
+ * for out-of-range millimetres. An optional closing repeat is harmless. */
+export function diagramPolygonPaperDoc(name:string,vertices:Point[]):Doc {
+ if(!Array.isArray(vertices)||vertices.length<3||vertices.some(p=>!Array.isArray(p)||p.length!==2||!p.every(Number.isFinite)))throw Error('多边形至少需要三个有限二维顶点。');
+ const points=vertices.map(p=>[...p] as Point);
+ if(points.length>3&&points.at(-1)!.every((value,axis)=>value===points[0][axis]))points.pop();
+ let magnitude=0;for(const point of points)for(const value of point)magnitude=Math.max(magnitude,Math.abs(value));
+ const scaled=points.map(p=>[p[0]/(magnitude||1),p[1]/(magnitude||1)] as Point),bounds=pointBounds(scaled),longest=Math.max(bounds.maxX-bounds.minX,bounds.maxY-bounds.minY);
+ if(!(longest>0))throw Error('多边形顶点不能全部重合。');
+ const boundary=scaled.map(p=>[(p[0]-bounds.minX)/longest*200,(p[1]-bounds.minY)/longest*200] as Point);
+ return diagramCustomPaperDoc(name,{name,paper:{width:200,height:200},segments:boundary.map((a,i)=>({id:crypto.randomUUID(),a,b:boundary[(i+1)%boundary.length],assignment:'B',angle:0}))});
 }
 export function canChangeDiagramBasicPaper(p:DiagramProject):boolean {
  const s=p.steps[0];return p.steps.length===1&&!s.simulationSurface&&!s.pose?.paperDeformation&&!s.pose?.spatial&&!s.foldLink?.fixed&&!(s.annotations?.length||s.images?.length||s.callouts?.length)&&p.states.every(st=>st.doc.segments.every(s=>s.assignment==='B')&&!st.doc.objects?.length&&!st.doc.background);

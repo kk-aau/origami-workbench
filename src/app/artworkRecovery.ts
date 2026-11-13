@@ -1,5 +1,6 @@
 import {api} from './api';
 import {prepareArtworkProject,type ArtworkProject} from './artworkProject';
+import {startArtworkImport} from './projectImportTask';
 
 export interface ArtworkRecoverySummary {
   id:string;name:string;updated:string;revision:string;bytes:number;models:number;steps:number;simulation:boolean;damaged?:boolean;
@@ -21,8 +22,8 @@ function summary(value:unknown):ArtworkRecoverySummary {
 export function createArtworkRecoveryStore(options:{request?:Request}={}) {
   const request:Request=options.request??api;
   return {
-    async list():Promise<ArtworkRecoveryList> {
-      const raw=await request('artwork-recovery') as ArtworkRecoveryList;
+    async list(cachedOnly=false):Promise<ArtworkRecoveryList> {
+      const raw=await request('artwork-recovery'+(cachedOnly?'?cached=1':'')) as ArtworkRecoveryList;
       if(!raw||Object.keys(raw).sort().join(',')!=='entries,warnings'||!Array.isArray(raw.entries)||!Array.isArray(raw.warnings)||raw.warnings.some(value=>typeof value!=='string'))throw new Error('完整作品恢复目录格式无效，未载入。');
       const entries=raw.entries.map(summary);if(new Set(entries.map(entry=>entry.id)).size!==entries.length)throw new Error('完整作品恢复目录编号重复，未载入。');
       return {entries,warnings:[...raw.warnings]};
@@ -32,7 +33,10 @@ export function createArtworkRecoveryStore(options:{request?:Request}={}) {
       if(!raw||Object.keys(raw).sort().join(',')!=='summary,text'||typeof raw.text!=='string')throw new Error('完整作品恢复记录无效，未载入。');
       const entry=summary(raw.summary);if(entry.id!==recordId||entry.damaged)throw new Error('完整作品恢复记录与目录不一致，未载入。');
       // All geometry/source validators finish before any workspace is changed.
-      return {summary:entry,project:prepareArtworkProject(raw.text)};
+      if(typeof Worker==='undefined')return {summary:entry,project:prepareArtworkProject(raw.text)};
+      const result=await startArtworkImport(raw.text).promise;
+      if(result.kind!=='artwork')throw Error('完整作品准备结果无效。');
+      return {summary:entry,project:result.project};
     },
     /** text must be the result of exportArtworkProject. That full codec already
      * validated geometry; do not repeat expensive source reconstruction here. */

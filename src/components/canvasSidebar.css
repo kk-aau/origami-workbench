@@ -1,5 +1,5 @@
 .chrome-workbench .canvas-inspector{overflow-x:hidden;overflow-y:auto;min-height:0}
-.chrome-workbench .canvas-inspector>.inspector-heading{display:flex;position:sticky;top:0;z-index:1;background:var(--paper);padding:12px 14px;border-bottom:1px solid var(--line)}
+.chrome-workbench .canvas-inspector>.overlay-scroll-viewport>.overlay-scroll-content>.inspector-heading{display:flex;position:sticky;top:0;z-index:1;background:var(--paper);padding:12px 14px;border-bottom:1px solid var(--line)}
 .chrome-workbench .canvas-inspector>*{flex-shrink:0}
 .tool-options{border-top:1px solid var(--line);font-size:11px}
 .tool-options>summary{padding:9px 8px;cursor:pointer;color:var(--muted)}
@@ -27,6 +27,6 @@
 .canvas-inspector .tool-options .tool-paper-settings h2{margin-bottom:10px}
 .canvas-inspector .tool-options .tool-selection-options{padding:8px 12px;gap:10px}
 .canvas-inspector .tool-options .tool-selection-options label{margin:0;font-size:12px;display:flex;align-items:center;gap:7px}
-.canvas-inspector .tool-options .dock-settings-actions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));padding:8px 12px 4px}
+.canvas-inspector .tool-options .dock-settings-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));padding:8px 12px 4px}
 .canvas-inspector .tool-options .dock-settings-actions button{min-width:0;padding:4px;font-size:11px;white-space:normal}
 .canvas-inspector .tool-options .dock-mark-history{padding:4px 12px 10px}

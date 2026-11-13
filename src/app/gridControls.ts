@@ -1,5 +1,5 @@
 export const GRID_MIN = 1;
-export const GRID_MAX = 128;
+export const GRID_MAX = 512;
 export const DEFAULT_GRID_DIVISIONS = 4;
 
 export function clampGridDivisions(value: number): number {

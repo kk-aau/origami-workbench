@@ -1,7 +1,7 @@
 import {useEffect,useId,useRef,useState,type ReactNode} from 'react';
 
 /** Compact application menu; every entry keeps its normal button semantics. */
-export default function HeaderMenu({label,children,icon,align='right'}:{label:string;children:ReactNode;icon?:ReactNode;align?:'left'|'right'}){
+export default function HeaderMenu({label,children,icon,align='right',onOpen}:{label:string;children:ReactNode;icon?:ReactNode;align?:'left'|'right';onOpen?:()=>void}){
  const [open,setOpen]=useState(false),root=useRef<HTMLDivElement>(null),trigger=useRef<HTMLButtonElement>(null),panel=useRef<HTMLDivElement>(null),id=useId();
  useEffect(()=>{
   if(!open)return;
@@ -19,7 +19,7 @@ export default function HeaderMenu({label,children,icon,align='right'}:{label:st
    : key==='f11'&&!event.shiftKey);
   if(appShortcut)setOpen(false);else event.stopPropagation();
  }} onBlur={event=>{if(event.relatedTarget instanceof Node&&!event.currentTarget.contains(event.relatedTarget))setOpen(false);}}>
-  <button ref={trigger} type="button" className={icon?'header-menu-trigger icon-menu-trigger':'header-menu-trigger'} aria-label={label} title={label} aria-expanded={open} aria-controls={id} onClick={()=>setOpen(value=>!value)} onKeyDown={event=>{if(event.key==='ArrowDown'||event.key==='ArrowUp'){event.preventDefault();setOpen(true);focusItem(event.key==='ArrowUp');}}}>{icon??label}{!icon&&<ChromeIcon name="down"/>}</button>
+  <button ref={trigger} type="button" className={icon?'header-menu-trigger icon-menu-trigger':'header-menu-trigger'} aria-label={label} title={label} aria-expanded={open} aria-controls={id} onClick={()=>{if(!open)onOpen?.();setOpen(value=>!value);}} onKeyDown={event=>{if(event.key==='ArrowDown'||event.key==='ArrowUp'){event.preventDefault();if(!open)onOpen?.();setOpen(true);focusItem(event.key==='ArrowUp');}}}>{icon??label}{!icon&&<ChromeIcon name="down"/>}</button>
   {open&&<div id={id} ref={panel} className="header-menu-panel" aria-label={label} onClick={event=>{if((event.target as HTMLElement).closest('button:not(:disabled)'))setOpen(false);}} onKeyDown={event=>{
    if(!['ArrowDown','ArrowUp','Home','End'].includes(event.key))return;
    const items=[...event.currentTarget.querySelectorAll<HTMLButtonElement>('button:not(:disabled)')];if(!items.length)return;

@@ -1,11 +1,12 @@
 import {useEffect,useId,useMemo,useState,type CSSProperties,type DragEvent,type ReactNode} from 'react';
 import {TOOL_GUIDES,type Tool} from '../app/tools';
 import {DOCK_LABELS} from '../app/orieditaToolLayout';
-import {TOOL_LAYOUT_ACTIONS,TOOL_LAYOUT_ITEM_IDS,defaultToolLayoutPreferences,type ToolLayoutActionId,type ToolLayoutSide} from '../app/toolLayoutPreferences';
+import {TOOL_LAYOUT_ACTIONS,TOOL_LAYOUT_ITEM_IDS,toolLayoutPoolGroups,type ToolLayoutActionId,type ToolLayoutSide} from '../app/toolLayoutPreferences';
 import type {DockToolProps} from './DockToolGroup';
 import type {ToolLayoutController,ToolLayoutDrop} from './useToolLayout';
 import {ToolLayoutName} from './ToolLayoutControls';
 import {Icon} from './Fields';
+import OverlayScrollArea from './OverlayScrollArea';
 export type ToolLayoutActions=Record<ToolLayoutActionId,()=>void>;
 const actionIcons:Record<ToolLayoutActionId,string>={'action:check':'check','action:duplicates':'eraseoverlap','action:merge':'mergevertex','action:cross-merge':'mergecrossvertex','action:fold-conflicts':'regioncheck','action:empty-branches':'trim'};
 export function layoutItemName(id:string){return TOOL_LAYOUT_ACTIONS.find(item=>item.id===id)?.name??TOOL_GUIDES[id as Tool]?.name??id;}
@@ -16,7 +17,7 @@ export default function CustomToolGroups({layout,side,actions,query='',surface='
  useEffect(()=>{const active=template.groups.find(group=>group.items.includes(props.tool));if(active)setExpanded(previous=>({...previous,[`${template.id}:${active.id}`]:true}));},[props.tool,template.id]);
  const isPool=side==='pool',columnCount=isPool?0:template.columns[side],iconPalette=surface==='rail'&&!editing&&!isPool&&!query.trim();
  const groups=useMemo(()=>{
-  if(side==='pool')return defaultToolLayoutPreferences().templates[0].groups.map(group=>({...group,id:`pool-${group.id}`,items:template.unassigned.filter(id=>group.items.includes(id))})).filter(group=>group.items.length);
+  if(side==='pool')return toolLayoutPoolGroups(template.unassigned);
   if(!editing&&side==='left'&&query.trim())return [{id:'search-results',name:'搜索结果',side,items:TOOL_LAYOUT_ITEM_IDS.filter(id=>`${layoutItemName(id)} ${DOCK_LABELS[id as Tool]??''} ${TOOL_GUIDES[id as Tool]?.usage??''} ${id}`.toLowerCase().includes(query.trim().toLowerCase()))}];
   return template.groups.filter(group=>group.side===side);
  },[template,side,query,editing]);
@@ -27,7 +28,7 @@ export default function CustomToolGroups({layout,side,actions,query='',surface='
  function groupTarget(id:string,after=false):ToolLayoutDrop {const others=groups.filter(group=>group.id!==drag?.id);const index=others.findIndex(group=>group.id===id);return {side,groupId:id,index:index<0?others.length:index+(after?1:0),after};}
  function itemTarget(groupId:string,id?:string,after=false):ToolLayoutDrop {const items=(isPool?template.unassigned:template.groups.find(group=>group.id===groupId)!.items).filter(item=>item!==drag?.id),index=id?items.indexOf(id):items.length;return {side,groupId:isPool?undefined:groupId,index:index<0?items.length:index+(after?1:0),itemId:id,after};}
  return <div className={'custom-tool-groups'+(editing?' is-editing':'')+(collapsible&&!editing?' is-collapsible':'')+(iconPalette?' is-icon-palette':'')} data-tool-layout-side={side} data-tool-layout-surface={surface} data-tool-layout-columns={columnCount||'auto'}>
-  <div className={'custom-tools-viewport'+(isPool?' tool-layout-pool-viewport':'')+(isPool&&drop?.side==='pool'?' is-drop-target':'')} aria-label={isPool?'未分配工具池':side==='left'?'左侧工具':'右侧工具'} style={{'--tool-layout-grid':columnCount?`repeat(${columnCount},minmax(0,1fr))`:undefined} as CSSProperties} onDragOver={event=>allow(event,{side,index:isPool?template.unassigned.filter(id=>id!==drag?.id).length:groups.length})} onDrop={event=>receive(event,{side,index:isPool?template.unassigned.filter(id=>id!==drag?.id).length:groups.length})}>
+  <OverlayScrollArea viewportClassName={'custom-tools-viewport'+(isPool?' tool-layout-pool-viewport':'')+(isPool&&drop?.side==='pool'?' is-drop-target':'')} viewportProps={{'aria-label':isPool?'未分配工具池':side==='left'?'左侧工具':'右侧工具',style:{'--tool-layout-grid':columnCount?`repeat(${columnCount},minmax(0,1fr))`:undefined} as CSSProperties,onDragOver:event=>allow(event,{side,index:isPool?template.unassigned.filter(id=>id!==drag?.id).length:groups.length}),onDrop:event=>receive(event,{side,index:isPool?template.unassigned.filter(id=>id!==drag?.id).length:groups.length})}}>
    {groups.map(group=>{
     const atGroup=drop?.side===side&&drop.surface===surface&&drop.groupId===group.id,groupDrop=drag?.kind==='group'&&drag.id!==group.id&&atGroup,allActions=group.items.length>0&&group.items.every(id=>id.startsWith('action:'));
     const canCollapse=collapsible&&!editing&&!isPool&&!query.trim(),expandedKey=`${template.id}:${group.id}`,isExpanded=!canCollapse||(expanded[expandedKey]??(group.id==='types'||group.items.includes(props.tool))),contentId=`${contentPrefix}-${encodeURIComponent(group.id)}`;
@@ -47,7 +48,7 @@ export default function CustomToolGroups({layout,side,actions,query='',surface='
    })}
    {!groups.length&&<p className="tool-layout-empty-group">{isPool?'工具已全部放入两侧；可将侧栏工具拖回这里。':editing?'将中间工具或其他分组拖到这里':query.trim()?'没有匹配的工具':'此侧尚未放置工具'}</p>}
    {editing&&!isPool&&<button className={'tool-layout-add-group'+(drop?.side===side&&drop.surface===surface&&!drop.groupId?' is-drop-target':'')} type="button" onClick={()=>layout.addGroup(side)} onDragOver={event=>allow(event,{side,index:groups.filter(g=>g.id!==drag?.id).length})} onDrop={event=>receive(event,{side,index:groups.filter(g=>g.id!==drag?.id).length})}>＋ 新建分组<span>也可将中间工具拖到此处</span></button>}
-  </div>
+  </OverlayScrollArea>
   {editing&&layout.selectedItem&&(isPool?selectedInPool:selectedGroup?.side===side)&&<div className="tool-layout-selection"><strong>{layoutItemName(layout.selectedItem)}</strong><label><span>移到分组</span><select aria-label={`${isPool?'中间':side==='left'?'左侧':'右侧'}选中工具移到分组`} value={selectedGroup?.id??'pool'} onChange={event=>event.target.value==='pool'?layout.returnItem(layout.selectedItem!):layout.moveItem(layout.selectedItem!,event.target.value)}><option value="pool">中间 · 未分配工具池</option>{template.groups.map(group=><option key={group.id} value={group.id}>{group.side==='left'?'左':'右'} · {group.name}</option>)}</select></label><div>{isPool?<><button type="button" onClick={()=>layout.moveItemToSide(layout.selectedItem!,'left')}>移到左侧</button><button type="button" onClick={()=>layout.moveItemToSide(layout.selectedItem!,'right')}>移到右侧</button></>:<><button type="button" disabled={selectedIndex<=0} onClick={()=>layout.moveItem(layout.selectedItem!,selectedGroup!.id,selectedIndex-1)}>前移</button><button type="button" disabled={selectedIndex>=selectedGroup!.items.length-1} onClick={()=>layout.moveItem(layout.selectedItem!,selectedGroup!.id,selectedIndex+1)}>后移</button><button type="button" onClick={()=>layout.returnItem(layout.selectedItem!)}>放回中间</button></>}<button type="button" onClick={()=>layout.setSelectedItem(null)}>取消选择</button></div></div>}
  </div>;
 }

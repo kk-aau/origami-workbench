@@ -1,9 +1,9 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {ALL_DOCK_GROUPS,LEFT_MAIN_GROUPS,LEFT_EXTRA_GROUPS,RIGHT_DOCK_GROUPS,TOOL_CATEGORY_GROUPS} from '../../src/app/orieditaToolLayout';
+import {ALL_DOCK_GROUPS,LEFT_MAIN_GROUPS,LEFT_EXTRA_GROUPS,RIGHT_DOCK_GROUPS,TOOL_CATEGORY_GROUPS,BACKGROUND_TOOLS} from '../../src/app/orieditaToolLayout';
 import {TOOL_GUIDES} from '../../src/app/tools';
 import {TOOL_LAYOUT_PREFERENCES_KEY,TOOL_LAYOUT_ITEM_IDS,TOOL_LAYOUT_ACTIONS,MAX_TOOL_LAYOUT_TEMPLATES,
-  defaultToolLayoutPreferences,readToolLayoutPreferences,saveToolLayoutPreferences,validateToolLayoutPreferences,activeToolLayoutTemplate,
+  defaultToolLayoutPreferences,readToolLayoutPreferences,saveToolLayoutPreferences,validateToolLayoutPreferences,activeToolLayoutTemplate,toolLayoutPoolGroups,
   selectToolLayoutTemplate,copyToolLayoutTemplate,createToolLayoutTemplate,renameToolLayoutTemplate,deleteToolLayoutTemplate,updateToolLayoutTemplate,moveToolLayoutItem,moveToolLayoutGroup,
   returnToolLayoutItemToPool,returnToolLayoutGroupToPool,
   type ToolLayoutPreferences,type ToolLayoutTemplate} from '../../src/app/toolLayoutPreferences';
@@ -15,13 +15,15 @@ function complete(template:ToolLayoutTemplate){
   assert.deepEqual([...ids].sort(),[...TOOL_LAYOUT_ITEM_IDS].sort(),'no tool or check action is missing');
 }
 
-test('default task categories preserve every tool and check action once in the left panel',()=>{
+test('default categories keep ordinary tools left and background tools available in the editor pool',()=>{
   const preferences=defaultToolLayoutPreferences(),current=activeToolLayoutTemplate(preferences);
   assert.equal(preferences.version,1);assert.equal(preferences.activeId,'default');
   assert.deepEqual(preferences.templates.map(item=>[item.id,item.name]),[['default','默认'],['swapped','左右对调'],['all-left','全部左侧']]);
   assert.deepEqual(current.columns,{left:0,right:0});
   assert.equal(preferences.columnSizingVersion,1);
-  assert.deepEqual(current.unassigned,[]);
+  assert.equal(preferences.backgroundPanelVersion,1);
+  assert.deepEqual(current.unassigned,BACKGROUND_TOOLS);
+  assert.ok(current.groups.every(group=>group.items.every(item=>!BACKGROUND_TOOLS.includes(item as never))));
   assert.deepEqual(current.groups.map(group=>group.name),['类型','选择','绘制','高级','删除','复制与移动','变换','修复','注释','生成','测量','整理与检查']);
   assert.ok(current.groups.every(group=>group.side==='left'));
   assert.deepEqual(current.groups.find(group=>group.id==='types')!.items,TOOL_CATEGORY_GROUPS[0].tools);
@@ -59,6 +61,33 @@ test('saved layouts roundtrip through preferenceStorage-compatible access with t
   assert.throws(()=>saveToolLayoutPreferences(preferences,{setItem:()=>{throw Error('写入失败');}}),/写入失败/);
 });
 
+test('background tools can be placed back in custom groups on either side and remain there after reopening',()=>{
+ for(const side of ['left','right'] as const){
+  let value=defaultToolLayoutPreferences();value=moveToolLayoutGroup(value,'transform',side);
+  for(const [index,item] of BACKGROUND_TOOLS.entries())value=moveToolLayoutItem(value,item,'transform',index);
+  const current=activeToolLayoutTemplate(value);assert.equal(current.groups.find(group=>group.id==='transform')!.side,side);assert.deepEqual(current.groups.find(group=>group.id==='transform')!.items.slice(0,3),BACKGROUND_TOOLS);assert.deepEqual(current.unassigned,[]);complete(current);
+  const store=memoryStorage();saveToolLayoutPreferences(value,store);assert.deepEqual(readToolLayoutPreferences(store),value);
+ }
+});
+
+test('the visible default editor pool includes a named background group for all three dedicated tools',()=>{
+  const template=defaultToolLayoutPreferences().templates[0],before=structuredClone(template),groups=toolLayoutPoolGroups(template.unassigned);
+  assert.deepEqual(groups,[{id:'pool-background',name:'底图',side:'left',items:[...BACKGROUND_TOOLS]}]);
+  assert.deepEqual(template,before);
+  const moved=moveToolLayoutItem(defaultToolLayoutPreferences(),'backgroundposition','transform',0),remaining=toolLayoutPoolGroups(activeToolLayoutTemplate(moved).unassigned);
+  assert.deepEqual(remaining[0].items,['advancetype','operationframe']);
+  let placed=moved;for(const item of ['advancetype','operationframe'])placed=moveToolLayoutItem(placed,item,'transform',0);
+  assert.deepEqual(toolLayoutPoolGroups(activeToolLayoutTemplate(placed).unassigned),[]);
+});
+
+test('every tool in a new editor pool has exactly one visible category and category order preserves pool item order',()=>{
+  const unassigned=[...TOOL_LAYOUT_ITEM_IDS].reverse(),before=[...unassigned],groups=toolLayoutPoolGroups(unassigned),visible=groups.flatMap(group=>group.items);
+  assert.equal(visible.length,unassigned.length);assert.equal(new Set(visible).size,unassigned.length);assert.deepEqual([...visible].sort(),[...unassigned].sort());
+  assert.deepEqual([...groups.find(group=>group.name==='底图')!.items].sort(),[...BACKGROUND_TOOLS].sort());
+  for(const group of groups){const positions=group.items.map(item=>unassigned.indexOf(item));assert.deepEqual(positions,[...positions].sort((a,b)=>a-b));}
+  assert.deepEqual(unassigned,before);groups[0].items.pop();assert.deepEqual(unassigned,before);
+});
+
 test('reading older layouts removes retired and duplicate tools while restoring new tools without losing custom placement',()=>{
   const saved=defaultToolLayoutPreferences(),current=saved.templates[0];
   for(const template of saved.templates)delete (template as Partial<ToolLayoutTemplate>).unassigned;
@@ -71,7 +100,7 @@ test('reading older layouts removes retired and duplicate tools while restoring 
   assert.ok(!first.groups.find(group=>group.id==='drawing')!.items.includes('line'));
   assert.ok(first.groups.find(group=>group.id==='advanced')!.items.includes('circle3'));
   assert.ok(first.groups.find(group=>group.id==='checks')!.items.includes('action:merge'));
-  assert.deepEqual(first.unassigned,[]);
+  assert.deepEqual(first.unassigned,BACKGROUND_TOOLS);
   reopened.templates.forEach(complete);
 });
 
@@ -128,11 +157,11 @@ test('repeated pool and sidebar transfers never duplicate a tool or restore it t
     preferences=returnToolLayoutItemToPool(preferences,'line');
     preferences=returnToolLayoutItemToPool(preferences,'line',0);
     let current=activeToolLayoutTemplate(preferences);
-    assert.deepEqual(current.unassigned,['line']);
+    assert.deepEqual(current.unassigned,['line',...BACKGROUND_TOOLS]);
     assert.ok(current.groups.every(group=>!group.items.includes('line')));complete(current);
     preferences=moveToolLayoutItem(preferences,'line','transform',index);
     current=activeToolLayoutTemplate(preferences);
-    assert.deepEqual(current.unassigned,[]);
+    assert.deepEqual(current.unassigned,BACKGROUND_TOOLS);
     assert.equal(current.groups.find(group=>group.id==='transform')!.items.filter(item=>item==='line').length,1);
     assert.ok(!current.groups.find(group=>group.id==='drawing')!.items.includes('line'));complete(current);
   }
@@ -145,7 +174,7 @@ test('returning a group appends its tools in order and copied templates keep ind
   const withPool=returnToolLayoutItemToPool(original,'line');
   const returned=returnToolLayoutGroupToPool(withPool,'checks'),current=activeToolLayoutTemplate(returned);
   assert.ok(!current.groups.some(group=>group.id==='checks'));
-  assert.deepEqual(current.unassigned,['line',...groupItems]);complete(current);
+  assert.deepEqual(current.unassigned,[...BACKGROUND_TOOLS,'line',...groupItems]);complete(current);
   const snapshot=structuredClone(returned),copied=copyToolLayoutTemplate(returned,'default','工具池副本',()=> 'pool-copy');
   assert.deepEqual(activeToolLayoutTemplate(copied).unassigned,current.unassigned);
   assert.notEqual(activeToolLayoutTemplate(copied).unassigned,copied.templates[0].unassigned);
@@ -188,7 +217,7 @@ test('missing groups recover on the existing single side and empty destination g
 });
 
 test('malformed or future preferences fall back to defaults without partially accepting corrupted group data',()=>{
-  const invalid:unknown[]=[null,[],{},'legacy-layout',{version:2,activeId:'default',templates:[]},{...defaultToolLayoutPreferences(),templates:[]}];
+  const invalid:unknown[]=[null,[],{},'legacy-layout',{version:2,activeId:'default',templates:[]},{...defaultToolLayoutPreferences(),templates:[]},{...defaultToolLayoutPreferences(),backgroundPanelVersion:2}];
   for(const change of [
     (value:ToolLayoutPreferences)=>{value.templates[0].columns.left=-1;},
     (value:ToolLayoutPreferences)=>{value.templates[0].columns.right=1.5;},

@@ -25,7 +25,7 @@ default = ["desktop"]
 desktop = ["dep:tauri", "dep:tauri-build", "dep:rfd"]
 
 [dependencies]
-tauri = { version = "2", optional = true, features = ["devtools"] }
+tauri = { version = "2", optional = true, features = ["devtools", "unstable"] }
 axum = { version = "0.8", features = ["json", "http1", "tokio"] }
 tokio = { version = "1", features = ["full"] }
 tower-http = { version = "0.6", features = ["fs", "cors", "trace"] }
@@ -68,3 +68,6 @@ lto = "thin"
 strip = true
 opt-level = "s"
 panic = "unwind"
+
+[patch.crates-io]
+tauri-runtime-wry = { path = "../vendor/tauri-runtime-wry" }

@@ -1,3 +1,4 @@
+import {projectedFoldInkSpans} from '../app/diagramProjectedInk';
 import DiagramDepthCamera from './DiagramDepthCamera';
 import {memo,useEffect,useId,useMemo,useRef,useState,type PointerEvent as ReactPointerEvent,type ReactNode} from 'react';
 import type {DiagramSimulationSurface} from '../app/diagramSimulationSurface';
@@ -91,9 +92,10 @@ const DiagramFoldPreviewLayer=memo(function DiagramFoldPreviewLayer({segments,un
   units:number;adaptiveLines:boolean;clips:ReturnType<typeof diagramLocalSurfaceClips>;
   tearWindows:ReturnType<typeof diagramTearWindowRender>;showCursorHint:boolean;
 }){
-  return <g data-diagram-fold-link-preview="true" pointerEvents="none">{segments.map(({segment,paint})=>{
+  const spans=useMemo(()=>projectedFoldInkSpans(segments.map(({segment,paint})=>({...segment,...paint}))),[segments]);
+  return <g data-diagram-fold-link-preview="true" pointerEvents="none">{segments.map(({segment,paint},index)=>{
     const quiet=segment.existing&&!segment.unfolding;
-    const markup=diagramAnnotationMarkup({id:segment.id,kind:'line',a:segment.a,b:segment.b,style:segment.style,color:paint.color,strokePattern:paint.strokePattern,width:adaptiveLines?paint.width:Math.max(paint.width,units*(quiet?.8:1.25))},{enabled:adaptiveLines,units,minimumWidth:units*(quiet?.8:1.25),span:segment.strokeSpan});
+    const markup=diagramAnnotationMarkup({id:segment.id,kind:'line',a:segment.a,b:segment.b,style:segment.style,color:paint.color,strokePattern:paint.strokePattern,width:adaptiveLines?paint.width:Math.max(paint.width,units*(quiet?.8:1.25))},{enabled:adaptiveLines,units,minimumWidth:units*(quiet?.8:1.25),span:segment.strokeSpan,projectedSpan:spans.get(index)});
     return <g key={segment.id} clipPath={clips?.clipForFace(segment.face)} mask={tearWindows.maskForFaces([segment.face])} data-diagram-fold-link-segment={segment.id} data-fold-link-face={segment.face} data-fold-link-visibility={segment.visibility} data-fold-link-style={segment.style} data-fold-link-existing={segment.existing?true:undefined} data-fold-link-unfolding={segment.unfolding?true:undefined} opacity={paint.opacity}>
       <g dangerouslySetInnerHTML={{__html:markup}}/>
       <line data-diagram-linked-line-hit x1={segment.a[0]} y1={segment.a[1]} x2={segment.b[0]} y2={segment.b[1]} stroke="transparent" strokeWidth={Math.max(units*7,paint.width)} pointerEvents="stroke">{showCursorHint&&<title>{`${segment.unfolding?'展开 · ':''}${LINE_LABELS[segment.style]} · 放大可查看线型细节`}</title>}</line>
@@ -245,6 +247,11 @@ export default function DiagramDrawingCanvas({depthPreview,depthCameraVisible=fa
     if(!paperVisible)return isDiagramImageAnnotationVisible(a);
     return !pose||a.kind==='symbol'||!a.foldFaces?.length||a.foldFaces.some(face=>diagramFaceVisible(pose,face));
   };
+  const independentSpans=useMemo(()=>{
+    const ink=items.filter((a):a is DiagramLineAnnotation=>a.kind==='line'&&paperAnnotationVisible(a)&&!isDiagramBackgroundLine(a)&&
+      (!foldLinkEnabled||!isDiagramCPLine(a)&&a.foldFaces?.length===0)).map(a=>applyDiagramLineAppearance(a,lineDefaults));
+    return new Map([...projectedFoldInkSpans(ink)].map(([index,span])=>[ink[index].id,span]));
+  },[items,paperVisible,pose,foldLinkEnabled,drawingView.showExistingCreases,lineDefaults]);
   const selectedFaceLabel=(id:string)=>Object.hasOwn(selectedLineFaces,id)?selectedLineFaces[id].join(','):undefined;
   const creaseToolbarPoints=useMemo(()=>{
     const selected=items.filter((item):item is DiagramLineAnnotation=>item.kind==='line'&&selectedIds.includes(item.id)&&paperAnnotationVisible(item));
@@ -436,7 +443,7 @@ export default function DiagramDrawingCanvas({depthPreview,depthCameraVisible=fa
     setLineDraft(continuous?{id:'draft',kind:'line',a:b,b,style:lineStyle,color,width,strokePattern}:null);
   }
   function symbolAt(value:DiagramSymbolAnnotation['symbol'],p:Point,id:string):DiagramSymbolAnnotation{
-    const next:DiagramSymbolAnnotation=orientDiagramRepeatSymbol({id,kind:'symbol',symbol:value,position:p,size:diagramSymbolInitialSize(value,rect,zoomRegion?diagramZoomRegionBounds(zoomRegion):{width:paperGrid.stepX*paperGrid.divisions,height:paperGrid.stepY*paperGrid.divisions}),rotation:0,color,width,...(value==='tearWindow'?{cutawayFaces:[]}:{cadProperties:{}})},viewportAngle);
+    const next:DiagramSymbolAnnotation=orientDiagramRepeatSymbol({id,kind:'symbol',symbol:value,position:p,size:diagramSymbolInitialSize(value,rect,zoomRegion?diagramZoomRegionBounds(zoomRegion):paperGrid.bounds),rotation:0,color,width,...(value==='tearWindow'?{cutawayFaces:[]}:{cadProperties:{}})},viewportAngle);
     const center=symbolNativeGrips(next).find(g=>g.id==='center')?.point;
     if(center)next.position=[next.position[0]+p[0]-center[0],next.position[1]+p[1]-center[1]];
     return next;
@@ -603,7 +610,7 @@ export default function DiagramDrawingCanvas({depthPreview,depthCameraVisible=fa
   const visibleItems=items.filter(paperAnnotationVisible);
   const renderedItems=visibleItems.map(a=><g key={a.id} clipPath={a.kind==='line'?paperClip:undefined} mask={paperVisible&&a.kind==='line'?tearWindows.maskForFaces(a.foldFaces):undefined} data-diagram-annotation={a.id} data-annotation-kind={a.kind} data-diagram-existing-crease={isDiagramCPExistingLine(a)?true:undefined} data-diagram-movable={!isDiagramCPExistingLine(a)&&(!editLocked||a.kind==='symbol')?true:undefined} pointerEvents={tool==='select'?'visiblePainted':'none'} style={{cursor:tool==='select'?(isDiagramCPExistingLine(a)?'pointer':editLocked&&a.kind==='line'?'default':'move'):undefined}} onPointerDown={e=>startObject(e,a)} onDoubleClick={e=>{const key=(e.target as Element).closest('[data-cad-attribute]')?.getAttribute('data-cad-attribute')??undefined;const p=point(e.clientX,e.clientY);if(editDivisionNumber(a,key,p??undefined)){e.preventDefault();e.stopPropagation();}else if(a.kind==='symbol'&&isDiagramRotationSymbol(a.symbol)){e.preventDefault();e.stopPropagation();editTurnAngle(a);}}}>
     {showCursorHint&&a.kind==='symbol'&&isDiagramRotationSymbol(a.symbol)&&<title>双击中央数字或旋转符号修改旋转角度（0～360°）</title>}
-    <g data-fold-link-source-hidden={foldSourceOpacity(a)===0?true:undefined} opacity={foldSourceOpacity(a)} pointerEvents={tool==='select'?'visiblePainted':'none'} dangerouslySetInnerHTML={{__html:diagramAnnotationMarkup(paintAnnotation(a),lineDisplay)}}/>
+    <g data-fold-link-source-hidden={foldSourceOpacity(a)===0?true:undefined} opacity={foldSourceOpacity(a)} pointerEvents={tool==='select'?'visiblePainted':'none'} dangerouslySetInnerHTML={{__html:diagramAnnotationMarkup(paintAnnotation(a),{...lineDisplay,projectedSpan:independentSpans.get(a.id)})}}/>
     {a.kind==='line'&&<line x1={a.a[0]} y1={a.a[1]} x2={a.b[0]} y2={a.b[1]} stroke="transparent" strokeWidth={Math.max(radius*3,a.width)} fill="none">{showCursorHint&&<title>{`${LINE_LABELS[a.style]} · 放大可查看线型细节`}</title>}</line>}
   </g>);
   return <>

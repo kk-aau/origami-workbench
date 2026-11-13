@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-desktop-documents"
+description = "Enables the desktop_documents command without any pre-configured scope."
+commands.allow = ["desktop_documents"]
+
+[[permission]]
+identifier = "deny-desktop-documents"
+description = "Denies the desktop_documents command without any pre-configured scope."
+commands.deny = ["desktop_documents"]

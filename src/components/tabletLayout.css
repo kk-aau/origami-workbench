@@ -41,13 +41,10 @@
 .app.web-tablet .diagram-workspace .diagram-body>.panel-divider{display:none}
 .app.web-tablet .diagram-workspace .diagram-edit-layout{grid-template-columns:minmax(0,1fr)}
 .app.web-tablet .diagram-workspace .diagram-document-heading{gap:4px;padding:4px 8px;flex-wrap:nowrap;min-height:44px}
-.app.web-tablet .diagram-workspace .diagram-document-name{flex:0 0 auto;max-width:32%;min-width:0;flex-wrap:wrap}
+.app.web-tablet .diagram-workspace .diagram-document-name{flex:1;min-width:0;flex-wrap:nowrap}
 .app.web-tablet .diagram-workspace .diagram-document-name strong{max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.app.web-tablet .diagram-workspace .diagram-toolbar-end{flex-wrap:nowrap;overflow-x:auto;min-width:0;justify-content:flex-start}
+.app.web-tablet .diagram-workspace .diagram-toolbar-end{flex-wrap:nowrap;min-width:0;justify-content:flex-start}
 .app.web-tablet .diagram-workspace .diagram-toolbar-end button{flex:0 0 auto;min-height:40px;font-size:12px}
-.app.web-tablet .diagram-workspace .diagram-unified-tools{flex-wrap:nowrap;overflow-x:auto;min-height:48px;flex-shrink:0;gap:6px}
-.app.web-tablet .diagram-workspace .diagram-unified-tools>div{flex-shrink:0;flex-wrap:nowrap}
-.app.web-tablet .diagram-workspace .diagram-unified-tools button,.app.web-tablet .diagram-workspace .diagram-unified-tools select{min-height:40px;font-size:12px}
 .app.web-tablet .diagram-workspace[data-tablet-panel=steps] .diagram-step-rail,
 .app.web-tablet .diagram-workspace[data-tablet-panel=layers] .diagram-context-shelf,
 .app.web-tablet .diagram-workspace[data-tablet-panel=symbols] .diagram-symbol-dock,
@@ -75,8 +72,7 @@
   .app.web-tablet .web-edition-notice summary>span:not(.web-edition-more){display:none}
   .app.web-tablet .workspaces .workspace-tab{min-width:0;padding:6px 8px;font-size:11px}
   .app.web-tablet .workspaces .workspace-tab:disabled{min-width:0}
-  .app.web-tablet .diagram-workspace .diagram-document-name{max-width:30%}
-  .app.web-tablet .diagram-workspace .diagram-document-name>button{display:none}
+  .app.web-tablet .diagram-workspace .diagram-document-name{gap:4px}
   .app.web-tablet .diagram-workspace .diagram-step-caption{overflow-x:auto}
   .app.web-tablet .diagram-workspace .diagram-step-caption>label{min-width:150px}
   .app.web-tablet .diagram-workspace.is-comparison .diagram-body{grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(200px,1fr) minmax(200px,1fr);overflow:auto}
@@ -101,3 +97,5 @@
 .app.web-tablet .diagram-workspace .diagram-precision-panel input,.app.web-tablet .diagram-workspace .diagram-precision-panel select{min-height:44px;font-size:14px}
 .app.web-tablet .diagram-workspace .diagram-precision-close{min-width:44px;min-height:44px}
 .app.web-tablet .diagram-workspace .diagram-comparison-cp button{min-height:40px;font-size:12px}
+
+.app.web-tablet .diagram-document-heading :is(.diagram-view-tools button,.diagram-view-menu>button){min-height:40px}

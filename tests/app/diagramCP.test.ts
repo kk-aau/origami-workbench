@@ -141,3 +141,48 @@ test('restoration cleanup fails atomically at exhausted revisions',()=>{
   project.states[1].revision=Number.MAX_SAFE_INTEGER;const before=structuredClone(project);
   assert.throws(()=>normalizeDiagramProjectCP(project),/修订号/);assert.deepEqual(project,before);
 });
+
+test('identical restored CP states keep separate normalized documents and all drawing metadata',()=>{
+  const source=blankDoc('重复 CP',100,100);source.segments.push(s('one',[50,0],[50,50]),s('two',[50,50],[50,100]));
+  source.metadata={author:'原作者',nested:{note:'逐状态保留'}};source.objects=[{id:'text',kind:'text',position:[5,8],fontSize:6,text:'说明',color:'#112233'}];
+  const project=createDiagramProject(source,ids()),before=structuredClone(project),cleaned=normalizeDiagramProjectCP(project);
+  assert.equal(cleaned.changed,true);assert.deepEqual(cleaned.changedStateIds,project.states.map(state=>state.id));
+  assert.notEqual(cleaned.project.states[0].doc,cleaned.project.states[1].doc);
+  assert.notEqual(cleaned.project.states[0].doc.metadata,cleaned.project.states[1].doc.metadata);
+  assert.notEqual(cleaned.project.states[0].doc.objects,cleaned.project.states[1].doc.objects);
+  for(const state of cleaned.project.states)assert.deepEqual(state.doc,normalizeDiagramCP(source).doc);
+  cleaned.project.states[0].doc.metadata!.nested={note:'仅改第一状态'};
+  assert.deepEqual(cleaned.project.states[1].doc.metadata,source.metadata);assert.deepEqual(project,before);
+});
+
+test('normalization reuse distinguishes complete IDs, paper, angles, display, objects, background and metadata',()=>{
+  const source=blankDoc('属性完整匹配',100,100);source.segments.push(s('one',[50,0],[50,50]),s('two',[50,50],[50,100]));
+  const variants:Doc[]=[];
+  const change=(edit:(doc:Doc)=>void)=>{const next=structuredClone(source);edit(next);variants.push(next);};
+  change(doc=>{doc.name='不同名称';});change(doc=>{doc.paper.width=120;});change(doc=>{doc.segments[4].id='不同来源编号';});
+  change(doc=>{doc.segments[4].angle=-90;});change(doc=>{doc.segments[4].displayColor='#234567';});
+  change(doc=>{doc.metadata={author:'不同作者',custom:{retained:5}};});
+  change(doc=>{doc.metadata={author:undefined};});change(doc=>{doc.metadata={};});
+  change(doc=>{doc.objects=[{id:'circle',kind:'circle',center:[5,8],radius:2,color:'#123456'}];});
+  change(doc=>{doc.flatFold=setStartingFace(doc,1).flatFold;});
+  change(doc=>{doc.background={name:'参考图.png',dataUrl:'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+j2ZkAAAAASUVORK5CYII=',width:1,height:1,opacity:.5,visible:true,placement:{origin:[0,0],axis:[1,0]}};});
+  const project=createDiagramProject(source,ids());
+  for(const variant of variants){project.states[1].doc=variant;const cleaned=normalizeDiagramProjectCP(project);assert.deepEqual(cleaned.project.states[1].doc,normalizeDiagramCP(variant).doc);}
+});
+
+test('equal JSON keys do not drop own undefined extension fields during reuse',()=>{
+  const source=blankDoc('非持久字段区别',100,100);source.segments.push(s('one',[50,0],[50,50]),s('two',[50,50],[50,100]));
+  source.metadata={author:undefined};const other=structuredClone(source);other.metadata={};assert.equal(JSON.stringify(source),JSON.stringify(other));
+  const project=createDiagramProject(source,ids());project.states[1].doc=other;
+  const cleaned=normalizeDiagramProjectCP(project);
+  assert.equal(Object.hasOwn(cleaned.project.states[0].doc.metadata!,'author'),true);
+  assert.equal(Object.hasOwn(cleaned.project.states[1].doc.metadata!,'author'),false);
+});
+
+test('reused unchanged material states retain each source bank and starting-face identity',()=>{
+  const fixture=materialSlitFixture(),source=setStartingFace(fixture.source,2),project=createDiagramProject(source,ids());
+  const second=structuredClone(project.states[0].doc);project.states[1].doc=second;
+  const cleaned=normalizeDiagramProjectCP(project);assert.equal(cleaned.changed,false);assert.equal(cleaned.project,project);
+  assert.equal(cleaned.project.states[0].doc,project.states[0].doc);assert.equal(cleaned.project.states[1].doc,second);
+  assert.equal(cleaned.stats.materialStates,2);assert.deepEqual(cleaned.project.states[1].doc.flatFold,source.flatFold);
+});

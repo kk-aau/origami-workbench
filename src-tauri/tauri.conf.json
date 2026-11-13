@@ -13,7 +13,8 @@
       "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; worker-src 'self' blob:; connect-src 'self' ipc: http://ipc.localhost; object-src 'none'; base-uri 'none'; frame-src 'self'",
       "capabilities": [
         "main-local",
-        "startup-local"
+        "startup-local",
+        "shell-local"
       ]
     }
   },

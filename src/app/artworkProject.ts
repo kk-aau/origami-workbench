@@ -72,6 +72,11 @@ export function exportArtworkProject(project:ArtworkProject,codecs:ArtworkExport
 export function prepareArtworkProject(text:string):ArtworkProject {
   let parsed:unknown;
   try{parsed=JSON.parse(text);}catch{throw new Error('完整作品不是有效 JSON。');}
+  return prepareParsedArtworkProject(parsed);
+}
+
+/** The import Worker has already parsed the envelope to select its codec. */
+export function prepareParsedArtworkProject(parsed:unknown):ArtworkProject {
   const version=parsed&&typeof parsed==='object'?(parsed as {version?:unknown}).version:null;
   const raw=record(parsed,['format','version','editor','models','diagram','simulation','construction',...(version===2?['design']:[])],'完整作品');
   if(raw.format!==ARTWORK_FORMAT||![1,2].includes(raw.version as number))throw new Error('不支持的完整作品格式或版本。');

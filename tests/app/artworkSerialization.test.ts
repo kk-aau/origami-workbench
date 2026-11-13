@@ -11,6 +11,11 @@ import {computeFlatFold} from '../../src/core/flatFold';
 import {emptyFoldedModelCollection,foldedModelCollectionReducer as reduce} from '../../src/app/foldedModelCollection';
 import {createDiagramProject,adoptDiagramPose} from '../../src/app/diagramProject';
 import {tessPreset} from '../../src/app/tessellation';
+import {newBaseDesign} from '../../src/app/baseDesign';
+import {DEFAULT_SIMULATION_SOLVER_SETTINGS} from '../../src/engine/simSettings';
+import {prepareSimulationDocument} from '../../src/engine/simmodel';
+import {OrigamiModel} from '../../vendor/simulator/oristudio/packages/origami-simulator/src/model';
+import {ReferenceSolver} from '../../vendor/simulator/oristudio/packages/origami-simulator/src/referenceSolver';
 
 function fixture():ArtworkProject {
  const raw=blankDoc('模型来源',100,100);raw.segments.push({id:'fold',a:[50,0],b:[50,100],assignment:'M',angle:-180});
@@ -146,11 +151,62 @@ test('worker creation and native structured-clone failures surface without produ
  await assert.rejects(client.serialize(project));assert.equal(workers[0].terminated,1);
 });
 
+test('archive and JSON captures share a worker without mixing queued output formats',async()=>{
+ const {workers,factory}=harness(),client=createArtworkSerializationClient(factory),project=fixture();
+ const json=client.serialize(project),archive=client.archive(project,JSON.stringify(project.editor));
+ assert.equal(workers.length,1);const [a,b]=workers[0].posted;
+ assert.equal(a.format,undefined);assert.equal(b.format,'archive');
+ assert.ok('editorText' in b);assert.equal(Object.hasOwn(b.project,'editor'),false);
+ project.editor.name='请求后仍可编辑';
+ assert.notEqual(JSON.parse(b.editorText).name,project.editor.name);
+ const blob=new Blob(['archive bytes'],{type:'application/zip'});
+ workers[0].onmessage!({data:{id:b.id,type:'archive',blob}});
+ workers[0].onmessage!({data:{id:a.id,type:'result',text:'JSON recovery'}});
+ assert.equal(await archive,blob);assert.equal(await json,'JSON recovery');client.cancel();
+});
+
+test('cancelling mixed captures discards old archives and a later archive gets a fresh worker',async()=>{
+ const {workers,factory}=harness(),client=createArtworkSerializationClient(factory),project=fixture();
+ const json=client.serialize(project),archive=client.archive(project);client.cancel();
+ await assert.rejects(json,{name:'AbortError'});await assert.rejects(archive,{name:'AbortError'});
+ assert.equal(workers[0].terminated,1);
+ const next=client.archive(project),id=workers[1].posted[0].id;
+ workers[0].onmessage!({data:{id,type:'archive',blob:new Blob(['stale'])}});
+ const current=new Blob(['current']);workers[1].onmessage!({data:{id,type:'archive',blob:current}});
+ assert.equal(await next,current);client.cancel();
+});
+
+test('an archive validation failure preserves other captures and does not publish a partial file',async()=>{
+ const {workers,factory}=harness(),client=createArtworkSerializationClient(factory),project=fixture();
+ const invalid=client.archive(project),valid=client.serialize(project),[a,b]=workers[0].posted;
+ workers[0].onmessage!({data:{id:a.id,type:'error',message:'容器编码失败'}});
+ workers[0].onmessage!({data:{id:b.id,type:'result',text:'valid JSON'}});
+ await assert.rejects(invalid,/编码失败/);assert.equal(await valid,'valid JSON');
+ assert.equal(workers[0].terminated,0);client.cancel();
+});
+
+test('invalid archive replies reject outstanding work and can be retried without a main-thread fallback',async()=>{
+ for(const cause of ['text','archive-for-json','empty','not-blob','worker','clone']){
+  const {workers,factory}=harness(),client=createArtworkSerializationClient(factory),project=fixture();
+  const archive=client.archive(project),json=client.serialize(project),id=workers[0].posted[0].id;
+  if(cause==='text')workers[0].onmessage!({data:{id,type:'result',text:'wrong format'}});
+  if(cause==='archive-for-json')workers[0].onmessage!({data:{id:workers[0].posted[1].id,type:'archive',blob:new Blob(['wrong format'])}});
+  if(cause==='empty')workers[0].onmessage!({data:{id,type:'archive',blob:new Blob()}});
+  if(cause==='not-blob')workers[0].onmessage!({data:{id,type:'archive',blob:{size:1}} as any});
+  if(cause==='worker')workers[0].onerror!({message:'内存不足'});
+  if(cause==='clone')workers[0].onmessageerror!();
+  await assert.rejects(archive);await assert.rejects(json);assert.equal(workers[0].terminated,1);
+  const retry=client.archive(project),retryId=workers[1].posted[0].id,blob=new Blob(['retry']);
+  workers[1].onmessage!({data:{id:retryId,type:'archive',blob}});assert.equal(await retry,blob);client.cancel();
+ }
+});
+
 test('actual worker handler returns the standard complete artwork and reports invalid topology without publishing',async()=>{
  const scope=globalThis as any,oldMessage=scope.onmessage,oldPost=scope.postMessage,replies:ArtworkSerializationReply[]=[];
  try{
   scope.postMessage=(reply:ArtworkSerializationReply)=>replies.push(reply);
   await import('../../src/workers/artworkSerialization.worker');
+  const {decodeArtworkArchive}=await import('../../src/app/artworkArchive');
   const project=fixture(),expected=exportArtworkProject(project);
   scope.onmessage({data:{id:1,project:artworkSerializationInput(project)}});
   assert.deepEqual(replies[0],{id:1,type:'result',text:expected});
@@ -163,5 +219,29 @@ test('actual worker handler returns the standard complete artwork and reports in
   assert.match((replies[2] as Extract<ArtworkSerializationReply,{type:'error'}>).message,/拓扑/);
   scope.onmessage({data:{id:4,project:remainder,editorText:'{"name":"invalid","paper":{},"segments":[]}'}});
   assert.equal(replies[3].type,'error');
+  const complete=fixture();complete.design=newBaseDesign('tree');complete.diagram=createDiagramProject(blankDoc('独立折序来源',120,110));
+  const simulationSource=JSON.parse(JSON.stringify(buildFold(blankDoc('独立模拟来源',90,70)).graph));
+  const prepared=prepareSimulationDocument(simulationSource).prepared,solver=new ReferenceSolver(new OrigamiModel(prepared),{...DEFAULT_SIMULATION_SOLVER_SETTINGS,foldPercent:45});
+  solver.step(8);const pose=solver.capturePose();solver.setVertexConstraint(0,pose.positions.slice(0,3) as [number,number,number]);
+  complete.simulation={version:1,source:simulationSource,solver:solver.capturePose(),progress:.45,settings:{...DEFAULT_SIMULATION_SOLVER_SETTINGS},view:{yaw:.3,pitch:.4,zoom:1.2}};solver.dispose();
+  const projected=artworkSerializationInput(complete),{editor:completeEditor,...completeRemainder}=projected;
+  scope.onmessage({data:{id:5,format:'archive',project:completeRemainder,editorText:JSON.stringify(completeEditor)}});
+  const archive=replies[4];assert.equal(archive.type,'archive');
+  if(archive.type!=='archive')assert.fail('Expected archive Blob');
+  assert.ok(archive.blob instanceof Blob);assert.equal(archive.blob.type,'application/zip');
+  const bytes=new Uint8Array(await archive.blob.arrayBuffer());assert.deepEqual([...bytes.slice(0,2)],[80,75]);
+  assert.deepEqual(decodeArtworkArchive(bytes),JSON.parse(exportArtworkProject(complete)));
+  const broken=structuredClone(artworkSerializationInput(complete));broken.models.entries[0].history.present!.geometry.graph!.edges_vertices[0][0]=9999;
+  scope.onmessage({data:{id:6,format:'archive',project:broken}});
+  assert.equal(replies[5].type,'error');assert.equal(Object.hasOwn(replies[5],'blob'),false);
+  scope.onmessage({data:{id:7,format:'archive',project:projected}});
+  const retry=replies[6];assert.equal(retry.type,'archive');
+  if(retry.type!=='archive')assert.fail('Expected retry archive');
+  assert.deepEqual(decodeArtworkArchive(new Uint8Array(await retry.blob.arrayBuffer())),JSON.parse(exportArtworkProject(complete)));
+  scope.onmessage({data:{id:8,project:projected}});
+  assert.deepEqual(replies[7],{id:8,type:'result',text:exportArtworkProject(complete)});
+  const invalidSimulation=structuredClone(projected);invalidSimulation.simulation!.solver.positions.push(0,0,0);
+  scope.onmessage({data:{id:9,format:'archive',project:invalidSimulation}});
+  assert.equal(replies[8].type,'error');assert.equal(Object.hasOwn(replies[8],'blob'),false);
  }finally{scope.onmessage=oldMessage;scope.postMessage=oldPost;}
 });

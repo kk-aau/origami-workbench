@@ -159,13 +159,45 @@ export interface DiagramProjectCPNormalization {
   warnings:string[];
 }
 
+/** Exact comparisons guard the JSON key against non-persisted distinctions
+ * such as an own undefined property. Only ordinary data can reuse a result. */
+function sameDocumentData(left:unknown,right:unknown):boolean {
+  const pending:[unknown,unknown][]=[[left,right]];
+  while(pending.length){
+    const [a,b]=pending.pop()!;if(Object.is(a,b))continue;
+    if(!a||!b||typeof a!=='object'||typeof b!=='object'||Array.isArray(a)!==Array.isArray(b))return false;
+    const prototype=Object.getPrototypeOf(a);
+    if(prototype!==Object.getPrototypeOf(b)||prototype!==Object.prototype&&prototype!==Array.prototype&&prototype!==null)return false;
+    const keys=Object.keys(a),other=Object.keys(b);if(keys.length!==other.length)return false;
+    for(let index=0;index<keys.length;index++){if(keys[index]!==other[index])return false;const key=keys[index];pending.push([(a as Record<string,unknown>)[key],(b as Record<string,unknown>)[key]]);}
+  }
+  return true;
+}
+
 /** Explicitly clean restored CP states while retaining every saved pose source.
  * Changed states advance one revision, so saved models remain honest snapshots.
  * All states are prepared before one project clone; invalid input is atomic.
  */
 export function normalizeDiagramProjectCP(project:DiagramProject):DiagramProjectCPNormalization {
   validateDiagramProject(project);
-  const prepared=project.states.map(state=>({state,result:normalizeDiagramCP(state.doc)}));
+  // Adjacent drawing states often contain the exact same CP. Reuse only this
+  // invocation's complete, already validated normalization; this is a bounded
+  // CPU cache, never a computation/geometry limit or a persisted certificate.
+  const keyBudget=8*1024*1024,cache=new Map<string,{source:Doc;result:DiagramCPNormalization}>();let keyBytes=0;
+  const prepared=project.states.map(state=>{
+    // Avoid encoding an obviously oversized CP just to try the small cache.
+    const encoded=state.doc.segments.length<=32768?JSON.stringify(state.doc):undefined;
+    const key=encoded!==undefined&&encoded.length*2<=keyBudget?encoded:undefined;
+    const cached=key===undefined?undefined:cache.get(key);
+    if(cached&&sameDocumentData(cached.source,state.doc))return {state,result:{...cached.result,doc:cached.result.changed?structuredClone(cached.result.doc):state.doc,warnings:[...cached.result.warnings]}};
+    const result=normalizeDiagramCP(state.doc);
+    if(key!==undefined){
+      if(cache.has(key)){cache.delete(key);keyBytes-=key.length*2;}
+      while(cache.size&&(cache.size>=16||keyBytes+key.length*2>keyBudget)){const oldest=cache.keys().next().value!;cache.delete(oldest);keyBytes-=oldest.length*2;}
+      cache.set(key,{source:state.doc,result});keyBytes+=key.length*2;
+    }
+    return {state,result};
+  });
   const changedStateIds=prepared.filter(({result})=>result.changed).map(({state})=>state.id);
   const stats={snappedEndpoints:0,splitSegments:0,removedSegments:0,mergedVertices:0,conflicts:0,materialStates:0};
   const warnings:string[]=[];

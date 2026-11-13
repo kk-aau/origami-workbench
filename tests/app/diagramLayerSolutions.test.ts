@@ -92,6 +92,6 @@ test('adjustment work locks its own and analysis controls while retaining paper 
     assert.ok(actions(html).every(tag=>tag.includes('disabled=""')));
     assert.ok([...html.matchAll(/<button[^>]*data-diagram-layer-visibility=[^>]*>/g)].every(match=>!match[0].includes('disabled')));
     assert.equal([...html.matchAll(/data-diagram-stack-row=/g)].length,2);
-    assert.match(html,/<div class="diagram-layer-stack-analysis"><button type="button" disabled=""/);
+    assert.match(html,/<button type="button" data-layer-analysis-command="" disabled=""/);
   }
 });

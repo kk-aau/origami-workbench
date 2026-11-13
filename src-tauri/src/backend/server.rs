@@ -4,13 +4,19 @@ use serde_json::{json,Value};
 use std::{collections::HashMap,net::SocketAddr,path::{Component,PathBuf},sync::Arc};
 use tokio::{net::TcpListener,sync::{oneshot,Mutex},task::JoinHandle};
 use uuid::Uuid;
+use super::document_workers::DocumentWorkers;
 
 #[derive(Clone,Debug)]
 pub struct ServerConfig{pub data_root:PathBuf,pub dist_dir:PathBuf,pub engine_executable:PathBuf,pub engine_args:Vec<String>,pub version:String,pub native_dialogs:bool,pub port:u16}
 pub struct AppState{
     pub storage:Storage,pub activity:ActivityLog,pub tess:TessWorker,pub design:TessWorker,pub token:String,
     pub version:String,pub native_dialogs:bool,pub port:u16,pub dist_dir:PathBuf,
-    projects:ProjectStore,artwork:ArtworkRecovery,document_gate:Mutex<()>,
+    projects:ProjectStore,artwork:ArtworkRecovery,document_gate:Mutex<()>,library_gate:Mutex<()>,document_workers:DocumentWorkers,
+}
+impl AppState {
+    /// Called only after a native document is actually closed, never on a tab
+    /// switch or reparent. Retired UUIDs reject delayed requests permanently.
+    pub fn release_document_workers(&self,owner:&str){self.document_workers.release(owner);}
 }
 pub struct RunningServer{pub address:SocketAddr,pub state:Arc<AppState>,shutdown:Option<oneshot::Sender<()>>,task:Option<JoinHandle<()>>}
 impl RunningServer{
@@ -18,6 +24,7 @@ impl RunningServer{
         if self.shutdown.is_none()&&self.task.is_none(){return;}
         // Stop accepting work before draining existing requests or closing logs.
         if let Some(tx)=self.shutdown.take(){let _=tx.send(());}
+        self.state.document_workers.shutdown().await;
         self.state.tess.stop().await;
         self.state.design.stop().await;
         if let Some(mut task)=self.task.take(){if tokio::time::timeout(std::time::Duration::from_secs(3),&mut task).await.is_err(){task.abort();let _=task.await;}}
@@ -52,8 +59,10 @@ pub async fn start(config:ServerConfig)->Result<RunningServer,Box<dyn std::error
     let token=format!("{}{}",Uuid::new_v4().simple(),Uuid::new_v4().simple());
     let activity=ActivityLog::new(storage.clone(),config.version.clone(),vec![token.clone()]);
     let listener=TcpListener::bind(("127.0.0.1",config.port)).await?;let address=listener.local_addr()?;
-    let state=Arc::new(AppState{projects:ProjectStore::new(storage.clone()),artwork:ArtworkRecovery::new(storage.clone()),document_gate:Mutex::new(()),storage,activity,
-        tess:TessWorker::new(config.engine_executable,config.engine_args),design:TessWorker::design(std::env::current_exe()?),token,version:config.version,native_dialogs:config.native_dialogs,port:address.port(),dist_dir:config.dist_dir});
+    let tess=TessWorker::new(config.engine_executable,config.engine_args);let design=TessWorker::design(std::env::current_exe()?);
+    let document_workers=DocumentWorkers::new(tess.clone(),design.clone());
+    let state=Arc::new(AppState{projects:ProjectStore::new(storage.clone()),artwork:ArtworkRecovery::new(storage.clone()),document_gate:Mutex::new(()),library_gate:Mutex::new(()),document_workers,storage,activity,
+        tess,design,token,version:config.version,native_dialogs:config.native_dialogs,port:address.port(),dist_dir:config.dist_dir});
     let app=Router::new().fallback(any(handle)).layer(DefaultBodyLimit::disable()).with_state(state.clone());
     let (stop,stopped)=oneshot::channel();
     let task=tokio::spawn(async move{let _=axum::serve(listener,app).with_graceful_shutdown(async{let _=stopped.await;}).await;});
@@ -66,10 +75,16 @@ fn json_response(v:Value)->Response{let mut r=Json(v).into_response();r.headers_
 fn token(headers:&HeaderMap)->Option<&str>{headers.get("x-zhezhi-token").and_then(|v|v.to_str().ok())}
 async fn body(request:Request,limit:Option<usize>,activity:bool)->Result<Value,ApiError>{
     let bytes=to_bytes(request.into_body(),limit.unwrap_or(usize::MAX)).await.map_err(|_|ApiError::new(413,if activity{"操作日志请求超过 16 KiB，请缩短诊断字段。"}else{"请求超过容量。"}))?;
-    serde_json::from_slice(&bytes).map_err(|_|ApiError::new(400,"请求不是有效的 JSON 数据。"))
+    tokio::task::spawn_blocking(move||serde_json::from_slice(&bytes).map_err(|_|ApiError::new(400,"请求不是有效的 JSON 数据。"))).await.map_err(|_|ApiError::new(500,"请求解析任务意外结束，当前工程未改变。"))?
 }
 async fn blocking<F>(work:F)->Result<Value,ApiError>where F:FnOnce()->Result<Value,ApiError>+Send+'static{
     tokio::task::spawn_blocking(work).await.map_err(|_|ApiError::new(500,"本地操作任务意外结束，当前工程未改变。"))?
+}
+/// Keep both encoding and destruction of large JSON trees off Tokio's request
+/// threads. The document permit is still held until the bytes are complete.
+async fn blocking_json<F>(work:F)->Result<Response,ApiError>where F:FnOnce()->Result<Value,ApiError>+Send+'static{
+    let bytes=tokio::task::spawn_blocking(move||serde_json::to_vec(&work()?).map_err(ApiError::from)).await.map_err(|_|ApiError::new(500,"本地响应任务意外结束，当前工程未改变。"))??;
+    Ok(([(header::CONTENT_TYPE,"application/json"),(header::CACHE_CONTROL,"no-store")],bytes).into_response())
 }
 async fn handle(State(state):State<Arc<AppState>>,request:Request)->Response{
     let method=request.method().clone();let uri=request.uri().clone();let route=uri.path().to_owned();
@@ -100,10 +115,21 @@ async fn dispatch(state:Arc<AppState>,request:Request)->Result<Response,ApiError
         if activity_route&&token(request.headers())!=Some(state.token.as_str()){return Err(ApiError::new(403,"操作日志需要当前本机会话，请刷新页面后重试。"))}
         if method!=Method::GET&&token(request.headers())!=Some(state.token.as_str()){return Err(ApiError::new(403,"会话已更新，请刷新页面后重试。"))}
         if route.starts_with("/api/storage")&&token(request.headers())!=Some(state.token.as_str()){return Err(ApiError::new(403,"保存设置需要当前本机会话，请刷新页面后重试。"))}
+        let worker_owner=request.headers().get("x-zhezhi-document").map(|value|value.to_str().map(str::to_owned).map_err(|_|ApiError::new(400,"作品计算标识无效。"))).transpose()?;
+        if worker_owner.as_ref().is_some_and(|owner|Uuid::parse_str(owner).map(|id|id.to_string()!=*owner).unwrap_or(true)){return Err(ApiError::new(400,"作品标识无效。"))}
         // Backpressure starts before reading/decoding the HTTP body. The disk
         // mutex alone cannot prevent concurrent million-segment Value trees.
         // Waiting requests retain their streaming bodies and are never dropped.
-        let document_route=route=="/api/recovery"||route=="/api/projects"||route.starts_with("/api/projects/")||route=="/api/artwork-recovery"||route.starts_with("/api/artwork-recovery/")||route=="/api/storage/preferences";
+        let cached_list=method==Method::GET&&route=="/api/artwork-recovery"&&query.get("cached").is_some_and(|value|value=="1");
+        let recovery_summary=method==Method::GET&&route=="/api/recovery"&&query.get("summary").is_some_and(|value|value=="1");
+        // This is a queue shortcut, not a file-size limit. Ordinary larger or
+        // streamed requests retain the complete document queue and body support.
+        let small_preference=method==Method::POST&&route=="/api/storage/preferences"&&request.headers().get(header::CONTENT_LENGTH).and_then(|value|value.to_str().ok()).and_then(|value|value.parse::<usize>().ok()).is_some_and(|length|length<=16384);
+        let list_route=method==Method::GET&&(route=="/api/projects"||route=="/api/artwork-recovery"&&!cached_list);
+        let document_route=!list_route&&!cached_list&&!recovery_summary&&!small_preference&&(route=="/api/recovery"||route=="/api/projects"||route.starts_with("/api/projects/")||route=="/api/artwork-recovery"||route.starts_with("/api/artwork-recovery/")||route=="/api/storage/preferences"&&method!=Method::GET);
+        // A bounded library queue keeps cache misses from creating parallel
+        // large trees. It does not hold the document/prefs write queue.
+        let _library_guard=if list_route{Some(state.library_gate.lock().await)}else{None};
         let _document_guard=if document_route{Some(state.document_gate.lock().await)}else{None};
         if route=="/api/export/pdf-page"&&method==Method::POST{
             // Hold the permit through rendering, including after the client
@@ -129,43 +155,53 @@ async fn dispatch(state:Arc<AppState>,request:Request)->Result<Response,ApiError
             #[cfg(not(feature="desktop"))]{let _=kind;return Err(ApiError::new(501,"当前构建不能打开系统目录选择器。"))}
         }
         if route=="/api/storage/apply"&&method==Method::POST{let input=body(request,Some(16384),false).await?;let storage=state.storage.clone();let log=state.activity.clone();log.flush()?;return Ok(json_response(blocking(move||storage.apply(&input)).await?))}
-        if route=="/api/storage/preferences"&&method==Method::GET{let key=query.get("key").cloned().unwrap_or_default();let storage=state.storage.clone();return Ok(json_response(blocking(move||Ok(json!({"value":storage.get_item(&key)?}))).await?))}
+        if route=="/api/storage/preferences/snapshot"&&method==Method::GET{let storage=state.storage.clone();return Ok(json_response(blocking(move||storage.preferences_snapshot()).await?))}
+        if route=="/api/storage/thumbnail"&&method==Method::GET{let key=query.get("key").cloned().unwrap_or_default();let storage=state.storage.clone();return Ok(json_response(blocking(move||storage.diagram_thumbnail(&key)).await?))}
+        if route=="/api/storage/preferences"&&method==Method::GET{let key=query.get("key").cloned().unwrap_or_default();let storage=state.storage.clone();return blocking_json(move||Ok(json!({"value":storage.get_item(&key)?}))).await}
         if route=="/api/storage/preferences"&&method==Method::POST{
-            let input=body(request,None,false).await?;
+            let input=body(request,if small_preference{Some(16384)}else{None},false).await?;
             if !input.as_object().is_some_and(|o|o.keys().all(|k|["key","value","expectedValue"].contains(&k.as_str())))||input.get("expectedValue").is_some_and(|v|!v.is_null()&&!v.is_string()){return Err(ApiError::new(400,"设置写入请求无效。"))}
             let key=input["key"].as_str().ok_or_else(||ApiError::new(400,"设置写入请求无效。"))?.to_owned();let value=input["value"].as_str().ok_or_else(||ApiError::new(400,"设置写入请求无效。"))?.to_owned();let storage=state.storage.clone();
             let changed=blocking(move||{let changed=if input.get("expectedValue").is_some(){storage.compare_and_set(&key,input["expectedValue"].as_str(),&value)?}else if key=="zhezhi.diagram-library.v1"{storage.compare_and_set(&key,None,&value)?}else{storage.set_item(&key,&value)?;true};Ok(json!(changed))}).await?;
             if changed!=true{return Err(ApiError::new(409,"绘图库已在其他窗口修改，请重新打开或另存当前绘图。"))}return Ok(json_response(json!({"ok":true})))
         }
-        if route=="/api/artwork-recovery"&&method==Method::GET{let s=state.clone();return Ok(json_response(blocking(move||s.artwork.list()).await?))}
+        if route=="/api/artwork-recovery"&&method==Method::GET{let s=state.clone();return blocking_json(move||if cached_list{s.artwork.list_cached()}else{s.artwork.list()}).await}
         if route=="/api/artwork-recovery"&&method==Method::POST{let input=body(request,None,false).await?;let s=state.clone();return Ok(json_response(blocking(move||s.artwork.put(&input)).await?))}
         if let Some(path)=route.strip_prefix("/api/artwork-recovery/"){
-            if method==Method::GET&&!path.contains('/') {let id=path.to_owned();let s=state.clone();return Ok(json_response(blocking(move||s.artwork.get(&id)).await?))}
+            if method==Method::GET&&!path.contains('/') {let id=path.to_owned();let s=state.clone();return blocking_json(move||s.artwork.get(&id)).await}
             if method==Method::POST&&path.ends_with("/delete")&&!path[..path.len()-7].contains('/') {let mut input=body(request,Some(16384),false).await?;if !input.as_object().is_some_and(|o|o.len()==1&&o.contains_key("expectedRevision")){return Err(ApiError::new(400,"完整作品恢复删除请求无效。"))}input["id"]=json!(&path[..path.len()-7]);let s=state.clone();return Ok(json_response(blocking(move||s.artwork.delete(&input)).await?))}
         }
-        if route=="/api/projects"&&method==Method::GET{let s=state.clone();let library=query.get("library").is_some_and(|v|v=="1");return Ok(json_response(blocking(move||s.projects.list(library)).await?))}
-        if (route=="/api/projects"||route=="/api/projects/draft")&&method==Method::POST{let input=body(request,None,false).await?;let draft=route.ends_with("/draft");let s=state.clone();return Ok(json_response(blocking(move||s.projects.save(&input,draft)).await?))}
+        if route=="/api/projects"&&method==Method::GET{let s=state.clone();let library=query.get("library").is_some_and(|v|v=="1");return blocking_json(move||match worker_owner{Some(owner)=>s.projects.list_workspace(library,&owner),None=>s.projects.list(library)}).await}
+        if (route=="/api/projects"||route=="/api/projects/draft")&&method==Method::POST{let input=body(request,None,false).await?;let draft=route.ends_with("/draft");let s=state.clone();return Ok(json_response(blocking(move||match worker_owner{Some(owner)=>s.projects.save_workspace(&input,draft,&owner),None=>s.projects.save(&input,draft)}).await?))}
         if let Some(path)=route.strip_prefix("/api/projects/"){
             if method==Method::GET{if let Some(id)=path.strip_suffix("/revision").filter(|id|!id.contains('/')){let id=id.to_owned();let s=state.clone();return Ok(json_response(blocking(move||s.projects.get_revision(&id)).await?))}}
-            if let Some(id)=path.strip_suffix("/rename").filter(|id|!id.contains('/')){if method==Method::POST{let id=id.to_owned();let input=body(request,Some(16384),false).await?;let s=state.clone();return Ok(json_response(blocking(move||s.projects.rename(&id,&input)).await?))}}
+            if let Some(id)=path.strip_suffix("/rename").filter(|id|!id.contains('/')){if method==Method::POST{let id=id.to_owned();let input=body(request,Some(16384),false).await?;let s=state.clone();return Ok(json_response(blocking(move||match worker_owner{Some(owner)=>s.projects.rename_workspace(&id,&input,&owner),None=>s.projects.rename(&id,&input)}).await?))}}
             if !path.contains('/'){
-                let id=path.to_owned();if method==Method::GET{let s=state.clone();let draft=query.get("draft").is_some_and(|v|v=="1");return Ok(json_response(blocking(move||s.projects.get(&id,draft)).await?))}
+                let id=path.to_owned();if method==Method::GET{let s=state.clone();let draft=query.get("draft").is_some_and(|v|v=="1");return blocking_json(move||match worker_owner{Some(owner)=>s.projects.get_workspace(&id,draft,&owner),None=>s.projects.get(&id,draft)}).await}
                 if method==Method::DELETE{let s=state.clone();let value=blocking(move||s.projects.delete(&id)).await?;let _=state.activity.append(&json!({"action":"project.delete","level":if value.get("warning").is_some(){"warning"}else{"info"},"details":{"target":value["id"],"files":value["files"],"result":if value.get("warning").is_some(){"deleted-with-cleanup-warning"}else if value["deleted"]==true{"deleted"}else{"already-absent"}}}));let mut result=value;result.as_object_mut().unwrap().remove("files");return Ok(json_response(result))}
             }
         }
-        if route=="/api/recovery"&&method==Method::GET{let s=state.clone();return Ok(json_response(blocking(move||s.projects.read_recovery()).await?))}
+        if route=="/api/recovery"&&method==Method::GET{
+            let s=state.clone();if recovery_summary{return blocking_json(move||s.projects.recovery_summary()).await}
+            let expected=query.get("expectedRevision").cloned();if expected.as_ref().is_some_and(|value|value.len()!=64||!value.bytes().all(|byte|byte.is_ascii_digit()||(b'a'..=b'f').contains(&byte))){return Err(ApiError::new(400,"折痕恢复修订格式无效。"))}
+            return blocking_json(move||s.projects.read_recovery_at(expected.as_deref())).await
+        }
         if route=="/api/recovery"&&method==Method::POST{let input=body(request,None,false).await?;let s=state.clone();return Ok(json_response(blocking(move||s.projects.save_recovery(&input)).await?))}
-        if route=="/api/design/cancel"&&method==Method::POST{state.design.stop().await;return Ok(json_response(json!({"cancelled":true})));}
+        // A view carries its stable UUID across all native windows. Legacy
+        // callers without this header retain the existing single-worker path.
+        if route=="/api/design/cancel"&&method==Method::POST{state.document_workers.worker(worker_owner.as_deref(),true)?.stop().await;return Ok(json_response(json!({"cancelled":true})));}
         if route=="/api/design/compute"&&method==Method::POST{
+            let worker=state.document_workers.worker(worker_owner.as_deref(),true)?;
             let input=body(request,Some(128*1024*1024),false).await?;
-            return Ok(json_response(state.design.run(input).await?));
+            return Ok(json_response(worker.run(input).await?));
         }
         if method==Method::POST{if let Some(operation)=super::operations::operation(&route){
             let mut input=body(request,None,false).await?;
             if operation.is_none()&&input.get("operation").is_some(){return Err(ApiError::new(400,"折痕构造接口不接受分析操作。"))}
             if let Some(operation)=operation{if operation=="curved-canonical-generic"{input=json!({"operation":operation,"canonicalInput":input});}else{if !input.is_object(){input=json!({});}input["operation"]=json!(operation);}}
-            if !state.tess.available(){return Err(ApiError::new(503,"镶嵌计算环境尚未就绪。请运行安装脚本后重试；其他工作区仍可使用。"))}
-            return Ok(json_response(state.tess.run(input).await?))
+            let worker=state.document_workers.worker(worker_owner.as_deref(),false)?;
+            if !worker.available(){return Err(ApiError::new(503,"镶嵌计算环境尚未就绪。请运行安装脚本后重试；其他工作区仍可使用。"))}
+            return Ok(json_response(worker.run(input).await?))
         }}
         return Err(ApiError::new(404,"未找到请求的本地接口。"))
     }
@@ -189,6 +225,41 @@ mod shutdown_tests{
 
     async fn service(root:&std::path::Path)->RunningServer{
         start(ServerConfig{data_root:root.join("data"),dist_dir:root.join("dist"),engine_executable:root.join("absent-engine.exe"),engine_args:vec![],version:"shutdown-tests".into(),native_dialogs:false,port:0}).await.unwrap()
+    }
+
+    #[tokio::test(flavor="multi_thread",worker_threads=2)]
+    async fn small_preference_reads_do_not_wait_for_library_or_document_queues(){
+        use http_body_util::BodyExt;
+        let dir=tempdir().unwrap();let mut server=service(dir.path()).await;
+        server.state.storage.set_item("zhezhi.theme.v1","green").unwrap();
+        let document=server.state.document_gate.lock().await;let library=server.state.library_gate.lock().await;
+        for route in ["/api/storage/preferences?key=zhezhi.theme.v1","/api/storage/preferences/snapshot"]{
+            let request=Request::builder().uri(route).header(header::HOST,format!("127.0.0.1:{}",server.state.port)).header("x-zhezhi-token",&server.state.token).body(Body::empty()).unwrap();
+            let response=tokio::time::timeout(Duration::from_millis(500),dispatch(server.state.clone(),request)).await.expect("small reads must bypass the heavy queues").unwrap();
+            assert_eq!(response.status(),StatusCode::OK);let bytes=response.into_body().collect().await.unwrap().to_bytes();assert!(String::from_utf8_lossy(&bytes).contains("green"));
+        }
+        let cached=Request::builder().uri("/api/artwork-recovery?cached=1").header(header::HOST,format!("127.0.0.1:{}",server.state.port)).body(Body::empty()).unwrap();
+        assert_eq!(tokio::time::timeout(Duration::from_millis(500),dispatch(server.state.clone(),cached)).await.expect("cached startup summaries must bypass both heavy queues").unwrap().status(),StatusCode::OK);
+        drop(library);drop(document);server.shutdown().await;
+    }
+
+    #[tokio::test(flavor="multi_thread",worker_threads=2)]
+    async fn recovery_heads_and_small_cas_bypass_heavy_queue_but_large_bodies_still_wait(){
+        use http_body_util::BodyExt;
+        let dir=tempdir().unwrap();let mut server=service(dir.path()).await;let guard=server.state.document_gate.lock().await;
+        let host=format!("127.0.0.1:{}",server.state.port);
+        let request=Request::builder().uri("/api/recovery?summary=1").header(header::HOST,&host).body(Body::empty()).unwrap();
+        let response=tokio::time::timeout(Duration::from_millis(500),dispatch(server.state.clone(),request)).await.unwrap().unwrap();
+        let bytes=response.into_body().collect().await.unwrap().to_bytes();assert_eq!(serde_json::from_slice::<Value>(&bytes).unwrap(),json!({"exists":false,"revision":null}));
+        let payload=json!({"key":"zhezhi.theme.v1","value":"green","expectedValue":null}).to_string();
+        let request=Request::builder().method(Method::POST).uri("/api/storage/preferences").header(header::HOST,&host).header("x-zhezhi-token",&server.state.token).header(header::CONTENT_LENGTH,payload.len()).body(Body::from(payload)).unwrap();
+        assert_eq!(tokio::time::timeout(Duration::from_millis(500),dispatch(server.state.clone(),request)).await.unwrap().unwrap().status(),StatusCode::OK);
+        let read=Arc::new(AtomicBool::new(false));let observed=read.clone();let value="a".repeat(20000);let payload=json!({"key":"zhezhi.theme.v1","value":value,"expectedValue":"green"}).to_string();
+        let body=Body::new(Body::from(payload.clone()).map_frame(move|frame|{observed.store(true,Ordering::SeqCst);frame}));
+        let request=Request::builder().method(Method::POST).uri("/api/storage/preferences").header(header::HOST,&host).header("x-zhezhi-token",&server.state.token).header(header::CONTENT_LENGTH,payload.len()).body(body).unwrap();
+        let state=server.state.clone();let pending=tokio::spawn(dispatch(state,request));tokio::time::sleep(Duration::from_millis(20)).await;assert!(!read.load(Ordering::SeqCst));
+        drop(guard);assert_eq!(pending.await.unwrap().unwrap().status(),StatusCode::OK);assert_eq!(server.state.storage.get_item("zhezhi.theme.v1").unwrap().as_deref(),Some(value.as_str()),"16KiB queue shortcut does not limit larger valid preferences");
+        server.shutdown().await;
     }
 
     #[tokio::test(flavor="multi_thread",worker_threads=2)]

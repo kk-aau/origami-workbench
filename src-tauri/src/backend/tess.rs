@@ -6,12 +6,23 @@ use tokio::{io::{AsyncReadExt,AsyncWriteExt},process::{Child,ChildStdin,ChildStd
 const INPUT_BYTES:usize=131073;
 const RESULT_BYTES:usize=20*1024*1024;
 struct WorkerProcess{child:Child,stdin:ChildStdin,stdout:ChildStdout}
-struct Inner{executable:PathBuf,args:Vec<String>,design:bool,busy:AtomicBool,process:AsyncMutex<Option<WorkerProcess>>,cancel:Mutex<Option<oneshot::Sender<()>>>}
+struct Inner{executable:PathBuf,args:Vec<String>,design:bool,busy:AtomicBool,retired:AtomicBool,process:AsyncMutex<Option<WorkerProcess>>,cancel:Mutex<Option<oneshot::Sender<()>>>}
 #[derive(Clone)]pub struct TessWorker{inner:Arc<Inner>}
 impl TessWorker{
     pub fn new(executable:PathBuf,args:Vec<String>)->Self{Self::configured(executable,args,false)}
     pub fn design(executable:PathBuf)->Self{Self::configured(executable,vec!["--design-worker".into()],true)}
-    fn configured(executable:PathBuf,args:Vec<String>,design:bool)->Self{Self{inner:Arc::new(Inner{executable,args,design,busy:AtomicBool::new(false),process:AsyncMutex::new(None),cancel:Mutex::new(None)})}}
+    fn configured(executable:PathBuf,args:Vec<String>,design:bool)->Self{Self{inner:Arc::new(Inner{executable,args,design,busy:AtomicBool::new(false),retired:AtomicBool::new(false),process:AsyncMutex::new(None),cancel:Mutex::new(None)})}}
+    /// A document gets a new process/lease, never another handle to a peer's job.
+    pub fn fresh(&self)->Self{Self::configured(self.inner.executable.clone(),self.inner.args.clone(),self.inner.design)}
+    /// Retiring is synchronous so closing a native view cannot race a delayed
+    /// HTTP request into starting work after its owning document has disappeared.
+    pub fn retire(&self){
+        self.inner.retired.store(true,Ordering::Release);
+        if let Some(cancel)=self.inner.cancel.lock().unwrap().take(){let _=cancel.send(());}
+        // Idle processes can be stopped without awaiting. A running process
+        // holds this mutex and observes the cancellation channel instead.
+        if let Ok(mut slot)=self.inner.process.try_lock(){if let Some(mut process)=slot.take(){let _=process.child.start_kill();}}
+    }
     pub fn busy(&self)->bool{self.inner.busy.load(Ordering::Acquire)}
     pub fn available(&self)->bool{self.inner.executable.is_file()}
     fn spawn(&self)->Result<WorkerProcess,ApiError>{
@@ -25,9 +36,14 @@ impl TessWorker{
         Ok(WorkerProcess{child,stdin,stdout})
     }
     pub async fn run(&self,input:Value)->Result<Value,ApiError>{
+        if self.inner.retired.load(Ordering::Acquire){return Err(ApiError::new(410,"作品已关闭，本次计算未启动。"))}
         let mut frame=serde_json::to_vec(&input)?;frame.push(b'\n');if frame.len()>if self.inner.design {128*1024*1024}else{INPUT_BYTES}{return Err(ApiError::new(413,if self.inner.design {"设计工程请求超过 128 MiB，请拆分工程后重试。"}else{"镶嵌参数超过 128 KiB。"}))}
         if self.inner.busy.compare_exchange(false,true,Ordering::AcqRel,Ordering::Acquire).is_err(){return Err(ApiError::new(429,if self.inner.design{"已有设计计算正在进行，请等待或停止后重试。"}else{"已有镶嵌计算正在进行，请等待或取消后重试。"}))}
-        let (reply,receiver)=oneshot::channel();let (cancel,cancelled)=oneshot::channel();*self.inner.cancel.lock().unwrap()=Some(cancel);let worker=self.clone();
+        let (reply,receiver)=oneshot::channel();let (cancel,cancelled)=oneshot::channel();{
+            let mut slot=self.inner.cancel.lock().unwrap();
+            if self.inner.retired.load(Ordering::Acquire){self.inner.busy.store(false,Ordering::Release);return Err(ApiError::new(410,"作品已关闭，本次计算未启动。"))}
+            *slot=Some(cancel);
+        }let worker=self.clone();
         tokio::spawn(async move{
             let result=worker.perform(frame,cancelled,reply).await;
             if let Err(error)=result{eprintln!("计算调度失败：{error}");}

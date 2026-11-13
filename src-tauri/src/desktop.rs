@@ -2,9 +2,12 @@ use crate::{backend::{self, RunningServer}, desktop_export::{ExportStore, CHUNK_
 use serde_json::{json, Value};
 use serde::Deserialize;
 use std::{collections::HashMap, fs, io::Read, path::{Path, PathBuf}, sync::{Arc, Mutex, atomic::{AtomicBool, Ordering}}, time::Duration};
-use tauri::{AppHandle, Manager, State, WebviewUrl, WebviewWindow, WebviewWindowBuilder, WindowEvent};
+use tauri::{AppHandle, Manager, State, WebviewUrl, Webview, Window, WebviewWindowBuilder, WindowEvent};
 use tokio::sync::oneshot;
 use uuid::Uuid;
+
+#[path="desktop_documents.rs"]
+mod documents;
 
 type Error = Box<dyn std::error::Error + Send + Sync>;
 const MAIN_TITLE: &str = "折纸工坊 · Tauri / Rust";
@@ -15,18 +18,26 @@ struct Host {
     server: tokio::sync::Mutex<Option<RunningServer>>,
     backend: Arc<backend::AppState>,
     closing: AtomicBool,
-    close_pending: AtomicBool,
     ready: AtomicBool,
     picker_busy: AtomicBool,
-    close_replies: Mutex<HashMap<String, oneshot::Sender<bool>>>,
+    picker_owner: Mutex<Option<String>>,
+    close_replies: Mutex<HashMap<String, documents::CloseReply>>,
+    documents: Mutex<documents::Registry>,
+    document_gate: tokio::sync::Mutex<()>,
     exports: Arc<ExportStore>,
 }
 
-fn trusted(window: &WebviewWindow, host: &Host, labels: &[&str]) -> Result<(), String> {
-    if !labels.contains(&window.label()) || window.url().map_err(|e|e.to_string())?.origin().ascii_serialization() != host.origin {
-        return Err("不允许此桌面请求。".into());
-    }
-    Ok(())
+fn trusted(window: &Webview, host: &Host, labels: &[&str]) -> Result<(), String> {
+    let role=documents::role(window,host)?;
+    if (role==documents::Role::Startup && labels.contains(&"startup")) || (role!=documents::Role::Startup && labels.contains(&"main")) {Ok(())}else{Err("不允许此桌面请求。".into())}
+}
+
+struct NativePicker<'a> {host:&'a Host}
+impl Drop for NativePicker<'_>{fn drop(&mut self){self.host.picker_owner.lock().unwrap().take();self.host.picker_busy.store(false,Ordering::SeqCst);}}
+fn begin_picker<'a>(host:&'a Host,owner:&str)->Result<NativePicker<'a>,String>{
+    {let registry=host.documents.lock().unwrap();if registry.closing_application||owner.strip_prefix("doc-").is_some_and(|id|registry.closing_documents.contains(id)||registry.documents.get(id).is_some_and(|d|registry.closing_windows.contains(&d.window_id))){return Err("作品正在等待关闭确认，未打开文件对话框。".into());}}
+    if host.picker_busy.swap(true,Ordering::SeqCst){return Err("请先完成当前文件选择对话框。".into());}
+    *host.picker_owner.lock().unwrap()=Some(owner.into());Ok(NativePicker{host})
 }
 
 fn queue_activity(log: backend::activity::ActivityLog, action: &str, details: Value) -> oneshot::Receiver<()> {
@@ -80,75 +91,30 @@ fn close_confirmation_accepted(answer: &rfd::MessageDialogResult) -> bool {
     }
 }
 
-fn request_close(app: AppHandle) {
-    let host = app.state::<Host>();
-    if host.closing.load(Ordering::SeqCst) || host.close_pending.swap(true, Ordering::SeqCst) { return; }
-    let Some(window) = app.get_webview_window("main") else { request_exit(app); return; };
-    let id = Uuid::new_v4().to_string();
-    let (tx, rx) = oneshot::channel();
-    host.close_replies.lock().unwrap().insert(id.clone(), tx);
-    let script = format!("window.__zhezhiBeforeClose?.({});", serde_json::to_string(&id).unwrap());
-    let _ = window.eval(&script);
-    tauri::async_runtime::spawn(async move {
-        let reply = tokio::time::timeout(Duration::from_secs(4), rx).await;
-        let host = app.state::<Host>();
-        host.close_replies.lock().unwrap().remove(&id);
-        let description = match reply {
-            Ok(Ok(false)) => None,
-            Ok(Ok(true)) => Some("原始工程、折叠模型或折序存在未保存内容，仍要关闭窗口吗？\n\n尚未暂存的修改可能丢失。已保存工程与成功写入的恢复副本仍会保留。"),
-            _ => Some("工作台暂时没有响应。继续等待会保留当前窗口；结束窗口会丢失尚未保存的修改。\n\n是否结束窗口？"),
-        };
-        let accepted = if let Some(message) = description {
-            let parent = window.clone();
-            tauri::async_runtime::spawn_blocking(move || {
-                #[cfg(debug_assertions)]
-                match std::env::var("ZHEZHI_TAURI_TEST_CLOSE_CHOICE").as_deref() {
-                    Ok("accept") => return true,
-                    Ok("cancel") => return false,
-                    _ => {}
-                }
-                let answer = rfd::MessageDialog::new().set_parent(&parent)
-                    .set_title("关闭折纸工坊")
-                    .set_description(message).set_level(rfd::MessageLevel::Warning)
-                    .set_buttons(rfd::MessageButtons::OkCancelCustom(CLOSE_CONFIRM_LABEL.into(), "继续编辑".into())).show();
-                close_confirmation_accepted(&answer)
-            }).await.unwrap_or(false)
-        } else { true };
-        host.close_pending.store(false, Ordering::SeqCst);
-        if accepted { request_exit(app.clone()); }
-        else { activity(&host,"desktop.close.wait",json!({"reason":"unsaved-or-unresponsive","result":"cancelled"})); let _ = window.set_focus(); }
-    });
-}
-
 #[tauri::command]
-async fn desktop_close_ack(window: WebviewWindow, host: State<'_, Host>, request_id: String, dirty: bool) -> Result<(), String> {
+async fn desktop_close_ack(window: Webview, host: State<'_, Host>, request_id: String, dirty: bool) -> Result<(), String> {
     trusted(&window, &host, &["main"])?;
-    if let Some(reply) = host.close_replies.lock().unwrap().remove(&request_id) { let _ = reply.send(dirty); }
+    documents::acknowledge_close(&host.close_replies,window.label(),&request_id,dirty);
+
     Ok(())
 }
 
 #[tauri::command]
-async fn desktop_ready(app: AppHandle, window: WebviewWindow, host: State<'_, Host>) -> Result<(), String> {
+async fn desktop_ready(app: AppHandle, window: Webview, host: State<'_, Host>) -> Result<(), String> {
     trusted(&window, &host, &["main"])?;
-    if host.ready.swap(true,Ordering::SeqCst) { return Ok(()); }
-    if !test_hidden() {
-        window.show().map_err(|e|e.to_string())?;
-        window.set_focus().map_err(|e|e.to_string())?;
-    }
-    if let Some(startup) = app.get_webview_window("startup") { let _ = startup.destroy(); }
-    activity(&host,"desktop.startup.ready",json!({"runtime":"tauri-webview2","version":env!("CARGO_PKG_VERSION")}));
-    Ok(())
+    documents::ready(&app,&window)
+
 }
 
 #[tauri::command]
-async fn desktop_cancel_startup(app: AppHandle, window: WebviewWindow, host: State<'_, Host>) -> Result<(), String> {
+async fn desktop_cancel_startup(app: AppHandle, window: Webview, host: State<'_, Host>) -> Result<(), String> {
     trusted(&window,&host,&["startup"])?;
     if !host.ready.load(Ordering::SeqCst) { request_exit(app); }
     Ok(())
 }
 
 #[tauri::command]
-async fn desktop_open_logs(window: WebviewWindow, host: State<'_, Host>) -> Result<(), String> {
+async fn desktop_open_logs(window: Webview, host: State<'_, Host>) -> Result<(), String> {
     trusted(&window,&host,&["startup","main"])?;
     open_directory(&host.backend.storage.paths().data_dir)
 }
@@ -188,18 +154,33 @@ fn test_selection(_name: &str) -> Result<Option<PathBuf>,String> {
     Ok(None)
 }
 
+#[cfg(debug_assertions)]
+fn verified_test_export_target(project:&Path,directory:&Path,name:&str)->Result<PathBuf,String>{
+    validate_name(name)?;let project=project.canonicalize().map_err(|e|e.to_string())?;let directory=directory.canonicalize().map_err(|e|e.to_string())?;
+    if !directory.is_dir()||![project.join(".runtime"),project.join("output")].iter().any(|allowed|directory.starts_with(allowed)){return Err("导出验收目录必须位于本迁移工程的 .runtime 或 output 内。".into());}
+    let marker=directory.join(".zhezhi-native-export-test");let marker_resolved=marker.canonicalize().map_err(|_|"导出验收目录缺少自有标记。")?;
+    if marker_resolved.parent()!=Some(directory.as_path())||fs::read_to_string(&marker_resolved).ok().as_deref()!=Some("zhezhi-native-export-test-v1"){return Err("导出验收目录标记无效。".into());}
+    let file=Path::new(name);let stem=file.file_stem().and_then(|v|v.to_str()).ok_or("导出文件名称无效。")?;let extension=file.extension().and_then(|v|v.to_str()).map(|v|format!(".{v}")).unwrap_or_default();
+    // Every debug selection is unique, including two simultaneous same-name exports.
+    Ok(directory.join(format!("{stem}-{}{extension}",Uuid::new_v4())))
+}
+fn test_export_selection(_name:&str)->Result<Option<PathBuf>,String>{
+    #[cfg(debug_assertions)]if let Some(directory)=std::env::var_os("ZHEZHI_TAURI_TEST_EXPORT_DIR"){return verified_test_export_target(&crate::project_root(),&PathBuf::from(directory),_name).map(Some);}
+    Ok(None)
+}
+
 #[tauri::command]
-async fn desktop_open_project(window: WebviewWindow, host: State<'_, Host>, kind: String) -> Result<tauri::ipc::Response, String> {
+async fn desktop_open_project(window: Webview, host: State<'_, Host>, kind: String) -> Result<tauri::ipc::Response, String> {
     trusted(&window,&host,&["main"])?;
     let (title, filter, extensions): (&str, &str, &[&str]) = match kind.as_str() {
-        "crease" => ("打开折痕工程", "折痕工程文件", &["json","fold","cp","opx","ori","orh"]),
+        "crease" => ("打开工程或完整作品", "折纸工程与作品", &["oriw","json","fold","cp","opx","ori","orh"]),
         "diagram" => ("打开折序工程", "折序工程文件", &["json"]),
         "design" => ("打开基础形设计", "基础形设计 / TreeMaker / BPS", &["json","tmd","tmd4","tmd5","bps"]),
         "tool-layout" => ("导入工具排版", "工具排版文件", &["json"]),
         _ => return Err("不支持的文件类型。".into()),
     };
-    if host.picker_busy.swap(true,Ordering::SeqCst) { return Ok(tauri::ipc::Response::new(Vec::<u8>::new())); }
-    let parent=window.clone();
+    let _picker=begin_picker(&host,window.label())?;
+    let parent=window.window();
     let result=tauri::async_runtime::spawn_blocking(move || {
         let dialog=rfd::FileDialog::new().set_parent(&parent).set_title(title).add_filter(filter,extensions);
         let selected=match test_selection("ZHEZHI_TAURI_TEST_OPEN_FILE")? {Some(path)=>Some(path),None=>dialog.pick_file()};
@@ -212,36 +193,35 @@ async fn desktop_open_project(window: WebviewWindow, host: State<'_, Host>, kind
         frame.extend_from_slice(&(name.len() as u32).to_le_bytes()); frame.extend(name); frame.extend(data);
         Ok::<_,String>(frame)
     }).await.map_err(|e|e.to_string());
-    host.picker_busy.store(false,Ordering::SeqCst);
     trusted(&window,&host,&["main"])?;
     Ok(tauri::ipc::Response::new(result??))
 }
 
 #[tauri::command]
-async fn desktop_pick_directory(window: WebviewWindow, host: State<'_, Host>, kind: String) -> Result<Value, String> {
+async fn desktop_pick_directory(window: Webview, host: State<'_, Host>, kind: String) -> Result<Value, String> {
     trusted(&window,&host,&["main"])?;
     if !["projectsDir","diagramsDir","dataDir"].contains(&kind.as_str()) {return Err("保存目录类别无效。".into());}
-    let parent=window.clone();
+    let _picker=begin_picker(&host,window.label())?;
+    let parent=window.window();
     let chosen=tauri::async_runtime::spawn_blocking(move || {let result=match test_selection("ZHEZHI_TAURI_TEST_PICK_DIRECTORY")? {Some(path)=>Some(path),None=>rfd::FileDialog::new().set_parent(&parent).set_title("选择保存目录").pick_folder()};let _=parent.set_focus();Ok::<_,String>(result)}).await.map_err(|e|e.to_string())??;
     trusted(&window,&host,&["main"])?;
     match chosen {None=>Ok(json!({"cancelled":true})),Some(path)=>host.backend.storage.register_selection(&kind,path).map_err(|e|e.to_string())}
 }
 
 #[tauri::command]
-async fn desktop_prepare_export(window: WebviewWindow, host: State<'_, Host>, name: String, bytes: u64) -> Result<Value,String> {
+async fn desktop_prepare_export(window: Webview, host: State<'_, Host>, name: String, bytes: u64) -> Result<Value,String> {
     trusted(&window,&host,&["main"])?;
     if host.closing.load(Ordering::SeqCst){return Err("应用正在关闭，未保存导出文件。".into());}
     validate_name(&name)?;
-    if host.picker_busy.swap(true,Ordering::SeqCst) {return Err("请先完成当前文件选择，再导出。".into());}
-    let parent=window.clone();
+    let _picker=begin_picker(&host,window.label())?;
+    let parent=window.window();
     let selected=tauri::async_runtime::spawn_blocking(move || {
         let mut dialog=rfd::FileDialog::new().set_parent(&parent).set_title("导出作品 · 另存为").set_file_name(&name);
         if let Some(extension)=Path::new(&name).extension().and_then(|s|s.to_str()) {dialog=dialog.add_filter("导出文件",&[extension]);}
-        let chosen=dialog.save_file();let _=parent.set_focus();chosen
+        let chosen=match test_export_selection(&name)?{Some(path)=>Some(path),None=>dialog.save_file()};let _=parent.set_focus();Ok::<_,String>(chosen)
     }).await.map_err(|e|e.to_string());
-    host.picker_busy.store(false,Ordering::SeqCst);
     trusted(&window,&host,&["main"])?;
-    let Some(target)=selected? else {return Ok(json!({"cancelled":true}));};
+    let Some(target)=selected?? else {return Ok(json!({"cancelled":true}));};
     if host.closing.load(Ordering::SeqCst){return Err("应用正在关闭，未保存导出文件。".into());}
     let exports=host.exports.clone();let owner=window.label().to_string();
     let ticket=tauri::async_runtime::spawn_blocking(move||exports.prepare(&owner,target,bytes)).await.map_err(|e|e.to_string())??;
@@ -249,7 +229,7 @@ async fn desktop_prepare_export(window: WebviewWindow, host: State<'_, Host>, na
 }
 
 #[tauri::command]
-async fn desktop_write_export(window: WebviewWindow, host: State<'_, Host>, request: tauri::ipc::Request<'_>) -> Result<u64,String> {
+async fn desktop_write_export(window: Webview, host: State<'_, Host>, request: tauri::ipc::Request<'_>) -> Result<u64,String> {
     trusted(&window,&host,&["main"])?;
     if host.closing.load(Ordering::SeqCst){return Err("应用正在关闭，导出已停止。".into());}
     let ticket=request.headers().get("x-zhezhi-export-ticket").and_then(|v|v.to_str().ok()).ok_or("缺少导出请求标识。")?.to_string();
@@ -277,7 +257,7 @@ fn export_chunk_bytes(body:&tauri::ipc::InvokeBody)->Result<Vec<u8>,String>{
 }
 
 #[tauri::command]
-async fn desktop_finish_export(window: WebviewWindow, host: State<'_, Host>, ticket: String) -> Result<Value,String> {
+async fn desktop_finish_export(window: Webview, host: State<'_, Host>, ticket: String) -> Result<Value,String> {
     trusted(&window,&host,&["main"])?;
     if host.closing.load(Ordering::SeqCst){return Err("应用正在关闭，导出未提交。".into());}
     let exports=host.exports.clone();let owner=window.label().to_string();
@@ -287,7 +267,7 @@ async fn desktop_finish_export(window: WebviewWindow, host: State<'_, Host>, tic
 }
 
 #[tauri::command]
-async fn desktop_cancel_export(window: WebviewWindow, host: State<'_, Host>, ticket: String) -> Result<bool,String> {
+async fn desktop_cancel_export(window: Webview, host: State<'_, Host>, ticket: String) -> Result<bool,String> {
     trusted(&window,&host,&["main"])?;
     let exports=host.exports.clone();let owner=window.label().to_string();
     let cancelled=tauri::async_runtime::spawn_blocking(move||exports.cancel(&owner,&ticket)).await.map_err(|e|e.to_string())??;
@@ -295,26 +275,24 @@ async fn desktop_cancel_export(window: WebviewWindow, host: State<'_, Host>, tic
 }
 
 #[tauri::command]
-async fn desktop_print(window: WebviewWindow, host: State<'_, Host>) -> Result<Value,String> {
+async fn desktop_print(window: Webview, host: State<'_, Host>) -> Result<Value,String> {
     trusted(&window,&host,&["main"])?;
     window.print().map_err(|e|e.to_string())?;
     Ok(json!({"success":true}))
 }
 
-fn window_state(window: &WebviewWindow) -> Result<Value, String> {
+fn window_state(window: &Window) -> Result<Value, String> {
     Ok(json!({"maximized":window.is_maximized().map_err(|e|e.to_string())?,"fullscreen":window.is_fullscreen().map_err(|e|e.to_string())?}))
 }
 
-fn publish_window_state(window: &WebviewWindow) {
-    if let Ok(state)=window_state(window) {
-        let _=window.eval(&format!("window.__zhezhiWindowState?.({state});"));
-    }
+fn publish_window_state(window: &Window) {
+    if let Ok(state)=window_state(window) {for view in window.webviews(){let _=view.eval(format!("window.__zhezhiWindowState?.({state});"));}}
 }
 
 #[tauri::command]
-async fn desktop_window_state(window: WebviewWindow, host: State<'_, Host>) -> Result<Value, String> {
+async fn desktop_window_state(window: Webview, host: State<'_, Host>) -> Result<Value, String> {
     trusted(&window,&host,&["main"])?;
-    window_state(&window)
+    window_state(&window.window())
 }
 
 #[derive(Debug, Deserialize, PartialEq)]
@@ -322,8 +300,9 @@ async fn desktop_window_state(window: WebviewWindow, host: State<'_, Host>) -> R
 enum WindowAction { Minimize, ToggleMaximize, ToggleFullscreen, StartDragging, Close }
 
 #[tauri::command]
-async fn desktop_window_action(app: AppHandle, window: WebviewWindow, host: State<'_, Host>, action: WindowAction) -> Result<(), String> {
+async fn desktop_window_action(app: AppHandle, window: Webview, host: State<'_, Host>, action: WindowAction) -> Result<(), String> {
     trusted(&window,&host,&["main"])?;
+    let window=window.window();
     match action {
         WindowAction::Minimize=>window.minimize().map_err(|e|e.to_string())?,
         WindowAction::ToggleMaximize=>{
@@ -335,14 +314,14 @@ async fn desktop_window_action(app: AppHandle, window: WebviewWindow, host: Stat
         WindowAction::StartDragging=>{if !window.is_fullscreen().map_err(|e|e.to_string())? {window.start_dragging().map_err(|e|e.to_string())?;}},
         // Custom chrome must use exactly the same guard and bounded shutdown as
         // the OS close button, Alt+F4 and the native close request.
-        WindowAction::Close=>request_close(app),
+        WindowAction::Close=>documents::request_host_close(app,window.label().to_string()),
     }
     publish_window_state(&window);
     Ok(())
 }
 
 #[tauri::command]
-async fn desktop_open_data_directory(window: WebviewWindow, host: State<'_, Host>) -> Result<(), String> {
+async fn desktop_open_data_directory(window: Webview, host: State<'_, Host>) -> Result<(), String> {
     trusted(&window,&host,&["main"])?;
     open_directory(&host.backend.storage.paths().projects_dir)
 }
@@ -400,9 +379,9 @@ pub fn run() -> Result<(), Error> {
     tauri::webview_version().map_err(|_| "未检测到可用的 Microsoft Edge WebView2 Runtime。本版复用系统 WebView2；请先修复系统运行环境，或使用保留的 Electron 版。程序未自动下载安装运行环境，现有工程不会被删除。")?;
     let server=tauri::async_runtime::block_on(backend::start(config))?;
     let origin=format!("http://{}",server.address);
-    let host=Host{origin:origin.clone(),backend:server.state.clone(),server:tokio::sync::Mutex::new(Some(server)),closing:AtomicBool::new(false),close_pending:AtomicBool::new(false),ready:AtomicBool::new(false),picker_busy:AtomicBool::new(false),close_replies:Mutex::new(HashMap::new()),exports:Arc::new(ExportStore::default())};
+    let host=Host{origin:origin.clone(),backend:server.state.clone(),server:tokio::sync::Mutex::new(Some(server)),closing:AtomicBool::new(false),ready:AtomicBool::new(false),picker_busy:AtomicBool::new(false),picker_owner:Mutex::new(None),close_replies:Mutex::new(HashMap::new()),documents:Mutex::new(documents::Registry::default()),document_gate:tokio::sync::Mutex::new(()),exports:Arc::new(ExportStore::default())};
     let app=tauri::Builder::default().manage(host)
-        .invoke_handler(tauri::generate_handler![desktop_ready,desktop_close_ack,desktop_cancel_startup,desktop_open_logs,desktop_open_project,desktop_pick_directory,desktop_prepare_export,desktop_write_export,desktop_finish_export,desktop_cancel_export,desktop_print,desktop_window_state,desktop_window_action,desktop_open_data_directory])
+        .invoke_handler(tauri::generate_handler![desktop_ready,desktop_close_ack,desktop_cancel_startup,desktop_open_logs,desktop_open_project,desktop_pick_directory,desktop_prepare_export,desktop_write_export,desktop_finish_export,desktop_cancel_export,desktop_print,desktop_window_state,desktop_window_action,desktop_open_data_directory,documents::desktop_documents])
         .setup(move |app| {
             let handle=app.handle();
             let profile=runtime_root().join("profile");fs::create_dir_all(&profile)?;
@@ -413,25 +392,9 @@ pub fn run() -> Result<(), Error> {
                 .on_permission_request(|_,_|tauri::webview::PermissionResponse::Deny);
             if let Some(args)=browser_args(){startup_builder=startup_builder.additional_browser_args(&args);}
             let startup=startup_builder.build()?;
-            let cancel=handle.clone();startup.on_window_event(move|event|if let WindowEvent::CloseRequested{api,..}=event {api.prevent_close();request_exit(cancel.clone());});
-            let mut builder=WebviewWindowBuilder::new(handle,"main",WebviewUrl::External(format!("{origin}/").parse()?))
-                .title(MAIN_TITLE).inner_size(1440.0,1000.0).min_inner_size(1000.0,720.0).visible(false).data_directory(profile)
-                .decorations(false).shadow(true)
-                .disable_drag_drop_handler()
-                .on_document_title_changed(|window,_|{let _=window.set_title(MAIN_TITLE);})
-                .initialization_script(include_str!("bridge.js"))
-                .on_navigation({let origin=origin.clone();move|url|url.origin().ascii_serialization()==origin})
-                .on_new_window(|_,_|tauri::webview::NewWindowResponse::Deny)
-                .on_permission_request(|_,_|tauri::webview::PermissionResponse::Deny)
-                // Application exports use native binary IPC only; no hidden downloads.
-                .on_download(|_,_|false);
-            if let Some(args)=browser_args(){builder=builder.additional_browser_args(&args);}
-            let window=builder.build()?;
-            let close=handle.clone();window.on_window_event(move|event|match event {
-                WindowEvent::CloseRequested{api,..}=>{api.prevent_close();request_close(close.clone());},
-                WindowEvent::Resized(_)=>{if let Some(window)=close.get_webview_window("main"){publish_window_state(&window);}},
-                _=>{}
-            });
+            let cancel=handle.clone();startup.on_window_event(move|event|if let WindowEvent::CloseRequested{api,..}=event {api.prevent_close();if !cancel.state::<Host>().ready.load(Ordering::SeqCst){request_exit(cancel.clone());}else if let Some(startup)=cancel.get_webview_window("startup"){let _=startup.destroy();}});
+            documents::create_host(handle,"main","edit").map_err(std::io::Error::other)?;
+            documents::create_document(handle,"main","edit",true,None,None,None,None).map_err(std::io::Error::other)?;
             let timeout=handle.clone();tauri::async_runtime::spawn(async move {
                 tokio::time::sleep(Duration::from_secs(35)).await;
                 let host=timeout.state::<Host>();
@@ -443,7 +406,7 @@ pub fn run() -> Result<(), Error> {
         })
         .build(tauri::generate_context!())?;
     app.run(|app,event|if let tauri::RunEvent::ExitRequested{api,..}=event {
-        if !app.state::<Host>().closing.load(Ordering::SeqCst) {api.prevent_exit();request_close(app.clone());}
+        if !app.state::<Host>().closing.load(Ordering::SeqCst) {api.prevent_exit();documents::request_app_close(app.clone());}
     });
     Ok(())
 }
@@ -508,4 +471,12 @@ mod tests {
     }
     #[test] fn read_snapshot_preserves_all_bytes() {let dir=tempfile::tempdir().unwrap();let path=dir.path().join("中文.cp");let bytes=b"\xff\xfe\x00\r\n";fs::write(&path,bytes).unwrap();assert_eq!(read_snapshot(&path).unwrap(),bytes);}
     #[test] fn project_reads_reject_a_directory() {let dir=tempfile::tempdir().unwrap();assert!(read_snapshot(dir.path()).is_err());}
+    #[cfg(debug_assertions)]
+    #[test]fn debug_exports_require_owned_marked_directory_and_never_overwrite_names(){
+        let dir=tempfile::tempdir_in(crate::project_root().join("output")).unwrap();let name="作品.oriw";
+        assert!(verified_test_export_target(&crate::project_root(),dir.path(),name).is_err());
+        fs::write(dir.path().join(".zhezhi-native-export-test"),"zhezhi-native-export-test-v1").unwrap();fs::write(dir.path().join(name),b"existing").unwrap();
+        let first=verified_test_export_target(&crate::project_root(),dir.path(),name).unwrap();let second=verified_test_export_target(&crate::project_root(),dir.path(),name).unwrap();
+        assert_ne!(first,second);assert_eq!(first.parent(),Some(dir.path().canonicalize().unwrap().as_path()));assert_eq!(first.extension().unwrap(),"oriw");assert_eq!(fs::read(dir.path().join(name)).unwrap(),b"existing");assert!(verified_test_export_target(&crate::project_root(),dir.path(),"../source.rs").is_err());
+    }
 }

@@ -1,0 +1,19 @@
+.canvas-paper-heading{display:flex;align-items:center;gap:8px}
+.canvas-paper-heading>h3{flex:none;margin:0}
+.canvas-paper-heading>select{flex:1;min-width:0;width:0;height:29px;padding:3px 5px;border:1px solid var(--line,#d3ded2);border-radius:var(--radius,5px);background:var(--paper,#fffefb);color:inherit;font:inherit}
+.canvas-paper-preview{display:block;width:100%;height:72px;margin-top:7px;border:1px solid var(--line,#d3ded2);border-radius:3px;background:var(--paper,#fffefb)}
+.canvas-paper-preview>path{fill:var(--tint,#e1ede2);stroke:var(--ink,#263b31);stroke-width:1.2}
+.canvas-paper-ratio{display:flex;gap:8px;margin-top:7px}
+.canvas-paper-ratio>label{display:flex;align-items:center;gap:4px;flex:1;min-width:0;white-space:nowrap}
+.canvas-paper-ratio input{width:0;flex:1;min-width:0}
+.canvas-paper-sides{display:flex;align-items:center;justify-content:space-between;gap:6px;margin-top:7px}
+.canvas-paper-sides>input{width:calc(3ch + 14px)}
+.canvas-paper-settings :is(.canvas-paper-ratio input,.canvas-paper-sides input,.canvas-paper-save input){box-sizing:border-box;height:29px;padding:3px 6px;border:1px solid var(--line,#d3ded2);border-radius:var(--radius,5px);background:var(--paper,#fffefb);color:inherit;font:inherit;font-variant-numeric:tabular-nums}
+.canvas-paper-ratio input,.canvas-paper-sides>input{appearance:textfield;-moz-appearance:textfield}
+.canvas-paper-ratio input::-webkit-inner-spin-button,.canvas-paper-ratio input::-webkit-outer-spin-button,.canvas-paper-sides>input::-webkit-inner-spin-button,.canvas-paper-sides>input::-webkit-outer-spin-button{margin:0;-webkit-appearance:none}
+.canvas-paper-apply-row{display:flex;align-items:center;gap:6px;margin-top:6px}
+.canvas-paper-apply-row>span{flex:1;min-width:0;font-size:10px;color:var(--muted,#637366);overflow-wrap:anywhere}
+.canvas-paper-settings :is(.canvas-paper-apply-row,.canvas-paper-save)>button{min-height:29px;flex:none;padding:3px 6px;border:1px solid var(--line,#d3ded2);border-radius:var(--radius,5px);background:var(--paper,#fffefb);color:inherit;font:inherit;white-space:nowrap}
+.canvas-paper-settings :is(.canvas-paper-apply-row,.canvas-paper-save)>button:hover:not(:disabled){background:var(--tint,#e1ede2)}
+.canvas-paper-save{display:flex;align-items:center;gap:6px;margin-top:6px}
+.canvas-paper-save>input{flex:1;min-width:0;width:0}

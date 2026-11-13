@@ -1,3 +1,4 @@
+import {projectedFoldInkSpans} from './diagramProjectedInk';
 import type {DiagramSimulationSurface} from './diagramSimulationSurface';
 import {renderDiagramSimulationSurface,diagramSimulationSurfaceBounds} from './diagramSimulationSurfaceRender';
 import type {Point} from '../core/types';
@@ -262,6 +263,9 @@ export function drawingSVG(pose:DiagramPose|null,annotations:DiagramAnnotation[]
   const linked:DiagramLineAnnotation[]=orderedPreview.map((segment,index)=>{const attributes=diagramFoldPreviewAttributes(segment,annotations,pose?.view?.colors?.line??defaultModelColors().line,lineDefaults);return {id:`linked-fold-${index}`,kind:'line',a:segment.a,b:segment.b,style:segment.style??styles[segment.assignment],color:attributes.color,width:attributes.width,...(attributes.strokePattern?{strokePattern:attributes.strokePattern}:{})};});
   const paint=(annotation:DiagramAnnotation)=>annotation.kind==='line'?applyDiagramLineAppearance(annotation,lineDefaults):annotation;
   const shownBackground=background.map(paint),shownIndependent=independent.map(paint);
+  const linkedSpans=projectedFoldInkSpans(linked);
+  const independentInk=shownIndependent.filter((a):a is DiagramLineAnnotation=>a.kind==='line');
+  const independentSpans=projectedFoldInkSpans(independentInk);
   const sourceFrame=diagramDrawingFrame(pose,[...shownBackground,...shownIndependent,...linked],undefined,images,paperVisible,callouts,zoom,surface),frame=diagramDrawingRotationFrame(sourceFrame,drawingRotation),pad=frame.width*.06,svgFrame=diagramDrawingSVGFrame(frame,!!(title||description));
   const outputWidth=lineDisplay?.outputSize?.width??1200,outputHeight=lineDisplay?.outputSize?.height??900;
   if(!Number.isFinite(outputWidth)||!Number.isFinite(outputHeight)||outputWidth<=0||outputHeight<=0)throw new Error('折图输出像素尺寸无效。');
@@ -271,8 +275,8 @@ export function drawingSVG(pose:DiagramPose|null,annotations:DiagramAnnotation[]
   const boundaryOverlay=pose&&!cutaway.definitions&&(linked.length||shownIndependent.some(annotation=>annotation.kind==='line'))?diagramBoundaryOverlay(pose,diagramPoseView(pose),lineDefaults,preview!==undefined):'';
   const artworkFor=(units:number,includeSymbols=true)=>{
     const options={...renderStyle,units};
-    const linkedMarkup=linked.map((line,index)=>{const ink=`<g opacity="${diagramFoldPreviewPaint(orderedPreview[index],line.color).opacity}">${diagramAnnotationMarkup(line,{...options,span:orderedPreview[index].strokeSpan})}</g>`;return cutaway.wrapFaces([orderedPreview[index].face],localClips?`<g data-diagram-local-ink-face="${orderedPreview[index].face}" clip-path="${localClips.clipForFace(orderedPreview[index].face)}">${ink}</g>`:ink);}).join('');
-    const independentLines=shownIndependent.filter(annotation=>annotation.kind==='line').map(annotation=>cutaway.wrapFaces(annotation.foldFaces,diagramAnnotationMarkup(annotation,options))).join('');
+    const linkedMarkup=linked.map((line,index)=>{const ink=`<g opacity="${diagramFoldPreviewPaint(orderedPreview[index],line.color).opacity}">${diagramAnnotationMarkup(line,{...options,span:orderedPreview[index].strokeSpan,projectedSpan:linkedSpans.get(index)})}</g>`;return cutaway.wrapFaces([orderedPreview[index].face],localClips?`<g data-diagram-local-ink-face="${orderedPreview[index].face}" clip-path="${localClips.clipForFace(orderedPreview[index].face)}">${ink}</g>`:ink);}).join('');
+    const independentLines=independentInk.map((annotation,index)=>cutaway.wrapFaces(annotation.foldFaces,diagramAnnotationMarkup(annotation,{...options,projectedSpan:independentSpans.get(index)}))).join('');
     const independentSymbols=includeSymbols?shownIndependent.filter(annotation=>annotation.kind==='symbol').map(annotation=>diagramAnnotationMarkup(annotation)).join(''):'';
     return definitions+shownBackground.map(annotation=>diagramAnnotationMarkup(annotation,options)).join('')+paperArtwork+linkedMarkup+independentLines+boundaryOverlay+independentSymbols;
   };

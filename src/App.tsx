@@ -1,3 +1,4 @@
+import {launchWorkspaceFile,takeWorkspaceFile,useLibraryFileIdentity,type WorkspaceFile,type CPReturnTarget} from './app/workspaceFileWindow';
 import {useWebTablet} from './app/useWebTablet';
 import TabletPanelBar,{TabletPanelHeading} from './components/TabletPanelBar';
 import {WEB_APP,appAsset} from './app/webRuntime';
@@ -23,7 +24,9 @@ import { diagnose } from './core/diagnostics';
 import {diagnosticHighlights} from './app/diagnosticHighlights';
 import { exportDocument, importDocument } from './core/formats';
 import UsageTutorial from './components/UsageTutorial';
-import {startProjectImport,startSavedProjectImport,type ProjectImportTask,type SavedProjectImportInfo} from './app/projectImportTask';
+import {startProjectImport,startSavedProjectImport,startArtworkImport,type ProjectImportTask,type SavedProjectImportInfo} from './app/projectImportTask';
+import {getArtworkImportPreparation,type ArtworkImportPreparation} from './app/artworkImportPreparation';
+import {getPreparedEditorSignature} from './app/editorImportPreparation';
 import {installRuntimeActivityLogging,recordActivity} from './app/activityLog';
 import ActivityLogPanel from './components/ActivityLogPanel';
 import {selectProjectFile} from './app/selectProjectFile';
@@ -34,7 +37,10 @@ import CPProcessingExportDialog from './components/CPProcessingExportDialog';
 import {exportModelSnapshot} from './core/modelSnapshot';
 import {prepareModelSnapshot} from './app/modelSnapshot';
 import {exportModelCollection,prepareModelCollection} from './app/modelCollectionFile';
-import {exportArtworkProject,prepareArtworkProject,type ArtworkProject} from './app/artworkProject';
+import {exportArtworkProject,type ArtworkProject} from './app/artworkProject';
+import {nativeDocumentId,documentWorkspaceCommand,artworkDocumentStatus,createArtworkSaveTracker,type ArtworkSaveStamp} from './app/documentRuntime';
+import {currentDocumentOwner} from './app/documentRequestScope';
+import './components/documentEmbedded.css';
 import {useArtworkRecovery} from './app/useArtworkRecovery';
 import {createArtworkSerializationClient} from './app/artworkSerializationTask';
 import {artworkSerializationInput} from './app/artworkSerialization';
@@ -42,7 +48,7 @@ import type {ArtworkRecoverySummary} from './app/artworkRecovery';
 import ArtworkOverview,{type ArtworkOverviewRow} from './components/ArtworkOverview';
 import {editableCanvasSelection,deleteCanvasSelection} from './app/canvasSelection';
 import type {SimulationPose} from './engine/simPose';
-import {simulationSourceSignature} from './engine/simLayerOrder';
+import {startSimulationGraphPreparation} from './app/simulationGraphPreparation';
 import TessFlatPane from './components/TessFlatPane';
 import TessRigidPane from './components/TessRigidPane';
 import './components/tessRigidPane.css';
@@ -57,12 +63,13 @@ import {primalDualFaceupRoot} from './app/primalDualFaceup';
 import {useTilePatchLayerCheck} from './app/useTilePatchLayerCheck';
 import { startFlatFold, startFlatLayerReanalysis } from './core/workerClient';
 import type {FlatComputationProgress} from './core/flatComputationProgress';
-import { api, apiText, apiSerialized, connect, deleteProject, download, saveDownload, safeName } from './app/api';
+import { api, apiText, apiBlob, apiSerialized, connect, deleteProject, download, saveDownload, safeName } from './app/api';
 import {documentRequestJson} from './app/documentRequest';
 import { getDrawingBounds, getPaperBounds, paperPath } from './app/paper';
 import {rasterizeSVG,downloadRaster} from './app/rasterExport';
 import {completeCreasePatternSVG,cpPrintHTML} from './app/creasePatternExport';
-import { chooseRecovery, saveRecoveryCopies, type RecoverySnapshot } from './app/recovery';
+import {saveRecoveryCopies} from './app/recovery';
+import {startRecoveryInspection,type RecoveryCandidate} from './app/recoveryInspectionTask';
 import { splitEditableSegments } from './app/planarize';
 import {prepareEditorCommit,type EditorMaterialIntent} from './app/editorCommit';
 import MaterialPieceSelector from './components/MaterialPieceSelector';
@@ -122,7 +129,8 @@ import ToolLibrary from './components/ToolLibrary';
 import {mergeAllVertices,mergeAllCrossTypeVertices} from './app/mergeAllVertices';
 import MergeCrossVertices from './components/MergeCrossVertices';
 import PanelDivider from './components/PanelDivider';
-import BackgroundPanel from './components/BackgroundPanel';
+import CanvasBackgroundSettings from './components/CanvasBackgroundSettings';
+import OverlayScrollArea from './components/OverlayScrollArea';
 import FlatView from './components/FlatView';
 import {FlatConflictOverlay,conflictPoints,sourceConflictResult,visibleFlatConflicts} from './components/FlatConflictDetails';
 import {useFlatNavigation,type FlatNavigationTarget} from './components/useFlatNavigation';
@@ -206,7 +214,7 @@ import {boundedAcrossSourceMatches,readBoundedAcrossRecipe} from './app/boundedA
 import CurveDesignPane from './components/CurveDesignPane';
 import {exportCurveDesignSVG,exportCurveDesignOBJ,type CurveDesign} from './app/curveDesign';
 import {curveDesignDocument,curveDesignFromDocument} from './app/curveDesignProject';
-import {tessPreset,prepareTessResult,canAdoptTess,canAdoptTessWithTileLayers,needsTessellationLayerCheck,previewTessDocument,tessConstructionKey,TESS_NAMES,type TessGraph,type TessParams,type TessResponse,type TessResult,type XY} from './app/tessellation';
+import {readTessParams,tessPreset,prepareTessResult,canAdoptTess,canAdoptTessWithTileLayers,needsTessellationLayerCheck,previewTessDocument,tessConstructionKey,TESS_NAMES,type TessGraph,type TessParams,type TessResponse,type TessResult,type XY} from './app/tessellation';
 import {unitQuadrilateralVertices} from './app/splitParams';
 import {decoratedMotherTiles,reframeTileDecorations,specializedTwistTileDecorations,twistDecoratedMotherTiles,twistTileDecorations,type TileDecorations} from './app/tileDecorations';
 import type {DiagramWorkspaceHandle} from './components/DiagramWorkspace';
@@ -227,6 +235,21 @@ function errorText(e:unknown){return e instanceof Error?e.message:String(e);}
 function TypeButtons({value,onChange,disabled=false,compact=false}:{value:Assignment|undefined;onChange:(t:Assignment)=>void;disabled?:boolean;compact?:boolean}) {return <div className={'type-buttons '+(compact?'compact':'')}>{(compact?TYPES.filter(t=>t!=='F'):TYPES).map(t=><button key={t} disabled={disabled} aria-pressed={value===t} onClick={()=>onChange(t)} title={NAMES[t]+' '+t}><i style={{background:COLORS[t]}}/>{NAMES[t]}{!compact&&<small>{t}</small>}</button>)}</div>;}
 
 export default function App(){
+  const [documentId]=useState(()=>{const id=nativeDocumentId(window.desktop);if(id&&id!==currentDocumentOwner())throw Error('作品窗口身份不一致，未启用工作恢复。');return id;});
+  const [documentPresentation,setDocumentPresentation]=useState({active:true,visible:true});
+  const documentActivation=useRef<Promise<void>|null>(null);
+  useEffect(()=>{
+    const documents=window.desktop?.documents;if(!documentId||!documents)return;
+    return documents.subscribe(snapshot=>{
+      const own=snapshot.documents.find(item=>item.id===documentId);if(!own)return;
+      setDocumentPresentation(previous=>previous.active===own.active&&previous.visible===own.visible?previous:{active:own.active,visible:own.visible});
+    });
+  },[documentId]);
+  function activateDocument(){
+    if(!documentId||documentHome||documentPresentation.active||documentActivation.current||!window.desktop?.documents)return;
+    const task=window.desktop.documents.activate(documentId);documentActivation.current=task;
+    void task.catch(error=>console.error('作品窗口激活未完成',error)).finally(()=>{if(documentActivation.current===task)documentActivation.current=null;});
+  }
   const tablet=useWebTablet();
   const [tabletPanel,setTabletPanel]=useState('');
   const toolLayout=useToolLayout();
@@ -293,7 +316,7 @@ export default function App(){
   const [linearSpaceDialog,setLinearSpaceDialog]=useState<{edit:boolean}|null>(null);
   const generalSpacerRecipe=useMemo(()=>readGeneralSpacerMiuraRecipe(doc),[doc]);
   const [generalSpacerDialog,setGeneralSpacerDialog]=useState<{edit:boolean}|null>(null);
-  const [dockSettings,setDockSettings]=useState<'properties'|'clipboard'|'background'|'canvashelp'|null>(null);
+  const [dockSettings,setDockSettings]=useState<'properties'|'clipboard'|'canvashelp'|null>(null);
   const [showFlat,setShowFlat]=useState(false),[modelToolsOpen,setModelToolsOpen]=useState(false);
   useEffect(()=>{if(toolLayout.editing)setModelToolsOpen(false);},[toolLayout.editing]);
   const [flatNavigation,setFlatNavigation]=useState<FlatNavigationTarget>('crease');
@@ -306,7 +329,18 @@ export default function App(){
   }
   function openFlat(){setMode('edit');setShowFlat(true);selectFlatNavigation('fold');}
   useEffect(()=>setTabletPanel(''),[tablet]);
-  const [mode,setMode]=useState<Mode>('edit'),[tool,setTool]=useState<Tool>('select'),[preset,setPreset]=useState<Assignment>('M');
+  const [windowMode]=useState<Mode|null>(()=>{
+    if(!documentId)return null;
+    const requested=new URLSearchParams(location.search).get('mode');
+    return requested&&Object.hasOwn(MODE_NAMES,requested)?requested as Mode:'edit';
+  });
+  const [documentHome]=useState(()=>!!documentId&&new URLSearchParams(location.search).get('home')==='1');
+  const [browserMode,setBrowserMode]=useState<Exclude<Mode,'sim'|'tess'>|null>(null);
+  const directNavigation=useRef(false);
+  const [localMode,setLocalMode]=useState<Mode>('edit');
+  const mode=windowMode??localMode;
+  function setMode(next:Mode){if(!windowMode)setLocalMode(next);}
+  const [tool,setTool]=useState<Tool>('select'),[preset,setPreset]=useState<Assignment>('M');
   const workspaceNavigation=useRef(0),workspaceMode=useRef(mode);workspaceMode.current=mode;
   const [drawingSwap,setDrawingSwap]=useState(false);
   useEffect(()=>{if(mode!=='edit'||!canSwapGeneratedLines(tool))setDrawingSwap(false);},[mode,tool]);
@@ -335,14 +369,15 @@ export default function App(){
     if(next!==tool)recordActivity('tool.select',{previous:tool,tool:next});setTool(next);
   }
   function runToolCommand(next:Tool){activateDrawingTool(next);if(next!=='regionalswap'||!canSwapGeneratedLines(tool))setCommandActivation(value=>value+1);}
-  const [diagramVisited,setDiagramVisited]=useState(false),diagramRef=useRef<DiagramWorkspaceHandle>(null);
-  const [designVisited,setDesignVisited]=useState(false),designRef=useRef<DesignWorkspaceHandle>(null);
+  const [diagramVisited,setDiagramVisited]=useState(windowMode==='diagram'),diagramRef=useRef<DiagramWorkspaceHandle>(null);
+  const [designVisited,setDesignVisited]=useState(windowMode==='design'),designRef=useRef<DesignWorkspaceHandle>(null);
   const [designArtworkRevision,setDesignArtworkRevision]=useState(0);
   const [incomingDiagramImage,setIncomingDiagramImage]=useState<{id:string;image:PreparedDiagramImage}|null>(null);
   useEffect(()=>{if(mode!=='diagram')setIncomingDiagramImage(null);},[mode]);
   const [storageStatus,setStorageStatus]=useState<StorageStatus|null>(storageBootstrapStatus);
   const [storageImportWarning,setStorageImportWarning]=useState(storageBootstrapError);
   const [storageSettingsOpen,setStorageSettingsOpen]=useState(()=>storageBootstrapStatus()?.configured===false||!!storageBootstrapStatus()?.unavailable?.length);
+  const [workspaceOptionsOpen,setWorkspaceOptionsOpen]=useState(false),workspaceNameInput=useRef<HTMLInputElement>(null);
   const [storageInitial,setStorageInitial]=useState(()=>storageBootstrapStatus()?.configured===false);
   const [storageUnavailable,setStorageUnavailable]=useState(false),[storageBusy,setStorageBusy]=useState(false),[storageError,setStorageError]=useState('');
   async function openStorageSettings(){
@@ -393,7 +428,10 @@ export default function App(){
   useEffect(()=>installRuntimeActivityLogging(),[]);
   useEffect(()=>{if(online&&!loggedStart.current){loggedStart.current=true;recordActivity('app.start',{version:VERSION});}},[online]);
   const [initialCreaseLibrary]=useState(()=>{try{return {value:readCreaseLibraryPreferences(),error:''};}catch(cause){return {value:emptyCreaseLibraryPreferences(),error:errorText(cause)};}});
+  useLibraryFileIdentity(windowMode==='edit'||windowMode==='sim'||windowMode==='tess'?windowMode:null,projectId);
   const [creaseLibraryOpen,setCreaseLibraryOpen]=useState(true),[hasCreaseDocument,setHasCreaseDocument]=useState(false);
+  const [creaseCanvasVisited,setCreaseCanvasVisited]=useState(false);
+  useEffect(()=>{if(mode!=='edit')setCreaseCanvasVisited(false);else if(!creaseLibraryOpen)setCreaseCanvasVisited(true);},[mode,creaseLibraryOpen]);
   const [creaseLibraryMeta,setCreaseLibraryMeta]=useState(initialCreaseLibrary.value),[creaseLibraryError,setCreaseLibraryError]=useState(initialCreaseLibrary.error);
   const [creaseLibraryLoading,setCreaseLibraryLoading]=useState(false),[creaseLibraryBusy,setCreaseLibraryBusy]=useState(false);
   const creaseIdRef=useRef<string|null>(null),hasCreaseDocumentRef=useRef(false),creaseLibraryTicket=useRef(0),creaseLibraryBusyRef=useRef(false);
@@ -408,8 +446,12 @@ export default function App(){
   serializedDocument.current={doc,text:signature};
   function documentText(value:Doc):string{const cached=serializedDocument.current;return cached?.doc===value?cached.text:JSON.stringify(value);}
   const savedSignatureRef=useRef(savedSignature);savedSignatureRef.current=savedSignature;
-  const [recovery,setRecovery]=useState<RecoverySnapshot|null>(null),[recoveryChecked,setRecoveryChecked]=useState(false);
-  const [recoveryAlternatives,setRecoveryAlternatives]=useState<RecoverySnapshot[]>([]);const startupSignature=useRef(signature);
+  const [recovery,setRecovery]=useState<RecoveryCandidate|null>(null),[recoveryChecked,setRecoveryChecked]=useState(false);
+  const [recoveryAlternatives,setRecoveryAlternatives]=useState<RecoveryCandidate[]>([]);const startupSignature=useRef(signature);
+  const [recoveryHint,setRecoveryHint]=useState<{server:boolean;browser:boolean;revision:string|null}|null>(null),[recoveryLoading,setRecoveryLoading]=useState(false);
+  const recoveryRead=useRef<AbortController|null>(null),recoveryInspection=useRef<ReturnType<typeof startRecoveryInspection>|null>(null),recoveryInspectionGeneration=useRef(0),recoveryInspected=useRef(false);
+  const recoveryRestoreRequest=useRef<number|null>(null);
+  const recoveryUnresolved=useRef(false);
   const [toolShortcuts,setToolShortcuts]=useState(readToolShortcuts);
   const [directCommands,setDirectCommands]=useState(readToolCommandInput);
   const commands=useToolCommands('crease',TOOL_COMMANDS);
@@ -496,7 +538,7 @@ export default function App(){
   function setTessParams(next:TessParams){tessPreviewSession.current=null;setTessDraft(null);setTessCommittedParams(next);setCurveEditRequest(0);curvePreviewSession.current=null;setCurveDesign(null);}
   function previewTessParams(next:TessParams){if(!tessPreviewSession.current)tessPreviewSession.current={result:tessResult,signature:tessSignature,error:tessError};setTessDraft(next);}
   function cancelTessPreview(){const session=tessPreviewSession.current;if(!session)return;tessPreviewSession.current=null;tessAbort.current?.abort();setTessDraft(null);const key=tessConstructionKey(tessCommittedParams);setTessError(tessSignature===key&&tessSignature!==session.signature?'':session.error);if(tessSignature===key&&tessResult){tessAttempt.current=key;}else{setTessResult(session.result);setTessSignature(session.signature);setTessError(session.error);tessAttempt.current=session.signature;if(session.signature!==key)setTessRetryToken(n=>n+1);}}
-  const tessParamKey=tessConstructionKey(tessParams);const tessAbort=useRef<AbortController|null>(null);
+  const tessParamKey=useMemo(()=>tessConstructionKey(tessParams),[tessParams]);const tessAbort=useRef<AbortController|null>(null);
   const tessTilingOnly=(tessParams.family==='archimedean'&&['cairo','double-cairo'].includes(tessParams.tiling)&&tessParams.cairoOutput!=='twist')||(tessParams.family==='custom'&&tessParams.customOutput==='tiling')||(tessParams.family==='nonperiodic'&&tessParams.kind==='goldberg'&&tessParams.goldbergOutput==='tiling');
   const tessTileDecoration=useMemo(()=>{
     if(!tessResult?.mother||!tessResult.motherDoc||tessSignature!==tessParamKey)return null;
@@ -593,11 +635,12 @@ export default function App(){
   const tessLatest=useRef({key:tessParamKey,mode}),tessAttempt=useRef('');
   tessLatest.current={key:tessParamKey,mode};
   const [simStatus,setSimStatus]=useState<SimulatorStatus|null>(null),[simProgress,setSimProgress]=useState(0),[simSignature,setSimSignature]=useState('');
+  const [simPreparing,setSimPreparing]=useState(false),simGraphPreparation=useRef<ReturnType<typeof startSimulationGraphPreparation>|null>(null);
   const [simVisited,setSimVisited]=useState(false),pendingSimulationPose=useRef<SimulationPose|null>(null);
   const simMounted=simVisited||mode==='sim';
   const hasSimulationWork=simMounted&&!!simStatus&&(!!simStatus.poseRestored||!!simStatus.poseEditRevision||!!simStatus.progress);
   const simulationWorkRef=useRef(hasSimulationWork);simulationWorkRef.current=hasSimulationWork;
-  const simReady=!!simStatus&&['loaded','running','paused'].includes(simStatus.status);
+  const simReady=!simPreparing&&!!simStatus&&['loaded','running','paused'].includes(simStatus.status);
   const iframe=useRef<HTMLIFrameElement>(null),simBridge=useRef<SimulatorBridge|null>(null),simControls=useRef<SimulationControlsHandle>(null);
   const [capturingSimulationImage,setCapturingSimulationImage]=useState(false),simulationImageAbort=useRef<AbortController|null>(null);
   const simLayerJob=useRef<{cancel:()=>void}|null>(null);
@@ -624,9 +667,17 @@ export default function App(){
   const flatCheckSource=flatSource?.doc??flatInputDoc.current;
   const flatSourceCurrent=useMemo(()=>!!flatCheckSource&&isFoldSourceCurrent(flatCheckSource,doc),[flatCheckSource,doc]);
   const flatStale=!!flat&&(flatCheckSource?!flatSourceCurrent:flatSignature!==signature),simStale=!!simSignature&&simSignature!==signature;
+  const simulationLoadLatest=useRef({flatBusy,flatStale,flat,flatSource,rootResolution,startingFace});
+  simulationLoadLatest.current={flatBusy,flatStale,flat,flatSource,rootResolution,startingFace};
   const simulationCaptureContext=useRef({mode,signature});simulationCaptureContext.current={mode,signature};
-  const artworkChangeKey=useMemo(()=>({doc,models,tessParams,curveDesign,designArtworkRevision,diagramArtworkRevision,progress:simProgress,pose:simStatus?.poseEditRevision,view:simStatus?.view,settings:simStatus?.solverSettings}),[doc,models,tessParams,curveDesign,designArtworkRevision,diagramArtworkRevision,simProgress,simStatus?.poseEditRevision,simStatus?.view,JSON.stringify(simStatus?.solverSettings)]);
-  const artworkRecovery=useArtworkRecovery({scope:scope.current,enabled:online&&!storageBusy&&!fileImport&&(hasCreaseDocument||constructionVisited||!!curveDesign||diagramArtworkRevision>0||designArtworkRevision>0||hasSimulationWork),changeKey:artworkChangeKey,periodic:simMounted&&simStatus?.status==='running',capture:async()=>{
+  const simulationSeed=pendingSimulationPose.current??simSignature;
+  const artworkRootKey=useMemo(()=>({doc,models,tessParams,curveDesign,designArtworkRevision,diagramArtworkRevision,simulationSeed}),[doc,models,tessParams,curveDesign,designArtworkRevision,diagramArtworkRevision,simulationSeed]);
+  const artworkSaved=useRef(createArtworkSaveTracker(artworkRootKey));artworkSaved.current.observe(artworkRootKey);
+  const restoringSimulation=useRef(false),simulationStatusContent=useRef(''),simulationLiveContent=useRef(''),simulationViewContent=useRef('');
+  const [simulationViewRevision,setSimulationViewRevision]=useState(0),simulationViewTimer=useRef<ReturnType<typeof setTimeout>|null>(null);
+  useEffect(()=>()=>{if(simulationViewTimer.current)clearTimeout(simulationViewTimer.current);},[]);
+  const artworkChangeKey=useMemo(()=>({root:artworkRootKey,progress:simProgress,pose:simStatus?.poseEditRevision,view:simulationViewRevision,settings:simStatus?.solverSettings}),[artworkRootKey,simProgress,simStatus?.poseEditRevision,simulationViewRevision,JSON.stringify(simStatus?.solverSettings)]);
+  const artworkRecovery=useArtworkRecovery({scope:scope.current,documentId,enabled:online&&!storageBusy&&!fileImport&&(hasCreaseDocument||constructionVisited||!!curveDesign||diagramArtworkRevision>0||designArtworkRevision>0||hasSimulationWork),changeKey:artworkChangeKey,periodic:simMounted&&simStatus?.status==='running',capture:async()=>{
     if(flatBusy||savingArtwork||simStatus?.interactionActive||document.documentElement.hasAttribute('data-diagram-pointer-gesture')||simMounted&&simSignature&&!simReady)return null;
     try{return await captureArtwork(false,true);}catch(error){if(errorText(error)==='三维交互进行中，稍后暂存')return null;throw error;}
   }});
@@ -662,7 +713,7 @@ export default function App(){
   async function reloadConflictedCrease(){
     const id=creaseIdRef.current;if(!id||creaseLibraryBusyRef.current||saveLock.current||!confirmAction('重新打开将替换当前窗口的内容。尚需保留的修改请先“另存当前副本”。是否继续？'))return;
     setCreaseBusy(true);
-    try{const result=await openSavedCrease(id);if(result)inform('已重新打开最新版本。'+(result.upgraded?'已兼容升级，请保存更新后的工程。':''));}catch(cause){setError(errorText(cause));}
+    try{const result=await openSavedCrease(id,false);if(result)inform('已重新打开最新版本。'+(result.upgraded?'已兼容升级，请保存更新后的工程。':''));}catch(cause){setError(errorText(cause));}
     finally{setCreaseBusy(false);}
   }
   function setCreaseBusy(busy:boolean){creaseLibraryBusyRef.current=busy;setCreaseLibraryBusy(busy);}
@@ -718,10 +769,11 @@ export default function App(){
     }catch(cause){if(['project_conflict','project_deleted'].includes((cause as {code?:string}).code??''))markCreaseConflict(errorText(cause));setCreaseLibraryError(errorText(cause));inform('折痕草稿暂存未完成：'+errorText(cause));return false;}
   }
   async function showCreaseLibrary(navigation?:number){
+    if(windowMode&&windowMode!=='edit'){setBrowserMode('edit');void refreshCreaseLibrary();return;}
     if(saveLock.current||creaseLibraryBusyRef.current)return;
     if(toolLayout.editing){inform('请先保存或取消工具排版，再返回折痕文档。');return;}
     flushSync(()=>{if(document.activeElement instanceof HTMLElement)document.activeElement.blur();});setCreaseBusy(true);
-    try{if(!await checkpointCreaseDraft()||navigation!==undefined&&navigation!==workspaceNavigation.current)return;setDialog(null);setCreaseLibraryOpen(true);setMode('edit');await refreshCreaseLibrary();}
+    try{if(!await checkpointCreaseDraft()||navigation!==undefined&&navigation!==workspaceNavigation.current)return;setDialog(null);setCreaseLibraryOpen(true);setMode('edit');if(creaseLibraryOpen)await refreshCreaseLibrary();}
     finally{setCreaseBusy(false);}
   }
   async function newCreaseDocument(kind='blank'){
@@ -730,7 +782,7 @@ export default function App(){
     finally{setCreaseBusy(false);}
   }
   function continueCreaseDocument(){if(!hasCreaseDocumentRef.current)return;setCreaseLibraryOpen(false);setMode(docRef.current.metadata?.curveDesign?'tess':'edit');}
-  async function openSavedCrease(id:string):Promise<{draft:boolean;segments:number;upgraded:boolean}|null>{
+  async function openSavedCrease(id:string,includeDraft=true):Promise<{draft:boolean;segments:number;upgraded:boolean}|null>{
     savedProjectRead.current?.abort();importTask.current?.cancel();
     const request=++openRequest.current,identity=scope.current,base=docRef.current,controller=new AbortController();
     const name=projects.find(project=>project.id===id)?.name??'折痕工程';
@@ -739,7 +791,7 @@ export default function App(){
     try{
       await new Promise<void>(resolve=>setTimeout(resolve,0));
       if(request!==openRequest.current||identity!==scope.current)return null;
-      let text=await apiText('projects/'+encodeURIComponent(id)+'?draft=1',controller.signal);
+      let text=await apiText('projects/'+encodeURIComponent(id)+'?draft='+(includeDraft?'1':'0'),controller.signal);
       if(request!==openRequest.current||identity!==scope.current)return null;
       task=startSavedProjectImport(text,stage=>{if(request===openRequest.current&&identity===scope.current)setFileImport({request,name,stage});});
       text='';importTask.current=task;
@@ -751,6 +803,7 @@ export default function App(){
       const saved=result.savedProject;
       if(!replace(result.doc,id,!saved.draft,false,true,false,saved))return null;
       projectRevisionRef.current=saved.revision;
+      if(saved.workspaceDraftConflict)markCreaseConflict('共享工程已更新，当前打开最新共享版本。原作品的私有草稿仍保留；请另存当前副本，避免自动暂存覆盖原草稿。');
       return {draft:saved.draft,segments:result.doc.segments.length,upgraded:saved.upgraded};
     }catch(cause){
       if(request!==openRequest.current||identity!==scope.current||(cause as Error).name==='AbortError')return null;
@@ -811,7 +864,7 @@ export default function App(){
       if(creaseIdRef.current===id)discardDeletedCreaseDocument();
       setProjects(value=>value.filter(project=>project.id!==id));
       try{changeCreaseLibraryMeta(value=>removeCreaseLibraryDocument(value,id));}catch{warnings.push('文档已删除，分类与最近打开记录暂未清理。');}
-      try{const raw=localStorage.getItem('zhezhi-recovery');if(raw&&JSON.parse(raw)?.projectId===id)localStorage.removeItem('zhezhi-recovery');}catch{warnings.push('文档已删除，浏览器恢复记录暂未清理。');}
+      if(!documentId)try{const raw=localStorage.getItem('zhezhi-recovery');if(raw&&JSON.parse(raw)?.projectId===id)localStorage.removeItem('zhezhi-recovery');}catch{warnings.push('文档已删除，浏览器恢复记录暂未清理。');}
       setRecoveryAlternatives(value=>value.filter(item=>item.projectId!==id));
       if(result.warning)warnings.push(result.warning);
       await refreshCreaseLibrary();
@@ -821,7 +874,7 @@ export default function App(){
     }catch(cause){recordActivity('document.delete.error',{stage:'library',reason:errorText(cause)},'error');setCreaseLibraryError(errorText(cause));inform('删除未完成，当前工程内容仍保留。');return false;}
     finally{creaseDeletePending.current=false;setCreaseBusy(false);}
   }
-  useEffect(()=>{if(online&&creaseLibraryOpen)void refreshCreaseLibrary();},[online,creaseLibraryOpen]);
+  useEffect(()=>{if(!windowMode&&online&&creaseLibraryOpen)void refreshCreaseLibrary();},[online,creaseLibraryOpen,windowMode]);
   useEffect(()=>{if(!hasCreaseDocument||creaseLibraryOpen||!online||!dirty||saving||creaseLibraryBusy)return;const timer=setTimeout(()=>{if(!creaseLibraryBusyRef.current)void checkpointCreaseDraft();},700);return()=>clearTimeout(timer);},[doc,hasCreaseDocument,creaseLibraryOpen,online,dirty,saving,creaseLibraryBusy]);
   const cropContext=useRef({doc,operationFrame,backgroundView,mode,tool});cropContext.current={doc,operationFrame,backgroundView,mode,tool};
   function cancelBackgroundCrop(){cropRequest.current++;cropAbort.current?.abort();cropAbort.current=null;setCropBusy(false);}
@@ -839,14 +892,14 @@ export default function App(){
   function publishEditorCommit(result:{doc:Doc;descendants:Map<string,string[]>},completedSelection?:Set<string>){dispatch({type:'commit',doc:result.doc});setSelected(ids=>selectionAfterCommit(ids,result.descendants,completedSelection,keepSelection));recordActivity('edit.commit',{tool,segments:result.doc.segments.length,objects:result.doc.objects?.length??0});setError('');return true;}
   function commit(next:Doc,completedSelection?:Set<string>,transform?:EditorMaterialIntent){try{if(doc.metadata?.curveDesign){if(next.segments.length)throw new Error('当前为曲面设计，请先新建或打开折痕工程，再绘制直线折痕。');curveDesignFromDocument(next);}const result=prepareEditorCommit(doc,next,transform);return publishEditorCommit(result,completedSelection);}catch(e){setError(errorText(e));return false;}}
   function transformChosen(kind:Parameters<typeof transformSelection>[2],a:number,b=0){if(kind==='copy'&&hasMaterialTopology(doc)){const material=inspectMaterialTopology(doc);if(material.ok&&material.edgeSegmentIds.some(id=>selected.has(id))){try{const intent={kind:'material-copy' as const,segmentIds:[...selected],placements:[{dx:a,dy:b,rotation:0,scale:1,mirror:'none' as const}]},result=copyMaterialComponents(doc,intent);return commit(result.doc,new Set(result.copiedIds),intent);}catch(e){setError(errorText(e));return false;}}}return commit(transformSelection(doc,selected,kind,a,b),selected,kind==='copy'?undefined:{kind,segmentIds:[...selected],a,b});}
-  function replace(next:Doc,id:string|null=null,saved=false,preserveCurveView=false,preparedImport=false,modelsApproved=false,preparedSaved?:SavedProjectImportInfo):boolean {
+  function replace(next:Doc,id:string|null=null,saved=false,preserveCurveView=false,preparedImport=false,modelsApproved=false,preparedSaved?:SavedProjectImportInfo,artworkPreparation?:ArtworkImportPreparation):boolean {
     let prepared:Doc,native:CurveDesign|null;
     try {
       if(preparedSaved&&!preparedImport)throw new Error('本地工程准备状态无效。');
       prepared=preparedImport?next:splitEditableSegments(upgradeProject(next));
       // Saved records were fully validated by the same preparation operator in
       // our Worker, then received through the acknowledged complete protocol.
-      if(!preparedSaved)validateDoc(prepared);
+      if(!artworkPreparation&&getPreparedEditorSignature(prepared)===undefined)validateDoc(prepared);
       native=curveDesignFromDocument(prepared);
     }
     catch(e) {setError(errorText(e));return false;}
@@ -854,21 +907,27 @@ export default function App(){
     // dismiss recovery, or enable autosave over an unread recovery snapshot.
     if(!modelsApproved&&!approveModelDiscard())return false;
     savedProjectRead.current?.abort();savedProjectRead.current=null;importTask.current?.cancel();importTask.current=null;
-    scope.current++;flatJob.current?.cancel();setFlatBusy(false);setOperationFrame(null);setExportFrame(false);
+    scope.current++;flatJob.current?.cancel();simGraphPreparation.current?.cancel();simGraphPreparation.current=null;setSimPreparing(false);setFlatBusy(false);setOperationFrame(null);setExportFrame(false);
     if(id!==creaseIdRef.current)projectRevisionRef.current=null;
     creaseConflictRef.current=false;setCreaseConflict(false);
-    if(preparedSaved)serializedDocument.current={doc:prepared,text:preparedSaved.preparedSignature};
+    if(preparedSaved)serializedDocument.current={doc:prepared,text:getPreparedEditorSignature(prepared)??JSON.stringify(prepared)};
+    else if(artworkPreparation)serializedDocument.current={doc:prepared,text:artworkPreparation.editorSignature};
+    else {const text=getPreparedEditorSignature(prepared);if(text!==undefined)serializedDocument.current={doc:prepared,text};}
     dispatch({type:'replace',doc:prepared});setProjectId(id);creaseIdRef.current=id;lastCreaseDraft.current=null;
     setCreaseLibraryOpen(false);setHasCreaseDocument(true);hasCreaseDocumentRef.current=true;
     // Compare with the saved, pre-migration document so split upgrades stay dirty.
-    setSavedSignature(preserveCurveView?savedSignatureRef.current:saved?(preparedSaved?.sourceSignature??documentText(next)):'');
+    setSavedSignature(preserveCurveView?savedSignatureRef.current:saved?(preparedSaved&&getPreparedEditorSignature(prepared)!==undefined?preparedSaved.sourceSignature:preparedSaved?.upgraded?'':documentText(next)):'');
     clearDrawingSelection();setFitToken(n=>n+1);setMode(native?'tess':'edit');curvePreviewSession.current=null;setCurveDesign(native);setCurveEditRequest(0);if(native&&!preserveCurveView)setTessFlatFit(n=>n+1);tessPreviewSession.current=null;setTessDraft(null);if(native)setExportFormat('json');setTool('select');
     updateModels({type:'clear'});setCpTarget(null);setModelTargetPoints({});setPendingFold(null);setBusyModelId(null);setFlatFitTokens({});flatInputDoc.current=null;setIssues(null);setFlat(null);setFlatSource(null);setSimSignature('');setSimVisited(false);pendingSimulationPose.current=null;setError('');
     if(preparedSaved?.upgraded||prepared!==next&&documentText(prepared)!==documentText(next))inform('已兼容升级工程并在交点处真实分段；请保存更新后的工程。');
     return true;
   }
-  function approveReplace(){return JSON.stringify(docRef.current)===savedSignatureRef.current||confirmAction('当前工程尚未手动保存。是否继续切换？建议先点“取消”并保存；自动恢复只保留最近工作。');}
-  function revealDiagramCP(source:Doc):boolean {
+  function approveReplace(){return documentText(docRef.current)===savedSignatureRef.current||confirmAction('当前工程尚未手动保存。是否继续切换？建议先点“取消”并保存；自动恢复只保留最近工作。');}
+  function revealDiagramCP(source:Doc,target?:CPReturnTarget):boolean|Promise<boolean> {
+    if(windowMode&&windowMode!=='edit'){
+      if(target)cpSessions.current.set(target.session,{target});
+      return launchWorkspaceFile('edit',{kind:'cp',doc:prepareDiagramEditorCP(source),returnTarget:target}).then(opened=>{linkedEditor.current=opened.id;return true;},error=>{if(target)cpSessions.current.delete(target.session);setError(errorText(error));return false;});
+    }
     if(saveLock.current){setError('当前工程正在保存，请保存完成后再打开 CP。');return false;}
     try{
       const prepared=prepareDiagramEditorCP(source);
@@ -879,7 +938,70 @@ export default function App(){
       inform('已在折痕编辑中打开独立 CP 副本，可撤销恢复之前的折痕；修改后回折序点击“采用编辑区 CP”。');return true;
     }catch(e){setError(errorText(e));return false;}
   }
-  useEffect(()=>{let alive=true;async function init(){let serverValue:unknown=null,browserValue:unknown=null;try{browserValue=localStorage.getItem('zhezhi-recovery');}catch{}try{await connect();if(!alive)return;setOnline(true);serverValue=await api('recovery');}catch(e){if(alive)setError(errorText(e));}if(!alive)return;const choice=chooseRecovery(serverValue,browserValue),remaining=[choice.recovery,...choice.alternatives].filter((item):item is RecoverySnapshot=>!!item&&(!item.projectId||!deletedCreaseIds.current.has(item.projectId)));setRecovery(remaining[0]??null);setRecoveryAlternatives(remaining.slice(1));setRecoveryChecked(!remaining.length);if(choice.warnings.length)inform(choice.warnings.join('；'));}void init();return()=>{alive=false;};},[]);
+  useEffect(()=>{
+    let alive=true;
+    async function init(){
+      if(documentId){try{await connect();if(alive){setOnline(true);setRecoveryChecked(true);}}catch(error){if(alive)setError(errorText(error));}return;}
+      let browser=false,server=true,revision:string|null=null;
+      // Enumerate names only: reading the legacy value itself can copy a large
+      // draft. Its body is needed only when the user opens the recovery menu.
+      try{for(let i=0;i<localStorage.length;i++)if(localStorage.key(i)==='zhezhi-recovery'){browser=true;break;}}catch{}
+      try{await connect();if(!alive)return;setOnline(true);const summary=await api<{exists:boolean;revision:string|null}>('recovery?summary=1');server=summary.exists;revision=summary.revision;}
+      catch(error){recoveryUnresolved.current=true;if(alive)setError(errorText(error));}
+      if(!alive)return;setRecoveryHint(server||browser?{server,browser,revision}:null);setRecoveryChecked(!server&&!browser);
+    }
+    void init();return()=>{alive=false;recoveryInspectionGeneration.current++;recoveryRead.current?.abort();recoveryInspection.current?.cancel();};
+  },[]);
+  async function inspectStartupRecovery(){
+    if(documentId){setArtworkOverviewOpen(true);void artworkRecovery.refresh();return;}
+    if(recoveryInspected.current||recoveryLoading||recoveryRead.current||recoveryInspection.current||!recoveryHint)return;
+    const generation=++recoveryInspectionGeneration.current,controller=new AbortController();recoveryRead.current=controller;setRecoveryLoading(true);
+    try{
+      let server:Blob|null=null,serverFailure='';
+      if(recoveryHint.server){
+        try{
+          try{server=await apiBlob('recovery'+(recoveryHint.revision?'?expectedRevision='+encodeURIComponent(recoveryHint.revision):''),controller.signal);}
+          catch(error){
+            if((error as {code?:string}).code!=='recovery_changed')throw error;
+            const latest=await api<{exists:boolean;revision:string|null}>('recovery?summary=1',undefined,controller.signal);
+            if(latest.exists)server=await apiBlob('recovery'+(latest.revision?'?expectedRevision='+encodeURIComponent(latest.revision):''),controller.signal);
+          }
+        }catch(error){if(controller.signal.aborted)throw error;serverFailure=errorText(error);}
+      }
+      let browser:Blob|null=null;try{const text=localStorage.getItem('zhezhi-recovery');if(text)browser=new Blob([text],{type:'application/json'});}catch{}
+      if(generation!==recoveryInspectionGeneration.current)return;
+      const task=startRecoveryInspection(server,browser);recoveryInspection.current=task;const choice=await task.promise;
+      if(generation!==recoveryInspectionGeneration.current)return;
+      const remaining=[choice.recovery,...choice.alternatives].filter((item):item is RecoveryCandidate=>!!item&&(!item.projectId||!deletedCreaseIds.current.has(item.projectId)));
+      const unresolved=!!serverFailure||!!choice.unreadableSources?.length;
+      recoveryUnresolved.current=unresolved;recoveryInspected.current=!unresolved;setRecovery(remaining[0]??null);setRecoveryAlternatives(remaining.slice(1));setRecoveryHint(unresolved?{server:recoveryHint.server,browser:!!browser,revision:null}:null);setRecoveryChecked(!remaining.length&&!unresolved);
+      if(choice.warnings.length)inform(choice.warnings.join('；'));
+      if(serverFailure)setError('本机恢复副本尚未读取，原副本仍保留：'+serverFailure);
+    }catch(error){if(generation===recoveryInspectionGeneration.current)setError('恢复副本尚未读取：'+errorText(error));}
+    finally{if(generation===recoveryInspectionGeneration.current){recoveryRead.current=null;recoveryInspection.current=null;setRecoveryLoading(false);}}
+  }
+  function dismissStartupRecovery(){
+    if(recoveryRestoreRequest.current!==null&&recoveryRestoreRequest.current===openRequest.current)cancelFileImport();
+    recoveryRestoreRequest.current=null;recoveryUnresolved.current=false;recoveryInspectionGeneration.current++;recoveryRead.current?.abort();recoveryRead.current=null;recoveryInspection.current?.cancel();recoveryInspection.current=null;setRecoveryLoading(false);setRecovery(null);setRecoveryHint(null);setRecoveryAlternatives([]);setRecoveryChecked(true);
+  }
+  async function restoreStartupRecovery(){
+    const candidate=recovery;if(!candidate||fileImport||creaseDeletePending.current||candidate.projectId&&deletedCreaseIds.current.has(candidate.projectId))return;
+    const request=++openRequest.current,identity=scope.current;
+    recoveryRestoreRequest.current=request;
+    savedProjectRead.current?.abort();importTask.current?.cancel();
+    setFileImport({request,name:candidate.name,stage:'正在后台准备恢复副本'});
+    let task:ProjectImportTask|undefined;
+    try{
+      task=startSavedProjectImport(candidate.restore,stage=>{if(request===openRequest.current)setFileImport({request,name:candidate.name,stage});});importTask.current=task;
+      const result=await task.promise;if(request!==openRequest.current||identity!==scope.current||creaseDeletePending.current||candidate.projectId&&deletedCreaseIds.current.has(candidate.projectId))return;
+      if(result.kind!=='crease'||!result.savedProject)throw Error('恢复副本准备结果不完整。');
+      if(!await checkpointCreaseDraft()||request!==openRequest.current||identity!==scope.current||creaseDeletePending.current||candidate.projectId&&deletedCreaseIds.current.has(candidate.projectId))return;
+      if(documentText(docRef.current)!==startupSignature.current&&!approveReplace())return;
+      if(!replace(result.doc,candidate.projectId??null,false,false,true,false,result.savedProject))return;
+      projectRevisionRef.current=candidate.baseRevision??null;setRecovery(null);if(!recoveryUnresolved.current)setRecoveryHint(null);setRecoveryChecked(!recoveryAlternatives.length&&!recoveryUnresolved.current);inform('已恢复最近工作。请检查后手动保存。'+(recoveryAlternatives.length?'另一份副本仍保留，可在“恢复副本”中查看或导出。':''));
+    }catch(error){if(request===openRequest.current&&identity===scope.current)setError('恢复未完成，当前工程仍保留：'+errorText(error));}
+    finally{if(importTask.current===task)importTask.current=null;if(recoveryRestoreRequest.current===request)recoveryRestoreRequest.current=null;setFileImport(current=>current?.request===request?null:current);}
+  }
   useEffect(()=>{
     if(!recovery?.projectId||!deletedCreaseIds.current.has(recovery.projectId))return;
     // Keep an unhandled recovery from another document visible. Dismissed
@@ -890,7 +1012,7 @@ export default function App(){
   useEffect(()=>{if(!dialog)return;const previous=document.activeElement as HTMLElement|null;const modal=document.querySelector<HTMLElement>('.modal');if(!modal)return;const onKey=(e:KeyboardEvent)=>{if(e.key!=='Tab')return;const items=[...modal.querySelectorAll<HTMLElement>('button:not(:disabled),input:not(:disabled),select:not(:disabled),a[href],[tabindex="0"]')].filter(el=>el.getClientRects().length);const first=items[0],last=items[items.length-1];if(!first)return;if(e.shiftKey&&(document.activeElement===first||!modal.contains(document.activeElement))){e.preventDefault();last.focus();}else if(!e.shiftKey&&(document.activeElement===last||!modal.contains(document.activeElement))){e.preventDefault();first.focus();}};modal.addEventListener('keydown',onKey);return()=>{modal.removeEventListener('keydown',onKey);previous?.focus();};},[dialog]);
   useEffect(()=>{if(!notice)return;const t=setTimeout(()=>setNotice(''),6500);return()=>clearTimeout(t);},[notice]);
   useEffect(()=>{
-    if(!recoveryChecked||!hasCreaseDocument||creaseLibraryBusy||creaseConflict)return;
+    if(documentId||!recoveryChecked||!hasCreaseDocument||creaseLibraryBusy||creaseConflict)return;
     const snapshot={doc,projectId},identity=scope.current;
     const timer=setTimeout(()=>{
       const writing=(recoveryWriteTask.current??Promise.resolve()).catch(()=>{}).then(async()=>{
@@ -910,16 +1032,30 @@ export default function App(){
     },700);
     return()=>clearTimeout(timer);
   },[doc,projectId,online,recoveryChecked,hasCreaseDocument,creaseLibraryBusy,creaseConflict]);
-  useEffect(()=>{const f=(e:BeforeUnloadEvent)=>{if(hasCreaseDocument&&dirty||unsavedModel||models.entries.length||hasSimulationWork||hasConstructionChanges){e.preventDefault();e.returnValue='';}};window.addEventListener('beforeunload',f);return()=>window.removeEventListener('beforeunload',f);},[dirty,hasCreaseDocument,unsavedModel,models.entries.length,hasSimulationWork,hasConstructionChanges]);
+  useEffect(()=>{if(documentId)return;const f=(e:BeforeUnloadEvent)=>{if(hasCreaseDocument&&dirty||unsavedModel||models.entries.length||hasSimulationWork||hasConstructionChanges){e.preventDefault();e.returnValue='';}};window.addEventListener('beforeunload',f);return()=>window.removeEventListener('beforeunload',f);},[documentId,dirty,hasCreaseDocument,unsavedModel,models.entries.length,hasSimulationWork,hasConstructionChanges]);
   useEffect(()=>{setSelected(ids=>new Set([...ids].filter(id=>doc.segments.some(s=>s.id===id&&(!lockBoundary||s.assignment!=='B')))));},[doc,lockBoundary]);
   useEffect(()=>{setSelectedCircles(ids=>{const remaining=new Set([...ids].filter(id=>doc.objects?.some(object=>object.kind==='circle'&&object.id===id)));return remaining.size===ids.size?ids:remaining;});},[doc]);
-  useEffect(()=>{if(!simMounted||!iframe.current)return;const bridge=new SimulatorBridge(iframe.current,status=>{setSimStatus(status);if(status.progress!==undefined)setSimProgress(status.progress*100);});simBridge.current=bridge;return()=>{simulationImageAbort.current?.abort();simulationImageAbort.current=null;setCapturingSimulationImage(false);bridge.dispose();simBridge.current=null;};},[simMounted]);
-  useEffect(()=>{if(simMounted&&simBridge.current){const pose=pendingSimulationPose.current;pendingSimulationPose.current=null;loadSimulation(pose??undefined);}return()=>{simLayerSource.current=null;simLayerJob.current?.cancel();simLayerJob.current=null;};},[simMounted]);
+  useEffect(()=>{if(!simMounted||!iframe.current)return;const bridge=new SimulatorBridge(iframe.current,status=>{
+    const key=JSON.stringify([status.revision,status.progress,status.poseEditRevision,status.solverSettings,status.meshQuality,status.collisionEnabled]);
+    if(restoringSimulation.current){
+      if(status.poseRestored&&status.status!=='ready'){
+        restoringSimulation.current=false;simulationStatusContent.current=key;
+        simulationLiveContent.current=JSON.stringify({revision:status.revision,steps:status.steps,view:status.poseView});simulationViewContent.current=JSON.stringify(status.poseView);
+      }
+    }else if(status.status!=='ready'&&key!==simulationStatusContent.current){simulationStatusContent.current=key;artworkSaved.current.simulationChanged();}
+    setSimStatus(status);if(status.progress!==undefined)setSimProgress(status.progress*100);
+  },value=>{
+    const key=JSON.stringify(value),view=JSON.stringify(value.view);if(key===simulationLiveContent.current)return;simulationLiveContent.current=key;
+    if(!restoringSimulation.current){artworkSaved.current.simulationChanged();if(view!==simulationViewContent.current&&!simulationViewTimer.current)simulationViewTimer.current=setTimeout(()=>{simulationViewTimer.current=null;setSimulationViewRevision(n=>n+1);},150);}
+    simulationViewContent.current=view;
+  });simBridge.current=bridge;return()=>{simulationImageAbort.current?.abort();simulationImageAbort.current=null;setCapturingSimulationImage(false);bridge.dispose();simBridge.current=null;};},[simMounted]);
+  useEffect(()=>{if(simMounted&&simBridge.current&&!(windowMode==='sim'&&new URLSearchParams(location.search).has('transfer'))){const pose=pendingSimulationPose.current;void loadSimulation(pose??undefined);}return()=>{simGraphPreparation.current?.cancel();simGraphPreparation.current=null;simLayerSource.current=null;simLayerJob.current?.cancel();simLayerJob.current=null;};},[simMounted]);
+  useEffect(()=>{if(!simGraphPreparation.current)setSimPreparing(false);return()=>{simGraphPreparation.current?.cancel();simGraphPreparation.current=null;};},[doc]);
   useEffect(()=>{if(mode==='sim')setSimVisited(true);else{simBridge.current?.send({type:'zhezhi-sim-pause'});simControls.current?.stop();}},[mode]);
   useEffect(()=>{if(mode==='sim'&&simStale){simLayerJob.current?.cancel();simLayerJob.current=null;const source=simLayerSource.current;if(source)simBridge.current?.send({type:'zhezhi-sim-layer-order',revision:source.revision,order:null,state:'unavailable',message:'折痕已修改，重新载入后再确认层序。'});simBridge.current?.send({type:'zhezhi-sim-pause'});}},[mode,simStale]);
   useEffect(()=>{
     const source=simLayerSource.current;
-    if(mode!=='sim'||simStale||!source||JSON.stringify(docRef.current)!==source.signature)return;
+    if(mode!=='sim'||simStale||!source||documentText(docRef.current)!==source.signature)return;
     if(!flatBusy&&!flatStale&&flat&&flatSource&&JSON.stringify(flatSource.doc)===source.signature){
       const order=simulationLayerOrder(source.graph,flat);
       source.order=order;source.message=order?'采用当前所选平折结果的层序。':'当前所选平折结果没有可用层序，保持三维深度显示。';
@@ -942,36 +1078,47 @@ export default function App(){
       if(identity===scope.current){
         projectRevisionRef.current=r.revision;creaseConflictRef.current=false;setCreaseConflict(false);notifyProjectChange(r.id,r.revision);
         creaseIdRef.current=r.id;setProjectId(r.id);setSavedSignature(text);setHasCreaseDocument(true);hasCreaseDocumentRef.current=true;markCreaseOpen(r.id);
-        if(recoveryChecked&&documentText(docRef.current)===text){const snapshot=documentRequestJson(text,{projectId:r.id,baseRevision:r.revision,updated:new Date().toISOString()});try{localStorage.setItem('zhezhi-recovery',snapshot);}catch{}await apiSerialized('recovery',snapshot).catch(()=>inform('工程已保存，但恢复副本暂未更新。'));}
+        if(!documentId&&recoveryChecked&&documentText(docRef.current)===text){const snapshot=documentRequestJson(text,{projectId:r.id,baseRevision:r.revision,updated:new Date().toISOString()});try{localStorage.setItem('zhezhi-recovery',snapshot);}catch{}await apiSerialized('recovery',snapshot).catch(()=>inform('工程已保存，但恢复副本暂未更新。'));}
         if(creaseLibraryOpen)await refreshCreaseLibrary();recordActivity('document.save.success',{format:'json',segments:current.segments.length});inform('工程已保存到折痕文档，可随时重新打开。');
       }
     }catch(e){if(['project_conflict','project_deleted'].includes((e as {code?:string}).code??''))markCreaseConflict(errorText(e));recordActivity('document.save.error',{reason:errorText(e)},'error');setError(errorText(e));setCreaseLibraryError(errorText(e));}finally{saveLock.current=false;setSaving(false);}
   }
-  async function captureArtwork(flush=true,checkpointDiagram=false):Promise<string>{
+  async function captureArtwork(flush?:boolean,checkpointDiagram?:boolean,format?:'json',captured?:()=>void):Promise<string>;
+  async function captureArtwork(flush:boolean,checkpointDiagram:boolean,format:'archive',captured?:()=>void):Promise<Blob>;
+  async function captureArtwork(flush=true,checkpointDiagram=false,format:'json'|'archive'='json',captured?:()=>void):Promise<string|Blob>{
     if(flush)flushSync(()=>{if(document.activeElement instanceof HTMLElement)document.activeElement.blur();});
     if(flush&&designRef.current&&!await designRef.current.settle())throw new Error('基础形设计参数尚未提交，请处理设计区提示后再保存完整作品。');
-    const identity=scope.current,editor=docRef.current,encoded=editor.segments.length>=20000?documentText(editor):undefined;
+    if(flush)flushSync(()=>{});
+    // The editor signature is already cached by its immutable document identity.
+    // Metadata can outweigh the crease array; reuse the frozen JSON for every
+    // snapshot instead of cloning a large editor twice on the UI thread.
+    const identity=scope.current,editor=docRef.current,encoded=documentText(editor);
     const projected=artworkSerializationInput({editor,models:modelsRef.current,construction:artworkConstruction.current,diagram:null,simulation:null});
     // The immutable editor JSON freezes this large bank before any await. The
     // worker reconstructs and validates it without a second UI object tree.
     const {editor:_,...parts}=projected;
-    const snapshot=encoded===undefined?structuredClone(projected):{...structuredClone(parts),editor};
+    const snapshot={...structuredClone(parts),editor};
     const diagram=diagramRef.current?.capture({flush,deferValidation:true,checkpointOnly:checkpointDiagram})??null;
     const design=designRef.current?.capture()??null;
-    const simulation=simBridge.current&&simSignature?await simBridge.current.capturePose({finishGesture:flush}):pendingSimulationPose.current;
+    captured?.();
+    const simulation=pendingSimulationPose.current&&(!simReady||simPreparing)?pendingSimulationPose.current:simBridge.current&&simSignature?await simBridge.current.capturePose({finishGesture:flush}):pendingSimulationPose.current;
     if(identity!==scope.current)throw new Error('保存期间工程已切换，请重新保存当前完整作品。');
-    const text=await artworkSerializer.serialize({...snapshot,diagram,simulation,design:design?structuredClone(design):null},encoded);
+    const input={...snapshot,diagram,simulation,design:design?structuredClone(design):null};
+    const text=format==='archive'?await artworkSerializer.archive(input,encoded):await artworkSerializer.serialize(input,encoded);
     if(identity!==scope.current)throw new Error('保存期间工程已切换，请重新保存当前完整作品。');
     return text;
   }
-  async function saveArtwork(){
+  async function saveArtwork(format:'archive'|'json'='archive'){
     if(artworkSaveLock.current||flatBusy)return;
     artworkSaveLock.current=true;setSavingArtwork(true);
     try{
-      const name=docRef.current.name,text=await captureArtwork();
-      const result=await download(text,safeName(name)+'.zhezhi-artwork.json','application/json');
+      const name=docRef.current.name;
+      let captured:ArtworkSaveStamp|undefined;const mark=()=>{captured=artworkSaved.current.capture();};
+      const file=format==='archive'?await captureArtwork(true,false,'archive',mark):new Blob([await captureArtwork(true,false,'json',mark)],{type:'application/json'});
+      const result=await saveDownload(file,safeName(name)+(format==='archive'?'.oriw':'.zhezhi-artwork.json'));
       if(result.status==='cancelled'){inform('已取消保存完整作品。');return;}
-      setError('');inform((result.status==='saved'?'完整作品文件保存完成。':'已发起完整作品浏览器下载，请确认下载结果。')+'包含折痕、基础形设计、构造参数、模型、当前折序及三维姿态；各文档的独立保存状态保持原样。');
+      if(result.status==='saved'&&captured)artworkSaved.current.acknowledge(captured);
+      setError('');inform((result.status==='saved'?`完整作品${format==='archive'?' ORIW':' JSON'}文件保存完成。`:'已发起完整作品浏览器下载，请确认下载结果。')+'包含折痕、基础形设计、构造参数、模型、当前折序及三维姿态；各文档的独立保存状态保持原样。');
     }catch(error){setError('完整作品未保存：'+errorText(error));}
     finally{artworkSaveLock.current=false;setSavingArtwork(false);}
   }
@@ -979,9 +1126,11 @@ export default function App(){
     setDesignVisited(true);
     const deadline=Date.now()+15000;
     while(!designRef.current){if(Date.now()>deadline)throw new Error('设计工作区尚未就绪，请重试。');await new Promise(resolve=>setTimeout(resolve,40));}
+    await designRef.current.ready();
     return designRef.current;
   }
   async function adoptBaseDesign(source:Doc):Promise<boolean>{
+    if(windowMode&&windowMode!=='edit')return openWork('edit',{kind:'cp',doc:source});
     if(!await checkpointCreaseDraft())return false;
     if(hasCreaseDocumentRef.current&&!approveReplace()||!approveModelDiscard())return false;
     if(!replace(source,null,false,false,true))return false;
@@ -997,7 +1146,7 @@ export default function App(){
     const request=++openRequest.current,identity=scope.current;
     const value=await artworkRecovery.load(entry.id);
     if(request!==openRequest.current||identity!==scope.current)return;
-    await openArtwork(exportArtworkProject(value.project),request,identity);
+    await openArtwork('',request,identity,value.project);
     if(identity!==scope.current){setArtworkOverviewOpen(false);setRecovery(null);setRecoveryChecked(true);}
   }
   async function removeArtworkRecovery(entry:ArtworkRecoverySummary){
@@ -1005,25 +1154,36 @@ export default function App(){
     await artworkRecovery.remove(entry);
   }
   async function openArtwork(text:string,request:number,identity:number,ready?:ArtworkProject){
-    const prepared=ready??prepareArtworkProject(text);curveDesignFromDocument(prepared.editor);
+    const isCurrent=()=>request===openRequest.current&&identity===scope.current;
+    let prepared=ready;
+    if(!prepared||!getArtworkImportPreparation(prepared)){
+      const task=startArtworkImport(prepared?exportArtworkProject(prepared):text,stage=>{if(isCurrent())setFileImport(current=>current?{...current,stage}:current);});
+      importTask.current=task;const result=await task.promise;if(importTask.current===task)importTask.current=null;
+      if(result.kind!=='artwork')throw Error('完整作品准备结果无效。');prepared=result.project;
+    }
+    const preparation=getArtworkImportPreparation(prepared);
     if(request!==openRequest.current||identity!==scope.current)return;
-    const diagram=await ensureDiagramWorkspace();
-    const design=await ensureDesignWorkspace();
+    const diagram=prepared.diagram||diagramRef.current?await ensureDiagramWorkspace():null;
+    const design=prepared.design||designRef.current?await ensureDesignWorkspace():null;
     if(request!==openRequest.current||identity!==scope.current)return;
     if(!await checkpointCreaseDraft())throw new Error('当前折痕草稿暂存未完成，完整作品未打开。');
     if(request!==openRequest.current||identity!==scope.current)return;
     if(hasCreaseDocumentRef.current&&!approveReplace()||!approveModelDiscard()){inform('已取消打开完整作品。');return;}
-    const restoreDesign=design.prepareRestore(prepared.design??null);
+    const restoreDesign=design?design.prepareRestore(prepared.design??null):()=>{};
     if(!restoreDesign)throw new Error('当前设计暂存未完成，或计算尚未停止，完整作品未打开。');
-    if(!await diagram.restore(prepared.diagram))throw new Error('当前折序暂存或新折序写入未完成，完整作品未打开。');
-    if(!replace(prepared.editor,null,false,false,true,true))return;
+    if(isCurrent())setFileImport(current=>current?{...current,stage:'正在写入工作区并准备显示'}:current);
+    if(diagram&&!await diagram.restore(prepared.diagram,{isCurrent})){if(!isCurrent())return;throw new Error('当前折序暂存或新折序写入未完成，完整作品未打开。');}
+    if(!isCurrent())return;
+    if(!replace(prepared.editor,null,false,false,true,true,undefined,preparation))return;
     restoreDesign();
     const restored={...prepared.models,generation:modelsRef.current.generation+1};modelsRef.current=restored;setModels(restored);showActiveModel();
     setTessParams(prepared.construction.tessellation);setCurveDesign(prepared.construction.curve);
     // Force a fresh frame when importing over an already mounted simulation.
     flushSync(()=>{setSimVisited(false);setMode('edit');});
     pendingSimulationPose.current=prepared.simulation;
-    if(prepared.simulation)setMode('sim');
+    restoringSimulation.current=!!prepared.simulation;simulationStatusContent.current='';simulationLiveContent.current='';simulationViewContent.current='';
+    flushSync(()=>{if(prepared.simulation)setMode('sim');else setSimStatus(null);});
+    artworkSaved.current.acknowledge(artworkSaved.current.capture());
     setDialog(null);inform('已恢复完整作品。三维姿态保持暂停；模型层序需重新分析，各工作区撤销历史从此处开始。');
   }
   function remove(){
@@ -1105,8 +1265,8 @@ export default function App(){
     else if(e.key==='Escape'){clearDrawingSelection();}
     else {const action=matchToolShortcut(e,toolShortcuts);if(action){e.preventDefault();if(action.startsWith('tool:'))activateDrawingTool(action.slice(5) as Tool);else setPreset(action.slice(7) as Assignment);}}
   };window.addEventListener('keydown',key);return()=>window.removeEventListener('keydown',key);},[doc,mode,tool,drawingSwap,dialog,selected,selectedCircles,displayLayers,projectId,lockBoundary,flatStale,toolShortcuts,directCommands,toolLayout.editing,libraryOpen,creaseLibraryOpen,storageBusy,clipboard,pasteOffsetX,pasteOffsetY]);
-  async function chooseProjectFile(){
-    try{const file=await selectProjectFile(inputFile.current);if(file)await openFile(file);}catch(cause){reportImportFailure('所选文件',errorText(cause));}
+  async function chooseProjectFile(target:Mode=browserMode??mode){
+    try{const file=await selectProjectFile(inputFile.current);if(file)await openFile(file,false,target);}catch(cause){reportImportFailure('所选文件',errorText(cause));}
   }
   function reportImportFailure(name:string,message:string){
     recordActivity('document.import.error',{fileName:name,reason:message},'error');
@@ -1116,7 +1276,8 @@ export default function App(){
     recordActivity('document.import.cancel',{fileName:fileImport?.name??'',reason:'用户取消'});
     openRequest.current++;savedProjectRead.current?.abort();savedProjectRead.current=null;importTask.current?.cancel();importTask.current=null;setFileImport(null);inform('已取消导入，当前工程保持不变。');
   }
-  async function openFile(file:File){
+  async function openFile(file:File,local=false,target:Mode=browserMode??mode){
+    if(windowMode&&!local){await openWork(target,{kind:'file',file});return;}
     savedProjectRead.current?.abort();savedProjectRead.current=null;importTask.current?.cancel();
     let task:ProjectImportTask|undefined;
     const request=++openRequest.current,identity=scope.current;
@@ -1351,10 +1512,10 @@ export default function App(){
   }
   useEffect(()=>{
     if(mode!=='tess'||curveDesign){tessAttempt.current='';tessAbort.current?.abort();return;}
-    if(!online||tessBusy||tessAttempt.current===tessParamKey)return;
+    if(!online||tessBusy||tessAttempt.current===tessParamKey||tessResult&&tessSignature===tessParamKey)return;
     const frame=window.requestAnimationFrame(()=>void generateTess());
     return()=>window.cancelAnimationFrame(frame);
-  },[mode,online,tessParamKey,tessBusy,curveDesign,tessRetryToken]);
+  },[mode,online,tessParamKey,tessBusy,curveDesign,tessRetryToken,tessResult,tessSignature]);
   function applyCurveDesign(design:CurveDesign):boolean{
     try{const next=curveDesignDocument(design);if(!curveDesignFromDocument(docRef.current)&&!approveReplace())return false;if(!replace(next,storedCurveDesign?projectId:null,false,!!storedCurveDesign))return false;setCurveDesign(design);setMode('tess');setTessRigidOpen(false);setExportFormat('json');inform('曲面设计已进入主画布，可修改参数、保存工程或导出尺寸图与采样网格。');return true;}catch(e){setError(errorText(e));return false;}
   }
@@ -1517,8 +1678,8 @@ export default function App(){
       return true;
     }catch(e){setError(errorText(e));return false;}
   }
-  function adoptWovenCP(){if(!tessCPAdoptable||!tessResult||!approveReplace())return;try{const adopted=tessParams.family==='discrete-curve-cp'?discreteCurveCPDocument(tessResult,tessParams):wovenCPDocument(tessResult,tessParams);if(!replace(adopted))return;inform('已仅采用经过几何验证的 CP，未载入折后位置或层序证书。可修改折痕后重新计算平折；镶嵌参数不会覆盖此副本。');}catch(e){setError(errorText(e));}}
-  function adoptTess(){if(!tessAdoptable||!tessResult||!approveReplace())return;try{const cut=hasWovenInternalBoundary(tessResult),adopted=cut?wovenMaterialDocument(tessResult,tessParams):structuredClone(tessResult.doc);adopted.metadata={...adopted.metadata,tessellation:{...(adopted.metadata?.tessellation as Record<string,unknown>),parameters:structuredClone(tessParams)}};if(!replace(adopted))return;inform(cut?'已建立切口材料工程。可修改折痕属性，按完整部件变换并重新平折；新增或删除材料折痕仍需专门的拓扑操作。':tessTilingOnly?'已建立母结构工程，内部边为辅助线。':'已建立独立折痕工程。此后修改参数不会覆盖这里的手工修订。');}catch(e){setError(errorText(e));}}
+  function adoptWovenCP(){if(!tessCPAdoptable||!tessResult||!approveReplace())return;try{const adopted=tessParams.family==='discrete-curve-cp'?discreteCurveCPDocument(tessResult,tessParams):wovenCPDocument(tessResult,tessParams);if(windowMode==='tess'){void openWork('edit',{kind:'cp',doc:adopted});return;}if(!replace(adopted))return;inform('已仅采用经过几何验证的 CP，未载入折后位置或层序证书。可修改折痕后重新计算平折；镶嵌参数不会覆盖此副本。');}catch(e){setError(errorText(e));}}
+  function adoptTess(){if(!tessAdoptable||!tessResult||!approveReplace())return;try{const cut=hasWovenInternalBoundary(tessResult),adopted=cut?wovenMaterialDocument(tessResult,tessParams):structuredClone(tessResult.doc);adopted.metadata={...adopted.metadata,tessellation:{...(adopted.metadata?.tessellation as Record<string,unknown>),parameters:structuredClone(tessParams)}};if(windowMode==='tess'){void openWork('edit',{kind:'cp',doc:adopted});return;}if(!replace(adopted))return;inform(cut?'已建立切口材料工程。可修改折痕属性，按完整部件变换并重新平折；新增或删除材料折痕仍需专门的拓扑操作。':tessTilingOnly?'已建立母结构工程，内部边为辅助线。':'已建立独立折痕工程。此后修改参数不会覆盖这里的手工修订。');}catch(e){setError(errorText(e));}}
   async function captureSimulationImage(){
     if(simulationImageAbort.current)return;
     const bridge=simBridge.current,source=simLayerSource.current;
@@ -1530,6 +1691,7 @@ export default function App(){
       if(!current())return;
       const image=await prepareDiagramImage({dataUrl:capture.dataUrl,name:'三维模拟截图',source:'simulation'},controller.signal);
       if(!current())return;
+      if(windowMode){await launchWorkspaceFile('diagram',{kind:'image',image});return;}
       setIncomingDiagramImage({id:crypto.randomUUID(),image});setDiagramVisited(true);setMode('diagram');
     }catch(error){
       if(current())inform(`截取模拟图片失败：${errorText(error)}`);
@@ -1537,35 +1699,45 @@ export default function App(){
       if(simulationImageAbort.current===controller){simulationImageAbort.current=null;setCapturingSimulationImage(false);}
     }
   }
-  function loadSimulation(pose?:SimulationPose){
-    simLayerSource.current=null;simLayerJob.current?.cancel();simLayerJob.current=null;setSimStatus(null);
+  function cancelSimulationPreparation(){simGraphPreparation.current?.cancel();simGraphPreparation.current=null;setSimPreparing(false);inform('已取消载入，当前模拟保持原样。');}
+  async function loadSimulation(pose?:SimulationPose){
+    simGraphPreparation.current?.cancel();
+    const input=docRef.current,identity=scope.current,inputSignature=documentText(input);
+    const preparation=startSimulationGraphPreparation(input,pose);simGraphPreparation.current=preparation;setSimPreparing(true);
+    const isCurrent=()=>simGraphPreparation.current===preparation&&identity===scope.current&&docRef.current===input;
     try{
+      const prepared=await preparation.promise;if(!isCurrent()||!simBridge.current)return;
+      simLayerSource.current=null;simLayerJob.current?.cancel();simLayerJob.current=null;
+      setSimStatus(null);
       if(pose){
-        let matches=false;try{matches=simulationSourceSignature(buildFold(docRef.current).graph)===simulationSourceSignature(pose.source);}catch{/* An older pose keeps its own valid source CP. */}
         const next=++simRevision.current;simBridge.current?.send({type:'zhezhi-sim-load',fold:pose.source,pose,revision:next});
-        setSimSignature(matches?JSON.stringify(docRef.current):'restored-independent-pose');setSimProgress(pose.progress*100);return;
+        setSimSignature(prepared.matchesPose?inputSignature:'restored-independent-pose');setSimProgress(pose.progress*100);if(workspaceMode.current!=='sim')simBridge.current?.send({type:'zhezhi-sim-pause'});return;
       }
-      const {graph,warnings}=buildFold(doc),source:{graph:FoldGraph;revision:number;signature:string;order:SimulationLayerOrder|null;message:string}={graph,revision:++simRevision.current,signature,order:null,message:''};simLayerSource.current=source;
-      simBridge.current?.send({type:'zhezhi-sim-load',fold:graph,revision:source.revision});setSimSignature(signature);setSimProgress(0);simBridge.current?.send({type:'zhezhi-sim-progress',value:0});
+      const {graph,warnings}=prepared;if(!graph)throw Error('当前折痕未生成完整的三维输入。');pendingSimulationPose.current=null;
+      const source:{graph:FoldGraph;revision:number;signature:string;order:SimulationLayerOrder|null;message:string}={graph,revision:++simRevision.current,signature:inputSignature,order:null,message:''};simLayerSource.current=source;
+      simBridge.current?.send({type:'zhezhi-sim-load',fold:graph,revision:source.revision});setSimSignature(inputSignature);setSimProgress(0);simBridge.current?.send({type:'zhezhi-sim-progress',value:0});if(workspaceMode.current!=='sim')simBridge.current?.send({type:'zhezhi-sim-pause'});
       const sendLayers=(result:FlatFoldResult|null,message?:string)=>{
-        if(simLayerSource.current!==source||JSON.stringify(docRef.current)!==source.signature)return;
+        if(simLayerSource.current!==source||documentText(docRef.current)!==source.signature)return;
         const order=result?simulationLayerOrder(graph,result):null;
         source.order=order;source.message=message??(order?'已确认当前折痕的平折层序。':result?.layers.status==='solved'?'当前结果没有可应用的重叠层序。':result?.layers.message||'当前折痕尚无可用平折层序。');
         simBridge.current?.send({type:'zhezhi-sim-layer-order',revision:source.revision,order,state:order?'ready':'unavailable',message:source.message});
       };
-      const current=!flatBusy&&!flatStale&&flat&&flatSource&&JSON.stringify(flatSource.doc)===signature?flat:null;
+      const latest=simulationLoadLatest.current;
+      const current=!latest.flatBusy&&!latest.flatStale&&latest.flat&&latest.flatSource&&documentText(latest.flatSource.doc)===inputSignature?latest.flat:null;
       if(current)sendLayers(current,simulationLayerOrder(graph,current)?'采用当前所选平折结果的层序。':'当前所选平折结果没有可用层序，保持三维深度显示。');
-      else if(rootResolution.stale||!simulationLayerOrderSupported(graph))sendLayers(null,'当前折痕目标不适用完全平折层序，保持三维深度显示。');
+      else if(latest.rootResolution.stale||!simulationLayerOrderSupported(graph))sendLayers(null,'当前折痕目标不适用完全平折层序，保持三维深度显示。');
       else{
         simBridge.current?.send({type:'zhezhi-sim-layer-order',revision:source.revision,order:null,state:'pending',message:'正在后台确认平折层序…'});
-        const job=startFlatFold(structuredClone(doc),{startingFace,timeoutMs:Infinity});simLayerJob.current=job;
+        const job=startFlatFold(input,{startingFace:latest.startingFace,timeoutMs:Infinity});simLayerJob.current=job;
         job.promise.then(result=>{if(simLayerJob.current!==job)return;simLayerJob.current=null;sendLayers(result);}).catch(()=>{if(simLayerJob.current!==job)return;simLayerJob.current=null;sendLayers(null,'平折层序确认失败，保持三维深度显示。');});
       }
       if(warnings.length)inform(warnings.join('；'));setError('');
-    }catch(e){simLayerSource.current=null;simLayerJob.current?.cancel();simLayerJob.current=null;simBridge.current?.send({type:'zhezhi-sim-clear',revision:++simRevision.current});setSimSignature('');setSimProgress(0);setSimStatus({type:'zhezhi-sim-status',status:'error',message:errorText(e)});setError(errorText(e));}
+    }catch(e){if(!isCurrent())return;simLayerSource.current=null;simLayerJob.current?.cancel();simLayerJob.current=null;simBridge.current?.send({type:'zhezhi-sim-clear',revision:++simRevision.current});setSimSignature('');setSimProgress(0);setSimStatus({type:'zhezhi-sim-status',status:'error',message:errorText(e)});setError(errorText(e));}
+    finally{if(simGraphPreparation.current===preparation){simGraphPreparation.current=null;setSimPreparing(false);}}
   }
   function progress(value:number){if(!simReady||simStale)return;setSimProgress(value);simBridge.current?.send({type:'zhezhi-sim-progress',value:value/100});}
   function resizePaper(width:number,height:number){try{if(commit(resizeDocument(doc,width,height)))setFitToken(n=>n+1);}catch(e){setError(errorText(e));}}
+  function applyCanvasPaper(next:Doc){if(next===doc)return true;if(!commit(next,new Set()))return false;setSelectedCircles(new Set());setFitToken(value=>value+1);return true;}
   function svgText(crop=false,includeGrid=false){const native=storedCurveDesign;if(native)return exportCurveDesignSVG(native);if(crop&&(!operationFrame||!backgroundView||tool!=='operationframe'||mode!=='edit'))throw new Error('操作框已失效，请重新绘制。');return completeCreasePatternSVG(doc,creaseDisplay,crop?frameWorldBounds(operationFrame!,backgroundView!):undefined,displayLayers,undefined,includeGrid?{divisions,diagonal:diagonalGrid,pattern:gridAppearance.pattern??'square',rotation:gridAppearance.squareRotation??0,scope:gridScope==='canvas'?'canvas':'paper',appearance:gridAppearance}:undefined);}
   async function doExport(){
     if(exportLock.current)return;exportLock.current=true;setExportBusy(true);setError('');
@@ -1588,8 +1760,8 @@ export default function App(){
     if(exportLock.current||!recoveryAlternatives.length)return;
     exportLock.current=true;setExportBusy(true);setError('');
     try{
-      const other=recoveryAlternatives[0],file=exportDocument(other.doc,'json');
-      const result=await download(file.text,safeName(other.doc.name)+'-另一恢复副本.zhezhi.json');
+      const other=recoveryAlternatives[0];
+      const result=await saveDownload(other.backup,safeName(other.name)+'-另一恢复副本.zhezhi.json');
       if(result.status==='cancelled'){inform('已取消保存恢复副本。');return;}
       inform(result.status==='saved'?'恢复副本文件保存完成。':'已发起恢复副本浏览器下载，请确认下载结果。');
     }catch(e){setError('恢复副本导出失败：'+errorText(e));}finally{exportLock.current=false;setExportBusy(false);}
@@ -1600,9 +1772,229 @@ export default function App(){
     const win=window.open('','_blank');if(!win){setError('打印窗口被浏览器拦截，请允许此本地工作台弹出打印窗口。');return;}
     win.document.write('<!doctype html><html lang="zh-CN"><head><title>折痕图 · 完整适配纸张</title></head><body><div class="desktop-print-page">'+markup+'</div></body></html>');win.document.close();win.focus();win.print();
   }
-  useEffect(()=>window.desktop?.onCommand(command=>{if(command==='settings'){void openStorageSettings();return;}if(mode==='design'){if(command==='open')designRef.current?.open();if(command==='save')designRef.current?.save();if(command==='export')designRef.current?.export();return;}if(mode==='diagram'){if(command==='open')diagramRef.current?.open();if(command==='save')diagramRef.current?.save();if(command==='export')diagramRef.current?.export();if(command==='print')diagramRef.current?.print();return;}if(mode==='edit'&&creaseLibraryOpen&&!hasCreaseDocumentRef.current&&command!=='open')return;if(command==='open')void chooseProjectFile();if(command==='save'){flushSync(()=>{if(document.activeElement instanceof HTMLElement)document.activeElement.blur();});void save();}if(command==='export')setDialog('export');if(command==='print')printDoc();}),[doc,projectId,creaseDisplay,displayLayers,mode,creaseLibraryOpen,storageBusy]);
+  async function useDrawingAsTessSource(source:Doc){
+    try{
+      const {graph}=await startSimulationGraphPreparation(source).promise;
+      if(docRef.current!==source)return;
+      if(!graph?.faces_vertices||graph.faces_vertices.length<2||graph.faces_vertices.length>96||graph.vertices_coords.length>96)throw Error('当前折痕不能作为自定义母结构，需要 2–96 个凸多边形面且最多 96 个顶点。可在镶嵌设计中选择其他构造。');
+      const xs=graph.vertices_coords.map(p=>p[0]),ys=graph.vertices_coords.map(p=>p[1]);
+      const x=Math.min(...xs),y=Math.min(...ys),span=Math.max(Math.max(...xs)-x,Math.max(...ys)-y);
+      setTessParams({...tessPreset('custom'),family:'custom',paper:tessParams.paper,vertices:graph.vertices_coords.map(p=>[(p[0]-x)/span,(p[1]-y)/span]),faces:graph.faces_vertices,repeatX:1,repeatY:1,angle:36,scale:.3});
+      inform('已从当前折痕提取母结构。');
+    }catch(cause){if(docRef.current===source)setError(errorText(cause));}
+  }
+  async function selectWorkspace(next:Mode){
+    if(windowMode){
+      if(toolLayout.editing)return;
+      if(next==='sim'||next==='tess'){
+        if(next===windowMode){setBrowserMode(null);return;}
+        if(directNavigation.current)return;
+        directNavigation.current=true;
+        try{
+          let source:Doc|null=hasCreaseDocumentRef.current?docRef.current:null;
+          if(mode==='diagram')source=diagramRef.current?.currentCP()??source;
+          if(mode==='design')source=designRef.current?.currentCP()??source;
+          if(mode==='tess'&&tessResult&&tessSignature===tessParamKey&&!curveDesign)source=tessPreview??tessResult.doc;
+          await openWork(next,{kind:'workspace-source',doc:source});
+        }finally{directNavigation.current=false;}
+        return;
+      }
+      setBrowserMode(next===windowMode&&(browserMode||documentHome)?null:next);
+      setTabletPanel('');
+      return;
+    }
+    if(WEB_APP&&(next==='design'||next==='tess')||toolLayout.editing||!!docRef.current.metadata?.curveDesign&&next!=='tess')return;
+    setTabletPanel('');const request=++workspaceNavigation.current;
+    if(workspaceMode.current==='design'&&next!=='design'&&designRef.current&&!designRef.current.checkpoint())return;
+    if(workspaceMode.current==='diagram'&&next!=='diagram'&&diagramRef.current&&!await diagramRef.current.checkpoint())return;
+    if(request!==workspaceNavigation.current)return;
+    if(next==='edit'){if(documentId&&hasCreaseDocumentRef.current){setCreaseLibraryOpen(false);setMode('edit');}else await showCreaseLibrary(request);return;}
+    if(next==='design')setDesignVisited(true);
+    if(next==='diagram'){setDiagramVisited(true);diagramRef.current?.enter();}
+    setMode(next);
+  }
+  useEffect(()=>{
+    if(!online||!documentPresentation.visible||!windowMode||!(browserMode==='edit'||!browserMode&&windowMode==='edit'&&creaseLibraryOpen))return;
+    const refresh=()=>{void refreshCreaseLibrary();};
+    refresh();
+    window.addEventListener('focus',refresh);
+    return ()=>window.removeEventListener('focus',refresh);
+  },[online,windowMode,browserMode,creaseLibraryOpen,documentPresentation.visible]);
+  const cpSessions=useRef(new Map<string,{target:CPReturnTarget;applied?:string}>());
+  const returnScope=useRef(0);
+  const [returnTarget,setReturnTarget]=useState<CPReturnTarget|null>(null);
+  const [returnBusy,setReturnBusy]=useState(false);
+  const returnLock=useRef(false),returnAttempt=useRef<{doc:Doc;id:string}|null>(null);
+  useEffect(()=>{
+    const fileOpened=()=>{if(!documentHome)setBrowserMode(null);};
+    const alreadyOpen=()=>inform('该文件已打开。');
+    window.addEventListener('zhezhi-workspace-file-opened',fileOpened);
+    const identityError=(event:Event)=>setError((event as CustomEvent<string>).detail);
+    window.addEventListener('zhezhi-file-already-open',alreadyOpen);
+    window.addEventListener('zhezhi-library-error',identityError);
+    return ()=>{window.removeEventListener('zhezhi-workspace-file-opened',fileOpened);window.removeEventListener('zhezhi-file-already-open',alreadyOpen);window.removeEventListener('zhezhi-library-error',identityError);};
+  },[]);
+  useEffect(()=>{
+    if(!documentId||windowMode!=='diagram')return;
+    const channel=new BroadcastChannel('diagram-cp-return:'+documentId);
+    channel.onmessage=({data})=>{
+      if(data?.type!=='apply'||!data.request)return;
+      try{
+        const session=cpSessions.current.get(data.session);
+        if(!session||!diagramRef.current)throw Error('来源折序已关闭或重新载入。');
+        if(session.applied!==data.request){
+          if(session.applied)throw Error('这次 CP 编辑已返回，请从折序重新打开。');
+          diagramRef.current.applyReturnedCP(session.target,data.doc);
+          session.applied=data.request;
+        }
+        setBrowserMode(null);
+        channel.postMessage({type:'result',request:data.request});
+      }catch(error){channel.postMessage({type:'result',request:data.request,error:errorText(error)});}
+    };
+    return ()=>channel.close();
+  },[documentId,windowMode]);
+  async function applyAndReturn(){
+    const service=window.desktop?.documents;
+    if(!returnTarget||!documentId||!service||returnLock.current)return;
+    if(scope.current!==returnScope.current){setError('当前编辑器已切换文件，无法返回原 CP。');return;}
+    returnLock.current=true;setReturnBusy(true);
+    try{
+      flushSync(()=>{if(document.activeElement instanceof HTMLElement)document.activeElement.blur();});
+      const edited=docRef.current,stamp=artworkSaved.current.capture();
+      if(!returnAttempt.current||returnAttempt.current.doc!==edited)returnAttempt.current={doc:edited,id:crypto.randomUUID()};
+      const request=returnAttempt.current.id;
+      const snapshot=await service.list();
+      if(!snapshot.documents.some(d=>d.id===returnTarget.origin))throw Error('来源折序窗口已关闭，修改仍保留在此窗口。');
+      const channel=new BroadcastChannel('diagram-cp-return:'+returnTarget.origin);
+      try{await new Promise<void>((resolve,reject)=>{
+        const timer=setTimeout(()=>reject(Error('折序窗口尚未确认应用，请稍后重试。')),15000);
+        channel.onmessage=({data})=>{if(data?.type!=='result'||data.request!==request)return;clearTimeout(timer);if(data.error)reject(Error(data.error));else resolve();};
+        channel.postMessage({type:'apply',session:returnTarget.session,request,doc:edited});
+      });}finally{channel.close();}
+      if(docRef.current!==edited||!artworkSaved.current.acknowledge(stamp))throw Error('已发送的 CP 已应用，编辑期间的新修改仍保留在此窗口。');
+      await service.focusOrigin();
+      await service.close(documentId);
+    }catch(error){setError(errorText(error));}
+    finally{returnLock.current=false;setReturnBusy(false);}
+  }
+  const linkedEditor=useRef<string|null>(null);
+  useEffect(()=>{
+    if(!documentId||windowMode!=='edit')return;
+    const channel=new BroadcastChannel('workspace-cp:'+documentId);
+    channel.onmessage=({data})=>{if(data?.type==='read'&&typeof data.request==='string')channel.postMessage({request:data.request,doc:docRef.current});};
+    return ()=>channel.close();
+  },[documentId,windowMode]);
+  async function readEditorCP():Promise<Doc>{
+    if(!linkedEditor.current)return docRef.current;
+    const id=linkedEditor.current,documents=await window.desktop!.documents!.list();
+    if(!documents.documents.some(d=>d.id===id))throw Error('对应的折痕编辑窗口已关闭，请重新打开这份 CP。');
+    const channel=new BroadcastChannel('workspace-cp:'+id),request=crypto.randomUUID();
+    try{return await new Promise<Doc>((resolve,reject)=>{
+      const timer=setTimeout(()=>reject(Error('折痕编辑窗口未响应，请稍后再试。')),10000);
+      channel.onmessage=({data})=>{if(data?.request===request&&data.doc){clearTimeout(timer);resolve(data.doc);}};
+      channel.postMessage({type:'read',request});
+    });}finally{channel.close();}
+  }
+  const browserDiagram=useRef<DiagramWorkspaceHandle>(null),browserDesign=useRef<DesignWorkspaceHandle>(null);
+  async function openWork(target:Mode,file:WorkspaceFile){
+    try{await launchWorkspaceFile(target,file);return true;}
+    catch(error){setError(errorText(error));return false;}
+  }
+  const consumedLaunch=useRef(false);
+  useEffect(()=>{
+    const token=new URLSearchParams(location.search).get('transfer');
+    if(!windowMode||!token||consumedLaunch.current||!online||storageInitial)return;
+    consumedLaunch.current=true;
+    void (async()=>{
+      const file=await takeWorkspaceFile(token);
+      if(!file)throw Error('没有找到待打开的文件。');
+      if(file.kind==='image'){setIncomingDiagramImage({id:crypto.randomUUID(),image:file.image});return;}
+      if(windowMode==='diagram'){await (await ensureDiagramWorkspace()).startFile(file);return;}
+      if(windowMode==='design'){await (await ensureDesignWorkspace()).startFile(file);return;}
+      if(file.kind==='workspace-source'){
+        const source=file.doc??blankDoc();
+        let applied=false;
+        flushSync(()=>{applied=replace(source);});
+        if(!applied)return;
+        if(windowMode==='tess'&&file.doc&&!curveDesignFromDocument(source)){
+          const params=readTessParams((source.metadata?.tessellation as {parameters?:unknown}|undefined)?.parameters);
+          if(params)setTessParams(params);
+          else await useDrawingAsTessSource(docRef.current);
+        }
+      }else if(file.kind==='stored'){await openCreaseDocument(file.id);if(creaseIdRef.current!==file.id)await window.desktop?.documents?.setLibraryIdentity(null);}
+      else if(file.kind==='file')await openFile(file.file,true);
+      else if(file.kind==='cp'){if(await revealDiagramCP(file.doc)){returnScope.current=scope.current;setReturnTarget(file.returnTarget??null);}}
+      else if(file.kind==='blank')await newCreaseDocument(file.example);
+      if(windowMode==='sim')await loadSimulation();
+    })().catch(error=>setError(errorText(error)));
+  },[windowMode,online,storageInitial]);
+  const documentCommand=useRef<(command:string)=>void>(()=>{});
+  documentCommand.current=command=>{
+    const next=documentWorkspaceCommand(command);if(next){void selectWorkspace(next).catch(error=>setError(errorText(error)));return;}
+    if(command==='settings'){if(documentId)setWorkspaceOptionsOpen(true);else void openStorageSettings();return;}
+    if(windowMode&&(command==='new'||command==='open')){
+      const target=browserMode??windowMode;
+      const diagram=browserMode==='diagram'?browserDiagram.current:diagramRef.current;
+      const design=browserMode==='design'?browserDesign.current:designRef.current;
+      if(target==='diagram'){if(command==='new')diagram?.newDrawing();else diagram?.open();return;}
+      if(target==='design'){if(command==='open')design?.open();else setBrowserMode('design');return;}
+      if(command==='new')void launchWorkspaceFile(target,{kind:'blank'}).catch(error=>setError(errorText(error)));
+      else void chooseProjectFile(target);return;
+    }
+    if(documentHome&&command!=='library')return;
+    if(command==='new'){void newCreaseDocument().catch(error=>setError(errorText(error)));return;}
+    if(command==='save-artwork'){void saveArtwork();return;}
+    if(command==='save-crease'){if(hasCreaseDocumentRef.current)void save();else inform('此作品尚未打开折痕工程。');return;}
+    if(command==='artwork-overview'){setArtworkOverviewOpen(true);void artworkRecovery.refresh();return;}
+    if(command==='undo'||command==='redo'){
+      if(mode==='diagram'){diagramRef.current?.[command]();return;}
+      if(mode==='design'){designRef.current?.[command]();return;}
+      if(mode==='sim'){simControls.current?.stop();simBridge.current?.send({type:command==='undo'?'zhezhi-sim-undo-pose':'zhezhi-sim-redo-pose'});return;}
+      if(mode==='edit'&&hasCreaseDocumentRef.current)dispatch({type:command});return;
+    }
+    if(command==='library'){if(windowMode){if(windowMode==='sim'||windowMode==='tess')setBrowserMode(null);else setBrowserMode(windowMode);return;}if(mode==='diagram'){void diagramRef.current?.library();return;}if(mode==='design'){designRef.current?.library();return;}void showCreaseLibrary();return;}
+    if(mode==='design'){if(command==='open')designRef.current?.open();if(command==='save')designRef.current?.save();if(command==='export')designRef.current?.export();return;}
+    if(mode==='diagram'){if(command==='open')diagramRef.current?.open();if(command==='save')void diagramRef.current?.save();if(command==='export')diagramRef.current?.export();if(command==='print')diagramRef.current?.print();return;}
+    if(mode==='edit'&&creaseLibraryOpen&&!hasCreaseDocumentRef.current&&command!=='open')return;
+    if(command==='open')void chooseProjectFile();
+    if(command==='save'){flushSync(()=>{if(document.activeElement instanceof HTMLElement)document.activeElement.blur();});void save();}
+    if(command==='export')setDialog('export');if(command==='print')printDoc();
+  };
+  useEffect(()=>{
+    const desktop=window.desktop;if(!desktop)return;
+    const remove=documentId&&desktop.documents?desktop.documents.onCommand(command=>documentCommand.current(command)):desktop.onCommand(command=>documentCommand.current(command));
+    // The native shell may immediately send an initial new/open command.
+    if(documentId)desktop.ready?.();
+    return remove;
+  },[documentId]);
+  useEffect(()=>{
+    const documents=window.desktop?.documents;if(!documentId||!documents)return;
+    const key=(event:KeyboardEvent)=>{
+      if(event.defaultPrevented||event.isComposing||event.repeat||event.altKey||!(event.ctrlKey||event.metaKey))return;
+      if(event.key.toLowerCase()==='s'){event.preventDefault();event.stopImmediatePropagation();documentCommand.current('save-artwork');return;}
+      if(event.shiftKey)return;
+      if(event.key.toLowerCase()==='n'){event.preventDefault();event.stopImmediatePropagation();documentCommand.current('new');}
+      else if(event.key.toLowerCase()==='o'){event.preventDefault();event.stopImmediatePropagation();documentCommand.current('open');}
+      else if(event.key.toLowerCase()==='w'){event.preventDefault();void documents.close(documentId).catch(error=>setError(errorText(error)));}
+    };
+    window.addEventListener('keydown',key,true);return()=>window.removeEventListener('keydown',key,true);
+  },[documentId]);
+  const documentReport=useRef(()=>artworkDocumentStatus({name:'未命名作品',workspace:mode,creaseDirty:false,modelDirty:false,simulationDirty:false,constructionDirty:false,busy:false,saving:false,ready:false}));
+  documentReport.current=()=>{const design=designRef.current?.status(),diagram=diagramRef.current?.status();return artworkDocumentStatus({name:documentHome?'文档区':hasCreaseDocument?docRef.current.name:'未命名作品',workspace:mode,creaseDirty:!documentHome&&artworkSaved.current.dirty(),modelDirty:false,simulationDirty:false,constructionDirty:false,busy:flatBusy||tessBusy||simPreparing||!!fileImport||storageBusy||creaseLibraryBusy,saving:saving||savingArtwork||exportBusy,ready:online&&!storageInitial,diagram:diagram?{...diagram,dirty:false}:undefined,design:design?{...design,dirty:false}:undefined});};
+  useEffect(()=>{
+    if(!documentId)return;
+    const protect=(event:BeforeUnloadEvent)=>{const invalid=!!document.querySelector('[aria-invalid="true"]');flushSync(()=>{if(document.activeElement instanceof HTMLElement)document.activeElement.blur();});const value=documentReport.current();if(invalid||document.querySelector('[aria-invalid="true"]')||value.dirty||value.busy||value.saving){event.preventDefault();event.returnValue='';}};
+    window.addEventListener('beforeunload',protect);return()=>window.removeEventListener('beforeunload',protect);
+  },[documentId]);
+  useEffect(()=>{
+    const documents=window.desktop?.documents;if(!documentId||!documents)return;
+    let last='',live=true;
+    const publish=()=>{const value=documentReport.current(),key=JSON.stringify(value);if(key===last)return;last=key;void documents.report(value).catch(()=>{if(live&&last===key)last='';});};
+    publish();const timer=setInterval(publish,200);return()=>{live=false;clearInterval(timer);};
+  },[documentId]);
   async function toggleFullscreen(){try{if(window.desktop?.window){await window.desktop.window.toggleFullscreen();return;}if(document.fullscreenElement)await document.exitFullscreen();else await document.documentElement.requestFullscreen();}catch(error){setError(errorText(error));}}
-  const statusCounts=useMemo(()=>({M:doc.segments.filter(s=>s.assignment==='M').length,V:doc.segments.filter(s=>s.assignment==='V').length,U:doc.segments.filter(s=>s.assignment==='U').length}),[doc]);
+  function runWorkspaceOption(action:()=>void){setWorkspaceOptionsOpen(false);action();}
+  const statusCounts=useMemo(()=>{const counts={M:0,V:0,U:0};for(const segment of doc.segments)if(segment.assignment==='M'||segment.assignment==='V'||segment.assignment==='U')counts[segment.assignment]++;return counts;},[doc.segments]);
   const instructions=TOOL_GUIDES[tool].usage;
 
   const toolLayoutActions:ToolLayoutActions={
@@ -1613,30 +2005,31 @@ export default function App(){
     'action:fold-conflicts':()=>setDialog('mergecrossall'),
     'action:empty-branches':()=>{try{const result=trimBranches(doc);if(!result.removed){inform('未发现悬空分枝，工程未修改。');return;}if(commit(result.doc)){setSelected(new Set());inform(`已清除 ${result.removed} 条悬空分枝，可按 Ctrl+Z 撤销。`);}}catch(error){inform(`悬空分枝整理失败：${errorText(error)}`);}},
   };
-  const dockSettingsContent={properties:<><MaterialPieceSelector doc={doc} selected={selected} lockBoundary={lockBoundary} onClipboardCut={applyMaterialClipboardCut} onSelect={ids=>{setSelected(ids);setTool('select');}} onCut={(next,intent,ids)=>{if(!commit(next,ids,intent))return false;inform(`已切开 ${intent.segmentIds.length} 条材料内边，可撤销；平折层序需要重新计算。`);return true;}} onJoin={(next,intent,ids)=>{if(!commit(next,ids,intent))return false;inform(`已粘合 ${intent.pairs.length} 对材料边界，可撤销；平折层序需要重新计算。`);return true;}} onCopy={(next,intent,ids)=>{if(!commit(next,ids,intent))return false;inform('已复制完整材料部件，可撤销；平折层序需要重新计算。');return true;}} onFaceEdit={(next,intent,ids)=>{if(!commit(next,ids,intent))return false;if(intent.kind==='material-auxiliary'){inform('已更新材料辅助线，可撤销。');return true;}if(intent.kind==='material-reference-face'){inform('已更新材料参考面，可撤销；平折层序需要重新计算。');return true;}if(intent.kind==='material-line-properties'){inform('已更新材料折痕属性，可撤销；平折层序需要重新计算。');return true;}if(intent.kind==='material-construction-move'){inform('已定位移动材料，可撤销；平折层序需要重新计算。');return true;}if(intent.kind==='material-curve-group-edit'||intent.kind==='material-curve-group-remove'){inform('已更新参数构造，可撤销；平折层序需要重新计算。');return true;}inform(`已${intent.kind==='material-face-remove'?'删除材料折痕并合并面':intent.kind==='material-face-trace'?'跨面构造材料折痕':intent.kind==='material-face-traces'?'批量构造材料折痕':'添加材料折痕'}，可撤销；平折层序需要重新计算。`);return true;}}/>{chosen.length?<><section><h2>修改选中线型</h2>{!selectedType&&<p className="muted small">所选包含多种类型</p>}<TypeButtons value={selectedType} onChange={modifyType}/><button className="text-button" onClick={()=>modifySwap()}>仅互换所选山谷</button><p className="note">点击立即应用，可撤销。不会改变上方新绘制线型。</p></section><section><h2>几何与折叠属性</h2>{one&&<><div className="readout"><span>长度</span><strong className="mono">{fmt(Math.hypot(one.b[0]-one.a[0],one.b[1]-one.a[1]))} mm</strong></div>{(['a','b'] as const).flatMap((end,i)=>([0,1] as const).map(axis=><NumberField key={one.id+end+axis} label={`${i?'终点':'起点'} ${axis?'Y':'X'}`} value={one[end][axis]} step={.1} onChange={n=>commit({...doc,segments:doc.segments.map(s=>s.id===one.id?{...s,[end]:s[end].map((v,j)=>j===axis?n:v) as Point}:s)})} suffix="mm"/>))}</>}</section><section><h2>线段移动与变换</h2><p className="note">本区仅处理所选 {chosen.length} 条线段。{chosenCircles.length>0?'另选的 '+chosenCircles.length+' 个圆保持不变；需要一起移动时，请在画布中拖动。':''}</p><div className="two-fields"><NumberField label="ΔX" value={dx} onChange={setDx}/><NumberField label="ΔY" value={dy} onChange={setDy}/></div><div className="button-pair"><button className="outline" onClick={()=>transformChosen('move',dx,dy)}>移动所选线段</button><button className="outline" onClick={()=>transformChosen('copy',dx,dy)}>复制所选线段</button></div><NumberField label="旋转角度" value={rotation} min={-360} max={360} suffix="°" onChange={setRotation}/><button className="outline full" onClick={()=>transformChosen('rotate',rotation)}>绕所选线段中心旋转</button><button className="outline full" onClick={()=>{setTool('rotatecopyselection');inform('请在画布点击旋转中心，移动鼠标预览旋转副本，再点击落位。');}}>旋转复制选区 · 指定中心</button><NumberField label="缩放比例" value={factor} min={.01} max={100} step={.1} onChange={setFactor}/><button className="outline full" onClick={()=>transformChosen('scale',factor)}>缩放所选线段</button><div className="button-pair"><button onClick={()=>transformChosen('mirrorX',0)}>左右镜像</button><button onClick={()=>transformChosen('mirrorY',0)}>上下镜像</button></div><p className="note">几何镜像保持原山谷赋型；如需反转折向，请单独互换山谷。</p></section></>:chosenCircles.length?<section><h2>圆属性</h2><p className="note">已选 {chosenCircles.length} 个辅助圆。定位构造适用于各入口生成的辅助圆。</p><div className="button-pair"><button onClick={()=>{setDockSettings(null);setTool("moveselection");}}>定位移动</button><button onClick={()=>{setDockSettings(null);setTool("copyselection");}}>定位复制</button></div><button className="outline full" onClick={()=>{setDockSettings(null);setTool("rotatecopyselection");}}>旋转复制 · 指定中心</button><button className="outline full" onClick={openCircleProperties}>编辑圆属性</button></section>:<section><h2>纸张与单位</h2><NumberField label="宽度" value={doc.paper.width} min={1} max={10000} suffix="mm" onChange={w=>resizePaper(w,doc.paper.height)}/><NumberField label="高度" value={doc.paper.height} min={1} max={10000} suffix="mm" onChange={h=>resizePaper(doc.paper.width,h)}/><p className="note">修改尺寸会同比例缩放该方向的全部几何，可撤销。边界以实际黑色边界线为准。</p><div className="readout"><span>山折 / 谷折</span><span className="mono">{statusCounts.M} / {statusCounts.V}</span></div>{statusCounts.U>0&&<div className="readout"><span>旧文件未指派</span><span className="mono">{statusCounts.U}</span></div>}<button className="outline full" onClick={()=>{setSelected(new Set(doc.segments.filter(s=>s.assignment!=='B').map(s=>s.id)));setTool('select');}}>选择全部非边界线</button><button className="text-button" onClick={()=>{if(confirmAction('互换全图山谷？边界、辅助和未指派线保持不变，此操作可撤销。'))modifySwap(new Set(doc.segments.map(s=>s.id)));}}>互换全图山谷</button></section>}</>,clipboard:<SelectionClipboardPanel clipboard={clipboard} selected={!!(selected.size||selectedCircles.size)} offset={[pasteOffsetX,pasteOffsetY]} onOffset={p=>{setPasteOffsetX(p[0]);setPasteOffsetY(p[1]);}} onCopy={copyClipboardSelection} onCut={cutClipboardSelection} onPaste={pasteClipboardSelection}/>,background:<BackgroundPanel doc={doc} view={backgroundView} onChange={commit} onPosition={()=>{setDockSettings(null);setTool('backgroundposition');}}/>,canvashelp:<>
+  const dockSettingsContent={properties:<><MaterialPieceSelector doc={doc} selected={selected} lockBoundary={lockBoundary} onClipboardCut={applyMaterialClipboardCut} onSelect={ids=>{setSelected(ids);setTool('select');}} onCut={(next,intent,ids)=>{if(!commit(next,ids,intent))return false;inform(`已切开 ${intent.segmentIds.length} 条材料内边，可撤销；平折层序需要重新计算。`);return true;}} onJoin={(next,intent,ids)=>{if(!commit(next,ids,intent))return false;inform(`已粘合 ${intent.pairs.length} 对材料边界，可撤销；平折层序需要重新计算。`);return true;}} onCopy={(next,intent,ids)=>{if(!commit(next,ids,intent))return false;inform('已复制完整材料部件，可撤销；平折层序需要重新计算。');return true;}} onFaceEdit={(next,intent,ids)=>{if(!commit(next,ids,intent))return false;if(intent.kind==='material-auxiliary'){inform('已更新材料辅助线，可撤销。');return true;}if(intent.kind==='material-reference-face'){inform('已更新材料参考面，可撤销；平折层序需要重新计算。');return true;}if(intent.kind==='material-line-properties'){inform('已更新材料折痕属性，可撤销；平折层序需要重新计算。');return true;}if(intent.kind==='material-construction-move'){inform('已定位移动材料，可撤销；平折层序需要重新计算。');return true;}if(intent.kind==='material-curve-group-edit'||intent.kind==='material-curve-group-remove'){inform('已更新参数构造，可撤销；平折层序需要重新计算。');return true;}inform(`已${intent.kind==='material-face-remove'?'删除材料折痕并合并面':intent.kind==='material-face-trace'?'跨面构造材料折痕':intent.kind==='material-face-traces'?'批量构造材料折痕':'添加材料折痕'}，可撤销；平折层序需要重新计算。`);return true;}}/>{chosen.length?<><section><h2>修改选中线型</h2>{!selectedType&&<p className="muted small">所选包含多种类型</p>}<TypeButtons value={selectedType} onChange={modifyType}/><button className="text-button" onClick={()=>modifySwap()}>仅互换所选山谷</button><p className="note">点击立即应用，可撤销。不会改变上方新绘制线型。</p></section><section><h2>几何与折叠属性</h2>{one&&<><div className="readout"><span>长度</span><strong className="mono">{fmt(Math.hypot(one.b[0]-one.a[0],one.b[1]-one.a[1]))} mm</strong></div>{(['a','b'] as const).flatMap((end,i)=>([0,1] as const).map(axis=><NumberField key={one.id+end+axis} label={`${i?'终点':'起点'} ${axis?'Y':'X'}`} value={one[end][axis]} step={.1} onChange={n=>commit({...doc,segments:doc.segments.map(s=>s.id===one.id?{...s,[end]:s[end].map((v,j)=>j===axis?n:v) as Point}:s)})} suffix="mm"/>))}</>}</section><section><h2>线段移动与变换</h2><p className="note">本区仅处理所选 {chosen.length} 条线段。{chosenCircles.length>0?'另选的 '+chosenCircles.length+' 个圆保持不变；需要一起移动时，请在画布中拖动。':''}</p><div className="two-fields"><NumberField label="ΔX" value={dx} onChange={setDx}/><NumberField label="ΔY" value={dy} onChange={setDy}/></div><div className="button-pair"><button className="outline" onClick={()=>transformChosen('move',dx,dy)}>移动所选线段</button><button className="outline" onClick={()=>transformChosen('copy',dx,dy)}>复制所选线段</button></div><NumberField label="旋转角度" value={rotation} min={-360} max={360} suffix="°" onChange={setRotation}/><button className="outline full" onClick={()=>transformChosen('rotate',rotation)}>绕所选线段中心旋转</button><button className="outline full" onClick={()=>{setTool('rotatecopyselection');inform('请在画布点击旋转中心，移动鼠标预览旋转副本，再点击落位。');}}>旋转复制选区 · 指定中心</button><NumberField label="缩放比例" value={factor} min={.01} max={100} step={.1} onChange={setFactor}/><button className="outline full" onClick={()=>transformChosen('scale',factor)}>缩放所选线段</button><div className="button-pair"><button onClick={()=>transformChosen('mirrorX',0)}>左右镜像</button><button onClick={()=>transformChosen('mirrorY',0)}>上下镜像</button></div><p className="note">几何镜像保持原山谷赋型；如需反转折向，请单独互换山谷。</p></section></>:chosenCircles.length?<section><h2>圆属性</h2><p className="note">已选 {chosenCircles.length} 个辅助圆。定位构造适用于各入口生成的辅助圆。</p><div className="button-pair"><button onClick={()=>{setDockSettings(null);setTool("moveselection");}}>定位移动</button><button onClick={()=>{setDockSettings(null);setTool("copyselection");}}>定位复制</button></div><button className="outline full" onClick={()=>{setDockSettings(null);setTool("rotatecopyselection");}}>旋转复制 · 指定中心</button><button className="outline full" onClick={openCircleProperties}>编辑圆属性</button></section>:<section><h2>纸张与单位</h2><NumberField label="宽度" value={doc.paper.width} min={1} max={10000} suffix="mm" onChange={w=>resizePaper(w,doc.paper.height)}/><NumberField label="高度" value={doc.paper.height} min={1} max={10000} suffix="mm" onChange={h=>resizePaper(doc.paper.width,h)}/><p className="note">修改尺寸会同比例缩放该方向的全部几何，可撤销。边界以实际黑色边界线为准。</p><div className="readout"><span>山折 / 谷折</span><span className="mono">{statusCounts.M} / {statusCounts.V}</span></div>{statusCounts.U>0&&<div className="readout"><span>旧文件未指派</span><span className="mono">{statusCounts.U}</span></div>}<button className="outline full" onClick={()=>{setSelected(new Set(doc.segments.filter(s=>s.assignment!=='B').map(s=>s.id)));setTool('select');}}>选择全部非边界线</button><button className="text-button" onClick={()=>{if(confirmAction('互换全图山谷？边界、辅助和未指派线保持不变，此操作可撤销。'))modifySwap(new Set(doc.segments.map(s=>s.id)));}}>互换全图山谷</button></section>}</>,clipboard:<SelectionClipboardPanel clipboard={clipboard} selected={!!(selected.size||selectedCircles.size)} offset={[pasteOffsetX,pasteOffsetY]} onOffset={p=>{setPasteOffsetX(p[0]);setPasteOffsetY(p[1]);}} onCopy={copyClipboardSelection} onCut={cutClipboardSelection} onPaste={pasteClipboardSelection}/>,canvashelp:<>
     <section><h2>网格与吸附</h2><p>可选择方格、方格＋对角或正三角网格。新建纸张默认 300 × 300 mm。网格按工程固定的纸张基准等分，删除或重画边界不改变网格间距、原点和旋转中心。方格使用横纵相同的格距，可通过“网格旋转”绕基准中心旋转；对角参考线随方格一起转动。正三角网格由等边三角形密铺，六个三角形围成一个正六边形；等分控制网格边长。纸内网格跟随纸面，全画布网格延伸到视口，开启吸附后可选网格节点及线与网格的交点。</p></section>
     <section><h2>选择与边界</h2><p>交点会自动分割成独立小段，选择和删除仅作用于所选小段。纸边默认可选、可改型、可删除；开启保护后禁止选择和删除，仍可作为构造参考。边界需要闭合才能计算纸面。</p></section>
     <section><h2>保持选区</h2><p>用于平折启动、移动、复制与镜像。移动保留结果选区，复制与镜像保留原选区；关闭则完成后清空。交点分割后保留对应小段。切换工作区不清空，Esc 和主动取消仍有效。</p></section>
     <section><h2>辅助对象</h2><p>圆、文字与独立标记随工程保存，不参与折叠计算。可用右侧的圆编辑、文字注释和标记工具修改；撤标记／重标记仅影响独立标记。</p></section>
   </>};
-  return <div className={"app soft-workbench chrome-workbench"+(tablet?" web-tablet":"")} data-tablet-panel={tabletPanel} data-workspace={mode}>
+  function creaseDocuments(target:Mode){return <CreaseLibrary workspaceName={target==='sim'||target==='tess'?MODE_NAMES[target]:undefined} documents={projects.map(project=>({...project,draft:project.draft??false,thumbnail:project.thumbnail??'',folderId:creaseLibraryMeta.documents[project.id]?.folderId??null,openedAt:creaseLibraryMeta.documents[project.id]?.openedAt??0}))} folders={creaseLibraryMeta.folders} lastOpenId={creaseLibraryMeta.lastOpenId} currentId={target===mode&&hasCreaseDocument?projectId:null} currentName={doc.name} canSaveCurrent={target===mode&&hasCreaseDocument} onOpen={id=>windowMode?void openWork(target,{kind:'stored',id}):void openCreaseDocument(id)} onNew={()=>windowMode?void openWork(target,{kind:'blank'}):void newCreaseDocument()} onNewExample={example=>windowMode?void openWork(target,{kind:'blank',example}):void newCreaseDocument(example)} onImport={()=>void chooseProjectFile(target)} onSaveCurrent={()=>void save()} onContinueCurrent={target===mode&&hasCreaseDocument?()=>{setBrowserMode(null);continueCreaseDocument();}:undefined} onCreateFolder={(name,parentId)=>organizeCreaseDocuments(value=>createCreaseLibraryFolder(value,name,parentId))} onRename={(id,name)=>void renameCreaseDocument(id,name)} onMove={(id,folderId)=>organizeCreaseDocuments(value=>moveCreaseLibraryDocument(value,id,folderId))} onDelete={deleteCreaseDocument} busy={creaseLibraryBusy||saving||storageBusy||!!fileImport} loading={creaseLibraryLoading} error={creaseLibraryError} onRefresh={()=>void refreshCreaseLibrary()}/>;}
+  return <div className={"app soft-workbench chrome-workbench"+(tablet?" web-tablet":"")+(documentId?' native-document':'')} data-document-id={documentId??undefined} data-document-active={documentPresentation.active} data-tablet-panel={tabletPanel} data-workspace={mode} onPointerDownCapture={documentId?activateDocument:undefined} onFocusCapture={documentId?activateDocument:undefined}>
     <a className="skip-link" href={mode==='design'?'#design-workspace':mode==='diagram'?'#diagram-workspace':mode==='edit'&&creaseLibraryOpen?'#crease-library':'#workspace'}>{mode==='edit'&&creaseLibraryOpen?'跳到折痕文档':'跳到作品画布'}</a>
-    <header className="app-header" onMouseDown={handleDesktopTitlebarMouseDown}>
-      <div className="brand"><svg viewBox="0 0 28 28" aria-hidden="true"><path d="M3 3h22v22H3ZM3 3l22 22M25 3 3 25M14 3v22"/></svg><span>折纸工坊</span></div>
+    {!documentId&&<header className="app-header" onMouseDown={handleDesktopTitlebarMouseDown}>
+      {!documentId&&<div className="brand"><svg viewBox="0 0 28 28" aria-hidden="true"><path d="M3 3h22v22H3ZM3 3l22 22M25 3 3 25M14 3v22"/></svg><span>折纸工坊</span></div>}
       <HeaderMenu label="文件" align="left">
         {mode!=='diagram'&&mode!=='design'&&<button onClick={()=>void files()}><Icon name="folder"/>{mode==='edit'?'折痕文档':'工程库'}</button>}
         <button onClick={()=>mode==='design'?designRef.current?.open():mode==='diagram'?diagramRef.current?.open():void chooseProjectFile()}>{mode==='design'?'打开设计工程':mode==='diagram'?'打开折序工程':'打开文件'}<kbd>Ctrl+O</kbd></button>
         {mode==='edit'&&!creaseLibraryOpen&&<button disabled={!!fileImport||flatBusy||!!doc.metadata?.curveDesign} onClick={()=>inputAppendFile.current?.click()} title="将另一张 CP 放到当前图案右侧，保持原尺寸">追加 CP</button>}
         {(mode==='diagram'||mode==='design')&&<button onClick={()=>void chooseProjectFile()}>打开完整作品</button>}
-        <hr/>{tablet&&<button disabled={savingArtwork||flatBusy||!!fileImport} onClick={()=>void saveArtwork()}>保存完整作品</button>}<button onClick={()=>{setArtworkOverviewOpen(true);void artworkRecovery.refresh();}}>作品总览与恢复副本</button>
+        <hr/>{tablet&&<button disabled={savingArtwork||flatBusy||!!fileImport} onClick={()=>void saveArtwork()}>保存完整作品</button>}<button disabled={savingArtwork||flatBusy||!!fileImport} onClick={()=>void saveArtwork('json')}>导出完整作品 JSON</button><button onClick={()=>{setArtworkOverviewOpen(true);void artworkRecovery.refresh();}}>作品总览与恢复副本</button>
       </HeaderMenu>
-    {recovery&&<div className="header-recovery"><HeaderMenu label="恢复副本" align="left"><div className="header-recovery-info">最近恢复副本（{recovery.source==='browser'?'浏览器':'本机磁盘'}）：<strong>{recovery.doc.name}</strong>{recovery.updated?' · '+new Date(recovery.updated).toLocaleString('zh-CN'):''}{hasCreaseDocument&&<small> · 旧副本保留，当前文档草稿仍会自动暂存</small>}</div><button onClick={()=>{if(signature!==startupSignature.current&&!approveReplace())return;if(!replace(recovery.doc,recovery.projectId||null))return;projectRevisionRef.current=recovery.baseRevision??null;setRecovery(null);setRecoveryChecked(true);inform('已恢复最近工作。请检查后手动保存。');}}>恢复工作</button>{recoveryAlternatives.length>0&&<button disabled={exportBusy} onClick={()=>void exportRecoveryBackup()}>导出另一副本</button>}<button onClick={()=>{setRecovery(null);setRecoveryChecked(true);}}>保留当前工程</button></HeaderMenu></div>}
+    {(recovery||recoveryHint||!!recoveryAlternatives.length)&&<div className="header-recovery"><HeaderMenu label="恢复副本" align="left" onOpen={()=>void inspectStartupRecovery()}><div className="header-recovery-info">{recovery?<><span>最近恢复副本（{recovery.source==='browser'?'浏览器':'本机磁盘'}）：</span><strong>{recovery.name}</strong>{recovery.updated?' · '+new Date(recovery.updated).toLocaleString('zh-CN'):''}</>:recoveryLoading?'正在检查恢复副本…':recoveryAlternatives.length?'另一恢复副本仍保留':'有尚未恢复的折痕副本'}{hasCreaseDocument&&<small> · 旧副本保留，当前文档草稿仍会自动暂存</small>}</div><button disabled={!recovery||!!fileImport||recoveryLoading} onClick={()=>void restoreStartupRecovery()}>恢复工作</button>{!recovery&&recoveryAlternatives.length>0&&<button onClick={()=>{setRecovery(recoveryAlternatives[0]);setRecoveryAlternatives(recoveryAlternatives.slice(1));setRecoveryChecked(false);}}>查看另一副本</button>}{recoveryAlternatives.length>0&&<button disabled={exportBusy} onClick={()=>void exportRecoveryBackup()}>导出另一副本</button>}<button onClick={dismissStartupRecovery}>保留当前工程</button></HeaderMenu></div>}
       <div className="document-name"><input aria-label={mode==='design'?'当前工作区':mode==='diagram'?'来源折痕工程名称':'工程名称'} readOnly={mode==='design'||mode==='diagram'||mode==='edit'&&creaseLibraryOpen} value={mode==='design'?'基础形设计':mode==='edit'&&creaseLibraryOpen&&!hasCreaseDocument?'我的折痕':doc.name} maxLength={80} onChange={e=>{if(commit({...doc,name:e.target.value})&&curveDesign&&!curvePreviewSession.current)setCurveDesign({...curveDesign,name:e.target.value});}}/><span hidden={mode==='design'||mode==='edit'&&creaseLibraryOpen&&!hasCreaseDocument} className={'save-dot '+(!dirty?'saved':'')} title={mode==='diagram'?(dirty?'来源折痕工程尚未手动保存':'来源折痕工程已保存'):(dirty?'尚未手动保存':'已保存')}/><small>{mode==='design'?'独立设计工程':mode==='edit'&&creaseLibraryOpen&&!hasCreaseDocument?'选择或新建工程':mode==='diagram'?'来源折痕工程':dirty?'折痕未保存':'折痕已保存'}{autosaved?' · 恢复副本 '+autosaved:''}{unsavedModel&&<span className="warning" data-unsaved-model="true"> · 模型修改未保存</span>}</small></div>
       <div className="header-drag-space" aria-hidden="true"/>
       <div className="header-actions">
         <button className="header-open" onClick={()=>mode==='design'?designRef.current?.open():mode==='diagram'?diagramRef.current?.open():void chooseProjectFile()}><Icon name="folder"/>{mode==='design'?'打开设计工程':mode==='diagram'?'打开折序工程':'打开文件'}</button>
         <button className="primary" onClick={()=>{if(mode==='design'){designRef.current?.save();return;}if(mode==='diagram'){diagramRef.current?.save();return;}void save();}} disabled={mode==='design'?!designRef.current?.capture():mode!=='diagram'&&(saving||!online||creaseLibraryBusy||storageBusy||mode==='edit'&&creaseLibraryOpen&&!hasCreaseDocument)}><Icon name="save"/>{mode==='design'?'保存设计工程':mode==='diagram'?'保存折序工程':saving?'保存中…':'保存折痕'}</button>
-        <button className="header-save-artwork" onClick={()=>void saveArtwork()} disabled={savingArtwork||flatBusy||!!fileImport} title="下载折痕、基础形设计、构造参数、模型、当前折序和三维姿态">{savingArtwork?'保存作品中…':'保存完整作品'}</button>
+        <button className="header-save-artwork" onClick={()=>void saveArtwork()} disabled={savingArtwork||flatBusy||!!fileImport} title="保存 ORIW 完整作品包（.oriw），包含各工作区当前内容">{savingArtwork?'保存作品中…':'保存完整作品'}</button>
         <button className={'header-overview'+(artworkRecovery.error?' warning':'')} onClick={()=>{setArtworkOverviewOpen(true);void artworkRecovery.refresh();}} title={artworkRecovery.error?'完整作品暂存失败，请查看详情':'查看各工作区内容、保存范围与恢复副本'}>作品总览{artworkRecovery.entries.some(entry=>entry.id!==artworkRecovery.currentId)?' · 可恢复':''}</button>
         <HeaderMenu label="导出">
           <button disabled={mode==='edit'&&creaseLibraryOpen} onClick={()=>mode==='design'?designRef.current?.export():mode==='diagram'?diagramRef.current?.export():setDialog('export')}><Icon name="export"/>导出作品</button>
@@ -1655,16 +2048,17 @@ export default function App(){
           {mode!=='diagram'&&!(mode==='edit'&&creaseLibraryOpen)&&<button onClick={()=>openLibrary()}>工具目录<kbd>Ctrl+K</kbd></button>}
           <button onClick={()=>setActivityLogOpen(true)}>查看与导出工作日志</button>
         </HeaderMenu>
-      </div><WindowControls onError={inform}/>
-    </header>
+      </div>{!documentId&&<WindowControls onError={inform}/>}
+    </header>}
     <div className="app-shell">
     <nav className="workspaces" aria-label="工作区">
-      {(['edit','design','tess','sim','diagram'] as Mode[]).map(m=><button className="workspace-tab" key={m} aria-pressed={mode===m} title={WEB_APP&&(m==='design'||m==='tess')?'此工作区需要桌面版':undefined} disabled={WEB_APP&&(m==='design'||m==='tess')||toolLayout.editing||!!doc.metadata?.curveDesign&&m!=='tess'} onClick={async()=>{setTabletPanel('');const request=++workspaceNavigation.current;if(workspaceMode.current==='design'&&m!=='design'&&designRef.current&&!designRef.current.checkpoint())return;if(workspaceMode.current==='diagram'&&m!=='diagram'&&diagramRef.current&&!await diagramRef.current.checkpoint())return;if(request!==workspaceNavigation.current)return;if(m==='edit'){void showCreaseLibrary(request);return;}if(m==='design')setDesignVisited(true);if(m==='diagram'){setDiagramVisited(true);diagramRef.current?.enter();}setMode(m);}}><ChromeIcon name={m}/><span>{MODE_NAMES[m]}</span></button>)}
+      {(['edit','design','tess','sim','diagram'] as Mode[]).map(m=><button className="workspace-tab" key={m} aria-pressed={(browserMode??mode)===m} title={WEB_APP&&(m==='design'||m==='tess')?'此工作区需要桌面版':undefined} disabled={WEB_APP&&(m==='design'||m==='tess')||toolLayout.editing||!windowMode&&!!doc.metadata?.curveDesign&&m!=='tess'} onClick={()=>void selectWorkspace(m)}><ChromeIcon name={m}/><span>{MODE_NAMES[m]}</span></button>)}
       <span className="nav-spacer"/>
       {mode==='edit'&&!creaseLibraryOpen&&<button className="workspace-tab workspace-view-control" aria-pressed={canvasFocused} aria-controls="workspace" disabled={toolLayout.editing} onClick={()=>setCanvasFocused(value=>!value)}><ChromeIcon name="focus"/><span>{canvasFocused?'显示侧栏':'聚焦画布'}</span></button>}
       <span className="local-badge" data-online={online} title={WEB_APP?'计算与保存均在当前浏览器':online?'本机运行 · 离线优先':'本地服务未连接'} role="status"><i/>{WEB_APP?'浏览器运行':online?'本机运行':'服务未连接'}</span>
     </nav>
-    <div className="app-content">
+    <div className="app-content" data-library-overlay={browserMode?true:undefined}>
+    {returnTarget&&!browserMode&&<div className="cp-return-bar"><span>{returnTarget.label}</span><button className="primary" disabled={returnBusy||saving||!!fileImport||flatBusy} onClick={()=>void applyAndReturn()}>{returnBusy?'正在应用…':'应用并返回'}</button></div>}
     {WEB_APP&&<WebEditionNotice/>}
     {creaseConflict&&<div className="recovery-bar" role="alert"><span>此工程已在其他窗口修改或删除。当前窗口的内容仍保留，请选择保存方式。</span><button disabled={saving} onClick={()=>void save(true)}>另存当前副本</button><button disabled={saving} onClick={()=>void reloadConflictedCrease()}>重新打开最新版本</button></div>}
 
@@ -1672,16 +2066,22 @@ export default function App(){
     {error&&<div className="error-bar" role="alert"><span>{error}</span><button onClick={()=>setError('')} aria-label="关闭错误提示">×</button></div>}
     {fileImport&&<div className="recovery-bar import-status" role="status"><span>正在导入 <strong>{fileImport.name}</strong> · {fileImport.stage}</span><button onClick={cancelFileImport}>取消导入</button></div>}
     {importFailure&&<AppDialog title="未能导入文件" size="small" closeLabel="关闭导入提示" onClose={()=>setImportFailure(null)} footer={<button className="primary" onClick={()=>setImportFailure(null)}>知道了</button>}><p className="import-failure-filename">文件：<strong>{importFailure.name}</strong></p><p role="alert">{importFailure.message}</p><p className="note">当前工程没有被此文件替换。可关闭提示后继续编辑，或检查文件后重新导入。</p></AppDialog>}
-    {(mode==='tess'||mode==='sim')&&<div className="context-toolbar">{mode==='tess'?<><span className="muted">构造模板</span><strong>{curveDesign?curveDesign.name:TESS_NAMES[tessParams.family]}</strong><span className="toolbar-note">{curveDesign?'实际尺寸 · 可保存曲面设计':'参数变化自动预览'}</span><span className="spacer"/><button className="outline" disabled={!curveDesign&&(tessBusy||!online)} onClick={()=>curveDesign?setCurveEditRequest(n=>n+1):void generateTess()}>{curveDesign?'修改构造':tessBusy?'更新中…':'重新计算'}</button>{!curveDesign&&(tessParams.family==='discrete-curve-cp'||tessParams.family==='woven-lines'&&tessParams.mode==='graph')&&<button className="outline" disabled={!tessCPAdoptable} title="仅采用经过验证的 CP，不带折后位置或层序证书，可继续编辑" onClick={adoptWovenCP}>仅采用 CP →</button>}{!curveDesign&&<button className="primary" disabled={!tessAdoptable} onClick={adoptTess}>{tessTilingOnly?'采用母结构副本 →':tessSpatialFamily?'采用展开图副本 →':'采用折痕副本 →'}</button>}</>:<><span className="muted">独立模拟视图 · 目标角驱动</span><span className="spacer"/><button className="outline" disabled={!simReady||simStale} onClick={()=>simControls.current?.reset()}>复位展开</button><button className="primary" onClick={()=>loadSimulation()}>载入当前折痕</button></>}</div>}
-    {tablet&&(mode==='sim'||mode==='edit'&&!creaseLibraryOpen)&&<TabletPanelBar label="工作面板" items={mode==='edit'?[['tools','绘图工具'],['inspector','画布与属性']]:[['inspector','模拟设置']]} value={tabletPanel} onChange={value=>{setTabletPanel(value);if(value)setCanvasFocused(false);}}/>}
-    {mode==='edit'&&creaseLibraryOpen&&<div id="crease-library" style={{display:'flex',flex:1,minHeight:0,minWidth:0}}><CreaseLibrary documents={projects.map(project=>({...project,draft:project.draft??false,thumbnail:project.thumbnail??'',folderId:creaseLibraryMeta.documents[project.id]?.folderId??null,openedAt:creaseLibraryMeta.documents[project.id]?.openedAt??0}))} folders={creaseLibraryMeta.folders} lastOpenId={creaseLibraryMeta.lastOpenId} currentId={hasCreaseDocument?projectId:null} currentName={doc.name} canSaveCurrent={hasCreaseDocument} onOpen={id=>void openCreaseDocument(id)} onNew={()=>void newCreaseDocument()} onNewExample={kind=>void newCreaseDocument(kind)} onImport={()=>void chooseProjectFile()} onSaveCurrent={()=>void save()} onContinueCurrent={hasCreaseDocument?continueCreaseDocument:undefined} onCreateFolder={(name,parentId)=>organizeCreaseDocuments(value=>createCreaseLibraryFolder(value,name,parentId))} onRename={(id,name)=>void renameCreaseDocument(id,name)} onMove={(id,folderId)=>organizeCreaseDocuments(value=>moveCreaseLibraryDocument(value,id,folderId))} onDelete={deleteCreaseDocument} busy={creaseLibraryBusy||saving||storageBusy||!!fileImport} loading={creaseLibraryLoading} error={creaseLibraryError} onRefresh={()=>void refreshCreaseLibrary()}/></div>}
+    {(mode==='tess'||mode==='sim')&&<div className="context-toolbar">{mode==='tess'?<><span className="muted">构造模板</span><strong>{curveDesign?curveDesign.name:TESS_NAMES[tessParams.family]}</strong><span className="toolbar-note">{curveDesign?'实际尺寸 · 可保存曲面设计':'参数变化自动预览'}</span><span className="spacer"/><button className="outline" disabled={!curveDesign&&(tessBusy||!online)} onClick={()=>curveDesign?setCurveEditRequest(n=>n+1):void generateTess()}>{curveDesign?'修改构造':tessBusy?'更新中…':'重新计算'}</button>{!curveDesign&&(tessParams.family==='discrete-curve-cp'||tessParams.family==='woven-lines'&&tessParams.mode==='graph')&&<button className="outline" disabled={!tessCPAdoptable} title="仅采用经过验证的 CP，不带折后位置或层序证书，可继续编辑" onClick={adoptWovenCP}>仅采用 CP →</button>}{!curveDesign&&<button className="primary" disabled={!tessAdoptable} onClick={adoptTess}>{tessTilingOnly?'采用母结构副本 →':tessSpatialFamily?'采用展开图副本 →':'采用折痕副本 →'}</button>}</>:<><span className="muted">独立模拟视图 · 目标角驱动</span><span className="spacer"/><button className="outline" disabled={!simReady||simStale} onClick={()=>simControls.current?.reset()}>复位展开</button><button className="primary" disabled={simPreparing} onClick={()=>void loadSimulation()}>{simPreparing?'正在准备折痕…':'载入当前折痕'}</button>{simPreparing&&<button onClick={cancelSimulationPreparation}>取消载入</button>}</>}</div>}
+    {tablet&&(mode==='sim'||mode==='tess'||mode==='design'&&designRef.current?.status().present||mode==='edit'&&!creaseLibraryOpen)&&<TabletPanelBar label="工作面板" items={mode==='edit'?[['tools','绘图工具'],['inspector','画布与属性']]:mode==='design'?[['tools','骨架'],['inspector','参数']]:[['inspector',mode==='tess'?'构造参数':'模拟设置']]} value={tabletPanel} onChange={value=>{setTabletPanel(value);if(value)setCanvasFocused(false);}}/>}
+    {browserMode&&<section className="document-workspace-browser" aria-label={MODE_NAMES[browserMode]+'文档区'}>
+      <header><strong>{MODE_NAMES[browserMode]} · 文档区</strong>{!documentHome&&<button onClick={()=>setBrowserMode(null)}>返回当前工作区</button>}</header>
+      {browserMode==='diagram'?<Suspense fallback="正在打开文档区…"><DiagramWorkspace ref={browserDiagram} browseOnly active={documentPresentation.visible} doc={doc} model={null} onMessage={inform} launchFile={async file=>{await launchWorkspaceFile('diagram',file);}}/></Suspense>:
+       browserMode==='design'?<Suspense fallback="正在打开文档区…"><DesignWorkspace ref={browserDesign} active={documentPresentation.visible} onAdopt={adoptBaseDesign} onMessage={inform} onArtworkChange={()=>{}} launchFile={async file=>{await launchWorkspaceFile('design',file);}}/></Suspense>:
+       creaseDocuments(browserMode)}
+    </section>}
+    {mode==='edit'&&creaseLibraryOpen&&<div id="crease-library" style={{display:'flex',flex:1,minHeight:0,minWidth:0}}>{creaseDocuments('edit')}</div>}
     <div className="workbench-main" inert={creaseLibraryBusy} style={mode==='design'||mode==='diagram'||mode==='edit'&&creaseLibraryOpen?{display:'none'}:undefined}>
       {mode==='edit'&&!canvasFocused&&<><div className="tablet-tool-sheet">{tablet&&<TabletPanelHeading title="绘图工具" onClose={()=>setTabletPanel('')}/>}<ToolRail layout={toolLayout} actions={toolLayoutActions} leading={<div className="dock-line-presets" title="新绘制线型，不改变已选线段"><div className="button-pair"><button disabled={!history.past.length} onClick={()=>dispatch({type:'undo'})}><Icon name="undo"/>撤销</button><button disabled={!history.future.length} onClick={()=>dispatch({type:'redo'})}><Icon name="redo"/>重做</button></div></div>} typeControls={<><TypeButtons compact value={preset} onChange={assignment=>{setPreset(assignment);selectFlatNavigation('crease');}}/></>} onShortcut={target=>{setShortcutTarget(target);setDialog('shortcuts');}} bindings={toolShortcuts} tool={tool} drawingSwap={drawingSwap} onTool={value=>{activateDrawingTool(value);if(tablet)setTabletPanel('');}} width={widths.left} onRemove={remove} canRemove={!!chosen.length||!!chosenCircles.length} onLibrary={openLibrary}/></div>
         <PanelDivider side="left" value={widths.left} min={192} max={Math.min(TOOL_PANEL_MAX,Math.max(800,viewport-workspaceRailWidth)-widths.right-368)} onChange={left=>setPanels(p=>({...p,left}))} onReset={()=>setPanels(p=>({...p,left:DEFAULT_PANELS.left}))}/></>}
       <main className="workspace" id="workspace">
         {mode==='edit'&&toolLayout.editing&&<ToolLayoutEditor layout={toolLayout} actions={toolLayoutActions} tool={tool} drawingSwap={drawingSwap} onTool={activateDrawingTool} bindings={toolShortcuts} onShortcut={target=>{setShortcutTarget(target);setDialog('shortcuts');}}/>}
         <div className="workspace-document" hidden={mode==='edit'&&toolLayout.editing} inert={mode==='edit'&&toolLayout.editing}>{mode!=='edit'&&<div className="canvas-heading"><h1>{MODE_NAMES[mode]}</h1>{mode==='tess'&&!curveDesign&&tessResult?.motherDoc&&<div className="tess-view-switch"><button aria-pressed={tessView==='fold'} onClick={()=>{setTessView('fold');setFitToken(n=>n+1);}}>{tessTilingOnly?'拼块图':'折痕图'}</button><button aria-pressed={tessView==='mother'} onClick={()=>{setTessView('mother');setFitToken(n=>n+1);}}>母结构</button>{tessResult.dualDoc&&<button aria-pressed={tessView==='dual'} onClick={()=>{setTessView('dual');setFitToken(n=>n+1);}}>原始与对偶</button>}</div>}<span className="chip">{mode==='tess'?(curveDesign?'曲面设计 · 实际尺寸 mm':tessHasSpatialView?(tessRigidOpen?tessSpatialFamily?'静态三维构形':'静态刚性三维':`${TESS_NAMES[tessParams.family]} · 展开折痕图`):tessTilingOnly?'母结构 · 辅助线':'真实构造 · 候选 CP'):'数值模拟'}</span>{mode==='tess'&&!curveDesign&&(tessHasSpatialView?<button className="tess-flat-toggle" aria-pressed={tessRigidOpen} onClick={()=>setTessRigidOpen(value=>!value)}>{tessRigidOpen?'显示折痕图':'显示三维构形'}</button>:<button className="tess-flat-toggle" disabled={tessTilingOnly} aria-pressed={!tessTilingOnly&&tessFlatOpen} onClick={()=>setTessFlatOpen(v=>!v)}>{!tessTilingOnly&&tessFlatOpen?'收起平折':'计算平折'}</button>)}<span className="spacer"/><span className="muted small">{mode==='tess'?curveDesign?'二维展开 / 三维曲面':tessResult?`${tessResult.stats.vertices} 顶点 · ${tessResult.stats.edges} 条边`:'选择参数，生成第一个单元排布':`${fmt(doc.paper.width)} × ${fmt(doc.paper.height)} mm · ${doc.segments.length} 条线`}</span></div>}
-        {mode==='edit'&&<div className="shared-fold-workspace">
+        {mode==='edit'&&(!creaseLibraryOpen||creaseCanvasVisited)&&<div className="shared-fold-workspace">
           <div className="editable-cp-pane" ref={flatNavigationPane} data-navigation-target={flatNavigation}><CreaseCanvas focusRegion={currentCpConflictFocus} svgOverlay={({view})=>cpConflict&&cpConflictSource?<g data-cp-flat-conflict="true" data-conflict-model-id={cpConflictModel?.id} pointerEvents="none"><FlatConflictOverlay conflict={cpConflict} result={cpConflictSource} coords={cpConflictSource.geometry.vertices} foldedResult={cpConflictResult??undefined} viewWidth={view.w}/></g>:null} targetPoint={cpTarget?.point} navigationTargetLabel={flatNavigationAvailable?(flatNavigation==='fold'?'平折结果':'折痕图'):undefined} overlayNavigation={flatNavigationAvailable&&flatNavigation==='fold'?{onZoom:zoomFlatNavigation,onFit:fitMarkedModel}:undefined} commandToken={commandActivation} diagnosticHighlights={issueHighlights} overlay={showFlat&&(<section className="canvas-fold-overlay" data-navigation-active={flatNavigation==='fold'} data-fold-result="true" aria-label="同画布平折模型">
 
             {models.entries.map((entry,index)=>entry.history.present&&<FlatView embedded overlay canvasModelId={entry.id} targetPoint={modelTargetPoints[entry.id]} targeted={entry.id===models.activeId} sceneIndex={index} sceneCount={models.entries.length}
@@ -1708,15 +2108,15 @@ export default function App(){
         </div>
       </main>
       {!(mode==='edit'&&canvasFocused)&&<PanelDivider side="right" value={widths.right} min={236} max={Math.min(440,Math.max(800,viewport-workspaceRailWidth)-(mode==='edit'?widths.left:0)-368)} onChange={right=>setPanels(p=>({...p,right}))} onReset={()=>setPanels(p=>({...p,right:DEFAULT_PANELS.right}))}/>}
-      <aside style={{width:widths.right,display:mode==='edit'&&canvasFocused?'none':undefined}} className={"inspector"+(mode==='edit'?' canvas-inspector':'')} aria-label={mode==='edit'?'画布设置':'属性与设置'}>{tablet&&<TabletPanelHeading title={mode==='sim'?'模拟设置':'画布与属性'} onClose={()=>setTabletPanel('')}/>}<div className="inspector-heading"><strong>{mode==='edit'?'画布':mode==='tess'?'构造参数':'模拟状态'}</strong>{mode!=='edit'&&<span className="chip">{mode==='tess'?'实时预览':'独立计算'}</span>}</div>
-        {mode==='edit'&&<div inert={toolLayout.editing}><CanvasSettingsPanel grid={grid} onGridChange={setGrid} gridScope={gridScope} onGridScopeChange={setGridScope} divisions={divisions} onDivisionsChange={value=>setDivisions(clampGridDivisions(value))} diagonalGrid={diagonalGrid} onDiagonalGridChange={setDiagonalGrid} gridPattern={gridAppearance.pattern??'square'} onGridPatternChange={pattern=>setGridAppearance(value=>({...value,pattern}))} gridRotation={gridAppearance.squareRotation??0} onGridRotationChange={squareRotation=>setGridAppearance(value=>({...value,squareRotation}))} snap={snap} onSnapChange={setSnap} defaultDivisions={gridAppearance.defaultDivisions} display={creaseDisplay} onDisplayChange={changeCanvasDisplay}/><details className="tool-options" open><summary>工具选项</summary>
+      <OverlayScrollArea as="aside" style={{width:widths.right,display:mode==='edit'&&canvasFocused?'none':undefined}} className={"inspector"+(mode==='edit'?' canvas-inspector':'')} label={mode==='edit'?'画布设置':'属性与设置'}>{tablet&&<TabletPanelHeading title={mode==='sim'?'模拟设置':'画布与属性'} onClose={()=>setTabletPanel('')}/>}<div className="inspector-heading"><strong>{mode==='edit'?'画布':mode==='tess'?'构造参数':'模拟状态'}</strong>{mode!=='edit'&&<span className="chip">{mode==='tess'?'实时预览':'独立计算'}</span>}</div>
+        {mode==='edit'&&<div inert={toolLayout.editing}><CanvasSettingsPanel paper={doc} onPaperChange={applyCanvasPaper} onPaperMessage={inform} grid={grid} onGridChange={setGrid} gridScope={gridScope} onGridScopeChange={setGridScope} divisions={divisions} onDivisionsChange={value=>setDivisions(clampGridDivisions(value))} diagonalGrid={diagonalGrid} onDiagonalGridChange={setDiagonalGrid} gridPattern={gridAppearance.pattern??'square'} onGridPatternChange={pattern=>setGridAppearance(value=>({...value,pattern}))} gridRotation={gridAppearance.squareRotation??0} onGridRotationChange={squareRotation=>setGridAppearance(value=>({...value,squareRotation}))} snap={snap} onSnapChange={setSnap} defaultDivisions={gridAppearance.defaultDivisions} display={creaseDisplay} onDisplayChange={changeCanvasDisplay}/><CanvasBackgroundSettings doc={doc} view={backgroundView} tool={tool} onChange={commit} onTool={activateDrawingTool}/><details className="tool-options" open><summary>工具选项</summary>
           <div className="tool-selection-options" inert={toolLayout.editing}>
   <label className="checkbox"><input type="checkbox" checked={lockBoundary} onChange={e=>setLockBoundary(e.target.checked)}/>保护边界</label>
   <label className="checkbox"><input type="checkbox" checked={keepSelection} onChange={e=>{try{saveSelectionPersistence(e.target.checked);setKeepSelection(e.target.checked);}catch(error){setError(errorText(error));}}}/>操作后保持选择</label>
 </div>
           <ConstructionRail layout={toolLayout} actions={toolLayoutActions} tool={tool} drawingSwap={drawingSwap} onTool={activateDrawingTool} bindings={toolShortcuts} onShortcut={target=>{setShortcutTarget(target);setDialog('shortcuts');}}/>
           <div className="dock-nonlayout-controls" inert={toolLayout.editing}>
-          <div className="dock-settings-actions"><button onClick={()=>chosen.length||!chosenCircles.length?setDockSettings('properties'):openCircleProperties()}>{chosen.length?`选区 (${chosen.length})`:chosenCircles.length?`圆属性 (${chosenCircles.length})`:'纸张属性'}</button>{chosen.length>0&&chosenCircles.length>0&&<button onClick={openCircleProperties}>圆属性 ({chosenCircles.length})</button>}<button onClick={()=>setDockSettings('clipboard')}>剪贴板</button><button onClick={()=>setDockSettings('background')}>底图</button></div>
+          <div className="dock-settings-actions"><button onClick={()=>chosen.length||!chosenCircles.length?setDockSettings('properties'):openCircleProperties()}>{chosen.length?`选区 (${chosen.length})`:chosenCircles.length?`圆属性 (${chosenCircles.length})`:'纸张属性'}</button>{chosen.length>0&&chosenCircles.length>0&&<button onClick={openCircleProperties}>圆属性 ({chosenCircles.length})</button>}<button onClick={()=>setDockSettings('clipboard')}>剪贴板</button></div>
           {acrossCPRecipe&&<button onClick={()=>setAcrossCPEdit(true)}>修改二维纸带源参数</button>}
           {conicCircleCPRecipe&&<button onClick={()=>setConicCircleCPEdit(true)}>修改原圆例纸面参数</button>}
           {conicNoncircleRecipe&&<button onClick={()=>setConicNoncircleEdit(true)}>修改原非圆纸面参数</button>}
@@ -1748,7 +2148,7 @@ export default function App(){
           </div>
         </details></div>}
 
-        {mode==='tess'&&<TessellationPanel onOpenStrainTQDesign={()=>setStrainTQDialog({edit:false})} onOpenRotationalPleats={()=>setRotationalPleatsDialog({edit:false})} onOpenBasicPaperModels={()=>setBasicPaperModelDialog({edit:false})} onOpenSavedDevelopablePaper={()=>setSavedDevelopablePaperDialog({edit:false})} onOpenFlutedMultiSliceCone={()=>setFlutedMultiSliceConeDialog({edit:false})} onOpenGenericSpacePaper={()=>setGenericSpacePaperDialog({edit:false})} onOpenBistableTwistTube={()=>setBistableTwistTubeDialog({edit:false})} onOpenFlatTroublewitStrip={()=>setFlatTroublewitStripDialog({edit:false})} onOpenLinearSpace={()=>setLinearSpaceDialog({edit:false})} onOpenGeneralSpacer={()=>setGeneralSpacerDialog({edit:false})} onOpenSemiGeneralMiura={()=>setSemiGeneralMiuraDialog({edit:false})} onOpenLinkedBands={()=>setLinkedBands4086Dialog({edit:false})} onOpenArray={kind=>setOriginalArrayDialog({kind,edit:false})} params={tessCommittedParams} onChange={setTessParams} onPreview={previewTessParams} onCancelPreview={cancelTessPreview} curveDesign={curveDesign} onPreviewCurveDesign={previewCurveDesign} onCancelCurvePreview={cancelCurvePreview} onApplyCurveDesign={applyCurveDesign} onAdoptAltMoselyFiniteCP={adoptAltMoselyFiniteCP} onAdoptEllipseOpticalCP={next=>adoptEllipseAcrossFiniteCP(next,'ellipse')} onAdoptAcrossDescendingCP={next=>adoptEllipseAcrossFiniteCP(next,'across')} onAdoptHuffmanFiniteCP={adoptHuffmanFiniteCP} onAdoptAcrossCP={adoptAcrossCP} onAdoptConicCircleCP={adoptConicCircleCP} onAdoptConicNoncircleCP={adoptConicNoncircleCP} onAdoptPlanarRuled4040CP={adoptPlanarRuled4040CP} onAdoptConeFourPlane4039CP={adoptConeFourPlane4039CP} onAdoptNonuniformSpiral3968CP={adoptNonuniformSpiral3968CP} onAdoptUniformHelix3951CP={adoptUniformHelix3951CP} onAdoptSpiralRefold3980CP={adoptSpiralRefold3980CP} onAdoptUniformHelixGeneral3951CP={adoptUniformHelixGeneral3951CP} onAdoptNonuniformHelixGeneral3966CP={adoptNonuniformHelixGeneral3966CP} curveEditRequest={curveEditRequest} result={tessResult} busy={tessBusy} stale={!!tessResult&&tessSignature!==tessParamKey} generationError={tessError} tileLayerCheck={tileLayerActive?tileLayerCheck:null} onCancel={()=>{tessAttempt.current=tessParamKey;tessAbort.current?.abort();}} savedParameters={(doc.metadata?.tessellation as {parameters?:unknown}|undefined)?.parameters} onUseDrawing={()=>{try{const g=buildFold(doc).graph;if(!g.faces_vertices||g.faces_vertices.length<2||g.faces_vertices.length>96||g.vertices_coords.length>96)throw new Error('请先绘制包含 2–96 个凸多边形面的母结构。');const minX=Math.min(...g.vertices_coords.map(p=>p[0])),minY=Math.min(...g.vertices_coords.map(p=>p[1]));const span=Math.max(Math.max(...g.vertices_coords.map(p=>p[0]))-minX,Math.max(...g.vertices_coords.map(p=>p[1]))-minY);setTessParams({...tessPreset('custom'),paper:tessParams.paper,family:'custom',vertices:g.vertices_coords.map(p=>[(p[0]-minX)/span,(p[1]-minY)/span]),faces:g.faces_vertices,repeatX:1,repeatY:1,angle:36,scale:.3});inform('已提取母结构，原工程保持不变。将自动检查凸性与邻接。');}catch(e){setError(errorText(e));}}}/>}
+        {mode==='tess'&&<TessellationPanel onOpenStrainTQDesign={()=>setStrainTQDialog({edit:false})} onOpenRotationalPleats={()=>setRotationalPleatsDialog({edit:false})} onOpenBasicPaperModels={()=>setBasicPaperModelDialog({edit:false})} onOpenSavedDevelopablePaper={()=>setSavedDevelopablePaperDialog({edit:false})} onOpenFlutedMultiSliceCone={()=>setFlutedMultiSliceConeDialog({edit:false})} onOpenGenericSpacePaper={()=>setGenericSpacePaperDialog({edit:false})} onOpenBistableTwistTube={()=>setBistableTwistTubeDialog({edit:false})} onOpenFlatTroublewitStrip={()=>setFlatTroublewitStripDialog({edit:false})} onOpenLinearSpace={()=>setLinearSpaceDialog({edit:false})} onOpenGeneralSpacer={()=>setGeneralSpacerDialog({edit:false})} onOpenSemiGeneralMiura={()=>setSemiGeneralMiuraDialog({edit:false})} onOpenLinkedBands={()=>setLinkedBands4086Dialog({edit:false})} onOpenArray={kind=>setOriginalArrayDialog({kind,edit:false})} params={tessCommittedParams} onChange={setTessParams} onPreview={previewTessParams} onCancelPreview={cancelTessPreview} curveDesign={curveDesign} onPreviewCurveDesign={previewCurveDesign} onCancelCurvePreview={cancelCurvePreview} onApplyCurveDesign={applyCurveDesign} onAdoptAltMoselyFiniteCP={adoptAltMoselyFiniteCP} onAdoptEllipseOpticalCP={next=>adoptEllipseAcrossFiniteCP(next,'ellipse')} onAdoptAcrossDescendingCP={next=>adoptEllipseAcrossFiniteCP(next,'across')} onAdoptHuffmanFiniteCP={adoptHuffmanFiniteCP} onAdoptAcrossCP={adoptAcrossCP} onAdoptConicCircleCP={adoptConicCircleCP} onAdoptConicNoncircleCP={adoptConicNoncircleCP} onAdoptPlanarRuled4040CP={adoptPlanarRuled4040CP} onAdoptConeFourPlane4039CP={adoptConeFourPlane4039CP} onAdoptNonuniformSpiral3968CP={adoptNonuniformSpiral3968CP} onAdoptUniformHelix3951CP={adoptUniformHelix3951CP} onAdoptSpiralRefold3980CP={adoptSpiralRefold3980CP} onAdoptUniformHelixGeneral3951CP={adoptUniformHelixGeneral3951CP} onAdoptNonuniformHelixGeneral3966CP={adoptNonuniformHelixGeneral3966CP} curveEditRequest={curveEditRequest} result={tessResult} busy={tessBusy} stale={!!tessResult&&tessSignature!==tessParamKey} generationError={tessError} tileLayerCheck={tileLayerActive?tileLayerCheck:null} onCancel={()=>{tessAttempt.current=tessParamKey;tessAbort.current?.abort();}} savedParameters={(doc.metadata?.tessellation as {parameters?:unknown}|undefined)?.parameters} onUseDrawing={()=>void useDrawingAsTessSource(doc)}/>}
         {mode==='sim'&&<><section>
           <h2>数值状态</h2>
           <StatusRow name="计算后端" value={simStatus?.backend==='cpu'?'CPU 回退':simStatus?.backend==='webgl2'?'WebGL2':'连接中'}/>
@@ -1772,7 +2172,7 @@ export default function App(){
           <p className="note">“模拟设置”可分别调整折痕刚度和面片抗弯。Verlet 模式暂不支持顶点塑形。目标播放同时驱动全部折痕，折序绘图中的步骤动画按动作规划路径。</p>
           <p className="note">数值稳定不代表实际可折；未模拟可靠碰撞、纸厚或摩擦。计算只在本机进行。</p>
         </details></section></>}
-      </aside>
+      </OverlayScrollArea>
     </div>
     <aside id="fold-model-tools" className="fold-model-tools" aria-label="模型操作" data-fold-result="true" hidden={mode!=='edit'||creaseLibraryOpen||!modelToolsOpen} onKeyDown={e=>{if(e.key==='Escape'){e.preventDefault();e.stopPropagation();setModelToolsOpen(false);}}}>
       <header><strong>模型操作</strong><button aria-label="关闭模型操作" onClick={()=>setModelToolsOpen(false)}>×</button></header>
@@ -1786,12 +2186,12 @@ export default function App(){
     {mode==='tess'&&<nav className="fold-dock" aria-label={tessHasSpatialView?'底部静态三维显示控制':'底部镶嵌折叠控制'}><FoldDisplayBar kind={curveDesign?'curve':tessParams.family==='rigid-quad'?'rigid':tessSpatialFamily?'spatial':'flat'} xray={tessFlatView.xray} onXray={xray=>setTessFlatView(v=>({...v,xray}))} back={tessFlatView.side==='back'} onBack={back=>setTessFlatView(v=>({...v,side:back?'back':'front'}))} colors={tessFlatView.colors??defaultModelColors()} onColors={colors=>setTessFlatView(v=>({...v,colors}))} onRotate={delta=>setTessFlatView(v=>({...v,rotation:(v.rotation+delta+360)%360}))} onFit={()=>setTessFlatFit(n=>n+1)}>{!curveDesign&&!tessHasSpatialView&&<details><summary>更多</summary><div className="fold-extra-controls"><button disabled={!tessFlatOpen} onClick={()=>setTessFlatPaused(v=>!v)}>{tessFlatPaused?'继续':'暂停'}</button><label>自动整片检查<select aria-label="镶嵌自动整片检查时限" value={tessFlatBudget} onChange={e=>setTessFlatBudget(Number(e.target.value))}>{[5,10,30].map(n=><option key={n} value={n}>{n}s</option>)}</select></label><button aria-label="重新计算镶嵌平折" disabled={!tessFlatOpen} onClick={()=>{setTessFlatPaused(false);setTessFlatRetry(n=>n+1);}}>重算</button></div></details>}</FoldDisplayBar>{curveDesign?<button onClick={()=>setCurveEditRequest(n=>n+1)}>修改曲面参数</button>:tessHasSpatialView?<button disabled={!tessRigidOpen} onClick={()=>setTessRigidOpen(false)}>收起三维构形</button>:<button disabled={!tessFlatOpen} onClick={()=>{setTessFlatOpen(false);setTessFlatPaused(false);}}>删除平折结果</button>}<span className="spacer"/><small>{curveDesign?'曲面数值展开 · 采样网格':tessHasSpatialView?'当前静态等距 · 非平折层序':'基本显示参数 · 调参后自动更新'}</small></nav>}
 
     {artworkOverviewOpen&&<ArtworkOverview rows={artworkRows} recovery={artworkRecovery} onClose={()=>setArtworkOverviewOpen(false)} onSave={()=>void saveArtwork()} onRestore={restoreArtworkRecovery} onRemove={removeArtworkRecovery}/>}
-    {designVisited&&<div id="design-workspace" style={{display:mode==='design'?'flex':'none',flex:1,minHeight:0,minWidth:0}}><Suspense fallback={<div role="status" style={{padding:24}}>正在打开基础形设计…</div>}><DesignWorkspace ref={designRef} active={mode==='design'} onMessage={inform} onArtworkChange={()=>setDesignArtworkRevision(value=>value+1)} onAdopt={adoptBaseDesign}/></Suspense></div>}
-    {diagramVisited&&<div id="diagram-workspace" style={{display:mode==='diagram'?'flex':'none',flex:1,minHeight:0,minWidth:0}}><Suspense fallback={<div role="status" style={{padding:24}}>正在打开折序绘图…</div>}><DiagramWorkspace ref={diagramRef} showToolGuide={creaseDisplay.showToolGuide!==false} onToolGuideChange={changeToolGuide} showCursorHint={creaseDisplay.showCursorHint!==false} onCursorHintChange={changeCursorHint} onArtworkChange={()=>setDiagramArtworkRevision(value=>value+1)} active={mode==='diagram'} doc={doc} model={!flatBusy&&flat?.geometry.status==='ready'&&flatSource?{doc:flatSource.doc,result:flat}:null} onMessage={inform} onRevealCP={revealDiagramCP} incomingImage={incomingDiagramImage??undefined} onImageReceived={id=>setIncomingDiagramImage(pending=>pending?.id===id?null:pending)}/></Suspense></div>}
+    {designVisited&&<div id="design-workspace" style={{display:mode==='design'?'flex':'none',flex:1,minHeight:0,minWidth:0}}><Suspense fallback={<div role="status" style={{padding:24}}>正在打开基础形设计…</div>}><DesignWorkspace launchFile={windowMode?async file=>{await launchWorkspaceFile('design',file);}:undefined} ref={designRef} active={mode==='design'&&!browserMode} onMessage={inform} onArtworkChange={()=>setDesignArtworkRevision(value=>value+1)} onAdopt={adoptBaseDesign}/></Suspense></div>}
+    {diagramVisited&&<div id="diagram-workspace" style={{display:mode==='diagram'?'flex':'none',flex:1,minHeight:0,minWidth:0}}><Suspense fallback={<div role="status" style={{padding:24}}>正在打开折序绘图…</div>}><DiagramWorkspace readEditorCP={windowMode?readEditorCP:undefined} launchFile={windowMode?async file=>{await launchWorkspaceFile('diagram',file);}:undefined} ref={diagramRef} showToolGuide={creaseDisplay.showToolGuide!==false} onToolGuideChange={changeToolGuide} showCursorHint={creaseDisplay.showCursorHint!==false} onCursorHintChange={changeCursorHint} onArtworkChange={()=>setDiagramArtworkRevision(value=>value+1)} active={mode==='diagram'&&!browserMode} doc={doc} model={!flatBusy&&flat?.geometry.status==='ready'&&flatSource?{doc:flatSource.doc,result:flat}:null} onMessage={inform} onRevealCP={revealDiagramCP} incomingImage={incomingDiagramImage??undefined} onImageReceived={id=>setIncomingDiagramImage(pending=>pending?.id===id?null:pending)}/></Suspense></div>}
     <footer className="statusbar"><span>{mode==='edit'?(creaseLibraryOpen?'折痕文档':TOOL_NAMES[tool]):MODE_NAMES[mode]}</span>{mode==='edit'&&!creaseLibraryOpen&&<><span>新线：{NAMES[preset]} {preset}</span><span className="mono">X {fmt(coords[0])} · Y {fmt(coords[1])} mm</span><span>{snap?'吸附开启':'吸附关闭'}</span></>}<span className="spacer"/><span>{flatBusy?'平折计算中':tessBusy?'镶嵌生成中':'本机工作台'}</span><span>v{VERSION}</span></footer>
     </div></div>
     {notice&&<div className="toast" role="status"><span>{notice}</span><button onClick={()=>setNotice('')} aria-label="关闭操作提示">×</button></div>}
-    {dockSettings&&<ToolSettingsDialog title={{properties:chosen.length?'选区属性':chosenCircles.length?'圆属性':'纸张属性',clipboard:'选区剪贴板',background:'参考底图',canvashelp:'画布辅助说明'}[dockSettings]} onClose={()=>setDockSettings(null)}>{dockSettingsContent[dockSettings]}</ToolSettingsDialog>}
+    {dockSettings&&<ToolSettingsDialog title={{properties:chosen.length?'选区属性':chosenCircles.length?'圆属性':'纸张属性',clipboard:'选区剪贴板',canvashelp:'画布辅助说明'}[dockSettings]} onClose={()=>setDockSettings(null)}>{dockSettingsContent[dockSettings]}</ToolSettingsDialog>}
     {materialClipboardCut&&<MaterialClipboardCutDialog doc={doc} selected={materialClipboardCut} lockBoundary={lockBoundary} onClose={()=>setMaterialClipboardCut(null)} onApply={applyMaterialClipboardCut}/>}
     {linkedBands4086Dialog&&<LinkedBandsPlanarCP4086Dialog initial={linkedBands4086Dialog.edit?linkedBands4086Recipe??undefined:undefined} onAdoptCP={adoptLinkedBands4086CP} onClose={()=>setLinkedBands4086Dialog(null)}/>}
     {linearSpaceDialog&&<LinearSpacePolyhedralCPDialog initial={linearSpaceDialog.edit?linearSpaceRecipe??undefined:undefined} onAdoptCP={adoptLinearSpaceCP} onClose={()=>setLinearSpaceDialog(null)}/>}
@@ -1828,8 +2228,44 @@ export default function App(){
     {libraryOpen&&<ToolLibrary onMergeAll={()=>{setMode('edit');mergeVertices();}} initialId={libraryId} onSettings={setDialog} onClose={()=>setLibraryOpen(false)} onTool={t=>{setMode('edit');activateDrawingTool(t);}}/>}
     <input ref={inputModelFile} type="file" className="hidden" aria-label="模型快照文件" accept=".json" onChange={e=>{const file=e.target.files?.[0];if(file)void openModelFile(file);e.target.value='';}}/>
     <input ref={inputCollectionFile} type="file" className="hidden" aria-label="模型集合文件" accept=".json" onChange={e=>{const file=e.target.files?.[0];if(file)void openCollectionFile(file);e.target.value='';}}/>
-    <input ref={inputFile} type="file" className="hidden" aria-label="折痕工程文件" accept=".json,.fold,.cp,.opx,.ori,.orh" onChange={e=>{const file=e.target.files?.[0];if(file)void openFile(file);e.target.value='';}}/>
+    <input ref={inputFile} type="file" className="hidden" aria-label="折痕工程文件" accept=".oriw,.json,.fold,.cp,.opx,.ori,.orh" onChange={e=>{const file=e.target.files?.[0];if(file)void openFile(file);e.target.value='';}}/>
     <input ref={inputAppendFile} type="file" className="hidden" aria-label="追加导入折痕文件" accept=".json,.fold,.cp,.opx,.ori,.orh" onChange={e=>{const file=e.target.files?.[0];if(file)void appendFile(file);e.target.value='';}}/>
+    {documentId&&workspaceOptionsOpen&&<AppDialog title="工作区选项" className="document-workspace-options" size="medium" initialFocusRef={workspaceNameInput} closeLabel="关闭工作区选项" onClose={()=>setWorkspaceOptionsOpen(false)} footer={<button type="button" className="primary" onClick={()=>setWorkspaceOptionsOpen(false)}>完成</button>}>
+      <label className="document-workspace-name"><span>{mode==='design'?'当前工作区':mode==='diagram'?'来源折痕工程名称':'工程名称'}</span><input ref={workspaceNameInput} aria-label={mode==='design'?'当前工作区':mode==='diagram'?'来源折痕工程名称':'工程名称'} readOnly={mode==='design'||mode==='diagram'||mode==='edit'&&creaseLibraryOpen} value={mode==='design'?'基础形设计':mode==='edit'&&creaseLibraryOpen&&!hasCreaseDocument?'我的折痕':doc.name} maxLength={80} onFocus={event=>event.currentTarget.select()} onChange={event=>{if(commit({...doc,name:event.target.value})&&curveDesign&&!curvePreviewSession.current)setCurveDesign({...curveDesign,name:event.target.value});}}/></label>
+      <p className="document-workspace-save-state">{mode==='design'?'独立设计工程':mode==='edit'&&creaseLibraryOpen&&!hasCreaseDocument?'选择或新建工程':mode==='diagram'?'来源折痕工程':dirty?'折痕未保存':'折痕已保存'}{autosaved?' · 恢复副本 '+autosaved:''}{unsavedModel&&<span className="warning" data-unsaved-model="true"> · 模型修改未保存</span>}</p>
+      <section className="document-workspace-option-group" aria-labelledby="document-workspace-files-title">
+        <h3 id="document-workspace-files-title">{MODE_NAMES[mode]}</h3>
+        <div className="document-workspace-option-actions">
+          <button type="button" onClick={()=>runWorkspaceOption(()=>documentCommand.current('open'))}><Icon name="folder"/>{mode==='design'?'打开设计工程':mode==='diagram'?'打开折序工程':'打开文件'}</button>
+          <button type="button" disabled={mode==='design'?!designRef.current?.capture():mode!=='diagram'&&(saving||!online||creaseLibraryBusy||storageBusy||mode==='edit'&&creaseLibraryOpen&&!hasCreaseDocument)} onClick={()=>runWorkspaceOption(()=>documentCommand.current('save'))}><Icon name="save"/>{mode==='design'?'保存设计工程':mode==='diagram'?'保存折序工程':'保存折痕'}</button>
+          <button type="button" onClick={()=>runWorkspaceOption(()=>documentCommand.current('library'))}><Icon name="folder"/>{mode==='design'?'设计文档库':mode==='diagram'?'折序文档库':'折痕文档库'}</button>
+          <button type="button" disabled={mode==='edit'&&creaseLibraryOpen} onClick={()=>runWorkspaceOption(()=>documentCommand.current('export'))}><Icon name="export"/>导出作品</button>
+          <button type="button" disabled={mode==='design'||mode==='edit'&&creaseLibraryOpen} onClick={()=>runWorkspaceOption(()=>documentCommand.current('print'))}>{mode==='diagram'?'打印折序':'打印折痕图'}</button>
+          {mode==='edit'&&!creaseLibraryOpen&&<button type="button" disabled={!!fileImport||flatBusy||!!doc.metadata?.curveDesign} onClick={()=>runWorkspaceOption(()=>inputAppendFile.current?.click())}>追加 CP</button>}
+          {mode!=='diagram'&&mode!=='design'&&<button type="button" disabled={mode==='edit'&&creaseLibraryOpen||!!storedCurveDesign} onClick={()=>runWorkspaceOption(()=>setProcessingExportOpen(true))}>优化加工导出</button>}
+          <button type="button" disabled={savingArtwork||flatBusy||!!fileImport} onClick={()=>runWorkspaceOption(()=>void saveArtwork('json'))}>导出完整作品 JSON</button>
+          <button type="button" className={artworkRecovery.error?'warning':undefined} onClick={()=>runWorkspaceOption(()=>{setArtworkOverviewOpen(true);void artworkRecovery.refresh();})}>作品总览与恢复副本</button>
+        </div>
+      </section>
+      <section className="document-workspace-option-group" aria-labelledby="document-workspace-display-title">
+        <h3 id="document-workspace-display-title">显示与操作</h3>
+        <div className="document-workspace-option-actions">
+          {mode!=='diagram'&&mode!=='design'&&<><button type="button" onClick={()=>runWorkspaceOption(()=>setDialog('display'))}><ChromeIcon name="settings"/>显示设置</button><button type="button" onClick={()=>runWorkspaceOption(()=>{setShortcutTarget('line');setDialog('shortcuts');})}>快捷键设置</button></>}
+          {mode==='edit'&&!creaseLibraryOpen&&<button type="button" disabled={toolLayout.editing} onClick={()=>runWorkspaceOption(()=>setCanvasFocused(value=>!value))}><ChromeIcon name="focus"/>{canvasFocused?'显示侧栏':'聚焦画布'}</button>}
+          <button type="button" onClick={()=>runWorkspaceOption(()=>void toggleFullscreen())}>切换全屏<kbd>F11</kbd></button>
+        </div>
+      </section>
+      <section className="document-workspace-option-group" aria-labelledby="document-workspace-support-title">
+        <h3 id="document-workspace-support-title">保存与支持</h3>
+        <div className="document-workspace-option-actions">
+          <button type="button" onClick={()=>runWorkspaceOption(()=>void openStorageSettings())}><Icon name="folder"/>保存目录设置</button>
+          {window.desktop?.openDataDirectory&&<button type="button" onClick={()=>runWorkspaceOption(()=>void window.desktop!.openDataDirectory!().catch(error=>setError(errorText(error))))}>打开工程数据目录</button>}
+          <button type="button" onClick={()=>runWorkspaceOption(()=>setDialog('help'))}><ChromeIcon name="help"/>使用帮助与版本</button>
+          {mode!=='diagram'&&!(mode==='edit'&&creaseLibraryOpen)&&<button type="button" onClick={()=>runWorkspaceOption(()=>openLibrary())}>工具目录<kbd>Ctrl+K</kbd></button>}
+          <button type="button" onClick={()=>runWorkspaceOption(()=>setActivityLogOpen(true))}>查看与导出工作日志</button>
+        </div>
+      </section>
+    </AppDialog>}
     {activityLogOpen&&<ActivityLogPanel onClose={()=>setActivityLogOpen(false)} onMessage={inform}/>}
     {storageSettingsOpen&&<StorageSettings onOpenActivityLog={()=>setActivityLogOpen(true)} commandSettings={<ToolCommandSettings initialScope={mode==='diagram'?'diagram':'crease'} onClose={()=>setStorageSettingsOpen(false)}/>} status={storageStatus} initial={storageInitial} unavailable={storageUnavailable} error={storageError} busy={storageBusy} onPick={pickStorageDirectory} onApply={applyStorageSettings} onClose={()=>{if(!storageStatus?.unavailable?.length&&(!storageInitial||storageUnavailable))setStorageSettingsOpen(false);}}/>}
     {dialog&&<AppDialog title={dialog==='files'?'本机工程库':dialog==='export'?'导出作品':dialog==='shortcuts'?'工具快捷键设置':dialog==='mergecrossall'?'全图跨线型合点':dialog==='display'?'折痕显示设置':'折纸工坊 · 使用指南'} onClose={()=>setDialog(null)} className="modal" size={dialog==='shortcuts'?'large':'medium'}>

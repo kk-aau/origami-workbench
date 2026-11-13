@@ -26,7 +26,7 @@
 .diagram-cp-workspace-placeholder small{font-size:10px;color:var(--diagram-muted)}
 .diagram-cp-workspace-access{padding:0 8px 6px;font-size:10px;line-height:1.55;color:#617365;margin:0;flex-shrink:0}
 .diagram-cp-card.is-exchanged{border-color:#a9c0af}
-.diagram-compact-workspace.is-cp-workspace .diagram-unified-tools,.diagram-compact-workspace.is-cp-workspace .diagram-drafting-bar,.diagram-compact-workspace.is-cp-workspace .diagram-symbol-dock,.diagram-compact-workspace.is-cp-workspace .diagram-layer-status{display:none}
+.diagram-compact-workspace.is-cp-workspace .diagram-drafting-bar,.diagram-compact-workspace.is-cp-workspace .diagram-symbol-dock,.diagram-compact-workspace.is-cp-workspace .diagram-layer-status{display:none}
 .diagram-compact-workspace.is-cp-workspace .diagram-context-shelf{display:none}
 .diagram-compact-workspace.is-cp-workspace .diagram-paper-work-area{position:relative}
 .diagram-compact-workspace .diagram-model-surface[hidden]{display:none}

@@ -4,6 +4,7 @@ import {packCreaseGpuScene,CreaseGpuRenderer,CREASE_GPU_STRIDE,creaseGpuHoverTit
 import {defaultCreaseDisplay,DISPLAY_PIXEL_MM} from '../../src/app/creaseDisplay';
 import {creaseLineStyle,LINE_STYLES} from '../../src/app/creaseLineStyle';
 import type {Segment} from '../../src/core/types';
+import {prepareCreaseGpuScene,prepareCreaseGpuPoints} from '../../src/components/creaseGpuScenePreparation';
 
 const segment=(id:string,assignment:Segment['assignment'],y=0):Segment=>({id,assignment,a:[0,y],b:[100,y],angle:assignment==='M'?-180:assignment==='V'?180:0});
 function scene():CreaseGpuScene{return {segments:[segment('m','M'),segment('a','A',1),segment('v','V',2),segment('b','B',3)],selected:new Set(['m']),diagnostic:new Set(['m']),hiddenId:null,main:true,auxiliary:true,display:defaultCreaseDisplay(),vertices:[[0,0],[100,0]]};}
@@ -123,5 +124,44 @@ test('GPU hollow and solid point shapes share an outer size independent of line 
     }
     assert.deepEqual(base,before);
   }finally{renderer.dispose();if(old)Object.defineProperty(globalThis,'window',old);else Reflect.deleteProperty(globalThis,'window');}
+});
+
+test('large uploads publish counts only after every bounded GPU buffer chunk completes',async()=>{
+  const fake=fakeCanvas(),renderer=new CreaseGpuRenderer(fake.canvas),base=scene();
+  const input={...base,segments:Array.from({length:50000},(_,index)=>({...base.segments[index%4],id:`full-${index}`})),vertices:Array.from({length:25000},(_,index)=>[index,index/2] as [number,number])};
+  const packed=await prepareCreaseGpuScene(input);renderer.setScene(base);const uploads=renderer.uploads;renderer.clearScene();
+  const start=fake.calls.length;let turns=0;
+  try{
+    const promise=renderer.setPackedSceneAsync(input,packed,{onBatch(){turns++;},onProgress(){assert.equal(fake.canvas.dataset.segmentCount,'0');assert.equal(renderer.uploads,uploads);}});
+    renderer.draw({x:0,y:0,w:200,h:150},{w:800,h:600},[0,0],true,true);
+    assert.equal(fake.canvas.dataset.segmentCount,'0');assert.equal(fake.canvas.dataset.sceneState,'uploading');await promise;
+    const chunks=fake.calls.slice(start).filter(call=>call.name==='bufferSubData');assert.ok(chunks.length>4);assert.ok(chunks.every(call=>(call.args[2] as Float32Array).byteLength<=1024*1024));
+    assert.equal(chunks.reduce((bytes,call)=>bytes+(call.args[2] as Float32Array).byteLength,0),packed.lines.byteLength+packed.points.byteLength);
+    assert.ok(turns>1);assert.equal(fake.canvas.dataset.segmentCount,'50000');assert.equal(fake.canvas.dataset.sceneState,'ready');assert.equal(renderer.uploads,uploads+1);
+  }finally{renderer.dispose();}assert.equal(fake.objects.size,0);
+});
+
+test('cancelled, superseded, disposed or failed uploads cannot publish their old geometry',async()=>{
+  const base=scene(),input={...base,segments:Array.from({length:50000},(_,index)=>({...base.segments[index%4],id:`old-${index}`}))},packed=await prepareCreaseGpuScene(input);
+  for(const cause of ['cancel','supersede','dispose','context']){
+    const fake=fakeCanvas(),renderer=new CreaseGpuRenderer(fake.canvas),controller=new AbortController();let changed=false;
+    try{
+      const promise=renderer.setPackedSceneAsync(input,packed,{signal:controller.signal,onProgress(fraction){
+        if(!fraction||changed)return;changed=true;if(cause==='cancel')controller.abort();if(cause==='supersede')renderer.setScene(base);if(cause==='dispose')renderer.dispose();if(cause==='context')fake.lose();
+      }});
+      await assert.rejects(promise,cause==='context'?/GPU upload failed/:{name:'AbortError'});
+      assert.equal(fake.canvas.dataset.segmentCount,cause==='supersede'?'4':'0');assert.equal(renderer.uploads,cause==='supersede'?1:0);
+    }finally{renderer.dispose();}assert.equal(fake.objects.size,0);
+  }
+});
+
+test('late point discovery preserves ready lines and updates only the point GPU buffer',async()=>{
+  const fake=fakeCanvas(),renderer=new CreaseGpuRenderer(fake.canvas),base=scene(),packed=packCreaseGpuScene(base);renderer.setPackedScene(base,packed);
+  const next={...base,vertices:[...base.vertices,[20,30] as [number,number]]},points=await prepareCreaseGpuPoints(next.vertices),start=fake.calls.length;
+  try{
+    const promise=renderer.setPackedSceneAsync(next,{...packed,points});assert.equal(fake.canvas.dataset.segmentCount,'4');await promise;
+    const calls=fake.calls.slice(start);assert.equal(calls.filter(call=>call.name==='bufferData').length,1);assert.equal(calls.filter(call=>call.name==='bufferSubData').reduce((bytes,call)=>bytes+(call.args[2] as Float32Array).byteLength,0),points.byteLength);
+    assert.equal(renderer.lineUploads,1);assert.equal(renderer.uploads,2);assert.equal(fake.canvas.dataset.segmentCount,'4');
+  }finally{renderer.dispose();}assert.equal(fake.objects.size,0);
 });
 

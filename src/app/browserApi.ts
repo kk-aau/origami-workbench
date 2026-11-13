@@ -1,7 +1,7 @@
 import {validateDoc,type Doc} from '../core/types';
 import {VERSION} from './state';
 import {projectThumbnail} from '../core/projectThumbnail.mjs';
-import {browserRead,browserMutate,browserEntries,browserPreferences,flushBrowserPreferences,initializeBrowserStorage} from './browserStorage';
+import {browserRead,browserHasRecord,browserMutate,browserEntries,browserPreferences,flushBrowserPreferences,initializeBrowserStorage} from './browserStorage';
 
 type Saved={format:'zhezhi-project';version:1;id:string;doc:Doc;updated:string;draft:boolean};
 type ProjectRecord={saved?:Saved;draft?:Saved;revision:string;deleted?:boolean};
@@ -25,6 +25,7 @@ export async function browserRequest(route:string,method:'GET'|'POST'|'DELETE',i
     await flushBrowserPreferences();return {value:input.value};
   }
   if(name==='recovery'){
+    if(method==='GET'&&url.searchParams.get('summary')==='1')return {exists:await browserHasRecord('recovery'),revision:null};
     if(method==='GET')return await browserRead('recovery')??{doc:null};
     validateDoc(input.doc);const value={doc:input.doc,projectId:input.projectId??null,baseRevision:input.baseRevision??null,updated:new Date().toISOString()};
     return browserMutate('recovery',()=>({value,result:{ok:true}}));

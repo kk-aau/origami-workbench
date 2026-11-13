@@ -1,7 +1,7 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {LEFT_MAIN_GROUPS,LEFT_EXTRA_GROUPS,RIGHT_DOCK_GROUPS} from '../../src/app/orieditaToolLayout';
-import {TOOL_LAYOUT_ACTIONS,TOOL_LAYOUT_ITEM_IDS,TOOL_LAYOUT_PREFERENCES_KEY,defaultToolLayoutPreferences,readToolLayoutPreferences,saveToolLayoutPreferences,updateToolLayoutTemplate,type ToolLayoutPreferences,type ToolLayoutTemplate} from '../../src/app/toolLayoutPreferences';
+import {LEFT_MAIN_GROUPS,LEFT_EXTRA_GROUPS,RIGHT_DOCK_GROUPS,BACKGROUND_TOOLS} from '../../src/app/orieditaToolLayout';
+import {TOOL_LAYOUT_ACTIONS,TOOL_LAYOUT_ITEM_IDS,TOOL_LAYOUT_PREFERENCES_KEY,defaultToolLayoutPreferences,readToolLayoutPreferences,saveToolLayoutPreferences,updateToolLayoutTemplate,moveToolLayoutItem,type ToolLayoutPreferences,type ToolLayoutTemplate} from '../../src/app/toolLayoutPreferences';
 
 /** The previous release's eight-folder layout; its exports are intentionally
  * retained independently of the new category list as the migration fixture. */
@@ -22,6 +22,18 @@ function previousLayout():ToolLayoutPreferences {
 }
 function reopen(value:ToolLayoutPreferences){return readToolLayoutPreferences({getItem:()=>JSON.stringify(value)});}
 function complete(value:ToolLayoutPreferences){for(const template of value.templates){const ids=[...template.groups.flatMap(group=>group.items),...template.unassigned];assert.equal(new Set(ids).size,ids.length);assert.deepEqual([...ids].sort(),[...TOOL_LAYOUT_ITEM_IDS].sort());}}
+function assertBackgroundSeparated(actual:ToolLayoutTemplate,before:ToolLayoutTemplate){
+ assert.deepEqual({id:actual.id,name:actual.name,columns:actual.columns},{id:before.id,name:before.name,columns:before.columns});
+ assert.equal(actual.groups.length,before.groups.length);
+ for(let index=0;index<before.groups.length;index++){
+  const current=actual.groups[index],original=before.groups[index];
+  assert.deepEqual({id:current.id,name:current.name,side:current.side},{id:original.id,name:original.name,side:original.side});
+  assert.deepEqual(current.items,original.items.filter(item=>!BACKGROUND_TOOLS.includes(item as never)));
+ }
+ assert.deepEqual(actual.unassigned.filter(item=>!BACKGROUND_TOOLS.includes(item as never)),before.unassigned.filter(item=>!BACKGROUND_TOOLS.includes(item as never)));
+ assert.deepEqual(new Set(actual.unassigned.filter(item=>BACKGROUND_TOOLS.includes(item as never))),new Set(BACKGROUND_TOOLS));
+ assert.equal(new Set(actual.unassigned).size,actual.unassigned.length);
+}
 
 test('unchanged previous built-ins upgrade to current categories without losing active selection or modifying stored data',()=>{
  const previous=previousLayout();previous.activeId='swapped';const raw=JSON.stringify(previous);let writes=0;
@@ -30,7 +42,7 @@ test('unchanged previous built-ins upgrade to current categories without losing 
  assert.equal(writes,0);assert.equal(JSON.stringify(previous),raw);complete(reopened);
 });
 
-test('renamed, reordered, moved or resized old built-ins keep their exact customized layout',()=>{
+test('renamed, reordered, moved or resized old built-ins change only their background tool placement',()=>{
  for(const edit of [
   (template:ToolLayoutTemplate)=>{template.name='我的默认';},
   (template:ToolLayoutTemplate)=>{template.columns.left=5;},
@@ -40,7 +52,7 @@ test('renamed, reordered, moved or resized old built-ins keep their exact custom
   (template:ToolLayoutTemplate)=>{const [first]=template.groups[0].items.splice(0,1);template.unassigned.push(first);},
  ]){
   const previous=previousLayout();edit(previous.templates[0]);const before=structuredClone(previous.templates[0]);
-  const reopened=reopen(previous);assert.equal(reopened.activeId,'default');assert.deepEqual(reopened.templates[0],before);
+  const reopened=reopen(previous);assert.equal(reopened.activeId,'default');assertBackgroundSeparated(reopened.templates[0],before);
   assert.deepEqual(reopened.templates.slice(1),defaultToolLayoutPreferences().templates.slice(1));complete(reopened);
  }
 });
@@ -48,7 +60,7 @@ test('renamed, reordered, moved or resized old built-ins keep their exact custom
 test('a sole custom legacy layout stays active and receives a separate category preset exactly once',()=>{
  const previous=previousLayout();previous.templates=previous.templates.slice(0,1);previous.templates[0].groups[0].name='手边工具';
  const before=structuredClone(previous.templates[0]),first=reopen(previous);
- assert.equal(first.activeId,'default');assert.deepEqual(first.templates[0],before);
+ assert.equal(first.activeId,'default');assertBackgroundSeparated(first.templates[0],before);
  assert.equal(first.templates.length,2);assert.equal(first.templates[1].name,'分类排版');
  assert.deepEqual(first.templates[1].groups,defaultToolLayoutPreferences().templates[0].groups);
  assert.deepEqual(reopen(first),first);complete(first);
@@ -61,7 +73,8 @@ test('custom templates at capacity are not overwritten to make room for a new pr
  const previous=previousLayout(),source=previous.templates[0];
  previous.templates=Array.from({length:20},(_,index)=>({...structuredClone(source),id:`custom-${index}`,name:`排版 ${index}`}));
  previous.activeId='custom-19';
- assert.deepEqual(reopen(previous),{...previous,columnSizingVersion:1});complete(reopen(previous));
+ const reopened=reopen(previous);assert.equal(reopened.activeId,'custom-19');assert.equal(reopened.templates.length,20);assert.equal(reopened.backgroundPanelVersion,1);
+ for(let index=0;index<20;index++)assertBackgroundSeparated(reopened.templates[index],previous.templates[index]);complete(reopened);
 });
 
 test('new category edits survive save and reopen without being reset or multiplying presets',()=>{
@@ -77,7 +90,7 @@ function previousDrawingLayout():ToolLayoutPreferences {
   ['selection','选择',['select','unselect','selectpolygon','unselectpolygon','selectlasso','unselectlasso','selectcross','unselectcross']],
   ['drawing','绘制',['line','restrictedline','parallel','offsetparallel','perpendicular','bisect','bisectlines','midperp','angledrag','angledirection','angleconverge','angleproject','polygon','circle','circleradius','circle3','circleseparate','circleconcentric','circleequal','restrictedcircle','tangentpoint','tangentcircles','divide','ratio','addvertex']],
   ['deletion','删除',['erase','eraseedge','eraseaux','deletetype','eraseoverlap','erasecross']],
-  ['transform','变换',['moveselection','movefour','copyselection','copyfour','mirrorselection','mirrorline','reflection','reflectionlines','transverse','continuous','circleinvert','lineinvert','circleedit','backgroundposition','advancetype','pan','operationframe','makemountain','makevalley','makeedge','makeaux','replacetype','regionalswap','cycletype']],
+  ['transform','变换',['moveselection','movefour','copyselection','copyfour','rotatecopyselection','mirrorselection','mirrorline','reflection','reflectionlines','transverse','continuous','circleinvert','lineinvert','circleedit','backgroundposition','advancetype','pan','operationframe','makemountain','makevalley','makeedge','makeaux','replacetype','regionalswap','cycletype']],
   ['repair','修复',['localflat','foldableinput','foldabledraw','mergevertex','mergecrossvertex','trim','extend','lengthen','circlepair','alternatecollinear','alternatecross']],
   ['marks','注释',['mark','erasemark','text','customcolor']],
   ['generation','生成',['voronoi','axiom5','axiom7','rabbitear','fishbone','drawdivide','drawratio','circledifference']],
@@ -105,7 +118,7 @@ function previousAdvancedLayout():ToolLayoutPreferences {
 }
 /** The twelve-category layout before reflections and inversions were regrouped. */
 function previousCopyMoveLayout():ToolLayoutPreferences {
- const previous=previousAdvancedLayout(),moving=['moveselection','movefour','copyselection','copyfour','mirrorselection','mirrorline','pan'];
+ const previous=previousAdvancedLayout(),moving=['moveselection','movefour','copyselection','copyfour','rotatecopyselection','mirrorselection','mirrorline','pan'];
  for(const template of previous.templates){
   const index=template.groups.findIndex(group=>group.id==='transform'),transform=template.groups[index];
   transform.items=transform.items.filter(item=>!moving.includes(item));
@@ -125,12 +138,24 @@ function previousGenerationAdvancedLayout():ToolLayoutPreferences {
  }
  return previous;
 }
+/** Frozen layout immediately before the dedicated background section. The
+ * historical chain and explicit final groups never read today's categories. */
+function previousBackgroundLayout():ToolLayoutPreferences {
+ const previous=previousGenerationAdvancedLayout();
+ for(const template of previous.templates){
+  template.groups.find(group=>group.id==='advanced')!.items=['polygon','circle','circleradius','circle3','circleedit','circleseparate','circleconcentric','circleequal','circlepair','restrictedcircle','tangentpoint','tangentcircles','circleinvert','lineinvert','circledifference'];
+  template.groups.find(group=>group.id==='transform')!.items=['backgroundposition','advancetype','operationframe','makemountain','makevalley','makeedge','makeaux','replacetype','regionalswap','cycletype'];
+  template.groups.find(group=>group.id==='repair')!.items=['localflat','foldableinput','foldabledraw','mergevertex','mergecrossvertex','trim','extend','lengthen','alternatecollinear','alternatecross'];
+  template.groups.find(group=>group.id==='generation')!.items=['voronoi','axiom5','axiom7','rabbitear','fishbone','drawdivide','drawratio','reflection','reflectionlines','transverse','continuous'];
+ }
+ return previous;
+}
 /** Saved categories before assignment and alternating tools were regrouped. */
 function previousCategoryLayout():ToolLayoutPreferences {
  const previous=previousDrawingLayout();
  for(const template of previous.templates){
   template.groups.find(group=>group.id==='types')!.items=['makemountain','makevalley','makeedge','makeaux','replacetype','regionalswap','cycletype','alternatecollinear','alternatecross'];
-  template.groups.find(group=>group.id==='transform')!.items=['moveselection','movefour','copyselection','copyfour','mirrorselection','mirrorline','reflection','reflectionlines','transverse','continuous','circleinvert','lineinvert','circleedit','backgroundposition','advancetype','pan','operationframe'];
+  template.groups.find(group=>group.id==='transform')!.items=['moveselection','movefour','copyselection','copyfour','rotatecopyselection','mirrorselection','mirrorline','reflection','reflectionlines','transverse','continuous','circleinvert','lineinvert','circleedit','backgroundposition','advancetype','pan','operationframe'];
   template.groups.find(group=>group.id==='repair')!.items=['localflat','foldableinput','foldabledraw','mergevertex','mergecrossvertex','trim','extend','lengthen','circlepair'];
  }
  return previous;
@@ -174,7 +199,7 @@ test('customized category presets retain their columns and exact group arrangeme
  ]){
   const previous=source();edit(previous.templates[0]);previous.activeId=previous.templates[0].id;
   const customized=structuredClone(previous.templates[0]),next=reopen(previous);
-  assert.equal(next.activeId,customized.id);assert.deepEqual(next.templates[0],customized);
+  assert.equal(next.activeId,customized.id);assertBackgroundSeparated(next.templates[0],customized);
   assert.deepEqual(next.templates.slice(1),defaultToolLayoutPreferences().templates.slice(1));complete(next);
  }
 });
@@ -192,7 +217,8 @@ test('saving a version-one layout marks its explicit column choice without requi
  const existing=fixedCategoryLayout();let raw='';
  saveToolLayoutPreferences(existing,{setItem:(_key,value)=>{raw=value;}});
  assert.equal(JSON.parse(raw).version,1);
- assert.deepEqual(readToolLayoutPreferences({getItem:()=>raw}),{...existing,columnSizingVersion:1});
+ const reopened=readToolLayoutPreferences({getItem:()=>raw});assert.equal(reopened.columnSizingVersion,1);assert.equal(reopened.backgroundPanelVersion,1);assert.equal(reopened.activeId,existing.activeId);
+ for(let index=0;index<existing.templates.length;index++)assertBackgroundSeparated(reopened.templates[index],existing.templates[index]);
  assert.equal(existing.columnSizingVersion,undefined);
 });
 
@@ -221,7 +247,7 @@ test('customized 0.13.41 drawing presets keep exact circle placement, groups, co
  ]){
   const previous=previousDrawingLayout();edit(previous.templates[0]);previous.activeId=previous.templates[0].id;
   const customized=structuredClone(previous.templates[0]),next=reopen(previous);
-  assert.equal(next.activeId,customized.id);assert.deepEqual(next.templates[0],customized);
+  assert.equal(next.activeId,customized.id);assertBackgroundSeparated(next.templates[0],customized);
   assert.deepEqual(next.templates.slice(1),defaultToolLayoutPreferences().templates.slice(1));complete(next);
   let raw='';saveToolLayoutPreferences(next,{setItem:(_key,value)=>{raw=value;}});
   assert.deepEqual(readToolLayoutPreferences({getItem:()=>raw}),next);
@@ -230,8 +256,8 @@ test('customized 0.13.41 drawing presets keep exact circle placement, groups, co
 
 test('a sole custom category layout is not rewritten or multiplied to introduce Advanced',()=>{
  const previous=previousDrawingLayout();previous.templates=previous.templates.slice(0,1);previous.templates[0].name='我的工具';
- assert.deepEqual(reopen(previous),previous);
- assert.deepEqual(reopen(reopen(previous)),previous);complete(previous);
+ const reopened=reopen(previous);assert.equal(reopened.activeId,previous.activeId);assert.equal(reopened.templates.length,1);assertBackgroundSeparated(reopened.templates[0],previous.templates[0]);
+ assert.deepEqual(reopen(reopened),reopened);complete(reopened);
 });
 
 test('untouched eleven- and twelve-category presets upgrade with active selection and persisted round trips intact',()=>{
@@ -264,7 +290,7 @@ test('customized eleven- and twelve-category presets retain exact tool placement
  ]){
   const previous=source();edit(previous.templates[0]);previous.activeId=previous.templates[0].id;
   const customized=structuredClone(previous.templates[0]),next=reopen(previous);
-  assert.equal(next.activeId,customized.id);assert.deepEqual(next.templates[0],customized);
+  assert.equal(next.activeId,customized.id);assertBackgroundSeparated(next.templates[0],customized);
   assert.deepEqual(next.templates.slice(1),defaultToolLayoutPreferences().templates.slice(1));complete(next);
   let saved='';saveToolLayoutPreferences(next,{setItem:(_key,value)=>{saved=value;}});
   assert.deepEqual(readToolLayoutPreferences({getItem:()=>saved}),next);
@@ -275,6 +301,48 @@ test('a sole customized eleven- or twelve-category layout is not rewritten or mu
  for(const source of [previousAdvancedLayout,previousCopyMoveLayout,previousGenerationAdvancedLayout]){
   const previous=source();previous.templates=previous.templates.slice(0,1);previous.templates[0].name='我的工具';
   const before=structuredClone(previous),next=reopen(previous);
-  assert.deepEqual(next,before);assert.deepEqual(reopen(next),before);complete(next);
+  assert.equal(next.activeId,before.activeId);assert.equal(next.templates.length,before.templates.length);assertBackgroundSeparated(next.templates[0],before.templates[0]);assert.deepEqual(reopen(next),next);complete(next);
  }
+});
+
+test('untouched pre-background built-ins move only dedicated background tools to the pool and remain idempotent',()=>{
+ for(const activeId of ['default','swapped','all-left']){
+  const previous=previousBackgroundLayout();previous.activeId=activeId;const before=structuredClone(previous);let writes=0;
+  assert.equal(previous.templates[0].groups.length,12);assert.deepEqual(previous.templates[0].groups.find(group=>group.id==='transform')!.items.slice(0,3),BACKGROUND_TOOLS);
+  const next=readToolLayoutPreferences({getItem:()=>JSON.stringify(previous),setItem:()=>writes++} as Storage);
+  assert.deepEqual(next,{...defaultToolLayoutPreferences(),activeId});assert.deepEqual(previous,before);assert.equal(writes,0);
+  for(const template of next.templates){assert.deepEqual(template.unassigned,BACKGROUND_TOOLS);assert.ok(template.groups.every(group=>group.items.every(item=>!BACKGROUND_TOOLS.includes(item as never))));}
+  complete(next);assert.deepEqual(reopen(next),next);
+  let saved='';saveToolLayoutPreferences(next,{setItem:(_key,value)=>{saved=value;}});assert.deepEqual(readToolLayoutPreferences({getItem:()=>saved}),next);
+ }
+});
+
+test('all old custom layouts separate background tools once while preserving every other placement and active selection',()=>{
+ const edits=[
+  (template:ToolLayoutTemplate)=>{template.id='my-background-layout';},
+  (template:ToolLayoutTemplate)=>{template.name='我的底图工作区';},
+  (template:ToolLayoutTemplate)=>{template.columns={left:4,right:4};},
+  (template:ToolLayoutTemplate)=>{template.groups.find(group=>group.id==='transform')!.name='我的变换';},
+  (template:ToolLayoutTemplate)=>{const group=template.groups.find(group=>group.id==='transform')!;group.side=group.side==='left'?'right':'left';},
+  (template:ToolLayoutTemplate)=>{template.groups.reverse();},
+  (template:ToolLayoutTemplate)=>{template.groups.find(group=>group.id==='transform')!.items.reverse();},
+  (template:ToolLayoutTemplate)=>{const transform=template.groups.find(group=>group.id==='transform')!;transform.items=transform.items.filter(item=>item!=='backgroundposition');template.groups.find(group=>group.id==='drawing')!.items.unshift('backgroundposition');},
+  (template:ToolLayoutTemplate)=>{const transform=template.groups.find(group=>group.id==='transform')!;transform.items=transform.items.filter(item=>item!=='advancetype');template.unassigned.push('advancetype');},
+ ];
+ for(let target=0;target<3;target++)for(const edit of edits){
+  const previous=previousBackgroundLayout();edit(previous.templates[target]);previous.activeId=previous.templates[target].id;
+  const before=structuredClone(previous),next=reopen(previous);
+  assert.equal(next.activeId,previous.activeId);assert.equal(next.backgroundPanelVersion,1);assertBackgroundSeparated(next.templates[target],before.templates[target]);
+  for(let other=0;other<3;other++)if(other!==target)assert.deepEqual(next.templates[other],defaultToolLayoutPreferences().templates[other]);
+  complete(next);assert.deepEqual(previous,before);assert.deepEqual(reopen(next),next);
+  let saved='';saveToolLayoutPreferences(next,{setItem:(_key,value)=>{saved=value;}});assert.deepEqual(readToolLayoutPreferences({getItem:()=>saved}),next);
+ }
+});
+
+test('the migration marker preserves future explicit background placement even when it recreates an old builtin exactly',()=>{
+ const previous=previousBackgroundLayout(),migrated=reopen(previous);assert.equal(previous.backgroundPanelVersion,undefined);assert.equal(migrated.backgroundPanelVersion,1);
+ let restored=migrated;for(const [index,item] of BACKGROUND_TOOLS.entries())restored=moveToolLayoutItem(restored,item,'transform',index);
+ assert.deepEqual(restored.templates[0],previous.templates[0],'the user deliberately reconstructs the old default arrangement');
+ assert.deepEqual(reopen(restored),restored);
+ let saved='';saveToolLayoutPreferences(restored,{setItem:(_key,value)=>{saved=value;}});assert.equal(JSON.parse(saved).backgroundPanelVersion,1);assert.deepEqual(readToolLayoutPreferences({getItem:()=>saved}),restored);complete(restored);
 });

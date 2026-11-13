@@ -16,7 +16,7 @@ export interface CreasePatternStrokeOptions {enabled?:boolean;units?:number;soli
 export interface CreasePatternGridOptions {divisions:number;pattern?:GridPattern;rotation?:number;diagonal?:boolean;diagonalAngle?:number;scope?:'paper'|'canvas';appearance?:GridAppearance}
 function gridSVG(doc:Doc,bounds:Bounds,outline:string,units:number,options?:CreasePatternGridOptions):string{
  if(!options)return '';
- if(!Number.isInteger(options.divisions)||options.divisions<GRID_MIN||options.divisions>GRID_MAX)throw new Error('导出网格等分须为 1—128 的整数。');
+ if(!Number.isInteger(options.divisions)||options.divisions<GRID_MIN||options.divisions>GRID_MAX)throw new Error(`导出网格等分须为 ${GRID_MIN}—${GRID_MAX} 的整数。`);
  if(options.diagonal!==undefined&&typeof options.diagonal!=='boolean'||options.scope!==undefined&&options.scope!=='paper'&&options.scope!=='canvas'||options.pattern!==undefined&&options.pattern!=='square'&&options.pattern!=='triangular')throw new Error('导出网格设置无效。');
  const appearance=validateGridAppearance(options.appearance??defaultGridAppearance());
  if(options.pattern!=='triangular'&&options.diagonalAngle!==undefined)validateDiagonalGridAngle(options.diagonalAngle);

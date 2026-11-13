@@ -1,4 +1,4 @@
-import {useId,useMemo,useRef,useState} from 'react';
+import {useEffect,useId,useMemo,useRef,useState} from 'react';
 import {Icon} from './Fields';
 import AppDialog from './AppDialog';
 import './DiagramLibrary.css';
@@ -25,6 +25,7 @@ export interface CreaseLibraryFolder {
 }
 
 export interface CreaseLibraryProps {
+  workspaceName?:string;
   documents:CreaseLibraryDocument[];
   folders:CreaseLibraryFolder[];
   lastOpenId:string|null;
@@ -50,24 +51,32 @@ export interface CreaseLibraryProps {
 type Location={kind:'all'|'recent'}|{kind:'folder';id:string|null};
 type Dialog={kind:'folder';name:string;parentId:string|null}|{kind:'rename'|'delete';id:string;name:string};
 const modifiedTime=(entry:CreaseLibraryDocument)=>Date.parse(entry.updated)||0;
+const modifiedDateFormat=new Intl.DateTimeFormat('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false});
 const dateText=(entry:CreaseLibraryDocument)=>{
   const stamp=modifiedTime(entry);
-  return stamp?new Intl.DateTimeFormat('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false}).format(stamp):'未记录时间';
+  return stamp?modifiedDateFormat.format(stamp):'未记录时间';
 };
 const detailText=(entry:CreaseLibraryDocument)=>entry.kind==='curve-design'?`曲面设计 · ${entry.samples??0} 个采样点`:`${entry.segments} 条折痕`;
 const svgSource=(svg:string)=>`data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
 
 function Preview({entry,large=false}:{entry:CreaseLibraryDocument;large?:boolean}) {
   const [failedThumbnail,setFailedThumbnail]=useState<string|null>(null);
+  const element=useRef<HTMLDivElement>(null),[visible,setVisible]=useState(false);
+  useEffect(()=>{
+    if(typeof IntersectionObserver==='undefined'){setVisible(true);return;}
+    const observer=new IntersectionObserver(entries=>{if(entries.some(entry=>entry.isIntersecting)){setVisible(true);observer.disconnect();}},{root:element.current?.closest('.diagram-library-main')??null,rootMargin:'160px'});
+    if(element.current)observer.observe(element.current);return()=>observer.disconnect();
+  },[]);
   const thumbnail=entry.thumbnail&&entry.thumbnail!==failedThumbnail?entry.thumbnail:null;
+  const source=useMemo(()=>visible&&thumbnail?svgSource(thumbnail):null,[visible,thumbnail]);
   const placeholder=entry.segments===0&&entry.kind!=='curve-design'?'空白折痕':'CP 预览暂不可用';
-  return <div className={'diagram-library-preview'+(large?' is-large':'')}>
-    {thumbnail?<img src={svgSource(thumbnail)} alt={`${entry.name} CP 缩略图`} draggable={false} onError={()=>setFailedThumbnail(thumbnail)}/>:<div className="crease-library-preview-placeholder" role="img" aria-label={`${entry.name}：${placeholder}`}><svg viewBox="0 0 320 220" aria-hidden="true"><rect x="76" y="26" width="168" height="168"/></svg><span>{placeholder}</span></div>}
+  return <div ref={element} className={'diagram-library-preview'+(large?' is-large':'')}>
+    {source?<img loading="lazy" decoding="async" src={source} alt={`${entry.name} CP 缩略图`} draggable={false} onError={()=>setFailedThumbnail(thumbnail)}/>:<div className="crease-library-preview-placeholder" role="img" aria-label={`${entry.name}：${placeholder}`}><svg viewBox="0 0 320 220" aria-hidden="true"><rect x="76" y="26" width="168" height="168"/></svg><span>{placeholder}</span></div>}
     <span className={'diagram-library-status'+(entry.draft?' is-draft':'')}>{entry.draft?'草稿':'已保存'}</span>
   </div>;
 }
 
-export default function CreaseLibrary({documents:allDocuments,folders:allFolders,lastOpenId,currentId,currentName,onOpen,onNew,onNewExample,onImport,onSaveCurrent,onContinueCurrent,canSaveCurrent=true,onCreateFolder,onRename,onMove,onDelete,busy=false,error='',loading=false,onRefresh}:CreaseLibraryProps) {
+export default function CreaseLibrary({workspaceName,documents:allDocuments,folders:allFolders,lastOpenId,currentId,currentName,onOpen,onNew,onNewExample,onImport,onSaveCurrent,onContinueCurrent,canSaveCurrent=true,onCreateFolder,onRename,onMove,onDelete,busy=false,error='',loading=false,onRefresh}:CreaseLibraryProps) {
   const [location,setLocation]=useState<Location>({kind:'all'});
   const [search,setSearch]=useState('');
   const [dialog,setDialog]=useState<Dialog|null>(null);
@@ -120,9 +129,9 @@ export default function CreaseLibrary({documents:allDocuments,folders:allFolders
     else onRename(dialog.id,dialog.name.trim());
     setDialog(null);
   }
-  return <section className="diagram-library crease-library" data-crease-library aria-label="折痕编辑文档" aria-busy={locked}>
+  return <section className="diagram-library crease-library" data-crease-library aria-label={(workspaceName??'折痕编辑')+'文档'} aria-busy={locked}>
     <aside className="diagram-library-sidebar">
-      <header><Icon name="folder"/><strong>折痕文档</strong></header>
+      <header><Icon name="folder"/><strong>{workspaceName?workspaceName+'文档':'折痕文档'}</strong></header>
       <nav aria-label="折痕文件夹">
         <button aria-current={location.kind==='all'?'page':undefined} onClick={()=>setLocation({kind:'all'})}><Icon name="grid"/>全部工程<span>{allDocuments.length}</span></button>
         <button aria-current={location.kind==='recent'?'page':undefined} onClick={()=>setLocation({kind:'recent'})}><Icon name="undo"/>最近工程</button>
@@ -134,7 +143,7 @@ export default function CreaseLibrary({documents:allDocuments,folders:allFolders
     </aside>
     <main className="diagram-library-main">
       <header className="diagram-library-heading">
-        <div><h1>我的折痕</h1><span>{allDocuments.length} 份工程 · {allFolders.length} 个文件夹</span></div>
+        <div><h1>{workspaceName?workspaceName+'工程':'我的折痕'}</h1><span>{allDocuments.length} 份工程 · {allFolders.length} 个文件夹</span></div>
         <div className="diagram-library-actions">
           {onContinueCurrent&&<button onClick={onContinueCurrent} disabled={locked}>继续当前折痕</button>}
           <button onClick={onSaveCurrent} disabled={locked||!canSaveCurrent} title={`保存“${currentName}”到文档库`}><Icon name="save"/>保存当前</button>

@@ -4,7 +4,7 @@ import {blankDoc,line} from '../../src/app/state';
 import {computeFlatFold} from '../../src/core/flatFold';
 import {normalizeDiagramCP} from '../../src/app/diagramCP';
 import {createDiagramProject,adoptDiagramPose,appendDiagramStep,updateDiagramFoldLink,updateDiagramCP,updateDiagramPoseResult,type DiagramProject} from '../../src/app/diagramProject';
-import {getDiagramCPEditAccess,applyDiagramCPEdit} from '../../src/app/diagramCPEditing';
+import {getDiagramCPEditAccess,applyDiagramCPEdit,applyReturnedDiagramCP} from '../../src/app/diagramCPEditing';
 import {findDiagramCPEdge,editDiagramCPEdge} from '../../src/app/diagramCPEdgeEdit';
 import {moveFoldedVertices} from '../../src/app/foldedVertexEdit';
 
@@ -131,4 +131,23 @@ test('read-only before editing does not block selecting its existing edge to ope
   assert.equal(getDiagramCPEditAccess(project,step.id,step.beforeId).editable,false);
   const edge=findDiagramCPEdge(project.states[0],{a:[0,50],b:[100,50]}),edited=editDiagramCPEdge(project,step.id,step.beforeId,edge,'V');
   assert.deepEqual(edited.states[0],project.states[0]);assert.ok(edited.states[1].doc.segments.some(segment=>segment.assignment==='V'));
+});
+
+test('returning an initial CP refreshes its source and preserves the fold link',()=>{
+  const project=fixture(),step=project.steps[0],state=project.states[0],edited=changedDoc(project,state.id);
+  const updated=applyReturnedDiagramCP(project,step.id,state.id,state.revision,edited);
+  assert.deepEqual(updated.states[0].doc,edited);
+  assert.equal(updated.states[0].revision,state.revision+1);
+  assert.equal(updated.steps[0].foldLink?.enabled,true);
+  assert.throws(()=>applyReturnedDiagramCP(updated,step.id,state.id,state.revision,edited),/来源 CP 已修改/);
+  assert.throws(()=>applyReturnedDiagramCP(project,'removed',state.id,state.revision,edited),/已被移除/);
+});
+
+test('returning a shared before CP edits its owner even after navigating to another step',()=>{
+  const project=appendDiagramStep(fixture(false)),step=project.steps[1],state=project.states[1];
+  const navigated={...project,activeStepId:project.steps[0].id};
+  const updated=applyReturnedDiagramCP(navigated,step.id,state.id,state.revision,changedDoc(project,state.id));
+  assert.equal(updated.states[1].revision,state.revision+1);
+  assert.equal(updated.states[0].revision,project.states[0].revision);
+  assert.equal(updated.activeStepId,navigated.activeStepId);
 });

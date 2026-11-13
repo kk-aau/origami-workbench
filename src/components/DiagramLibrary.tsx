@@ -1,4 +1,4 @@
-import {useId,useMemo,useRef,useState} from 'react';
+import {useEffect,useId,useMemo,useRef,useState} from 'react';
 import {diagramLibraryIsDraft,type DiagramLibraryIndex,type DiagramLibraryEntry} from '../app/diagramLibrary';
 import type {DiagramProject} from '../app/diagramProject';
 import {Icon} from './Fields';
@@ -7,8 +7,8 @@ import './DiagramLibrary.css';
 
 export interface DiagramLibraryProps {
   index:DiagramLibraryIndex;currentId:string|null;currentProject:DiagramProject;
-  getThumbnail:(id:string)=>string|null;
-  onOpen:(id:string)=>void;onNew:()=>void;onImport:()=>void;onSaveCurrent:()=>void;
+  getThumbnail:(id:string)=>string|null|Promise<string|null>;
+  onOpen:(id:string)=>void;onNew:()=>void;onImport:()=>void;onSaveCurrent?:()=>void;
   onCreateFolder:(name:string,parentId:string|null)=>void;
   onRename:(id:string,name:string)=>void;onMove:(id:string,folderId:string|null)=>void;onDelete:(id:string)=>void;
   onContinueCurrent?:()=>void;busy?:boolean;error?:string;
@@ -19,9 +19,17 @@ const dateText=(stamp:number)=>new Intl.DateTimeFormat('zh-CN',{month:'2-digit',
 const svgSource=(svg:string)=>`data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
 
 function Preview({entry,getThumbnail,large=false}:{entry:DiagramLibraryEntry;getThumbnail:DiagramLibraryProps['getThumbnail'];large?:boolean}) {
-  const thumbnail=useMemo(()=>{try{return getThumbnail(entry.id);}catch{return null;}},[getThumbnail,entry.id,entry.draftKey,entry.savedKey]);
-  return <div className={'diagram-library-preview'+(large?' is-large':'')}>
-    {thumbnail?<img src={svgSource(thumbnail)} alt={`${entry.name}绘图缩略图`} draggable={false}/>:<div className="diagram-library-preview-empty"><Icon name="folder"/><span>折序绘图</span></div>}
+  const element=useRef<HTMLDivElement>(null),[thumbnail,setThumbnail]=useState<string|null>(null);
+  useEffect(()=>{
+    let live=true,started=false;setThumbnail(null);
+    const load=()=>{if(started)return;started=true;void Promise.resolve().then(()=>getThumbnail(entry.id)).then(value=>{if(live)setThumbnail(value);},()=>{});};
+    const node=element.current;
+    if(!node||typeof IntersectionObserver==='undefined'){load();return()=>{live=false;};}
+    const observer=new IntersectionObserver(entries=>{if(entries.some(item=>item.isIntersecting)){observer.disconnect();load();}},{root:node.closest('.diagram-library-main'),rootMargin:'160px'});
+    observer.observe(node);return()=>{live=false;observer.disconnect();};
+  },[getThumbnail,entry.id,entry.draftKey,entry.savedKey]);
+  return <div ref={element} className={'diagram-library-preview'+(large?' is-large':'')}>
+    {thumbnail?<img loading="lazy" decoding="async" src={svgSource(thumbnail)} alt={`${entry.name}绘图缩略图`} draggable={false}/>:<div className="diagram-library-preview-empty"><Icon name="folder"/><span>折序绘图</span></div>}
     <span className={'diagram-library-status'+(diagramLibraryIsDraft(entry)?' is-draft':'')}>{diagramLibraryIsDraft(entry)?'草稿':'已保存'}</span>
   </div>;
 }
@@ -54,7 +62,7 @@ export default function DiagramLibrary({index,currentId,currentProject,getThumbn
         <div><p>折序绘图</p><h1>我的绘图</h1><span>{index.documents.length} 份绘图 · {index.folders.length} 个文件夹</span></div>
         <div className="diagram-library-actions">
           {onContinueCurrent&&<button onClick={onContinueCurrent} disabled={busy}>继续当前绘图</button>}
-          <button onClick={onSaveCurrent} disabled={busy} title={`保存“${currentProject.name}”到文档库`}><Icon name="save"/>保存当前</button>
+          {onSaveCurrent&&<button onClick={onSaveCurrent} disabled={busy} title={`保存“${currentProject.name}”到文档库`}><Icon name="save"/>保存当前</button>}
           <button onClick={onImport} disabled={busy}><Icon name="folder"/>导入工程</button>
           <button className="diagram-library-primary" onClick={onNew} disabled={busy}>＋ 新建绘图</button>
         </div>

@@ -5,14 +5,15 @@ import {clampGridDivisions} from './gridControls';
 
 export interface DiagramSnapGrid extends GridLattice {}
 interface GridSettings {gridDivisions?:number;gridSpacing:number;gridSubdivisions:number;diagonalGrid:boolean}
-export interface DiagramPaperGrid extends DiagramSnapGrid {divisions:number;snap:(point:Point)=>Point}
+export interface DiagramPaperGrid extends DiagramSnapGrid {bounds:Bounds;divisions:number;snap:(point:Point)=>Point}
 
 /** Source paper bounds, not folded-model or annotation bounds, define the grid.
+ * Divisions apply to the width; both axes retain the same physical spacing.
  * Legacy millimetre settings are interpreted once as a paper division count. */
 export function diagramPaperGrid(settings:GridSettings,doc?:Doc):DiagramPaperGrid{
   const bounds=doc?getPaperBounds(doc):{x:0,y:0,width:200,height:200};
   const divisions=clampGridDivisions(settings.gridDivisions??bounds.width/settings.gridSpacing*settings.gridSubdivisions);
-  return {...paperGridGeometry(bounds,divisions),divisions,diagonal:settings.diagonalGrid};
+  return {...paperGridGeometry(bounds,divisions,{pattern:'square',diagonal:settings.diagonalGrid}),bounds,divisions};
 }
 
 /** A hidden or unreadably dense grid must not catch a pointer. Zoom never

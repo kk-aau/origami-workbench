@@ -1,23 +1,23 @@
 import {useEffect,useId,useRef,useState} from 'react';
-import type {DiagramLineStyle,DiagramLineAnnotation} from '../app/diagramAnnotations';
+import type {DiagramLineStyle} from '../app/diagramAnnotations';
 import {diagramAnnotationMarkup} from '../app/diagramAnnotationSVG';
 import {evaluateDiagramRatio} from '../app/diagramPrecisionTools';
 import {DIAGRAM_ANGLE_PRESET_MIN,DIAGRAM_ANGLE_PRESET_MAX,isValidDiagramAnglePreset} from '../app/diagramAnglePreset';
 import type {DiagramDrawingTool} from './DiagramDrawingCanvas';
+import {Icon} from './Fields';
 import './DiagramPrecisionToolbar.css';
 
 export interface DiagramPrecisionSettings {ratioA:number;ratioB:number;expression:string}
 interface Props {
   showLineStyles?:boolean;tool:DiagramDrawingTool;lineStyle:DiagramLineStyle;disabled:boolean;angle:number;pointCount:number;
   precision:DiagramPrecisionSettings;onPrecision:(settings:DiagramPrecisionSettings)=>void;
-  foldAction:NonNullable<DiagramLineAnnotation['foldAction']>;onFoldAction:(action:NonNullable<DiagramLineAnnotation['foldAction']>)=>void;
   onLine:(style:DiagramLineStyle)=>void;onPointTool:(tool:'ratio-point'|'special-point')=>void;
   onAngle:(angle:number)=>void;onClearPoints:()=>void;
 }
 const STYLES:[DiagramLineStyle,string][]=[['valley','谷折'],['mountain','峰折'],['crease','已有折痕'],['auxiliary','辅助线']];
 const PRESET_ANGLES=[0,15,22.5,30,45,60,90];
 
-export default function DiagramPrecisionToolbar({showLineStyles=true,tool,lineStyle,disabled,angle,pointCount,precision,onPrecision,foldAction,onFoldAction,onLine,onPointTool,onAngle,onClearPoints}:Props){
+export default function DiagramPrecisionToolbar({showLineStyles=true,tool,lineStyle,disabled,angle,pointCount,precision,onPrecision,onLine,onPointTool,onAngle,onClearPoints}:Props){
   const [panel,setPanel]=useState<'angle'|'ratio'|'special'|null>(null);
   const [customAngle,setCustomAngle]=useState(!PRESET_ANGLES.includes(angle));
   const [angleDraft,setAngleDraft]=useState(String(angle||22.5)),[angleError,setAngleError]=useState('');
@@ -43,13 +43,9 @@ export default function DiagramPrecisionToolbar({showLineStyles=true,tool,lineSt
   return <div ref={toolbar} className="diagram-precision-toolbar" aria-label="绘线与精确取点工具" onKeyDown={e=>{if(e.key==='Escape')setPanel(null);}}>
     <div className="diagram-precision-buttons">
       {showLineStyles&&STYLES.map(([style,label])=><button type="button" key={style} disabled={disabled} aria-label={label} aria-pressed={['line','polyline'].includes(tool)&&lineStyle===style} onClick={()=>{setPanel(null);onLine(style);}}><svg viewBox="0 0 80 12" aria-hidden="true" dangerouslySetInnerHTML={{__html:diagramAnnotationMarkup({id:'style-'+style,kind:'line',a:[4,6],b:[76,6],style,color:'#426f59',width:1})}}/><span>{label}</span></button>)}
-      <div className="diagram-fold-action-toggle" role="group" aria-label="新山谷折线用途">
-        <button type="button" disabled={disabled} aria-pressed={foldAction==='fold'} onClick={()=>{setPanel(null);onFoldAction('fold');}}>本步折叠</button>
-        <button type="button" disabled={disabled} aria-pressed={foldAction==='precrease'} title="先折再展开：留下折痕，下一步保持展开" onClick={()=>{setPanel(null);onFoldAction('precrease');}}>预折后展开</button>
-      </div>
-      <button type="button" disabled={disabled} aria-expanded={panel==='angle'} aria-pressed={angle>0} onClick={toggleAnglePanel}>预设角度{angle>0&&<small>{angle}°</small>}</button>
-      <button type="button" disabled={disabled} aria-expanded={panel==='ratio'} aria-pressed={tool==='ratio-point'} onClick={()=>pointTool('ratio')}>比例分点</button>
-      <button type="button" disabled={disabled} aria-expanded={panel==='special'} aria-pressed={tool==='special-point'} onClick={()=>pointTool('special')}>特殊取点</button>
+      <button type="button" disabled={disabled} aria-expanded={panel==='angle'} aria-pressed={angle>0} title={angle>0?`预设角度 · ${angle}°`:'预设角度 · 自由'} onClick={toggleAnglePanel}><Icon name="angledirection"/><span>预设角度</span></button>
+      <button type="button" disabled={disabled} aria-expanded={panel==='ratio'} aria-pressed={tool==='ratio-point'} onClick={()=>pointTool('ratio')}><Icon name="ratio"/><span>比例分点</span></button>
+      <button type="button" disabled={disabled} aria-expanded={panel==='special'} aria-pressed={tool==='special-point'} onClick={()=>pointTool('special')}><Icon name="addvertex"/><span>特殊取点</span></button>
     </div>
     {panel&&!disabled&&<div className="diagram-precision-panel" role="group" aria-label={panel==='angle'?'预设角度参数':panel==='ratio'?'比例分点参数':'特殊取点参数'}>
       <button type="button" className="diagram-precision-close" aria-label="关闭精确取点参数" onClick={()=>setPanel(null)}>×</button>

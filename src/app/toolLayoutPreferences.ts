@@ -1,11 +1,11 @@
-import {LEFT_MAIN_GROUPS,LEFT_EXTRA_GROUPS,RIGHT_DOCK_GROUPS,TOOL_CATEGORY_GROUPS} from './orieditaToolLayout';
+import {LEFT_MAIN_GROUPS,LEFT_EXTRA_GROUPS,RIGHT_DOCK_GROUPS,TOOL_CATEGORY_GROUPS,BACKGROUND_TOOLS} from './orieditaToolLayout';
 import {TOOL_GUIDES,type Tool} from './tools';
 import {preferenceStorage} from './preferenceStorage';
 
 export type ToolLayoutSide='left'|'right';
 export interface ToolLayoutGroup {id:string;name:string;side:ToolLayoutSide;items:string[]}
 export interface ToolLayoutTemplate {id:string;name:string;columns:{left:number;right:number};groups:ToolLayoutGroup[];unassigned:string[]}
-export interface ToolLayoutPreferences {version:1;columnSizingVersion?:1;activeId:string;templates:ToolLayoutTemplate[]}
+export interface ToolLayoutPreferences {version:1;columnSizingVersion?:1;backgroundPanelVersion?:1;activeId:string;templates:ToolLayoutTemplate[]}
 export interface ToolLayoutTemplatePatch {name?:string;columns?:Partial<ToolLayoutTemplate['columns']>;groups?:ToolLayoutGroup[];unassigned?:string[]}
 export const TOOL_LAYOUT_PREFERENCES_KEY='zhezhi.tool-layout.v1';
 export const MAX_TOOL_LAYOUT_TEMPLATES=20;
@@ -23,6 +23,7 @@ export type ToolLayoutActionId=typeof TOOL_LAYOUT_ACTIONS[number]['id'];
 export type ToolLayoutItemId=Tool|ToolLayoutActionId;
 export const TOOL_LAYOUT_ITEM_IDS:readonly ToolLayoutItemId[]=[...Object.keys(TOOL_GUIDES) as Tool[],...TOOL_LAYOUT_ACTIONS.map(action=>action.id)];
 const itemIds=new Set<string>(TOOL_LAYOUT_ITEM_IDS);
+const backgroundToolIds=new Set<string>(BACKGROUND_TOOLS);
 export function isToolLayoutItemId(value:unknown):value is ToolLayoutItemId {return typeof value==='string'&&itemIds.has(value);}
 
 /** Stable group IDs retain user placement when a later app release adds tools. */
@@ -57,16 +58,23 @@ function defaultGroups():ToolLayoutGroup[] {
   groups.find(group=>group.id==='checks')!.items.unshift(...TOOL_LAYOUT_ACTIONS.map(action=>action.id));
   const placed=new Set(groups.flatMap(group=>group.items));
   // Future tools remain available until their task category is assigned.
-  groups.find(group=>group.id==='drawing')!.items.push(...TOOL_LAYOUT_ITEM_IDS.filter(id=>!placed.has(id)));
+  // Background tools live in their panel and stay in the editable tool pool.
+  groups.find(group=>group.id==='drawing')!.items.push(...TOOL_LAYOUT_ITEM_IDS.filter(id=>!placed.has(id)&&!backgroundToolIds.has(id)));
   return groups;
 }
 export function defaultToolLayoutPreferences():ToolLayoutPreferences {
   const groups=defaultGroups();
-  return {version:1,columnSizingVersion:1,activeId:'default',templates:[
-    {id:'default',name:'默认',columns:{left:0,right:0},groups,unassigned:[]},
-    {id:'swapped',name:'左右对调',columns:{left:0,right:0},groups:groups.map(group=>({...group,side:'right',items:[...group.items]})),unassigned:[]},
-    {id:'all-left',name:'全部左侧',columns:{left:0,right:0},groups:groups.map(group=>({...group,items:[...group.items]})),unassigned:[]},
+  return {version:1,columnSizingVersion:1,backgroundPanelVersion:1,activeId:'default',templates:[
+    {id:'default',name:'默认',columns:{left:0,right:0},groups,unassigned:[...BACKGROUND_TOOLS]},
+    {id:'swapped',name:'左右对调',columns:{left:0,right:0},groups:groups.map(group=>({...group,side:'right',items:[...group.items]})),unassigned:[...BACKGROUND_TOOLS]},
+    {id:'all-left',name:'全部左侧',columns:{left:0,right:0},groups:groups.map(group=>({...group,items:[...group.items]})),unassigned:[...BACKGROUND_TOOLS]},
   ]};
+}
+/** Pool categories include tools served by dedicated panels, so they remain
+ * visible and draggable even though they are absent from the default rails. */
+export function toolLayoutPoolGroups(unassigned:readonly string[]):ToolLayoutGroup[]{
+  const categories:ToolLayoutGroup[]=[...defaultGroups(),{id:'background',name:'底图',side:'left',items:[...BACKGROUND_TOOLS]}];
+  return categories.map(group=>({...group,id:`pool-${group.id}`,items:unassigned.filter(id=>group.items.includes(id))})).filter(group=>group.items.length);
 }
 /** Exact category presets shipped before assignment tools moved out of Types.
  * Keep this snapshot independent of defaults so later category edits cannot
@@ -150,13 +158,25 @@ function previousCircleToolLayoutTemplates():ToolLayoutTemplate[] {
   }
   return templates;
 }
+/** Exact twelve-category presets before background tools gained a dedicated
+ * panel. Keep every group independent of current defaults for safe detection. */
+function previousBackgroundToolLayoutTemplates():ToolLayoutTemplate[] {
+  const templates=previousCircleToolLayoutTemplates();
+  for(const template of templates){
+    template.groups.find(group=>group.id==='advanced')!.items=['polygon','circle','circleradius','circle3','circleedit','circleseparate','circleconcentric','circleequal','circlepair','restrictedcircle','tangentpoint','tangentcircles','circleinvert','lineinvert','circledifference'];
+    template.groups.find(group=>group.id==='transform')!.items=['backgroundposition','advancetype','operationframe','makemountain','makevalley','makeedge','makeaux','replacetype','regionalswap','cycletype'];
+    template.groups.find(group=>group.id==='repair')!.items=['localflat','foldableinput','foldabledraw','mergevertex','mergecrossvertex','trim','extend','lengthen','alternatecollinear','alternatecross'];
+  }
+  return templates;
+}
 /** Only a byte-for-byte-equivalent built-in arrangement is upgraded. A user
  * renamed, reordered, resized or edited template is never replaced. */
 function migrateBuiltinLayouts(value:unknown):unknown {
   if(!value||typeof value!=='object')return value;
   const input=value as Partial<ToolLayoutPreferences>;
   if(input.version!==1||!Array.isArray(input.templates))return value;
-  const defaults=defaultToolLayoutPreferences().templates,previousCategories=[...previousCategoryToolLayoutTemplates(),...previousDrawingToolLayoutTemplates(),...previousAdvancedToolLayoutTemplates(),...previousCopyMoveToolLayoutTemplates(),...previousGenerationToolLayoutTemplates(),...previousCircleToolLayoutTemplates()];
+  if(input.backgroundPanelVersion===1)return value;
+  const defaults=defaultToolLayoutPreferences().templates,previousCategories=[...previousCategoryToolLayoutTemplates(),...previousDrawingToolLayoutTemplates(),...previousAdvancedToolLayoutTemplates(),...previousCopyMoveToolLayoutTemplates(),...previousGenerationToolLayoutTemplates(),...previousCircleToolLayoutTemplates(),...previousBackgroundToolLayoutTemplates()];
   // Older category presets fixed both sides at four columns. Only recognize
   // that exact shipped arrangement once; choosing four columns now must persist.
   const legacy=[...legacyToolLayoutTemplates(),...previousCategories,...(input.columnSizingVersion===1?[]:[...previousCategories,...defaults].map(template=>({...template,columns:{left:4,right:4}})))];
@@ -235,17 +255,26 @@ function template(value:unknown,repairItems:boolean):ToolLayoutTemplate {
       }
       target.items.push(...missing);for(const item of missing)seen.add(item);
     }
+    // Dedicated-panel tools remain available in the editor pool even when an
+    // older layout has no pool field. Existing custom placements always win.
+    unassigned.push(...BACKGROUND_TOOLS.filter(item=>!seen.has(item)));
   }
   return {id,name:title,columns:counts,groups,unassigned};
 }
 function preferences(value:unknown,repairItems:boolean):ToolLayoutPreferences {
   const input=record(value);
   if(input.version!==1||!Array.isArray(input.templates)||!input.templates.length||input.templates.length>MAX_TOOL_LAYOUT_TEMPLATES)throw new Error(`工具布局版本无效，或模板数量超出 1～${MAX_TOOL_LAYOUT_TEMPLATES} 个。`);
+  if(input.backgroundPanelVersion!==undefined&&input.backgroundPanelVersion!==1)throw new Error('暂不支持此底图工具布局版本。');
   const templates=input.templates.map(value=>template(value,repairItems)),ids=new Set<string>();
+  if(input.backgroundPanelVersion!==1)for(const item of templates){
+    const moved=item.groups.flatMap(group=>group.items.filter(id=>backgroundToolIds.has(id)));
+    item.groups=item.groups.map(group=>({...group,items:group.items.filter(id=>!backgroundToolIds.has(id))}));
+    item.unassigned=[...new Set([...item.unassigned,...moved])];
+  }
   for(const item of templates){if(ids.has(item.id))throw new Error('工具模板标识不能重复。');ids.add(item.id);}
   const activeId=identifier(input.activeId);
   if(!repairItems&&!ids.has(activeId))throw new Error('当前工具模板不存在，请重新选择后保存。');
-  return {version:1,columnSizingVersion:1,activeId:ids.has(activeId)?activeId:templates[0].id,templates};
+  return {version:1,columnSizingVersion:1,backgroundPanelVersion:1,activeId:ids.has(activeId)?activeId:templates[0].id,templates};
 }
 export function validateToolLayoutPreferences(value:unknown,repairItems=true):ToolLayoutPreferences {return preferences(value,repairItems);}
 export function readToolLayoutPreferences(storage:Pick<Storage,'getItem'>=preferenceStorage):ToolLayoutPreferences {

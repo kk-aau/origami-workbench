@@ -23,6 +23,7 @@ const placed=new Set<Tool>([...core,...selection,...editing,...RIGHT_DOCK_GROUPS
 export const LEFT_MAIN_GROUPS:DockGroup[]=[{name:'绘图与构造',tools:core},{name:'选择与变换',tools:selection},{name:'修改与整理',tools:editing}];
 export const LEFT_EXTRA_GROUPS:DockGroup[]=LEGACY_GROUPS.map(g=>({...g,tools:g.tools.filter(t=>!placed.has(t))})).filter(g=>g.tools.length);
 export const ALL_DOCK_GROUPS=[...LEFT_MAIN_GROUPS,...LEFT_EXTRA_GROUPS,...RIGHT_DOCK_GROUPS];
+export const BACKGROUND_TOOLS:readonly Tool[]=['backgroundposition','advancetype','operationframe'];
 
 /** The editor's task-based categories. The legacy dock exports above remain as
  * the exact migration reference for saved, unmodified built-in layouts. */
@@ -33,7 +34,7 @@ export const TOOL_CATEGORY_GROUPS:(DockGroup&{id:string})[]=[
  {id:'advanced',name:'高级',tools:['polygon','circle','circleradius','circle3','circleedit','circleseparate','circleconcentric','circleequal','circlepair','restrictedcircle','tangentpoint','tangentcircles','circleinvert','lineinvert','circledifference']},
  {id:'deletion',name:'删除',tools:['erase','eraseedge','eraseaux','deletetype','eraseoverlap','erasecross']},
  {id:'copy-move',name:'复制与移动',tools:['moveselection','movefour','copyselection','copyfour','rotatecopyselection','mirrorselection','mirrorline','pan']},
- {id:'transform',name:'变换',tools:['backgroundposition','advancetype','operationframe','makemountain','makevalley','makeedge','makeaux','replacetype','regionalswap','cycletype']},
+ {id:'transform',name:'变换',tools:['makemountain','makevalley','makeedge','makeaux','replacetype','regionalswap','cycletype']},
  {id:'repair',name:'修复',tools:['localflat','foldableinput','foldabledraw','mergevertex','mergecrossvertex','trim','extend','lengthen','alternatecollinear','alternatecross']},
  {id:'marks',name:'注释',tools:['mark','erasemark','text','customcolor']},
  {id:'generation',name:'生成',tools:['voronoi','axiom5','axiom7','rabbitear','fishbone','drawdivide','drawratio','reflection','reflectionlines','transverse','continuous']},

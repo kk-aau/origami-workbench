@@ -2,6 +2,7 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {startProjectImport,type ProjectImportReply} from '../../src/app/projectImportTask';
 import {blankDoc,transformSelection} from '../../src/app/state';
+import {getPreparedEditorSignature} from '../../src/app/editorImportPreparation';
 
 function harness(){
   const fake={onmessage:null as ((e:{data:ProjectImportReply})=>void)|null,onerror:null as ((e:{message:string})=>void)|null,
@@ -17,6 +18,7 @@ test('large file is sent to worker without a byte gate; stage and prepared resul
   fake.onmessage!({data:{type:'stage',message:'整理交点'}});
   fake.onmessage!({data:{type:'result',result:{kind:'crease',doc,warnings:[]}}});
   assert.deepEqual(await task.promise,{kind:'crease',doc,warnings:[]});
+  assert.equal(getPreparedEditorSignature(doc),undefined,'legacy result replies never grant Worker-prepared identity');
   assert.deepEqual(stages,['整理交点']);assert.equal(fake.terminated,1);
   task.cancel();assert.equal(fake.terminated,1);
 });

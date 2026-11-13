@@ -20,33 +20,40 @@ export function getGridReferenceBounds(doc:Doc):Bounds{
  * of separate pieces even when their displayed CP positions overlap. */
 export const paperFillRule=(doc:Doc):'nonzero'|'evenodd'=>hasMaterialTopology(doc)?'nonzero':'evenodd';
 
-function boundsOf(points: Point[], fallback: Bounds): Bounds {
-  if (!points.length) return fallback;
-  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-  for (const [x, y] of points) { minX = Math.min(minX, x); minY = Math.min(minY, y); maxX = Math.max(maxX, x); maxY = Math.max(maxY, y); }
-  // Imported documents are restricted to +/-1e6 mm. Saturation also makes this
-  // utility safe for temporarily malformed application state outside that limit.
-  const span = (min: number, max: number) => Math.max(1, Math.min(Number.MAX_VALUE, max - min));
-  return { x: minX, y: minY, width: span(minX, maxX), height: span(minY, maxY) };
+function boundsCollector(fallback:Bounds){
+  let count=0,minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
+  return {
+    add([x,y]:Point){count++;minX=Math.min(minX,x);minY=Math.min(minY,y);maxX=Math.max(maxX,x);maxY=Math.max(maxY,y);},
+    result(){
+      if(!count)return fallback;
+      const span=(min:number,max:number)=>Math.max(1,Math.min(Number.MAX_VALUE,max-min));
+      return {x:minX,y:minY,width:span(minX,maxX),height:span(minY,maxY)};
+    },
+    get count(){return count;},
+  };
 }
 
 /** Actual boundary origin is preserved, including all-negative drawings. */
 export function getPaperBounds(doc: Doc): Bounds {
-  const boundary = doc.segments.filter(s => s.assignment === 'B').flatMap(s => [s.a, s.b]).filter(finitePoint);
-  if (boundary.length) return boundsOf(boundary, fallbackBounds(doc));
+  const boundary=boundsCollector(fallbackBounds(doc));
+  for(const segment of doc.segments)if(segment.assignment==='B'){if(finitePoint(segment.a))boundary.add(segment.a);if(finitePoint(segment.b))boundary.add(segment.b);}
+  if(boundary.count)return boundary.result();
   return getDrawingBounds(doc);
 }
 
 /** Extent of every drawable endpoint; zero width/height is expanded to 1 mm. */
 export function getDrawingBounds(doc: Doc): Bounds {
-  const points: Point[] = doc.segments.flatMap(s => [s.a, s.b]).filter(finitePoint);
+  // Accumulate endpoints directly; a million-line drawing must not allocate
+  // and then discard two extra million-element arrays merely to fit its view.
+  const points=boundsCollector(fallbackBounds(doc));
+  for(const segment of doc.segments){if(finitePoint(segment.a))points.add(segment.a);if(finitePoint(segment.b))points.add(segment.b);}
   for (const o of doc.objects ?? []) {
-    if (o.kind === 'circle') points.push([o.center[0] - o.radius, o.center[1] - o.radius], [o.center[0] + o.radius, o.center[1] + o.radius]);
-    else if (o.kind === 'mark') points.push(o.a, o.b);
+    if (o.kind === 'circle'){points.add([o.center[0]-o.radius,o.center[1]-o.radius]);points.add([o.center[0]+o.radius,o.center[1]+o.radius]);}
+    else if (o.kind === 'mark'){points.add(o.a);points.add(o.b);}
     // Conservative text extent for fit/export; text content is never geometry.
-    else { const bounds = textBounds(o); points.push([bounds.x, bounds.y], [bounds.x + bounds.width, bounds.y + bounds.height]); }
+    else {const bounds=textBounds(o);points.add([bounds.x,bounds.y]);points.add([bounds.x+bounds.width,bounds.y+bounds.height]);}
   }
-  return boundsOf(points, fallbackBounds(doc));
+  return points.result();
 }
 
 /**

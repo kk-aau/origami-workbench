@@ -1,4 +1,5 @@
 import {DIAGRAM_ANNOTATION_LIMITS,DIAGRAM_SYMBOL_PARAM_LIMITS,type DiagramAnnotation,type DiagramLineStyle,type DiagramSymbolAnnotation,type DiagramSymbolKind,type DiagramSymbolParams} from './diagramAnnotations';
+import type {ProjectedInkSpan} from './diagramProjectedInk';
 import {diagramLineDasharray} from './diagramLineStyles';
 import {adaptiveLineStroke,type AdaptiveLineOptions} from './adaptiveLineStyle';
 import type {Point} from '../core/types';
@@ -560,14 +561,16 @@ export function diagramSymbolPreview(symbol:DiagramSymbolKind):string {
   return `<g transform="translate(${n(-cx*fit)} ${n(-cy*fit)}) scale(${n(fit)})" fill="none" stroke="currentColor" stroke-width="${n(2.5/fit)}" stroke-linecap="round" stroke-linejoin="round">${sketch.markup}</g>`;
 }
 /** Render one step annotation in world coordinates; no editor handles are emitted. */
-export function diagramAnnotationMarkup(annotation:DiagramAnnotation,lineDisplay?:AdaptiveLineOptions&{minimumWidth?:number}):string {
+export function diagramAnnotationMarkup(annotation:DiagramAnnotation,lineDisplay?:AdaptiveLineOptions&{minimumWidth?:number;projectedSpan?:ProjectedInkSpan}):string {
   const stroke=safeColor(annotation.color),width=positive(annotation.width);
   if(annotation.kind==='line'){
-    const [ax,ay]=annotation.a.map(finite),[bx,by]=annotation.b.map(finite);
+    const shared=lineDisplay?.projectedSpan;
+    const [ax,ay]=(shared?.reverse?annotation.b:annotation.a).map(finite),[bx,by]=(shared?.reverse?annotation.a:annotation.b).map(finite);
     const originalDash=diagramLineDasharray(annotation.style,width,annotation.strokePattern);
     const penWidth=lineDisplay?.minimumWidth?Math.max(width,lineDisplay.minimumWidth):width;
-    const paint=lineDisplay?adaptiveLineStroke(Math.hypot(bx-ax,by-ay),penWidth,originalDash,{...lineDisplay,linecap:'round'}):{width,dash:originalDash,limited:false,dashOffset:undefined};
-    const attributes=`x1="${n(ax)}" y1="${n(ay)}" x2="${n(bx)}" y2="${n(by)}" fill="none" stroke="${stroke}" stroke-width="${n(paint.width)}" stroke-linecap="round"${paint.dash?` stroke-dasharray="${paint.dash}"`:''}${paint.dashOffset!==undefined?` stroke-dashoffset="${n(paint.dashOffset)}"`:''}`;
+    const paint=lineDisplay?adaptiveLineStroke(Math.hypot(bx-ax,by-ay),penWidth,originalDash,{...lineDisplay,span:shared??lineDisplay.span,linecap:'round'}):{width,dash:originalDash,limited:false,dashOffset:undefined};
+    const dashOffset=shared&&!lineDisplay?.enabled&&originalDash?shared.offset:paint.dashOffset;
+    const attributes=`x1="${n(ax)}" y1="${n(ay)}" x2="${n(bx)}" y2="${n(by)}" fill="none" stroke="${stroke}" stroke-width="${n(paint.width)}" stroke-linecap="round"${paint.dash?` stroke-dasharray="${paint.dash}"`:''}${dashOffset!==undefined?` stroke-dashoffset="${n(dashOffset)}"`:''}`;
     const adjusted=paint.width!==width||paint.dash!==originalDash||paint.dashOffset!==undefined||paint.limited;
     return lineDisplay?.enabled&&adjusted?`<line ${attributes} data-adaptive-line="true"${paint.limited?' data-line-detail-limited="true"':''}><title>${LINE_LABELS[annotation.style]}${paint.limited?' · 当前显示过小，放大查看线型':''}</title></line>`:`<line ${attributes}/>`;
   }

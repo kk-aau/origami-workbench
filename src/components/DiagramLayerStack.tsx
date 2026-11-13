@@ -11,6 +11,7 @@ import './DiagramLayerStack.css';
 
 export interface DiagramLayerStackProps {
   pose:DiagramPose|null;
+  showPreview?:boolean;
   hoveredFaces?:number[];
   selectedFaces?:number[];
   fixedFaces?:number[];
@@ -39,7 +40,7 @@ export interface DiagramLayerStackProps {
   disabled?:boolean;
 }
 
-export default function DiagramLayerStack({pose,hoveredFaces=[],selectedFaces=[],fixedFaces=[],onHoverFace,onSelectFace,onToggleVisible,onShowAll,onHideAll,onAnalyse,analysing=false,analysisError,analysisUnavailableReason,onAdjustLayer,onRelativeConstraints,adjustmentMode=false,onAdjustmentModeChange,adjustmentFace,adjustingLayer=false,layerAdjustmentError,layerAdjustmentFeedback,visibilityContext,controls,faceActions,selectionHint,disabled=false}:DiagramLayerStackProps) {
+export default function DiagramLayerStack({pose,showPreview=true,hoveredFaces=[],selectedFaces=[],fixedFaces=[],onHoverFace,onSelectFace,onToggleVisible,onShowAll,onHideAll,onAnalyse,analysing=false,analysisError,analysisUnavailableReason,onAdjustLayer,onRelativeConstraints,adjustmentMode=false,onAdjustmentModeChange,adjustmentFace,adjustingLayer=false,layerAdjustmentError,layerAdjustmentFeedback,visibilityContext,controls,faceActions,selectionHint,disabled=false}:DiagramLayerStackProps) {
   const [search,setSearch]=useState('');
   const searchInput=useRef<HTMLInputElement>(null);
   const ordered=useMemo(()=>pose?diagramLayerStackOrder(pose,selectedFaces):null,[pose,selectedFaces]);
@@ -72,7 +73,7 @@ export default function DiagramLayerStack({pose,hoveredFaces=[],selectedFaces=[]
   const path=(face:number)=>diagramIllustrationMesh(pose).rings[face].map(ring=>ring.map((vertex,index)=>`${index?'L':'M'}${drawing.display.vertices[vertex].join(' ')}`).join(' ')+'Z').join(' ');
   const faceLabel=(face:number)=>`纸面 F${face+1}${layerKnown(face)?`，${ordered.scope==='local'?'选中组':'当前视角'}第 ${ordered.faces.indexOf(face)+1} 层`:'，层位未确认'}${fixedFaces.includes(face)?'，已固定':''}${blocked.has(face)?'，整图已隐藏':hidden.has(face)?`，${scope}已隐藏`:''}`;
   return <aside className={`diagram-layer-stack${known?'':' is-unknown'}${controls?' has-layer-controls':''}`} aria-label="纸层顺序提示" aria-busy={analysing||adjustingLayer} data-layer-analysis={analysing?'running':analysisError?'error':pose.result.layers.status} data-diagram-layer-stack={ordered.scope} data-layer-visibility-scope={visibilityContext?'window':'whole'}>
-    <header className="diagram-layer-stack-header"><strong>{visibilityContext?.label??'纸层顺序'}</strong><span>{label}</span></header>
+    {showPreview&&<><header className="diagram-layer-stack-header"><strong>{visibilityContext?.label??'纸层顺序'}</strong><span>{label}</span></header>
     <div className="diagram-layer-stack-preview" role="group" aria-label={known?`${label}，按当前正背观察方向显示`:'纸面示意，不表示真实上下顺序'}>
       {previewFaces.map((face,index)=><button type="button" key={face} className="diagram-layer-stack-card" data-diagram-stack-face={face} data-layer-state={state(face)} data-layer-visible={!hidden.has(face)} aria-label={faceLabel(face)} aria-pressed={visualSelectedFaces.includes(face)} disabled={disabled} onPointerEnter={()=>onHoverFace?.(face)} onPointerLeave={()=>onHoverFace?.(null)} onFocus={()=>onHoverFace?.(face)} onBlur={()=>onHoverFace?.(null)} onClick={()=>onSelectFace?.(face)} style={{'--stack-index':index,'--stack-depth':previewFaces.length-index,'--stack-angle':`${(index-(previewFaces.length-1)/2)*5}deg`} as CSSProperties}>
         <svg viewBox={drawing.viewBox} aria-hidden="true"><path d={path(face)} fill={drawing.display.frontMaterial[face]?'#fff5df':'#b5cbb9'} fillRule="evenodd" stroke="currentColor" vectorEffect="non-scaling-stroke"/></svg>
@@ -81,10 +82,20 @@ export default function DiagramLayerStack({pose,hoveredFaces=[],selectedFaces=[]
         {fixedFaces.includes(face)&&<span className="diagram-layer-stack-pin" aria-hidden="true">◆</span>}
       </button>)}
     </div>
-    <div className="diagram-layer-stack-visibility"><span aria-live="polite">{scope}显示 {visibleCount} / {faces.length}</span><div><button type="button" disabled={disabled||localHidden.size===0||!onShowAll} onClick={onShowAll}>{scope}全部显示</button><button type="button" disabled={disabled||visibleCount===0||!onHideAll} onClick={onHideAll}>{scope}全部隐藏</button></div></div>
+    </>}
+    <div className="diagram-layer-count" aria-live="polite">{scope}显示 {visibleCount} / {faces.length}</div>
+    <DiagramLayerSolutions toolbarActions={<>
+      <button type="button" disabled={disabled||localHidden.size===0||!onShowAll} aria-label={scope+'全部显示'} onClick={onShowAll}>
+        <svg className="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg>全部显示
+      </button>
+      <button type="button" disabled={disabled||visibleCount===0||!onHideAll} aria-label={scope+'全部隐藏'} onClick={onHideAll}>
+        <svg className="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12ZM3 3l18 18"/><circle cx="12" cy="12" r="3"/></svg>全部隐藏
+      </button>
+      {onAnalyse&&<button type="button" data-layer-analysis-command="" disabled={disabled||analysing||adjustingLayer||!!analysisUnavailableReason} title={analysisUnavailableReason??(solved?'重新分析层序':'重试层序分析')} onClick={onAnalyse}>
+        <svg className="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true"><path d="M3 8l7-4 7 4-7 4zM3 12l7 4 3-1.5M3 16l7 4 2-1"/><circle cx="17" cy="14" r="3.5"/><path d="m19.5 16.5 3 4"/></svg>{analysing?'分析中':'分析层序'}
+      </button>}
+    </>} result={pose.result} side={pose.view?.side??'front'} onRelativeConstraints={onRelativeConstraints} adjustmentMode={adjustmentMode} adjustmentFace={adjustmentFace} position={ordered.scope==='global'&&adjustmentFace!==undefined&&ordered.faces.includes(adjustmentFace)?ordered.faces.indexOf(adjustmentFace)+1:undefined} onAdjustmentModeChange={onAdjustmentModeChange} disabled={disabled||analysing||!!analysisUnavailableReason} busy={adjustingLayer} error={layerAdjustmentError} feedback={layerAdjustmentFeedback} onAdjust={onAdjustLayer}/>
     {analysisMessage&&<p className="diagram-layer-stack-note" role="status">{analysisMessage}</p>}
-    {onAnalyse&&<div className="diagram-layer-stack-analysis"><button type="button" disabled={disabled||analysing||adjustingLayer||!!analysisUnavailableReason} title={analysisUnavailableReason} onClick={onAnalyse}>{analysing?'正在分析…':solved?'重新分析层序':'重试层序分析'}</button></div>}
-    <DiagramLayerSolutions result={pose.result} side={pose.view?.side??'front'} onRelativeConstraints={onRelativeConstraints} adjustmentMode={adjustmentMode} adjustmentFace={adjustmentFace} position={ordered.scope==='global'&&adjustmentFace!==undefined&&ordered.faces.includes(adjustmentFace)?ordered.faces.indexOf(adjustmentFace)+1:undefined} onAdjustmentModeChange={onAdjustmentModeChange} disabled={disabled||analysing||!!analysisUnavailableReason} busy={adjustingLayer} error={layerAdjustmentError} feedback={layerAdjustmentFeedback} onAdjust={onAdjustLayer}/>
     {ordered.scope==='local'&&<p className="diagram-layer-stack-note">仅表示选中组的顺序，其他纸层尚未确认。</p>}
     {selectionHint&&!adjustmentMode&&<p className="diagram-layer-stack-selection-hint" role="status">{selectionHint}</p>}
     <div className="diagram-layer-stack-search" role="search" aria-label="搜索纸面">

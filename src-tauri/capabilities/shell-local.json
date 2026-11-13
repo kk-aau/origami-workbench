@@ -1,0 +1,22 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "shell-local",
+  "description": "Native document host chrome only; no project-file or export ticket access.",
+  "webviews": [
+    "shell-*"
+  ],
+  "remote": {
+    "urls": [
+      "http://127.0.0.1:*/"
+    ]
+  },
+  "local": false,
+  "permissions": [
+    "allow-desktop-ready",
+    "allow-desktop-documents",
+    "allow-desktop-window-state",
+    "allow-desktop-window-action",
+    "allow-desktop-open-logs",
+    "allow-desktop-open-data-directory"
+  ]
+}
