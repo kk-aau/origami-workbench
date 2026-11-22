@@ -1,3 +1,4 @@
+import {selectProjectFile,projectFileBinding,saveProjectFile} from '../app/selectProjectFile';
 import {useLibraryFileIdentity,type LaunchWorkspaceFile,type WorkspaceFile} from '../app/workspaceFileWindow';
 import {forwardRef,useEffect,useImperativeHandle,useMemo,useRef,useState} from 'react';
 import {api,safeName,saveDownload} from '../app/api';
@@ -16,16 +17,16 @@ import './design-workspace.css';
 export interface DesignWorkspaceHandle {
  currentCP:()=>Doc|null;
  startFile:(file:WorkspaceFile)=>Promise<void>;
- open:()=>void;save:()=>void;export:()=>void;capture:()=>BaseDesignProject|null;
+ open:()=>void;save:(asCopy?:boolean)=>void;export:()=>void;capture:()=>BaseDesignProject|null;
  checkpoint:()=>boolean;settle:()=>Promise<boolean>;ready:()=>Promise<void>;prepareRestore:(project:BaseDesignProject|null)=>(()=>void)|null;storageChanged:()=>void;
  undo:()=>void;redo:()=>void;library:()=>void;status:()=>{name:string|null;dirty:boolean;busy:boolean;present:boolean};
 }
 type Selection={node:number}|{edge:number};
-type Props={launchFile?:LaunchWorkspaceFile;active:boolean;onAdopt:(doc:Doc)=>Promise<boolean>;onMessage:(message:string)=>void;onArtworkChange:()=>void};
+type Props={onOpenFile?:()=>void;launchFile?:LaunchWorkspaceFile;active:boolean;onAdopt:(doc:Doc)=>Promise<boolean>;onMessage:(message:string)=>void;onArtworkChange:()=>void};
 const message=(e:unknown)=>e instanceof Error?e.message:String(e);
 const names={tree:'树形基础形',box:'方格 / Box Pleating'};
 
-export default forwardRef<DesignWorkspaceHandle,Props>(function DesignWorkspace({launchFile,active,onAdopt,onMessage,onArtworkChange},ref){
+export default forwardRef<DesignWorkspaceHandle,Props>(function DesignWorkspace({onOpenFile,launchFile,active,onAdopt,onMessage,onArtworkChange},ref){
  const library=useMemo(()=>new BaseDesignLibrary(),[]),entry=useRef<BaseDesignEntry|null>(null);
  const [entries,setEntries]=useState<readonly BaseDesignSummary[]>([]),[project,setProject]=useState<BaseDesignProject|null>(null),current=useRef(project);current.current=project;
  useLibraryFileIdentity(launchFile?'design':null,entry.current?.id??null);
@@ -49,6 +50,7 @@ export default forwardRef<DesignWorkspaceHandle,Props>(function DesignWorkspace(
  }
  function copyDesign(){const p=current.current;if(!p||busyRef.current)return;try{const next={...p,name:p.name+' 副本'} as BaseDesignProject,record=library.write(next,null);activate(next,record);refresh();onMessage('已另存独立设计副本，原文档保留。');}catch(e){setFailure(message(e));}}
  const input=useRef<HTMLInputElement>(null),job=useRef<{controller:AbortController;cancelled:boolean;stopping?:Promise<void>}|null>(null),alive=useRef(true),fileRead=useRef<AbortController|null>(null);
+ const fileBindings=useRef(new Map<string,string>());
  const pendingEdit=useRef<Promise<DesignResult|null>|null>(null),savingFile=useRef(false);
  const dirty=useMemo(()=>!!project&&serializeBaseDesign(project)!==savedText,[project,savedText]);
  const derived=result?.source===project?result.value:null;
@@ -110,17 +112,17 @@ export default forwardRef<DesignWorkspaceHandle,Props>(function DesignWorkspace(
    await readyWorkspace();controller.signal.throwIfAborted();if(busyRef.current||!checkpoint())return;
    const source=current.current;
    const stillCurrent=()=>{controller.signal.throwIfAborted();if(!alive.current)return false;if(current.current===source&&!busyRef.current)return true;onMessage('读取设计期间当前工程已变化或正在操作，原内容已保留；请重新打开文件。');return false;};
-   const text=(await file.text()).replace(/^\uFEFF/,'');let next:BaseDesignProject;
+   const text=(await file.text()).replace(/^\uFEFF/,'');let next:BaseDesignProject,binding:string|undefined;
    if(!stillCurrent())return;
    if(/\.tmd[45]?$/i.test(file.name)||/^\s*tree\s/i.test(text)){
     const value=await importNative('tree',text);if(!value)return;next=validateBaseDesign({format:'zhezhi-base-design',version:1,name:file.name.replace(/\.tmd[45]?$/i,''),kind:'tree',model:value.project});
    }else{
     const parsed=await prepareBaseDesignFile(text,controller.signal);if(!stillCurrent())return;
-    if(parsed.type==='design')next=parsed.project;
+    if(parsed.type==='design'){next=parsed.project;binding=projectFileBinding(file);}
     else {const value=await importNative('box',text);if(!value)return;next=validateBaseDesign({format:'zhezhi-base-design',version:1,name:value.kind==='box'?value.project.design.title||file.name:file.name,kind:'box',model:value.project});}
    }
    if(!stillCurrent())return;
-   const record=library.write(next,null);activate(next,record);refresh();onMessage('设计工程已打开，原文档保留在设计文档库。');
+   const record=library.write(next,null);activate(next,record);if(binding){fileBindings.current.set(record.id,binding);setSavedText(serializeBaseDesign(next));}refresh();onMessage('设计工程已打开，原文档保留在设计文档库。');
   }catch(e){if(!controller.signal.aborted&&alive.current)setFailure(message(e));}
   finally{if(fileRead.current===controller)fileRead.current=null;}
  }
@@ -130,8 +132,9 @@ export default forwardRef<DesignWorkspaceHandle,Props>(function DesignWorkspace(
   catch(e){if(!running.cancelled)throw e;setNotice('已取消导入，原工程保留。');return null;}
   finally{await running.stopping;if(job.current===running){job.current=null;busyRef.current='';setBusy('');}}
  }
- async function open(){if(busyRef.current)return;try{await readyWorkspace();if(window.desktop?.openProject){const file=await window.desktop.openProject('design');if(file)await readFile(new File([file.bytes],file.name));}else input.current?.click();}catch(e){setFailure(message(e));}}
- async function save(){if(savingFile.current)return;savingFile.current=true;try{if(!await settleFields())return;const p=current.current;if(!p)return;const text=serializeBaseDesign(p),response=await saveDownload(new Blob([text],{type:'application/json'}),safeName(p.name)+'.design.json');if(response.status==='cancelled')return;if(current.current===p&&response.status==='saved'){setSavedText(text);checkpoint(true);}onMessage(response.status==='saved'?'基础形设计工程已保存。':'已发起设计工程下载；请确认浏览器下载结果。');}catch(e){setFailure(message(e));}finally{savingFile.current=false;}}
+ async function open(){if(busyRef.current)return;if(onOpenFile){onOpenFile();return;}try{await readyWorkspace();const file=await selectProjectFile(input.current,'design');if(file)await readFile(file);}catch(e){setFailure(message(e));}}
+ async function save(asCopy=false){if(savingFile.current)return;savingFile.current=true;try{if(!await settleFields())return;const p=current.current;if(!p)return;const id=entry.current?.id,text=serializeBaseDesign(p),response=await saveProjectFile(text,safeName(p.name)+'.design.json',!asCopy&&id?fileBindings.current.get(id):undefined);
+ if(response.status==='saved'&&id&&response.binding)fileBindings.current.set(id,response.binding);if(response.status==='cancelled')return;if(current.current===p&&response.status==='saved'){setSavedText(text);checkpoint(true);}onMessage(response.status==='saved'?'基础形设计工程已保存。':'已发起设计工程下载；请确认浏览器下载结果。');}catch(e){setFailure(message(e));}finally{savingFile.current=false;}}
  async function exportNative(){const p=current.current;if(!p||busyRef.current)return;try{let text:string,extension:string;if(p.kind==='tree'){const answer=await compute('export');if(!answer||answer.kind!=='tree'||!answer.nativeFile)return;text=answer.nativeFile;extension='.tmd5';}else{text=JSON.stringify(p.model);extension='.bps';}const response=await saveDownload(new Blob([text],{type:'text/plain'}),safeName(p.name)+extension);if(response.status!=='cancelled')onMessage(response.status==='saved'?'设计源文件已保存。':'已发起源文件下载，请确认下载结果。');}catch(e){setFailure(message(e));}}
  async function exportCp(){if(!cp)return;try{const response=await saveDownload(new Blob([JSON.stringify(cp)],{type:'application/json'}),safeName(cp.name)+'.zhezhi.json');if(response.status!=='cancelled')onMessage(response.status==='saved'?'折痕工程副本已保存。':'已发起折痕工程下载，请确认下载结果。');}catch(e){setFailure(message(e));}}
  useImperativeHandle(ref,()=>({currentCP:()=>cp,startFile:async(file)=>{
@@ -139,7 +142,7 @@ export default forwardRef<DesignWorkspaceHandle,Props>(function DesignWorkspace(
   if(file.kind==='design-new')await create(file.design,file.example,true);
   else if(file.kind==='design-stored'){openEntry(file.item,true);if(entry.current?.id!==file.item.id)await window.desktop?.documents?.setLibraryIdentity(null);}
   else if(file.kind==='file')await readFile(file.file,true);
- },open:()=>void open(),save:()=>void save(),export:()=>void exportNative(),capture:()=>current.current,checkpoint:()=>checkpoint(),settle:settleFields,ready:()=>readyWorkspace(),prepareRestore,storageChanged:()=>{void readyWorkspace(true).catch(()=>{});},undo:()=>history('undo'),redo:()=>history('redo'),library:()=>{if(!busyRef.current&&checkpoint())activate(null);},status:()=>({name:current.current?.name??null,present:!!current.current,dirty:dirty||[...tabCache.current.values()].some(item=>item.entry.id!==entry.current?.id&&item.dirty),busy:!!busyRef.current||savingFile.current||gestureActive})}));
+ },open:()=>void open(),save:asCopy=>void save(asCopy),export:()=>void exportNative(),capture:()=>current.current,checkpoint:()=>checkpoint(),settle:settleFields,ready:()=>readyWorkspace(),prepareRestore,storageChanged:()=>{void readyWorkspace(true).catch(()=>{});},undo:()=>history('undo'),redo:()=>history('redo'),library:()=>{if(!busyRef.current&&checkpoint())activate(null);},status:()=>({name:current.current?.name??null,present:!!current.current,dirty:dirty||[...tabCache.current.values()].some(item=>item.entry.id!==entry.current?.id&&item.dirty),busy:!!busyRef.current||savingFile.current||gestureActive})}));
  useEffect(()=>{if(!active)return;const key=(e:KeyboardEvent)=>{if(!(e.ctrlKey||e.metaKey)||e.altKey)return;const k=e.key.toLowerCase();if(!['s','o','z','y'].includes(k))return;if(['z','y'].includes(k)&&(e.target instanceof HTMLElement&&e.target.closest('input,textarea')))return;e.preventDefault();e.stopPropagation();if(k==='o')void open();else if(k==='s')void save();else history(k==='y'||e.shiftKey?'redo':'undo');};window.addEventListener('keydown',key);return()=>window.removeEventListener('keydown',key);},[active,project,past,future,busy]);
  function treeEdit(update:(m:TreeDesign)=>TreeDesign){const p=current.current;if(!p||p.kind!=='tree'||busyRef.current)return;try{publish({...p,model:update(p.model)});}catch(e){setFailure(message(e));}}
  function boxEdit(command:Record<string,unknown>){const task=compute('edit',{command});pendingEdit.current=task;void task.finally(()=>{if(pendingEdit.current===task)pendingEdit.current=null;});}

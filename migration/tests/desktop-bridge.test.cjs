@@ -102,12 +102,20 @@ test('native close handshake consults existing workspace guards and removals',as
   assert.equal(calls.at(-1).args.dirty,false);
 });
 
-test('binary file bridge preserves UTF-8 name and unmodified file bytes',async()=>{
-  const name=Buffer.from('中文大图.fold');const data=Buffer.from([0xff,0xfe,0x00,13,10]);
-  const frame=Buffer.alloc(4+name.length+data.length);frame.writeUInt32LE(name.length);name.copy(frame,4);data.copy(frame,4+name.length);
-  const {window}=bridge({file:frame.buffer.slice(frame.byteOffset,frame.byteOffset+frame.length)});
+function openFileFrame(name,binding,data){
+  const header=Buffer.from(JSON.stringify({name,binding}));
+  const frame=Buffer.alloc(4+header.length+data.length);
+  frame.writeUInt32LE(header.length);
+  header.copy(frame,4);
+  data.copy(frame,4+header.length);
+  return frame.buffer.slice(frame.byteOffset,frame.byteOffset+frame.length);
+}
+
+test('binary file bridge preserves UTF-8 name, source binding and unmodified file bytes',async()=>{
+  const data=Buffer.from([0xff,0xfe,0x00,13,10]);
+  const {window}=bridge({file:openFileFrame('中文大图.fold','binding-1',data)});
   const selected=await window.desktop.openProject('crease');
-  assert.equal(selected.name,'中文大图.fold');assert.deepEqual(Buffer.from(selected.bytes),data);
+  assert.equal(selected.name,'中文大图.fold');assert.equal(selected.binding,'binding-1');assert.deepEqual(Buffer.from(selected.bytes),data);
   assert.equal(await bridge().window.desktop.openProject('crease'),null);
 });
 
@@ -117,14 +125,13 @@ test('malformed binary envelopes fail without exposing partial data',async()=>{
 });
 
 test('tool layout import uses its own native chooser kind and preserves JSON bytes',async()=>{
-  const name=Buffer.from('我的工具排版.tool-layout.json');
   const data=Buffer.from(JSON.stringify({format:'zhezhi-tool-layout',version:1,name:'中文排版'}));
-  const frame=Buffer.alloc(4+name.length+data.length);frame.writeUInt32LE(name.length);name.copy(frame,4);data.copy(frame,4+name.length);
-  const {window,calls}=bridge({file:frame.buffer.slice(frame.byteOffset,frame.byteOffset+frame.length)});
+  const {window,calls}=bridge({file:openFileFrame('我的工具排版.tool-layout.json',null,data)});
   const selected=await window.desktop.openProject('tool-layout');
   assert.equal(calls.at(-1).command,'desktop_open_project');
   assert.equal(calls.at(-1).args.kind,'tool-layout');
   assert.equal(selected.name,'我的工具排版.tool-layout.json');
+  assert.equal(selected.binding,null);
   assert.deepEqual(Buffer.from(selected.bytes),data);
   const cancelled=bridge();
   assert.equal(await cancelled.window.desktop.openProject('tool-layout'),null);
@@ -189,6 +196,16 @@ function exportBridge({prepare=async()=>({cancelled:false,ticket:'native-ticket'
   return {window,calls};
 }
 
+test('diagram save-as encodes the chosen name before writing and cancels without encoding',async()=>{
+  let wrote;
+  const f=exportBridge({prepare:async args=>args.sizeTicket?true:{ticket:'chosen',fileName:'新名称.zds',chunkBytes:1024},write:async bytes=>{wrote=new TextDecoder().decode(bytes);return bytes.byteLength;}});
+  const encode=async name=>new Blob([JSON.stringify({name})]);
+  assert.equal((await f.window.desktop.saveNamedDiagram('旧名称.zds',encode)).status,'saved');
+  assert.equal(JSON.parse(wrote).name,'新名称.zds');
+  assert.equal(f.calls[1].args.bytes,Buffer.byteLength(wrote));
+  const cancelled=exportBridge({prepare:async()=>({cancelled:true})});
+  assert.equal((await cancelled.window.desktop.saveNamedDiagram('旧名称.zds',()=>assert.fail('cancelled'))).status,'cancelled');
+});
 test('native export streams exact binary chunks without whole-file reads, URLs or browser downloads',async()=>{
   const f=exportBridge(),bytes=new Uint8Array(2*1024*1024+19);for(let i=0;i<bytes.length;i++)bytes[i]=i%251;
   const blob=new Blob([bytes]);blob.arrayBuffer=()=>{throw Error('Whole-file copy forbidden');};const progress=[];
@@ -258,11 +275,55 @@ test('native shell sends actual OS-menu requests without serializing a document 
 });
 
 
-test('document and shell creation keep initial open/new commands in the native handshake instead of client polling',async()=>{
-  for(const role of ['shell','document']){const f=bridge({context:{role,documentId:role==='document'?'11111111-1111-4111-8111-111111111111':null}}),docs=f.window.desktop.documents;
-    await docs.create('open');assert.equal(f.calls.at(-1).args.action,'create');assert.equal(f.calls.at(-1).args.input.initialCommand,'open');
-    await docs.create('new');assert.equal(f.calls.at(-1).args.input.initialCommand,'new');
-    await docs.create();assert.deepEqual(Object.keys(f.calls.at(-1).args.input),[]);
-    await assert.rejects(docs.create('eval'),/新建或打开/);
+test('sending a snapshot to Blender uses the native chunk protocol and requires launch confirmation',async()=>{
+  const f=exportBridge({finish:async()=>({status:'launched'})});
+  const result=await f.window.desktop.sendToBlender(new Blob(['v 0 0 0\n']));
+  assert.equal(f.calls[0].args.blender,true);
+  assert.equal(f.calls[0].args.name,'folded-paper.obj');
+  assert.deepEqual(f.calls.map(call=>call.command),['desktop_prepare_export','desktop_write_export','desktop_finish_export']);
+  assert.equal(result.status,'launched');
+  const animated=exportBridge({finish:async()=>({status:'launched'})});
+  await animated.window.desktop.sendAnimationToBlender(new Blob(['ZZANIM01']));
+  assert.equal(animated.calls[0].args.name,'folded-paper.zzanim');
+  assert.equal(animated.calls[0].args.blender,true);
+  const stale=exportBridge();
+  await assert.rejects(stale.window.desktop.sendToBlender(new Blob(['mesh'])),/未确认 Blender/);
+});
+
+test('a linked Blender step waits for the scene to confirm its import or update',async()=>{
+  for(const status of ['linked','updated']){
+    const f=exportBridge({finish:async()=>({status})});
+    let phase;
+    const result=await f.window.desktop.sendAnimationToBlender(new Blob(['clip']),{
+      step:'project/step',onCommit:()=>{phase=f.calls.at(-1).command;},
+    });
+    assert.equal(f.calls[0].args.blenderStep,'project/step');
+    assert.equal(phase,'desktop_write_export');
+    assert.equal(result.status,status);
+    await f.window.desktop.blenderStepIsOpen('project/step');
+    assert.equal(f.calls.at(-1).command,'desktop_blender_step_status');
+    assert.equal(f.calls.at(-1).args.step,'project/step');
+  }
+  const native=path.join(__dirname,'../../src-tauri');
+  const capabilities=JSON.parse(fs.readFileSync(path.join(native,'capabilities/main-local.json'),'utf8'));
+  assert.ok(capabilities.permissions.includes('allow-desktop-blender-step-status'));
+  assert.match(fs.readFileSync(path.join(native,'build.rs'),'utf8'),/"desktop_blender_step_status"/);
+  const launched=exportBridge({finish:async()=>({status:'launched'})});
+  await assert.rejects(launched.window.desktop.sendAnimationToBlender(new Blob(['clip']),{step:'project/step'}),/尚未确认步骤/);
+});
+
+test('document and shell pass the initial open/new command when opening a workspace',async()=>{
+  for(const role of ['shell','document']){
+    const f=bridge({context:{role,documentId:role==='document'?'11111111-1111-4111-8111-111111111111':null}});
+    for(const initialCommand of ['open','new',undefined]){
+      const count=f.calls.length;
+      await f.window.desktop.documents.openWorkspace('diagram',initialCommand);
+      assert.equal(f.calls.length,count+1);
+      const {command,args}=f.calls.at(-1);
+      assert.equal(command,'desktop_documents');
+      assert.equal(args.action,'open-workspace');
+      assert.equal(args.input.workspace,'diagram');
+      assert.equal(args.input.initialCommand,initialCommand);
+    }
   }
 });

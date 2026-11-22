@@ -35,8 +35,8 @@ const delay=ms=>new Promise(resolve=>setTimeout(resolve,ms));
  page.setDefaultTimeout(15000);page.on('pageerror',error=>report.errors.push(String(error)));page.on('dialog',dialog=>dialog.accept());
  await page.context().route('**/*',route=>{const url=new URL(route.request().url());if(['http:','https:'].includes(url.protocol)&&!['localhost','127.0.0.1','[::1]'].includes(url.hostname)){report.blockedExternalRequests.push(url.href);return route.abort('internetdisconnected');}return route.continue();});
  const exact=name=>page.getByRole('button',{name,exact:true}).first(),button=name=>page.getByRole('button',{name:new RegExp(name)}).first();
- const first=exact('设置并开始使用');if(await first.isVisible().catch(()=>false)){await first.click();await first.waitFor({state:'hidden'});}
- const health=await page.evaluate(()=>fetch('/api/health').then(r=>r.json()));pass(health.version===version&&health.runtime==='rust','running Release host uses expected Rust service version');
+ const first=exact('使用默认位置开始');if(await first.isVisible().catch(()=>false)){await first.click();await first.waitFor({state:'hidden'});}
+ const health=await page.evaluate(()=>fetch('/api/health').then(r=>r.json()));pass(health.version===version&&health.releaseVersion===version+'-'+release.candidate&&health.runtime==='rust','running Release host uses expected Rust service version');
  report.webviewVersion=browser.version();
  if(Number.isSafeInteger(report.appPid)&&report.appPid>0){
   const inspect=`$all=@(Get-CimInstance Win32_Process);$ids=[System.Collections.Generic.HashSet[uint32]]::new();[void]$ids.Add(${report.appPid});do{$added=$false;foreach($p in $all){if($ids.Contains([uint32]$p.ParentProcessId)-and $ids.Add([uint32]$p.ProcessId)){$added=$true}}}while($added);@($all|Where-Object{$ids.Contains([uint32]$_.ProcessId)}|ForEach-Object{@{pid=$_.ProcessId;name=$_.Name;parent=$_.ParentProcessId;hostPath=$(if($_.ProcessId -eq ${report.appPid}){$_.ExecutablePath}else{$null});sandboxDisabled=($_.CommandLine -match '--no-sandbox');gpuDisabled=($_.CommandLine -match '--disable-gpu(?: |$)')}})|ConvertTo-Json -Depth 3 -Compress`;

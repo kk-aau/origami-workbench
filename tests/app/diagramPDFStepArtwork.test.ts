@@ -9,6 +9,7 @@ import {diagramPDFPageSVG,embedDiagramPDFSVG} from '../../src/app/diagramPDFPage
 import {defaultDiagramPDFOptions,planDiagramPDF,diagramPDFCellContent} from '../../src/app/diagramPDFLayout';
 import {defaultDiagramLineDefaults,changeGlobalDiagramLineStyle} from '../../src/app/diagramLineStyles';
 import {diagramStepZooms} from '../../src/app/diagramStepZoom';
+import {defaultDiagramPDFPaint} from '../../src/app/diagramPDFDecoration';
 
 const pixel='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGP4z8DwHwAFAAH/iZk9HQAAAABJRU5ErkJggg==';
 const palette=changeGlobalDiagramLineStyle(defaultDiagramLineDefaults(),'valley',{color:'#1234ab',width:1.4,strokePattern:'solid'});
@@ -42,15 +43,19 @@ test('shared PDF artwork retains size-aware margin symbols, crop, rotation, rast
   }
 });
 
-test('shared cached artwork is exactly the image embedded in each configured PDF panel',()=>{
+test('PDF panels preserve the shared artwork geometry over the chosen page background',()=>{
   const project=fixture(),step=project.steps[1],zooms=diagramStepZooms(project);
   step.title='这是需要换行的步骤标题';step.description='说明占用单步图稿下面的版面，图片使用剩余的真实 PDF 尺寸。';
   for(const layout of ['1x1','3x4'] as const)for(const descriptions of [false,true]){
-    const options={...defaultDiagramPDFOptions(project),cover:'none' as const,layout,scope:'range' as const,rangeStart:2,rangeEnd:2,descriptions};
+    const options={...defaultDiagramPDFOptions(project),pageBackground:{...defaultDiagramPDFPaint(),color:'#f2dac1'},cover:'none' as const,layout,scope:'range' as const,rangeStart:2,rangeEnd:2,descriptions};
     const plan=planDiagramPDF(project,options),cell=plan.pages[0].cells[0],box=diagramPDFCellContent(step,cell,options,plan).imageRect;
     const artwork=diagramPDFStepArtwork(step,project.states,box,palette,true,zooms.get(step.id)?.region);
     const page=diagramPDFPageSVG(project,options,plan,0,palette,true);
-    assert.ok(page.includes(embedDiagramPDFSVG(artwork,box,'p0-art0-')),'PDF and cache use the same image rectangle and artwork');
+    const backdrop=artwork.match(/<g data-pdf-main-artwork=""><rect\b[^>]* fill="white"\/>/);
+    assert.ok(backdrop,'standalone artwork has a white backdrop');
+    const transparent=artwork.replace(backdrop[0],'<g data-pdf-main-artwork="">');
+    assert.ok(page.includes('fill="#f2dac1"'));
+    assert.ok(page.includes(embedDiagramPDFSVG(transparent,box,'p0-art0-')),'the entire drawing matches at the planned panel size, including its clips, art and symbols');
     assert.doesNotMatch(artwork,/这是需要换行的步骤标题|说明占用/,'captions belong outside the panel image');
   }
 });

@@ -1,3 +1,4 @@
+import {MIN_GAP_PIXELS,MIN_WIDTH_PIXELS} from '../app/adaptiveLineStyle';
 import type {Point,Segment} from '../core/types';
 import type {CreaseDisplay} from '../app/creaseDisplay';
 import {DISPLAY_PIXEL_MM} from '../app/creaseDisplay';
@@ -62,19 +63,26 @@ void main(){
   for(int i=0;i<6;i++){if(float(i)<a_style.w){float d=dashAt(i);period+=d;if(i%2==0)minInk=min(minInk,d);else minGap=min(minGap,d);}}
   float factor=1.0,phase=0.0;
   if(u_adaptive>0.5&&period>0.0&&len>0.0){
-    float floorWidth=min(width,0.65),cap=u_round*width;
-    float pitch=max(1.0,max((0.7+cap)/minGap,max(0.0,0.65-cap)/minInk));
+    float floorWidth=min(width,${MIN_WIDTH_PIXELS}),cap=u_round*width;
+    float pitch=max(1.0,max((${MIN_GAP_PIXELS}+cap)/minGap,max(0.0,${MIN_WIDTH_PIXELS}-cap)/minInk));
     if(len/(period*pitch)>=2.0)factor=pitch;
     else{
       bool found=false;
       for(int j=0;j<2;j++){
         float candidate=min(pitch,len/period/(2.0-float(j))),gap=minGap*candidate;
-        float available=u_round>0.5?gap-0.7:width;
+        float available=u_round>0.5?gap-${MIN_GAP_PIXELS}:width;
         float shown=min(width,available);
-        if(!found&&gap>=0.7&&available>=floorWidth&&minInk*candidate+u_round*shown>=0.65){factor=candidate;width=shown;phase=a_dashA.x*factor/2.0;found=true;}
+        if(!found&&gap>=${MIN_GAP_PIXELS}&&available>=floorWidth&&minInk*candidate+u_round*shown>=${MIN_WIDTH_PIXELS}){factor=candidate;width=shown;found=true;}
       }
       if(!found){period=0.0;width=floorWidth;}
     }
+  }
+  // Fit whole repeats across the finite segment, as in resolveLineStroke.
+  if(period>0.0&&len>0.0){
+    float repeats=len/(period*factor);
+    float count=max(1.0,floor(repeats+0.000001));
+    factor=len/(period*count);
+    phase=a_dashA.x*factor*0.5;
   }
   v_color=a_color;v_dashA=a_dashA*factor;v_dashB=a_dashB*factor;
   v_metrics=vec4(len,width,phase,period*factor);v_flags=a_style.yz;

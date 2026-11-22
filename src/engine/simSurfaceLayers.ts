@@ -142,7 +142,7 @@ function project(panel:Panel,positions:Float32Array,indices:Uint32Array,basis:[V
 }
 
 /** Strict SAT: sharing only a point or a boundary has no positive overlap area. */
-function trianglesOverlap(a:Point[],b:Point[],epsilon:number):boolean {
+export function trianglesOverlap(a:Point[],b:Point[],epsilon:number):boolean {
   for(const triangle of [a,b])for(let i=0;i<3;i++){
     const from=triangle[i],to=triangle[(i+1)%3],dx=to[0]-from[0],dy=to[1]-from[1],length=Math.hypot(dx,dy);
     if(length===0)return false;

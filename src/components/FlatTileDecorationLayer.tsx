@@ -3,7 +3,8 @@ import type {Point} from '../core/types';
 import type {FlatTileDecorationMapping,FlatTileDecorationSource,VisibleTileRegion} from '../app/flatTileDecorations';
 import {resolvedTileTilingStyle} from '../app/tileDecorations';
 import {parseTileGraphicsSource,tileGraphicsPlacement,type TileGraphicsPrimitive} from '../app/tileGraphicsSource';
-import {TileGraphicsPrimitives,useSvgScreenUnits} from './TileGraphicsPrimitives';
+import {useSvgScreenUnits} from '../app/useSvgScreenUnits';
+import {TileGraphicsPrimitives} from './TileGraphicsPrimitives';
 
 const near=(a:Point,b:Point,eps:number)=>Math.hypot(a[0]-b[0],a[1]-b[1])<=eps;
 function touches(point:Point,polygon:Point[],eps:number):boolean{

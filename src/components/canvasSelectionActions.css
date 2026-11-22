@@ -21,3 +21,4 @@
 .canvas-tool-options-panel>button{display:flex;align-items:center;justify-content:space-between;gap:24px;min-height:30px;width:100%;padding:5px 10px;text-align:left;font-size:12px}
 .canvas-tool-options-panel>button:hover{background:var(--tint)}
 .canvas-tool-options-panel kbd{color:var(--muted);font-size:10px}
+.canvas-controls-overlay .continuous-cutoff-controls{width:fit-content;max-width:100%;box-sizing:border-box;margin:6px;border:1px solid var(--line);border-radius:4px;background:var(--paper);pointer-events:auto}

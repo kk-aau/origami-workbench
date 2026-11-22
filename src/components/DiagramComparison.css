@@ -1,9 +1,8 @@
 .diagram-workspace.diagram-compact-workspace.is-comparison .diagram-body{grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px}
+.diagram-workspace.diagram-compact-workspace.is-comparison .diagram-body.has-cp-handle{grid-template-columns:minmax(0,1fr) var(--cp-rail-width) minmax(0,1fr);gap:0}
+.diagram-workspace.diagram-compact-workspace.is-comparison .diagram-body.cp-drawer-closed{grid-template-columns:minmax(0,1fr) var(--cp-rail-width)}
 .diagram-workspace.is-comparison .diagram-body>.panel-divider{display:none}
 .diagram-workspace.is-comparison .diagram-paper-work-area{position:relative}
-.diagram-workspace.is-comparison:not(.with-comparison-layers) .diagram-context-shelf{display:none}
-.diagram-workspace.is-comparison.with-comparison-layers .diagram-context-shelf{position:absolute;inset:0 auto 0 0;z-index:8;width:212px;max-width:75%;background:var(--diagram-sheet);border-right:1px solid var(--diagram-line)}
-.diagram-workspace.is-comparison:not(.with-comparison-symbols) .diagram-symbol-dock{display:none}
 .diagram-comparison-heading{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:7px 9px;border-bottom:1px solid var(--diagram-line);flex-shrink:0;min-height:38px}
 .diagram-comparison-heading strong{font-size:12px}
 .diagram-comparison-heading>span{font-size:11px;color:var(--diagram-muted);margin-right:auto}

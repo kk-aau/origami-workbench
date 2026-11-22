@@ -6,6 +6,8 @@ import {computeFlatFold} from '../../src/core/flatFold';
 import {materialFaceInside} from '../../src/core/materialRings';
 import {materialCanonical} from '../../src/core/materialFaceCommon';
 import {modelProjection} from '../../src/app/modelProjection';
+import {diagramPresentation} from '../../src/app/diagramDrawing';
+import {createDiagramSpatialPose,reprojectDiagramSpatialPose} from '../../src/app/diagramSpatialPose';
 import {defaultModelView} from '../../src/app/modelViewState';
 import type {DiagramCPState,DiagramPose} from '../../src/app/diagramProject';
 import type {Doc,Point,Segment} from '../../src/core/types';
@@ -30,6 +32,27 @@ function afterHorizontal(pose:DiagramPose,doc:Doc):Doc {
   const mapped=mapDiagramFoldLines(pose,[{id:'next-fold',kind:'line',a:[0,40],b:[50,40],style:'valley',color:'#314b3c',width:.7}],{enabled:true,layers:'all',selectedFaces:[]});
   return applyDiagramFoldSegments(doc,mapped.segments);
 }
+
+test('CP face and vertex highlights follow the rendered spatial pose after camera and back-side changes',()=>{
+  const {doc,pose,source}=stacked();
+  doc.segments.at(-1)!.angle=90;
+  source.doc=structuredClone(doc);pose.sourceDoc=structuredClone(doc);
+  const spatial=createDiagramSpatialPose(doc);
+  pose.result=spatial.result;pose.spatial=spatial.spatial;
+  for(const side of ['front','back'] as const){
+    pose.view={...defaultModelView(),side,rotation:23};
+    const moved=reprojectDiagramSpatialPose(pose,{...pose.spatial!.camera,yaw:37,elevation:28});
+    pose.result=moved.result;pose.spatial=moved.spatial;
+    const shown=diagramPresentation(pose).vertices;
+    const mapped=mapDiagramCPSelection(pose,source,{kind:'face',index:0},source);
+    assert.deepEqual(mapped.faces,[0]);
+    assert.ok(Math.abs(area(mapped.polygons)-Math.abs(polygonArea(pose.result.geometry.faces[0].map(v=>shown[v]))))<1e-5);
+    for(const vertex of pose.result.geometry.faces[0]){
+      const hit=mapDiagramCPSelection(pose,source,{kind:'vertex',index:vertex},source);
+      assert.ok(hit.points.some(point=>distance(point,shown[vertex])<1e-5));
+    }
+  }
+});
 
 test('source face and exact source vertex preserve CP identity under back-side rotation',()=>{
   const {doc,pose,source}=stacked();pose.view={...defaultModelView(),side:'back',rotation:73};

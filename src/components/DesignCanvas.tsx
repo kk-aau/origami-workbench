@@ -1,3 +1,5 @@
+import {svgLineStroke} from '../app/adaptiveLineStyle';
+import {useAdaptiveLineStyle} from '../app/useAdaptiveLineStyle';
 import {useEffect,useId,useMemo,useRef,useState,type PointerEvent as Pointer,type KeyboardEvent} from 'react';
 import {createPortal} from 'react-dom';
 import type {BaseDesignProject,DesignResult,XY} from '../app/baseDesign';
@@ -21,6 +23,7 @@ interface Props {
 const color:Record<string,string>={B:'var(--ink)',M:'#c64242',V:'#366fc4',A:'var(--muted)',F:'var(--muted)',U:'var(--warn)'};
 export default function DesignCanvas(props:Props){
  const {project,result,cp,view,selection,camera,onCamera,layers,tool,active,disabled}=props;
+ const [adaptive]=useAdaptiveLineStyle();
  const nodes=useMemo(()=>designNodes(project),[project]),edges=useMemo(()=>designEdges(project),[project]),tree=project.kind==='tree'?project.model:null,box=project.kind==='box'?project.model:null;
  const graphIndex=useMemo(()=>indexDesignGraph(nodes,edges),[nodes,edges]),flapIndex=useMemo(()=>new Map(box?.design.layout.flaps.map(f=>[f.id,f])??[]),[box]);
  const selectedNodes=useMemo(()=>new Set(selection.nodes),[selection.nodes]),selectedEdges=useMemo(()=>new Set(selection.edges),[selection.edges]);
@@ -140,7 +143,7 @@ export default function DesignCanvas(props:Props){
    <defs><pattern id={`${id}-grid`} width={box?1:width/10} height={box?1:height/10} patternUnits="userSpaceOnUse"><path d={`M ${box?1:width/10} 0 H0 V${box?1:height/10}`} fill="none" className="design-grid-line" vectorEffect="non-scaling-stroke"/></pattern><clipPath id={`${id}-paper`}><rect width={width} height={height}/></clipPath></defs>
    <rect width={width} height={height} className="design-paper"/>{layers.grid&&view!=='cp'&&<rect width={width} height={height} fill={`url(#${id}-grid)`} pointerEvents="none"/>}
    {box&&view==='packing'&&box.design.layout.sheet.type==='diag'&&<path d={`M${width/2} 0 ${width} ${height/2} ${width/2} ${height} 0 ${height/2}Z`} className="design-diagonal-border"/>}
-   {view==='cp'&&cp&&cp.segments.map(s=><line key={s.id} x1={s.a[0]} y1={s.a[1]} x2={s.b[0]} y2={s.b[1]} stroke={color[s.assignment]} strokeWidth={s.assignment==='B'?1.8:1} strokeDasharray={s.assignment==='A'?'4 4':undefined} vectorEffect="non-scaling-stroke"/>)}
+   {view==='cp'&&cp&&cp.segments.map(s=><line key={s.id} x1={s.a[0]} y1={s.a[1]} x2={s.b[0]} y2={s.b[1]} stroke={color[s.assignment]} {...svgLineStroke(s.a,s.b,s.assignment==='B'?1.8:1,s.assignment==='A'?'4 4':undefined,{enabled:adaptive,units:screenUnit,pen:'pixels'})}/>)}
    {packingCircles}
    {batch&&view!=='cp'&&<g pointerEvents="none" className="design-batch">{batch.normalEdges.map((d,index)=><path key={`edge-${index}`} d={d} className="design-batch-edge"/>)}{batch.chosenEdges.map((d,index)=><path key={`selected-edge-${index}`} d={d} className="design-batch-edge selected"/>)}{batch.normalNodes.map((d,index)=><path key={`normal-${index}`} d={d} className="design-batch-node"/>)}{batch.chosenNodes.map((d,index)=><path key={`selected-${index}`} d={d} className="design-batch-node selected"/>)}{batch.edgeLabels.map(edge=><text key={edge.id} x={edge.x} y={height-edge.y-unit*.012/camera.zoom} fontSize={fontSize} className="design-batch-label">{Number(edge.length.toFixed(3))}</text>)}{batch.nodeLabels.map(node=><text key={node.id} x={node.x+radius*1.7} y={height-node.y-radius*1.7} fontSize={fontSize} className="design-batch-label">{node.name||`N${node.id}`}</text>)}</g>}
    {view!=='cp'&&(tree||view==='tree')&&!batched&&<>

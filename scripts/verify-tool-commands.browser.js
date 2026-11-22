@@ -73,7 +73,7 @@ async page => {
     await page.getByLabel('工程名称', { exact: true }).waitFor();
     // Bootstrap may present the initial storage confirmation or recovery bar.
     await page.waitForTimeout(250);
-    for (const name of ['设置并开始使用', '关闭窗口', '保留当前工程']) {
+    for (const name of ['使用默认位置开始', '关闭窗口', '保留当前工程']) {
       const candidate = button(name);
       if (await candidate.count() && await candidate.isVisible()) await candidate.click();
     }

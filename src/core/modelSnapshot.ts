@@ -50,6 +50,11 @@ export interface LoadedModelSnapshot { source:Doc; graph:FoldGraph; result:FlatF
 
 /** Stores the calculation-time source, not whatever document is currently in the editor. */
 export function exportModelSnapshot(source:Doc,result:FlatFoldResult):string{
+  return JSON.stringify(checkedSnapshotModel(source,result),null,2);
+}
+
+/** Validate the same portable model fields without encoding a temporary file. */
+export function checkedSnapshotModel(source:Doc,result:FlatFoldResult){
   const model=result.geometry,flatCreases=model.graph?.zhezhi_flatCreases==='marks'?'marks':undefined;
   const {graph,material}=sourceGraph(source,flatCreases);
   if(model.status!=='ready'||!model.graph)throw new Error('请先生成有效的模型几何。');
@@ -59,8 +64,7 @@ export function exportModelSnapshot(source:Doc,result:FlatFoldResult):string{
   const validAngles=same(model.graph.edges_foldAngle,graph.edges_foldAngle)||same(model.graph.edges_foldAngle,flatAngles);
   if(!validAngles||!same(topology(graph,material),topology(model.graph,material))||!same(model.faces,graph.faces_vertices)||!same(model.vertices,model.graph.vertices_coords))throw new Error('模型与原始折痕拓扑不对应，不能保存为同一快照。');
   const relativeConstraints=result.layers.relativeConstraints===undefined?[]:result.layers.relativeConstraints;validateRelativeLayerConstraints(relativeConstraints,model.faces.length);
-  const snapshot={format:FORMAT,version:material?3:flatCreases?4:2,source:structuredClone(source),model:{basis:basis(graph,material),vertices:points(model.vertices,graph.vertices_coords.length),startingFace:root(model.startingFace??0,model.faces.length),constraints:constraints(result.layers.constraints,model.faces.length),...(relativeConstraints.length?{relativeConstraints:structuredClone(relativeConstraints)}:{}),...(flatCreases?{flatCreases}:{})}};
-  return JSON.stringify(snapshot,null,2);
+  return {format:FORMAT,version:material?3:flatCreases?4:2,source,model:{basis:basis(graph,material),vertices:points(model.vertices,graph.vertices_coords.length),startingFace:root(model.startingFace??0,model.faces.length),constraints:constraints(result.layers.constraints,model.faces.length),...(relativeConstraints.length?{relativeConstraints:structuredClone(relativeConstraints)}:{}),...(flatCreases?{flatCreases}:{})}};
 }
 
 /** Rebuild all topology from validated source; loading never executes a layer solver. */

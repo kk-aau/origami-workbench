@@ -35,6 +35,8 @@ export interface SimulationStepCollisionPath {
    * at ANY time in [a,b]. A scalar may bound all vertices. End-point distances
    * alone are not a valid bound for a rotating or otherwise nonlinear path. */
   motionBound(a: number, b: number): number | ArrayLike<number>;
+  /** All six material vertices move together throughout this whole interval. */
+  sameRigidAssembly?(start:number,end:number,first:readonly number[],second:readonly number[]):boolean;
   /** Optional certified projection ranges over the ENTIRE interval. When an
    * origin is supplied, ranges describe position(v)-position(origin).
    * This is necessary to certify many paths starting with zero-gap contact. */
@@ -247,6 +249,9 @@ export function certifySimulationStepPath(mesh:SimulationStepCollisionMesh,path:
       for(const p of pending){
         tick();
         const kind=test(p,pose);if(kind==='penetration')return {status:'collision',pairs:[describe(mesh,p,kind)],progress:m,interval:[a,b],...base()};
+        // A constant relative pose carries this directly checked separation
+        // (or legal contact) through the whole interval.
+        if(path.sameRigidAssembly?.(a,b,ts[p.a],ts[p.b]))continue;
         const at=ts[p.a].map(v=>point(pose,v)),bt=ts[p.b].map(v=>point(pose,v));
         if(kind&&m>0&&m<1&&coplanarAreaOverlap(at,bt,tolerance)){
           const transition=path.contactTransition?.(m,ts[p.a],ts[p.b])??'inconclusive';

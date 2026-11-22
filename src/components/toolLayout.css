@@ -113,7 +113,7 @@
 .is-collapsible:not(.is-icon-palette) .custom-tool-grid.has-actions{grid-auto-rows:34px}
 .is-collapsible:not(.is-icon-palette) .custom-tool-grid.has-actions>button{height:34px}
 .tool-category-leading{padding:1px 0 8px}
-.tool-category-leading .type-buttons.compact,.tool-category-fallback .type-buttons.compact{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px}
+.tool-category-leading .type-buttons.compact,.tool-category-fallback .type-buttons.compact{display:grid;grid-template-columns:repeat(auto-fit,minmax(43px,1fr));gap:4px}
 .tool-category-leading .type-buttons.compact button,.tool-category-fallback .type-buttons.compact button{display:flex;justify-content:center;gap:4px;min-width:0;min-height:32px;padding:4px 2px;font-size:11px;border:1px solid var(--line);background:var(--paper)}
 .tool-category-leading .type-buttons.compact button[aria-pressed=true],.tool-category-fallback .type-buttons.compact button[aria-pressed=true]{border-color:var(--accent);background:var(--tint)}
 .tool-category-leading .type-buttons.compact small,.tool-category-fallback .type-buttons.compact small{display:none}

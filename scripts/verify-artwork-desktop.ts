@@ -63,7 +63,7 @@ async function launch(){
   const identity=await application.evaluate(({app,BrowserWindow}:any)=>{const window=BrowserWindow.getAllWindows().find((item:any)=>item.webContents.getURL().startsWith('http:'));return {version:app.getVersion(),profile:app.getPath('userData'),isolated:process.env.ZHEZHI_DESKTOP_TEST_DATA,sandbox:window.webContents.getLastWebPreferences().sandbox,visible:window.isVisible()};});
   assert.equal(path.resolve(identity.profile),path.join(testRoot,'profile'));assert.equal(identity.isolated,testRoot);assert.equal(identity.sandbox,true);
   report.identity=identity;report.pid=child.pid;const port=Number(new URL(page.url()).port);assert.ok(port!==8933&&port!==8934&&port!==8787);ports.push(port);
-  const setup=page.getByRole('button',{name:'设置并开始使用',exact:true});if(await setup.isVisible().catch(()=>false))await setup.click();
+  const setup=page.getByRole('button',{name:'使用默认位置开始',exact:true});if(await setup.isVisible().catch(()=>false))await setup.click();
   await page.locator('[data-storage-settings]').waitFor({state:'detached'});
   await application.evaluate(({dialog,BrowserWindow}:any,{downloads}:any)=>{
     (globalThis as any).__artworkPicker={path:null,cancel:false,calls:0};(globalThis as any).__artworkDownloads=[];

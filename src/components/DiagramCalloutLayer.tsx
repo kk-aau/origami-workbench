@@ -3,6 +3,7 @@ import type {Point} from '../core/types';
 import {DIAGRAM_CALLOUT_MIN_RADIUS,DIAGRAM_CALLOUT_MAX_RADIUS,diagramCalloutLocator,diagramCalloutTargets,type DiagramCallout,type DiagramCalloutCircle,type DiagramCalloutTargetPart} from '../app/diagramCallouts';
 import {diagramCalloutsSVG,type DiagramCalloutPaperMarkup} from '../app/diagramCalloutSVG';
 import './DiagramCalloutLayer.css';
+import type {DiagramSymbolStyles} from '../app/diagramSymbolStyles';
 
 export interface DiagramCalloutLayerProps {
   callouts:readonly DiagramCallout[];
@@ -16,6 +17,7 @@ export interface DiagramCalloutLayerProps {
   /** World units occupied by one screen pixel. */
   units:number;
   stroke?:string;
+  symbolStyles?:DiagramSymbolStyles;
 }
 type Part='source'|DiagramCalloutTargetPart;
 interface Gesture {id:number;target:SVGCircleElement;callout:DiagramCallout;part:Part;resize:boolean;start:Point;inverse:DOMMatrix;next:DiagramCallout;moved:boolean}
@@ -31,7 +33,7 @@ function withCircle(callout:DiagramCallout,part:Part,circle:DiagramCalloutCircle
 }
 
 /** A drawing overlay: circle gestures never change CP or the surrounding canvas camera. */
-export default function DiagramCalloutLayer({callouts,selectedId,editable,onSelect,onChange,paperMarkup,cpMarkup,units,stroke='#293d35'}:DiagramCalloutLayerProps){
+export default function DiagramCalloutLayer({callouts,selectedId,editable,onSelect,onChange,paperMarkup,cpMarkup,units,stroke='#293d35',symbolStyles}:DiagramCalloutLayerProps){
   const group=useRef<SVGGElement>(null),gesture=useRef<Gesture|null>(null),[draft,setDraft]=useState<DiagramCallout|null>(null);
   const prefix='callout-layer-'+useId().replace(/[^a-zA-Z0-9_-]/g,''),pixel=Number.isFinite(units)&&units>0?units:1;
   const current=useRef({callouts,onChange});current.current={callouts,onChange};
@@ -82,7 +84,7 @@ export default function DiagramCalloutLayer({callouts,selectedId,editable,onSele
     </g>;
   };
   return <g ref={group} data-diagram-callout-layer data-callout-dragging={draft?true:undefined} onDragStartCapture={event=>{event.preventDefault();event.stopPropagation();}}>
-    <g pointerEvents="none" dangerouslySetInnerHTML={{__html:diagramCalloutsSVG(shown,{paperMarkup,cpMarkup,idPrefix:prefix,stroke,strokeWidth:pixel*1.3,units:pixel})}}/>
+    <g pointerEvents="none" dangerouslySetInnerHTML={{__html:diagramCalloutsSVG(shown,{paperMarkup,cpMarkup,idPrefix:prefix,stroke,strokeWidth:pixel*1.3,units:pixel,symbolStyles})}}/>
     {editable&&shown.map((callout,index)=><g key={callout.id}>{controls(callout,'source',index)}{diagramCalloutTargets(callout).map(target=>controls(callout,target.part,index))}</g>)}
     {editable&&shown.map((callout,index)=>callout.id===selectedId?<g key={callout.id} data-callout-grips>{controls(callout,'source',index,true)}{diagramCalloutTargets(callout).map(target=>controls(callout,target.part,index,true))}</g>:null)}
   </g>;

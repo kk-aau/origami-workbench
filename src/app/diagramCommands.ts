@@ -16,7 +16,6 @@ const tools:readonly ToolCommand<DiagramDrawingTool>[]=[
   {tool:'perpendicular',name:'垂线',aliases:['PER','PERP']},
   {tool:'bisector',name:'角平分线',aliases:['BI','BISECT','BISECTOR']},
   {tool:'trim',name:'修剪',aliases:['TR','TRIM','截断']},
-  {tool:'extend',name:'延长',aliases:['EX','EXTEND']},
   {tool:'symbol',name:'折纸符号',aliases:['SY','SYMBOL','符号']},
   {tool:'vertex',name:'拖角',aliases:['VX','VERTEX','纸角']},
   {tool:'fixed',name:'固定侧',aliases:['FIX','FIXED']},

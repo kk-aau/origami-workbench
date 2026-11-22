@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import type { Doc, Point, Segment, Assignment } from '../../src/core/types';
-import { continuousReflection } from '../../src/app/continuousReflection';
-import { distance } from '../../src/core/geometry';
+import { continuousReflection, continuousReflectionEndpointOnSegment } from '../../src/app/continuousReflection';
+import { distance, epsilonFor } from '../../src/core/geometry';
 import {overlayDrawnSegments} from '../../src/app/drawOverlay';
 const s=(id:string,a:Point,b:Point,assignment:Assignment='B'):Segment=>({id,a,b,assignment,angle:assignment==='M'?-180:assignment==='V'?180:0});
 const boundary=[s('top',[0,0],[200,0]),s('right',[200,0],[200,200]),s('bottom',[200,200],[0,200]),s('left',[0,200],[0,0])];
@@ -40,6 +40,35 @@ test('isolated endpoint stops and boundary wins at coincident vertex',()=>{
 test('auxiliary and flat lines do not redirect the path',()=>{
   const r=continuousReflection(doc([s('a',[50,0],[50,200],'A'),s('f',[75,0],[75,200],'F')]),[25,100],[100,100],'A');
   assert.equal(r.path.length,1);assert.equal(r.path[0].assignment,'A');assert.deepEqual(r.path[0].b,[200,100]);
+});
+
+test('a selected finite segment cuts the traced route at its first encounter',()=>{
+  const crease=s('mirror',[75,0],[75,200],'M');
+  const auxiliary=s('guide',[55,110],[55,100],'A'),flat=s('flat',[110,10],[110,150],'F');
+  const d=doc([crease,auxiliary,flat]),eps=epsilonFor(d);
+  const full=continuousReflection(d,[25,100],[50,100],'V');
+  assert.deepEqual(full.path.map(leg=>leg.b),[[75,100],[200,100]]);
+  for(const [target,point,segmentIndex] of [[auxiliary,[55,100],0],[crease,[75,100],0],[flat,[110,100],1],[boundary[1],[200,100],1]] as const){
+    const endpoint=continuousReflectionEndpointOnSegment(full.path,target,eps);
+    assert.deepEqual(endpoint,{point,segmentIndex});
+    const cut=continuousReflection(d,[25,100],[50,100],'V',45,{endpoint});
+    assert.equal(cut.stop,'selected');
+    assert.deepEqual(cut.path.at(-1)!.b,point);
+  }
+  assert.equal(continuousReflectionEndpointOnSegment(full.path,s('too-short',[60,90],[60,60]),eps),undefined);
+});
+
+test('overlap and repeated visits select the first positive-length stop along the path',()=>{
+  const eps=1e-6,route=[s('leg1',[12,5],[2,5]),s('leg2',[2,5],[2,9]),s('leg3',[2,9],[12,9])];
+  const endpoint=(a:Point,b:Point)=>continuousReflectionEndpointOnSegment(route,s('target',a,b),eps);
+  assert.deepEqual(endpoint([4,5],[8,5]),{segmentIndex:0,point:[8,5]});
+  assert.deepEqual(endpoint([15,5],[7,5]),{segmentIndex:0,point:[7,5]});
+  assert.deepEqual(endpoint([15,5],[0,5]),{segmentIndex:0,point:[2,5]});
+  assert.deepEqual(endpoint([2,5],[2,9]),{segmentIndex:0,point:[2,5]});
+  assert.deepEqual(endpoint([8,0],[8,10]),{segmentIndex:0,point:[8,5]});
+  assert.deepEqual(endpoint([12,5],[12,10]),{segmentIndex:2,point:[12,9]});
+  assert.equal(endpoint([12,5],[14,5]),undefined);
+  assert.equal(endpoint([12,5],[12,0]),undefined);
 });
 test('non-MV preset stays constant; U stays unknown',()=>{
   const r=continuousReflection(doc([s('m',[100,0],[100,200],'M')]),[25,100],[50,100],'U');

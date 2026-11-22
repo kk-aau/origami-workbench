@@ -9,7 +9,11 @@ import {defaultModelView} from './modelViewState';
 import {defaultModelColors,validateModelColors,type ModelColors} from './modelColors';
 import {defaultDiagramLineDefaults,validateDiagramLineDefaults,DIAGRAM_LINE_STYLES,type DiagramLineDefaults} from './diagramLineStyles';
 
+import {readPaperPatterns,type PaperPatterns} from './paperPatterns';
+import {validateDiagramSymbolStyles,type DiagramSymbolStyles} from './diagramSymbolStyles';
 export interface DiagramBasicSettings {
+ paperPatterns?:PaperPatterns;
+ symbolStyles?:DiagramSymbolStyles;
  paper:{shape:'square'|'rectangle'|'triangle'|'regular'|'custom';width:number;height:number;sides:number};
  colors:ModelColors;lineDefaults:DiagramLineDefaults;adaptiveLines:boolean;
 }
@@ -21,7 +25,9 @@ export function validateDiagramBasicSettings(value:unknown):asserts value is Dia
  if(!value||typeof value!=='object'||Array.isArray(value))throw Error('绘图基本信息无效。');
  const s=value as DiagramBasicSettings,p=s.paper;
  if(!p||!['square','rectangle','triangle','regular','custom'].includes(p.shape)||![p.width,p.height].every(v=>Number.isFinite(v)&&v>0&&v<=(p.shape==='custom'?1_000_000:100000))||!Number.isSafeInteger(p.sides)||p.sides<3||p.sides>64||typeof s.adaptiveLines!=='boolean')throw Error('纸张尺寸、形状或边数无效。');
+ if(s.paperPatterns!==undefined){const valid=readPaperPatterns(s.paperPatterns);if(!valid||Object.keys(s.paperPatterns).some(k=>!Object.prototype.hasOwnProperty.call(valid,k)))throw Error('纸张图案必须是有效的 PNG、JPEG 或 WebP 图片。');}
  validateModelColors(s.colors);validateDiagramLineDefaults(s.lineDefaults);
+ if(s.symbolStyles!==undefined)validateDiagramSymbolStyles(s.symbolStyles);
 }
 function regularPoints(sides:number):Point[]{return Array.from({length:sides},(_,i)=>{const angle=-Math.PI/2+i*2*Math.PI/sides;return [Math.cos(angle),Math.sin(angle)];});}
 export function normalizeDiagramBasicSettings(input:DiagramBasicSettings):DiagramBasicSettings {
@@ -87,6 +93,7 @@ export function readDiagramBasicSettings(project:DiagramProject,fallbackLines?:D
  if(project.basicSettings)return structuredClone(project.basicSettings);
  const doc=project.states[0].doc,s=defaultDiagramBasicSettings(doc.paper.width,doc.paper.height),vertices=doc.segments.filter(s=>s.assignment==='B').flatMap(s=>[s.a,s.b]);
  const rectangle=vertices.length===8&&vertices.every(p=>(p[0]===0||p[0]===doc.paper.width)&&(p[1]===0||p[1]===doc.paper.height));
+ s.paperPatterns=readPaperPatterns(doc.metadata?.paperPatterns);
  if(!rectangle)s.paper.shape='custom';
  const step=project.steps.find(s=>s.id===project.activeStepId);s.colors=structuredClone(step?.simulationSurface?.colors??step?.pose?.view?.colors??defaultModelColors());
  if(fallbackLines)s.lineDefaults=structuredClone(fallbackLines);if(!s.lineDefaults.boundary.globalFields?.includes('color'))s.lineDefaults.boundary.color=s.colors.line;s.adaptiveLines=adaptiveLines;return s;
@@ -104,6 +111,15 @@ export function applyDiagramBasicSettings(project:DiagramProject,name:string,inp
  const settings=normalizeDiagramBasicSettings(input);if(!name.trim())throw Error('请填写绘图名称。');
  const previous=readDiagramBasicSettings(project),paperChanged=JSON.stringify(previous.paper)!==JSON.stringify(settings.paper);
  let next={...project,name:name.trim(),basicSettings:settings};
+ if(!paperChanged&&previous.colors.front===settings.colors.front&&previous.colors.back===settings.colors.back&&previous.colors.line===settings.colors.line){
+  // A symbol-only edit in an older document must not also adopt global line
+  // attributes or repaint every step's saved paper and simulation snapshots.
+  if(JSON.stringify(previous.symbolStyles)!==JSON.stringify(settings.symbolStyles)&&DIAGRAM_LINE_STYLES.every(kind=>{
+   const a=previous.lineDefaults[kind],b=settings.lineDefaults[kind];
+   return a.width===b.width&&a.color===b.color&&a.strokePattern===b.strokePattern;
+  }))settings.lineDefaults=previous.lineDefaults;
+  return next;
+ }
  if(paperChanged){
   if(!canChangeDiagramBasicPaper(project)||previous.paper.shape==='custom')throw Error('纸张已用于绘图，不能直接替换其尺寸或边界。');
   const doc=diagramBasicPaperDoc(name.trim(),settings),result=computeFlatFold(doc,undefined,{flatCreases:'marks'});

@@ -26,6 +26,8 @@ export function refineSimulationStepForBending(fold:FoldGraph,animation:Simulati
   const timeByEdge=new Map(animation.timings?.map(t=>[t.edge,t]));
   const timings=ranges.flatMap(r=>{const source=provenance.edgeSourceEdges[r.edge],timing=source===null?undefined:timeByEdge.get(source);return timing?[{...timing,edge:r.edge}]:[];});
   const next:SimulationStepAnimation={version:1,sourceSignature,initialPositions,ranges,fixedVertices,materialMode:'bendable',motionPolicy:'allow-dynamic',collisionPolicy:animation.collisionPolicy,retainedCreases,...timings.length?{timings}:{}};
+  const target=animation.targetCreases;
+  if(target)next.targetCreases=provenance.edgeSourceEdges.map(source=>source===null?null:target[source]);
   validateSimulationStepAnimationStructure(next,refined,sourceSignature);
   return {fold:graph,animation:next};
 }

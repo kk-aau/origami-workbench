@@ -13,14 +13,35 @@ export function binaryCoordinate(value:number):readonly [bigint,number]{
  if(value===0)return [0n,0];memory.setFloat64(0,value);const bits=memory.getBigUint64(0),exponent=Number((bits>>52n)&2047n),mantissa=(bits&((1n<<52n)-1n))|(exponent?1n<<52n:0n);
  return [(bits>>63n?-1n:1n)*mantissa,exponent?exponent-1075:-1074];
 }
+function integerExponent(value:bigint):number{
+ const rounded=Number(value);
+ if(!Number.isFinite(rounded))return value.toString(2).length-1;
+ memory.setFloat64(0,rounded);
+ const high=memory.getUint32(0),e=(high>>>20)-1023;
+ // Rounding an integer can raise its exponent only at a power of two.
+ if(!(high&0xfffff)&&!memory.getUint32(4)&&value<(1n<<BigInt(e)))return e-1;
+ return e;
+}
 /** Correct nearest-even conversion, including subnormal values. */
 export function fractionNumber(n:bigint,d:bigint,exponent=0):number{
  if(!n)return 0;if(d<0n){n=-n;d=-d;}const sign=n<0n?-1:1;n=n<0n?-n:n;
- let k=n.toString(2).length-d.toString(2).length;if(k>=0?n<(d<<BigInt(k)):(n<<BigInt(-k))<d)k--;
+ if(d===1n||n<=0x1fffffffffffffn&&d>0n&&d<=0x1fffffffffffffn){
+  // Exact operands (or a single rounded integer). Scaling a normal result
+  // by an exactly representable power of two preserves nearest-even rounding.
+  const quick=(Number(n)/Number(d))*2**exponent;
+  if(quick>=2**-1021&&Number.isFinite(quick))return sign*quick;
+ }
+ let k=integerExponent(n)-integerExponent(d);if(k>=0?n<(d<<BigInt(k)):(n<<BigInt(-k))<d)k--;
  const subnormal=k+exponent< -1022,shift=subnormal?exponent+1074:52-k,a=shift>=0?n<<BigInt(shift):n,b=shift>=0?d:d<<BigInt(-shift),q=a/b,r=a%b,rounded=q+(r*2n>b||r*2n===b&&(q&1n)!==0n?1n:0n);
  return sign*Number(rounded)*2**(subnormal?-1074:k+exponent-52);
 }
-export const compareCoordinate=(a:ExactPoint,b:ExactPoint,axis:0|1):number=>{const d=(axis?a.y:a.x)*b.w-(axis?b.y:b.x)*a.w;return d<0n?-1:d>0n?1:0;};
+export const compareCoordinate=(a:ExactPoint,b:ExactPoint,axis:0|1):number=>{
+ // Projection is correctly rounded in a shared positive binary unit. Distinct
+ // rounded values preserve order. Coincident pixels still need exact products.
+ const av=a.point[axis],bv=b.point[axis];
+ if(av<bv)return -1;if(av>bv)return 1;
+ const d=(axis?a.y:a.x)*b.w-(axis?b.y:b.x)*a.w;return d<0n?-1:d>0n?1:0;
+};
 export function exactOrientation(a:ExactPoint,b:ExactPoint,c:ExactPoint):bigint{
  const bx=b.x*a.w-a.x*b.w,by=b.y*a.w-a.y*b.w,cx=c.x*a.w-a.x*c.w,cy=c.y*a.w-a.y*c.w;return bx*cy-by*cx;
 }

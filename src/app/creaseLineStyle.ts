@@ -1,6 +1,6 @@
 import type {Point,Segment} from '../core/types';
 import {segmentDisplayColor} from './customColor';
-import {adaptiveLineStroke} from './adaptiveLineStyle';
+import {resolveLineStroke} from './adaptiveLineStyle';
 export const LINE_STYLES={WORKBENCH:'工作台默认',COLOR:'彩色实线',BLACK_WHITE:'黑灰实线',COLOR_AND_SHAPE:'彩色区分线型',BLACK_ONE_DOT:'黑色一点划线',BLACK_TWO_DOT:'黑色两点划线'} as const;
 export type CreaseLineStyle=keyof typeof LINE_STYLES;
 export function isCreaseLineStyle(value:unknown):value is CreaseLineStyle{return typeof value==='string'&&Object.hasOwn(LINE_STYLES,value);}
@@ -34,9 +34,9 @@ export function creaseLineStyle(segment:Segment,style:CreaseLineStyle,units:numb
 /** A CP segment is already the complete source stroke. Junction/snap markers do
  * not split its pattern, and unrelated collinear segments never share phase. */
 export function creaseLineStroke(segment:Segment,style:CreaseLineStyle,widthPixels:number,units:number,enabled:boolean,roundedEnds=false,auxLineStyle:AuxiliaryLineStyle='solid',solidCreases=false){
- const base=creaseLineStyle(segment,style,units,auxLineStyle,solidCreases);
+ const base=creaseLineStyle(segment,style,1,auxLineStyle,solidCreases);
  const length=Math.hypot(segment.b[0]-segment.a[0],segment.b[1]-segment.a[1]);
- return {color:base.color,...adaptiveLineStroke(length,widthPixels*units,base.dash,{enabled,units,linecap:roundedEnds?'round':'butt'})};
+ return {color:base.color,...resolveLineStroke(length,widthPixels,base.dash,{enabled,units,pen:'pixels',linecap:roundedEnds?'round':'butt'})};
 }
 
 export function creaseShortLineTitle(segment:Segment,limited:boolean):string|undefined {

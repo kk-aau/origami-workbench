@@ -7,6 +7,19 @@ function model(polygons:Point[][]):FlatFoldResult{
  const vertices:Point[]=[],faces=polygons.map(p=>{const offset=vertices.length;vertices.push(...p);return p.map((_,i)=>offset+i);});return {geometry:{status:'ready',message:'',vertices,faces},layers:{status:'unknown',message:''},warnings:[]};
 }
 const rect=(x:number,y:number,w:number,h:number):Point[]=>[[x,y],[x+w,y],[x+w,y+h],[x,y+h]];
+test('different source directions intern the same reduced rational intersection only once',()=>{
+ // Three integral lines y=x, x+2y=1 and 4x-y=1 meet at (1/3,1/3).
+ const t=buildExactModelTopology(model([
+  [[-6,-6],[3,3],[-6,3]],
+  [[5,-2],[-3,2],[5,2]],
+  [[-2,-9],[2,7],[2,-9]],
+ ]),undefined,{retainExactVertices:true});
+ const unit=t.binaryExponent>=0?1n<<BigInt(t.binaryExponent):1n;
+ const divisor=t.binaryExponent<0?1n<<BigInt(-t.binaryExponent):1n;
+ const matches=t.exactVertices!.filter(([x,y,w])=>x*3n*unit===w*divisor&&y===x);
+ assert.equal(matches.length,1);
+ assert.equal(matches[0][2],3n);
+});
 test('compact result stores topology only and preserves halfedge left-cell cycles',()=>{
  const t=buildExactModelTopology(model([rect(0,0,2,2),rect(1,0,2,2)]));
  assert.equal(t.cellCount,3);assert.equal(t.exactVertices,undefined);assert.equal('cells' in t,false);assert.equal(t.cellArea.reduce((s,a)=>s+a,0),6);

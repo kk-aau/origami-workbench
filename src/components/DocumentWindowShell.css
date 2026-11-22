@@ -58,6 +58,7 @@
 .document-view-wait{height:100%;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:12px}
 .document-window-status{height:22px;min-height:22px;display:flex;align-items:center;gap:12px;padding:2px 10px;border-top:1px solid var(--line);background:var(--surface);font-size:11px;white-space:nowrap;overflow:hidden}
 .document-window-status>span{overflow:hidden;text-overflow:ellipsis}
+.document-window-status .document-window-update{flex-shrink:0;border:0;background:transparent;color:var(--accent);font:inherit;font-weight:600;cursor:pointer}
 .document-window-online{color:var(--accent);flex-shrink:0}
 .document-window-status-spacer{flex:1}
 .document-window-error{color:var(--danger);max-width:60%;overflow:hidden;text-overflow:ellipsis}

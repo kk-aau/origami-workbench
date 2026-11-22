@@ -3,6 +3,7 @@ import type {DiagramSimulationSurface} from './diagramSimulationSurface';
 import {renderDiagramSimulationSurface,diagramSimulationSurfaceBounds} from './diagramSimulationSurfaceRender';
 import type {Point} from '../core/types';
 import {resolveDiagramPaperBindings} from './diagramPaperBinding';
+import {resolveDiagramSymbolGeometry} from './diagramSymbolStyles';
 import type {DiagramPose} from './diagramProject';
 import type {DiagramAnnotation,DiagramLineAnnotation,DiagramLineStyle} from './diagramAnnotations';
 import {isDiagramCPExistingLine,isDiagramCPLine} from './diagramAnnotations';
@@ -17,7 +18,7 @@ import {diagramIllustrationMesh} from './diagramIllustrationMesh';
 import {modelProjection} from './modelProjection';
 import {diagramTearWindowRender} from './diagramTearWindowRender';
 import {diagramImageBounds,diagramImageSVG,isDiagramImageAnnotationVisible,type DiagramImage} from './diagramImages';
-import {applyDiagramLineAppearance,readDiagramLineDefaults,type DiagramLineDefaults} from './diagramLineStyles';
+import {applyDiagramLineAppearance,diagramBoundaryStrokeWidth,readDiagramLineDefaults,type DiagramLineDefaults} from './diagramLineStyles';
 import {diagramCalloutDrawingBounds,type DiagramCallout} from './diagramCallouts';
 import {diagramCalloutsSVG} from './diagramCalloutSVG';
 import {readAdaptiveLineStyle} from './adaptiveLineStyle';
@@ -27,7 +28,8 @@ import {diagramLocalSurfaceMarkup,diagramLocalSurfaceClips} from './diagramLocal
 import {diagramDrawingRotationFrame,diagramDrawingRotationMarkup} from './diagramDrawingRotation';
 import {diagramSpatialFaceColor} from './diagramSpatialAppearance';
 import {diagramSpatialEdgeMarkup} from './diagramSpatialEdges';
-import {diagramBoundaryOverlay} from './diagramBoundaryOverlay';
+import {boundaryFoldInk,diagramBoundaryFoldOffsets,diagramBoundaryOverlay} from './diagramBoundaryOverlay';
+import {processFigureImageBounds,processFigureImageRegion} from './diagramProcessFigureFrame';
 import {diagramDepthActive} from './diagramDepth';
 
 export const diagramPoseView=(pose:DiagramPose):ModelViewState=>pose.view??defaultModelView();
@@ -42,7 +44,9 @@ export function diagramPresentation(pose:DiagramPose,view=diagramPoseView(pose))
 function facePath(outer:number[],holes:number[][],vertices:Point[]) {
   return [outer,...holes].map(r=>r.map((v,i)=>`${i?'L':'M'} ${vertices[v].join(' ')}`).join(' ')+' Z').join(' ');
 }
-export function diagramModelMarkup(pose:DiagramPose,view=diagramPoseView(pose),omitFlatCreases=false,annotations:readonly DiagramAnnotation[]=[],lineDefaults:DiagramLineDefaults=readDiagramLineDefaults()) {
+import {readPaperPatterns,type PaperPatterns} from './paperPatterns';
+import {diagramPaperPrint} from './diagramPaperPatternSVG';
+export function diagramModelMarkup(pose:DiagramPose,view=diagramPoseView(pose),omitFlatCreases=false,annotations:readonly DiagramAnnotation[]=[],lineDefaults:DiagramLineDefaults=readDiagramLineDefaults(),patterns:PaperPatterns|undefined=readPaperPatterns(pose.sourceDoc.metadata?.paperPatterns)) {
   omitFlatCreases=omitFlatCreases||view.showExistingCreases===false;
   const p=diagramPresentation(pose,view),baseColors=view.colors??defaultModelColors();
   // The category picker controls actual paper outlines as well as authored
@@ -54,19 +58,20 @@ export function diagramModelMarkup(pose:DiagramPose,view=diagramPoseView(pose),o
   // local overlap. Paint those regions instead of exposing all buried faces.
   // Per-face cutaways and pulled illustrations keep their established fallback.
   if(!p.solid&&!p.manual&&!view.xray&&!cutaway.definitions){
-    const local=diagramLocalSurfaceMarkup(pose,view,colors,omitFlatCreases);if(local!==null)return local+diagramSpatialEdgeMarkup(pose,view,colors.line);
+    const local=diagramLocalSurfaceMarkup(pose,view,colors,omitFlatCreases,patterns,diagramBoundaryStrokeWidth(lineDefaults,shade?1.35:.8));if(local!==null)return local+diagramSpatialEdgeMarkup(pose,view,colors.line,diagramBoundaryStrokeWidth(lineDefaults,1.35));
   }
   const graph=pose.result.geometry.graph,flatEdges=new Set<string>(),mesh=diagramIllustrationMesh({...pose,view}),depth=diagramDepthActive({...pose,view});
   // Side-on outlines still need their own precise depth clipping. The spatial
   // edge renderer uses these same display cells when relief is enabled.
   const spatialEdges=pose.spatial&&!view.xray&&!pose.paperDeformation?.nodes.length&&!cutaway.definitions?new Set(graph?.zhezhi_spatialEdgeOnFaces as number[]|undefined):null;
   if(omitFlatCreases&&graph)graph.edges_vertices.forEach(([a,b],index)=>{if(graph.edges_assignment[index]==='F'||['M','V'].includes(graph.edges_assignment[index])&&pose.spatial&&typeof pose.spatial.measuredAngles[index]==='number'&&Math.abs(pose.spatial.measuredAngles[index]!)<=1e-5)flatEdges.add([Math.min(a,b),Math.max(a,b)].join('-'));});
+  const print=patterns?diagramPaperPrint(patterns,mesh.graph.vertices_coords,p.vertices):null;
   const faces=p.visibleOrder.map(index=>{
     if(spatialEdges?.has(index))return ''; // The dedicated depth-clipped silhouette paints zero-area faces.
     const rings=mesh.rings[index],path=facePath(rings[0],rings.slice(1),p.vertices);
-    const attributes=`stroke="${colors.line}" stroke-width="${shade?1.35:1.2}" vector-effect="non-scaling-stroke" stroke-linejoin="round"`;
+    const attributes=`stroke="${colors.line}" stroke-width="${diagramBoundaryStrokeWidth(lineDefaults,shade?1.35:1.2)}" vector-effect="non-scaling-stroke" stroke-linejoin="round"`;
     const cells=pose.paperDeformation?.nodes.length||depth||graph?.zhezhi_flatCreases==='marks'&&graph.edges_assignment.includes('F')?mesh.triangles[index]:null;
-    if(!flatEdges.size&&!cells)return cutaway.wrapFaces([index],`<path d="${path}" fill="${fillFor(index,p.frontMaterial[index])}" fill-opacity="${p.solid?1:.09}" fill-rule="evenodd" ${attributes} data-diagram-paper-face="${index}"/>`);
+    if(!print&&!flatEdges.size&&!cells)return cutaway.wrapFaces([index],`<path d="${path}" fill="${fillFor(index,p.frontMaterial[index])}" fill-opacity="${p.solid?1:.09}" fill-rule="evenodd" ${attributes} data-diagram-paper-face="${index}"/>`);
     // F subdivides the material topology but leaves the paper flat. Paint its
     // crease once through the layer-aware preview, rather than as a solid face edge.
     const flatBoundary=(a:number,b:number)=>{
@@ -91,30 +96,51 @@ export function diagramModelMarkup(pose:DiagramPose,view=diagramPoseView(pose),o
       group.paths.push(facePath(cell,[],p.vertices));group.vertices.push(cell.join(','));
     });
     const fill=cells?fills.map(group=>`<path data-diagram-cell="${index}:${group.first}" data-diagram-cell-count="${group.paths.length}" data-diagram-cell-vertices="${group.vertices.join(' ')}" d="${group.paths.join(' ')}" fill="${fillFor(index,group.front)}" fill-opacity="${p.solid?1:.09}" fill-rule="nonzero" stroke="none"/>`).join(''):`<path d="${path}" fill="${fillFor(index,p.frontMaterial[index])}" fill-opacity="${p.solid?1:.09}" fill-rule="evenodd" stroke="none"/>`;
-    return cutaway.wrapFaces([index],`<g data-diagram-paper-face="${index}">${fill}<path d="${outline}" fill="none" ${attributes}/></g>`);
+    const ink=print?mesh.triangles[index].map(tri=>{
+      const front=cells?(polygonArea(tri.map(v=>mesh.vertices[v]))>0)===(view.side==='front'):p.frontMaterial[index];
+      return print.triangle(tri,front,p.solid?1:.09);
+    }).join(''):'';
+    return cutaway.wrapFaces([index],`<g data-diagram-paper-face="${index}">${fill}${ink}<path d="${outline}" fill="none" ${attributes}/></g>`);
   }).join('');
-  return (cutaway.definitions?`<defs>${cutaway.definitions}</defs>`:'')+faces+(cutaway.definitions?'':diagramSpatialEdgeMarkup(pose,view,colors.line));
+  return (print?`<defs>${print.defs.join('')}</defs>`:'')+(cutaway.definitions?`<defs>${cutaway.definitions}</defs>`:'')+faces+(cutaway.definitions?'':diagramSpatialEdgeMarkup(pose,view,colors.line,diagramBoundaryStrokeWidth(lineDefaults,1.35)));
 }
-export function diagramDrawingFrame(pose:DiagramPose|null,annotations:DiagramAnnotation[],view?:ModelViewState,images:readonly DiagramImage[]=[],paperVisible=true,callouts:readonly DiagramCallout[]=[],zoom?:DiagramZoomRegion|null,surface?:DiagramSimulationSurface):Omit<ModelCamera,'rotation'> {
-  annotations=resolveDiagramPaperBindings(pose&&view?{...pose,view}:pose,annotations);
+/** Fit visible ink with the usual step margins. Covers can explicitly request a tight frame. */
+type DiagramArtworkFit=boolean|'tight';
+export const DIAGRAM_STEP_FRAME_MARGIN=.16;
+export const DIAGRAM_FOCUS_FRAME_MARGIN=.04;
+export function diagramPaddedFrame(bounds:DiagramZoomBounds|null,margin=DIAGRAM_STEP_FRAME_MARGIN):DiagramZoomBounds {
+  if(!bounds)return {x:-20,y:-20,width:240,height:240};
+  const pad=Math.max(bounds.width,bounds.height)*margin;
+  return {x:bounds.x-pad,y:bounds.y-pad,width:bounds.width+pad*2,height:bounds.height+pad*2};
+}
+export function diagramDrawingFrame(pose:DiagramPose|null,annotations:DiagramAnnotation[],view?:ModelViewState,images:readonly DiagramImage[]=[],paperVisible=true,callouts:readonly DiagramCallout[]=[],zoom?:DiagramZoomRegion|null,surface?:DiagramSimulationSurface,fitArtwork:DiagramArtworkFit=false,symbolStyles?:import('./diagramSymbolStyles').DiagramSymbolStyles):Omit<ModelCamera,'rotation'> {
+  annotations=resolveDiagramPaperBindings(pose&&view?{...pose,view}:pose,annotations,symbolStyles);
   if(zoom){
     // Paper and crease ink are cropped, while action symbols remain usable in
     // the surrounding drawing area. Tight focus margins make even a half-sheet
     // wave selection larger, rather than merely hiding the other half.
-    const bounds=diagramZoomRegionBounds(zoom),symbols=annotationBounds(annotations.filter(annotation=>annotation.kind==='symbol'));
+    const bounds=diagramZoomRegionBounds(zoom),symbols=annotationBounds(annotations.filter(annotation=>annotation.kind==='symbol'),{symbolStyles});
     const x=Math.min(bounds.x,symbols?.x??bounds.x),y=Math.min(bounds.y,symbols?.y??bounds.y);
-    const width=Math.max(bounds.x+bounds.width,symbols?symbols.x+symbols.width:-Infinity)-x,height=Math.max(bounds.y+bounds.height,symbols?symbols.y+symbols.height:-Infinity)-y,pad=Math.max(width,height)*.04;
-    return {x:x-pad,y:y-pad,width:width+2*pad,height:height+2*pad};
+    const width=Math.max(bounds.x+bounds.width,symbols?symbols.x+symbols.width:-Infinity)-x,height=Math.max(bounds.y+bounds.height,symbols?symbols.y+symbols.height:-Infinity)-y;
+    return diagramPaddedFrame({x,y,width,height},DIAGRAM_FOCUS_FRAME_MARGIN);
   }
-  const vertices=pose&&paperVisible?diagramPresentation(pose,view).vertices:[],bounds=annotationBounds(paperVisible?annotations:annotations.filter(isDiagramImageAnnotationVisible));
+  const paper=pose&&paperVisible?diagramPresentation(pose,view):null;
+  let vertices=paper?.vertices??[];
+  if(fitArtwork&&paper&&pose?.hiddenFaces?.length){
+    const mesh=diagramIllustrationMesh(view?{...pose,view}:pose);
+    const visible=new Set<number>();
+    for(const face of paper.visibleOrder)for(const ring of mesh.triangles[face])for(const vertex of ring)visible.add(vertex);
+    vertices=Array.from(visible,index=>paper.vertices[index]);
+  }
+  const bounds=annotationBounds(paperVisible?annotations:annotations.filter(isDiagramImageAnnotationVisible),{symbolStyles});
   if(surface&&paperVisible){const b=diagramSimulationSurfaceBounds(surface);vertices.push([b.x,b.y],[b.x+b.width,b.y+b.height]);}
   if(bounds)vertices.push([bounds.x,bounds.y],[bounds.x+bounds.width,bounds.y+bounds.height]);
   const detailBounds=diagramCalloutDrawingBounds(callouts);if(detailBounds)vertices.push([detailBounds.x,detailBounds.y],[detailBounds.x+detailBounds.width,detailBounds.y+detailBounds.height]);
-  for(const image of images){const box=diagramImageBounds(image);vertices.push([box.minX,box.minY],[box.maxX,box.maxY]);}
-  if(!vertices.length)return {x:-20,y:-20,width:240,height:240};
+  for(const image of images){const box=fitArtwork?processFigureImageBounds(image):diagramImageBounds(image);if(box)vertices.push([box.minX,box.minY],[box.maxX,box.maxY]);}
+  if(!vertices.length)return diagramPaddedFrame(null);
   const xs=vertices.map(p=>p[0]),ys=vertices.map(p=>p[1]);
-  const x=Math.min(...xs),y=Math.min(...ys),w=Math.max(1,Math.max(...xs)-x),h=Math.max(1,Math.max(...ys)-y),pad=Math.max(w,h)*.16;
-  return {x:x-pad,y:y-pad,width:w+pad*2,height:h+pad*2};
+  const x=Math.min(...xs),y=Math.min(...ys),minimum=fitArtwork?Number.EPSILON:1,w=Math.max(minimum,Math.max(...xs)-x),h=Math.max(minimum,Math.max(...ys)-y);
+  return diagramPaddedFrame({x,y,width:w,height:h},fitArtwork==='tight' ? .03 : DIAGRAM_STEP_FRAME_MARGIN);
 }
 /** The standalone artwork also reserves space for its title and description. */
 export function diagramDrawingSVGFrame(frame:Omit<ModelCamera,'rotation'>,withCaptions=true):Omit<ModelCamera,'rotation'> {
@@ -140,16 +166,25 @@ export function diagramZoomInstructionMarkup(annotations:readonly DiagramAnnotat
     return `<path data-diagram-zoom-instruction="${escapeXML(annotation.id)}" d="${path}" fill="none" stroke="${escapeXML(annotation.color)}" stroke-width="${annotation.width}" stroke-linecap="round" stroke-linejoin="round" pointer-events="none"/>`;
   }).join('');
 }
+function previewStyleMatches(annotation:DiagramAnnotation,style:DiagramLineStyle,face:number,unfolding?:boolean):annotation is DiagramLineAnnotation {
+  if(annotation.kind!=='line'||annotation.foldFaces&&!annotation.foldFaces.includes(face))return false;
+  if(unfolding&&!annotation.foldFaces)return false;
+  if(annotation.style===style)return true;
+  // Older generated opening handles stored the closed hinge's opposite style.
+  // Only their explicit pen overrides belong to the opening on this material face.
+  return !!unfolding&&isDiagramCPExistingLine(annotation)&&(annotation.style==='valley'||annotation.style==='mountain')
+    &&!!annotation.appearanceOverrides?.length;
+}
 /** CP normalization can merge overlapping same-assignment strokes. Split only
  * their displayed ink at authored endpoints so a partial overpaint stays local. */
-export function diagramFoldPreviewAppearanceSegments<T extends Pick<DiagramFoldPreviewSegment,'face'|'a'|'b'|'strokeSpan'>&{style?:DiagramLineStyle;assignment?:DiagramFoldPreviewSegment['assignment'];id?:string}>(preview:readonly T[],annotations:readonly DiagramAnnotation[]):T[] {
+export function diagramFoldPreviewAppearanceSegments<T extends Pick<DiagramFoldPreviewSegment,'face'|'a'|'b'|'strokeSpan'|'unfolding'>&{style?:DiagramLineStyle;assignment?:DiagramFoldPreviewSegment['assignment'];id?:string}>(preview:readonly T[],annotations:readonly DiagramAnnotation[]):T[] {
   const styles={M:'mountain',V:'valley',F:'crease',U:'auxiliary'} as const,eps=1e-7;
   return preview.flatMap(segment=>{
     const style=segment.style??(segment.assignment?styles[segment.assignment]:undefined),dx=segment.b[0]-segment.a[0],dy=segment.b[1]-segment.a[1],length=Math.hypot(dx,dy);
     if(!style||length<=eps)return [segment];
     const along=(point:Point)=>((point[0]-segment.a[0])*dx+(point[1]-segment.a[1])*dy)/length,stops=[0,length];
     for(const annotation of annotations){
-      if(annotation.kind!=='line'||annotation.style!==style||annotation.foldFaces&&!annotation.foldFaces.includes(segment.face))continue;
+      if(!previewStyleMatches(annotation,style,segment.face,segment.unfolding))continue;
       if([annotation.a,annotation.b].some(point=>Math.abs((point[0]-segment.a[0])*dy-(point[1]-segment.a[1])*dx)/length>eps))continue;
       const values=[along(annotation.a),along(annotation.b)].sort((a,b)=>a-b);
       if(Math.min(length,values[1])-Math.max(0,values[0])<=eps)continue;
@@ -165,7 +200,7 @@ export function diagramFoldPreviewAppearanceSegments<T extends Pick<DiagramFoldP
 export function diagramFoldPreviewAttributes(segment:DiagramFoldPreviewSegment,annotations:DiagramAnnotation[],lineColor:string,lineDefaults:DiagramLineDefaults=readDiagramLineDefaults()) {
   const styles={M:'mountain',V:'valley',F:'crease',U:'auxiliary'} as const,style=segment.style??styles[segment.assignment];
   const matches=annotations.filter((annotation):annotation is DiagramLineAnnotation=>{
-    if(annotation.kind!=='line'||annotation.style!==style||annotation.foldFaces&&!annotation.foldFaces.includes(segment.face))return false;
+    if(!previewStyleMatches(annotation,style,segment.face,segment.unfolding))return false;
     const dx=annotation.b[0]-annotation.a[0],dy=annotation.b[1]-annotation.a[1],length=Math.hypot(dx,dy);
     if(length<1e-8)return false;
     return [segment.a,segment.b].every(point=>{
@@ -177,19 +212,25 @@ export function diagramFoldPreviewAttributes(segment:DiagramFoldPreviewSegment,a
   // An explicit material owner still takes precedence over unbound annotations.
   const bound=matches.filter(annotation=>annotation.foldFaces?.includes(segment.face));
   const source=bound.at(-1)??matches.at(-1),paint=diagramFoldPreviewPaint(segment,lineColor);
+  if(segment.unfolding&&(!source||isDiagramCPLine(source))){
+    const preset=lineDefaults[style],overrides=source?.appearanceOverrides;
+    return {...paint,color:source&&overrides?.includes('color')?source.color:preset.color,
+      width:source&&overrides?.includes('width')?source.width:preset.width,
+      strokePattern:source?.strokePattern&&overrides?.includes('strokePattern')?source.strokePattern:preset.strokePattern,
+      ...(overrides?{appearanceOverrides:[...overrides]}:{})};
+  }
   const shown=applyDiagramLineAppearance<DiagramLineAnnotation>(source??{id:'preview',kind:'line',a:segment.a,b:segment.b,style,color:paint.color,width:segment.existing?.45:.7},lineDefaults);
-  const generatedUnfold=segment.unfolding&&source&&isDiagramCPExistingLine(source);
-  return {...paint,color:generatedUnfold&&!source.appearanceOverrides?.includes('color')?paint.color:shown.color,
-    width:generatedUnfold&&!source.appearanceOverrides?.includes('width')?Math.max(shown.width,.7):shown.width,
+  return {...paint,color:shown.color,width:shown.width,
     ...(shown.strokePattern?{strokePattern:shown.strokePattern}:{}),...(source?.appearanceOverrides?{appearanceOverrides:[...source.appearanceOverrides]}:{})};
 }
 /** Linked fold instructions may extend into the background. Only their paper
  * portions are replaced by CP projection; the remainder stays on the bottom
  * drawing layer and keeps its original style. Overlapping faces count once. */
 export const isDiagramBackgroundLine=(a:DiagramAnnotation):a is DiagramLineAnnotation&{id:`bg:${string}`}=>a.kind==='line'&&a.id.startsWith('bg:');
+export const mayExtendBeyondPaper=(a:DiagramAnnotation):a is DiagramLineAnnotation=>a.kind==='line'&&!isDiagramCPLine(a)&&!isDiagramBackgroundLine(a)&&(a.style==='valley'||a.style==='mountain')&&a.foldFaces?.length!==0;
 export function diagramFoldBackgroundLines(pose:DiagramPose|null,annotations:DiagramAnnotation[],view=pose?diagramPoseView(pose):undefined):DiagramLineAnnotation[] {
-  const lines=annotations.filter((a):a is DiagramLineAnnotation=>a.kind==='line'&&!isDiagramCPLine(a)&&!isDiagramBackgroundLine(a)&&(a.style==='valley'||a.style==='mountain')&&a.foldFaces?.length!==0);
-  if(!pose)return lines;
+  const lines=annotations.filter(mayExtendBeyondPaper);
+  if(!pose||!lines.length)return lines;
   const vertices=diagramPresentation(pose,view).vertices,graph=pose.result.geometry.graph,eps=epsilonFor(pose.sourceDoc);
   const faces=pose.result.geometry.faces.map((face,index)=>{
     const rings=[face,...(graph?.faces_holes?.[index]??[])].map(ring=>ring.map(v=>vertices[v])),outer=rings[0];
@@ -242,17 +283,21 @@ export function diagramFoldPreviewPaint(segment:Pick<DiagramFoldPreviewSegment,'
 }
 /** Paint ghosted lower creases before visible upper creases, independent of CP
  * face numbering, so an opaque current instruction keeps its selected color. */
-export function diagramFoldPreviewDrawingOrder<T extends Pick<DiagramFoldPreviewSegment,'visibility'|'existing'|'unfolding'> & {assignment?:string;style?:string}>(preview:readonly T[],options:{xray?:boolean;cutaway?:boolean;clipped?:boolean;showExistingCreases?:boolean}={}):T[] {
+export function diagramFoldPreviewCreaseVisible(segment:{existing?:boolean;unfolding?:boolean;assignment?:string;style?:string},showExistingCreases?:boolean){
+  return showExistingCreases!==false||!!segment.unfolding||!segment.existing&&segment.assignment!=='F'&&segment.style!=='crease';
+}
+export function diagramFoldPreviewDrawingOrder<T extends Pick<DiagramFoldPreviewSegment,'visibility'|'existing'|'unfolding'|'redundantFold'> & {assignment?:string;style?:string}>(preview:readonly T[],options:{xray?:boolean;cutaway?:boolean;clipped?:boolean;showExistingCreases?:boolean}={}):T[] {
   const rank={hidden:0,unknown:1,visible:2};
   // Old physical creases are part of their paper, not instructions on top of
   // the stack. Only explicit X-ray / cutaway views reveal buried old ink.
-  return preview.filter(segment=>options.showExistingCreases!==false||segment.unfolding||!segment.existing&&segment.assignment!=='F'&&segment.style!=='crease').filter(segment=>!segment.existing||segment.unfolding||segment.visibility!=='hidden'||options.xray||options.cutaway||options.clipped).sort((a,b)=>rank[a.visibility]-rank[b.visibility]);
+  return preview.filter(segment=>!segment.redundantFold||options.xray||options.cutaway).filter(segment=>diagramFoldPreviewCreaseVisible(segment,options.showExistingCreases)).filter(segment=>!segment.existing||segment.unfolding||segment.visibility!=='hidden'||options.xray||options.cutaway||options.clipped).sort((a,b)=>rank[a.visibility]-rank[b.visibility]);
 }
 /** Preview points already use the same presented paper coordinates as the pose.
  * Supplying an empty preview deliberately removes original mountain/valley paint;
  * omitting it preserves the independent drawing export used by older projects. */
-export function drawingSVG(pose:DiagramPose|null,annotations:DiagramAnnotation[],title:string,description:string,preview?:DiagramFoldPreviewSegment[],images:readonly DiagramImage[]=[],paperVisible=true,lineDefaults:DiagramLineDefaults=readDiagramLineDefaults(),callouts:readonly DiagramCallout[]=[],cpMarkup?:(stateId:string,sourceUnits?:number,hideExistingCreases?:boolean)=>string,lineDisplay?:{enabled?:boolean;units?:number;outputSize?:{width:number;height:number}},zoom?:DiagramZoomRegion|null,drawingRotation=0,surface?:DiagramSimulationSurface) {
-  annotations=resolveDiagramPaperBindings(pose,annotations).filter(a=>diagramAnnotationCreaseVisible(a,pose?.view));
+export function drawingSVG(pose:DiagramPose|null,annotations:DiagramAnnotation[],title:string,description:string,preview?:DiagramFoldPreviewSegment[],images:readonly DiagramImage[]=[],paperVisible=true,lineDefaults:DiagramLineDefaults=readDiagramLineDefaults(),callouts:readonly DiagramCallout[]=[],cpMarkup?:(stateId:string,sourceUnits?:number,hideExistingCreases?:boolean)=>string,lineDisplay?:{enabled?:boolean;units?:number;symbolStyles?:import('./diagramSymbolStyles').DiagramSymbolStyles;fitArtwork?:DiagramArtworkFit;outputSize?:{width:number;height:number}},zoom?:DiagramZoomRegion|null,drawingRotation=0,surface?:DiagramSimulationSurface,patterns?:PaperPatterns) {
+  annotations=resolveDiagramPaperBindings(pose,annotations,lineDisplay?.symbolStyles).filter(a=>diagramAnnotationCreaseVisible(a,pose?.view))
+    .map(annotation=>annotation.kind==='symbol'?resolveDiagramSymbolGeometry(annotation,lineDisplay?.symbolStyles):annotation);
   if(!paperVisible){pose=null;preview=undefined;annotations=annotations.filter(isDiagramImageAnnotationVisible);}
   const cutaway=diagramTearWindowRender(pose,annotations);
   const localClips=pose&&!cutaway.definitions?diagramLocalSurfaceClips(pose,diagramPoseView(pose)):null;
@@ -266,22 +311,27 @@ export function drawingSVG(pose:DiagramPose|null,annotations:DiagramAnnotation[]
   const linkedSpans=projectedFoldInkSpans(linked);
   const independentInk=shownIndependent.filter((a):a is DiagramLineAnnotation=>a.kind==='line');
   const independentSpans=projectedFoldInkSpans(independentInk);
-  const sourceFrame=diagramDrawingFrame(pose,[...shownBackground,...shownIndependent,...linked],undefined,images,paperVisible,callouts,zoom,surface),frame=diagramDrawingRotationFrame(sourceFrame,drawingRotation),pad=frame.width*.06,svgFrame=diagramDrawingSVGFrame(frame,!!(title||description));
+  const sourceFrame=diagramDrawingFrame(pose,[...shownBackground,...shownIndependent,...linked],undefined,images,paperVisible,callouts,zoom,surface,lineDisplay?.fitArtwork,lineDisplay?.symbolStyles),frame=diagramDrawingRotationFrame(sourceFrame,drawingRotation),pad=frame.width*.06,svgFrame=diagramDrawingSVGFrame(frame,!!(title||description));
   const outputWidth=lineDisplay?.outputSize?.width??1200,outputHeight=lineDisplay?.outputSize?.height??900;
   if(!Number.isFinite(outputWidth)||!Number.isFinite(outputHeight)||outputWidth<=0||outputHeight<=0)throw new Error('折图输出像素尺寸无效。');
-  const renderStyle={enabled:lineDisplay?.enabled??readAdaptiveLineStyle(),units:lineDisplay?.units??Math.max(svgFrame.width/outputWidth,svgFrame.height/outputHeight)};
+  const renderStyle={symbolStyles:lineDisplay?.symbolStyles,enabled:lineDisplay?.enabled??readAdaptiveLineStyle(),units:lineDisplay?.units??Math.max(svgFrame.width/outputWidth,svgFrame.height/outputHeight)};
   const definitions=cutaway.definitions||localClips?`<defs>${cutaway.definitions}${localClips?.definitions??''}</defs>`:'';
-  const paperArtwork=(surface&&paperVisible?renderDiagramSimulationSurface(surface).markup:'')+(pose?diagramModelMarkup(pose,undefined,preview!==undefined,annotations,lineDefaults):'')+diagramImageSVG(images);
-  const boundaryOverlay=pose&&!cutaway.definitions&&(linked.length||shownIndependent.some(annotation=>annotation.kind==='line'))?diagramBoundaryOverlay(pose,diagramPoseView(pose),lineDefaults,preview!==undefined):'';
+  const paperArtwork=(surface&&paperVisible?renderDiagramSimulationSurface(surface,{patterns}).markup:'')+(pose?diagramModelMarkup(pose,undefined,preview!==undefined,annotations,lineDefaults,patterns):'')+diagramImageSVG(images,lineDisplay?.fitArtwork&&!zoom?processFigureImageRegion:undefined);
+  const boundaryOverlay=pose&&!cutaway.definitions&&(linked.length||shownIndependent.some(annotation=>annotation.kind==='line'))?diagramBoundaryOverlay(pose,diagramPoseView(pose),lineDefaults,preview!==undefined):null;
+  const boundaryOffsets=diagramBoundaryFoldOffsets(boundaryOverlay,orderedPreview.map((part,index)=>({...part,strokePattern:linked[index].strokePattern})));
   const artworkFor=(units:number,includeSymbols=true)=>{
     const options={...renderStyle,units};
-    const linkedMarkup=linked.map((line,index)=>{const ink=`<g opacity="${diagramFoldPreviewPaint(orderedPreview[index],line.color).opacity}">${diagramAnnotationMarkup(line,{...options,span:orderedPreview[index].strokeSpan,projectedSpan:linkedSpans.get(index)})}</g>`;return cutaway.wrapFaces([orderedPreview[index].face],localClips?`<g data-diagram-local-ink-face="${orderedPreview[index].face}" clip-path="${localClips.clipForFace(orderedPreview[index].face)}">${ink}</g>`:ink);}).join('');
+    const linkedMarkup=linked.map((line,index)=>{
+      const segment=orderedPreview[index],stroke=diagramAnnotationMarkup(line,{...options,span:segment.strokeSpan,projectedSpan:linkedSpans.get(index)});
+      const ink=`<g opacity="${diagramFoldPreviewPaint(segment,line.color).opacity}">${boundaryFoldInk(stroke,units,boundaryOffsets.get(index))}</g>`;
+      return cutaway.wrapFaces([segment.face],localClips?`<g data-diagram-local-ink-face="${segment.face}" clip-path="${localClips.clipForFace(segment.face)}">${ink}</g>`:ink);
+    }).join('');
     const independentLines=independentInk.map((annotation,index)=>cutaway.wrapFaces(annotation.foldFaces,diagramAnnotationMarkup(annotation,{...options,projectedSpan:independentSpans.get(index)}))).join('');
-    const independentSymbols=includeSymbols?shownIndependent.filter(annotation=>annotation.kind==='symbol').map(annotation=>diagramAnnotationMarkup(annotation)).join(''):'';
-    return definitions+shownBackground.map(annotation=>diagramAnnotationMarkup(annotation,options)).join('')+paperArtwork+linkedMarkup+independentLines+boundaryOverlay+independentSymbols;
+    const independentSymbols=includeSymbols?shownIndependent.filter(annotation=>annotation.kind==='symbol').map(annotation=>diagramAnnotationMarkup(annotation,options)).join(''):'';
+    return definitions+shownBackground.map(annotation=>diagramAnnotationMarkup(annotation,options)).join('')+paperArtwork+linkedMarkup+independentLines+(boundaryOverlay?.markup??'')+independentSymbols;
   };
-  const artwork=artworkFor(renderStyle.units,!zoom),symbols=zoom?shownIndependent.filter(annotation=>annotation.kind==='symbol').map(annotation=>diagramAnnotationMarkup(annotation)).join(''):'';
-  const details=diagramCalloutsSVG(callouts,{paperMarkup:(_callout,sourceUnits)=>artworkFor(sourceUnits),cpMarkup:cpMarkup??(()=>''),units:renderStyle.units,stroke:pose?.view?.colors?.line??defaultModelColors().line,strokeWidth:.7,idPrefix:'drawing-detail'});
+  const artwork=artworkFor(renderStyle.units,!zoom),symbols=zoom?shownIndependent.filter(annotation=>annotation.kind==='symbol').map(annotation=>diagramAnnotationMarkup(annotation,renderStyle)).join(''):'';
+  const details=diagramCalloutsSVG(callouts,{paperMarkup:(_callout,sourceUnits)=>artworkFor(sourceUnits),cpMarkup:cpMarkup??(()=>''),symbolStyles:lineDisplay?.symbolStyles,units:renderStyle.units,stroke:pose?.view?.colors?.line??defaultModelColors().line,strokeWidth:.7,idPrefix:'drawing-detail'});
   const sourceArea=annotations.find((a):a is Extract<DiagramAnnotation,{kind:'symbol'}>=>a.kind==='symbol'&&a.symbol==='zoom'&&!!a.zoomArea)?.zoomArea;
   const instructionBounds=!pose&&!surface&&!images.length&&sourceArea?sourceArea.basis:diagramZoomPaperBounds(pose,images,paperVisible,undefined,surface),instructions=diagramZoomInstructionMarkup(annotations,instructionBounds);
   const presented=diagramDrawingRotationMarkup(diagramZoomArtwork(artwork+details,zoom)+symbols+instructions,sourceFrame,drawingRotation);

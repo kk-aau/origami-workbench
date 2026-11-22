@@ -5,7 +5,7 @@ import {DIAGRAM_SYMBOL_KINDS} from '../../src/app/diagramAnnotations';
 import {normalizeToolCommand,resolveToolCommand,searchToolCommands} from '../../src/app/toolCommands';
 
 test('diagram commands cover all drawing tools and all symbols without normalized collisions',()=>{
-  assert.equal(DIAGRAM_COMMANDS.length,63);
+  assert.equal(DIAGRAM_COMMANDS.some(command=>command.name==='延长'),false);
   const owners=new Map<string,string>();
   for(const command of DIAGRAM_COMMANDS)for(const token of [command.tool,command.name,...command.aliases]){
     const key=normalizeToolCommand(token),previous=owners.get(key);
@@ -13,7 +13,7 @@ test('diagram commands cover all drawing tools and all symbols without normalize
     assert.equal(resolveToolCommand(token,DIAGRAM_COMMANDS),command);
   }
   assert.deepEqual(DIAGRAM_COMMANDS.filter(command=>isDiagramDrawingCommand(command.tool)).map(command=>command.tool).sort(),[
-    'select','vertex','line','symbol','pan','erase','polyline','perpendicular','parallel','bisector','trim','extend','fixed','layer','ratio-point','special-point','mirror-copy',
+    'select','vertex','line','symbol','pan','erase','polyline','perpendicular','parallel','bisector','trim','fixed','layer','ratio-point','special-point','mirror-copy',
   ].sort());
   assert.deepEqual(DIAGRAM_COMMANDS.filter(command=>command.tool.startsWith('symbol:')).map(command=>command.tool.slice(7)).sort(),[...DIAGRAM_SYMBOL_KINDS].sort());
 });
@@ -27,7 +27,7 @@ test('diagram aliases preserve familiar supported tools and expose crease types 
 });
 
 test('unsupported editor-only commands and numeric parameters cannot switch a diagram tool',()=>{
-  for(const input of ['C','CIRCLE','DI','DIST','M','MOVE','L 10,20','MI;DEL','不存在'])assert.equal(resolveToolCommand(input,DIAGRAM_COMMANDS),null,input);
+  for(const input of ['EX','EXTEND','C','CIRCLE','DI','DIST','M','MOVE','L 10,20','MI;DEL','不存在'])assert.equal(resolveToolCommand(input,DIAGRAM_COMMANDS),null,input);
   assert.equal(resolveToolCommand('MI')?.tool,'mirrorselection');
   assert.equal(resolveToolCommand('MI',DIAGRAM_COMMANDS)?.tool,'mirror-copy');
 });

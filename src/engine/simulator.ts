@@ -6,15 +6,21 @@ import type {SimulationStepAnimation} from './simStepAnimation';
 import {validateSimulationPose,validateSimulationView,type SimulationPose} from './simPose';
 import type {SimulationAngleDiagnostics,SimulationSolveState} from './simConvergence';
 
+import {validateFrameArtwork,type DiagramFrameArtwork} from '../app/diagramFrameArtwork';
+
 export interface SimulationImageCapture {
+  artwork?:DiagramFrameArtwork;
   dataUrl:string;
   width:number;
   height:number;
+  croppedToContent?:true;
 }
 
 export interface SimulationImageCaptureOptions {
+  vectorFrame?:boolean;
   scale?:1|2|4;
   transparent?:boolean;
+  trimTransparent?:boolean;
   timeoutMs?:number;
   signal?:AbortSignal;
 }
@@ -71,7 +77,10 @@ export interface SimulatorStatus {
 }
 
 export type SimulatorCommand =
-  | { type: 'zhezhi-sim-load'; fold: unknown; revision: string | number; animation?:SimulationStepAnimation; pose?:SimulationPose; mesh?:SimulationMeshQuality; limitFoldAngles?:boolean }
+  | {type:'zhezhi-sim-paper-print';patterns?:import('../app/paperPatterns').PaperPatterns}
+  | {type:'zhezhi-sim-render-quality';quality:'standard'|'fine'}
+  | {type:'zhezhi-sim-fixed-inactive-layers';enabled:boolean}
+  | { type: 'zhezhi-sim-load'; fold: unknown; revision: string | number; animation?:SimulationStepAnimation; pose?:SimulationPose; mesh?:SimulationMeshQuality; limitFoldAngles?:boolean; sinkContinuation?:{fold:unknown;animation:SimulationStepAnimation}; initialProgress?:number }
   | { type: 'zhezhi-sim-fold-limit'; enabled:boolean }
   | { type: 'zhezhi-sim-mesh'; quality:SimulationMeshQuality }
   | { type: 'zhezhi-sim-collision'; enabled:boolean }
@@ -85,14 +94,14 @@ export type SimulatorCommand =
   | { type: 'zhezhi-sim-solver-settings'; settings:Partial<SimulationSolverSettings> }
   | { type: 'zhezhi-sim-crease-style'; style: SimulationCreaseStyle }
   | { type: 'zhezhi-sim-camera'; preset: SimulationCameraPreset }
-  | { type: 'zhezhi-sim-camera-pose'; view: import('./simPose').SimulationPose['view'] }
+  | { type: 'zhezhi-sim-camera-pose'; view: import('./simPose').SimulationPose['view']; preset?:'isometric' }
   | { type: 'zhezhi-sim-camera-frame'; revision:string; center:[number,number,number]; radius:number }
   | { type: 'zhezhi-sim-material'; creaseStiffness:number; damping:number }
   | { type: 'zhezhi-sim-layer-gap'; multiplier:number }
   | { type: 'zhezhi-sim-colors'; front:string; back:string; line?:string; diagramLine?:string }
-  | { type: 'zhezhi-sim-step' | 'zhezhi-sim-export-fold' | 'zhezhi-sim-export-svg' | 'zhezhi-sim-export-obj' | 'zhezhi-sim-export-stl' }
+  | { type: 'zhezhi-sim-step' | 'zhezhi-sim-export-fold' | 'zhezhi-sim-export-svg' | 'zhezhi-sim-export-obj' | 'zhezhi-sim-export-stl' | 'zhezhi-sim-send-blender' }
   | { type: 'zhezhi-sim-export-png'; scale?:1|2|4 }
-  | { type: 'zhezhi-sim-capture-image'; requestId:string; revision:string|number; scale:1|2|4; transparent:boolean }
+  | { type: 'zhezhi-sim-capture-image'; requestId:string; revision:string|number; scale:1|2|4; transparent:boolean; trimTransparent?:boolean; vectorFrame?:boolean }
   | { type: 'zhezhi-sim-reset' | 'zhezhi-sim-pause' | 'zhezhi-sim-resume' | 'zhezhi-sim-ping' };
 
 type PendingImageCapture={revision:string|number;resolve:(image:SimulationImageCapture)=>void;reject:(error:Error)=>void;timer:ReturnType<typeof setTimeout>;removeAbort?:()=>void};
@@ -142,7 +151,12 @@ export class SimulatorBridge {
         const image=reply.image;
         if(!image||!Number.isSafeInteger(image.width)||!Number.isSafeInteger(image.height)||image.width<1||image.height<1||image.width>8192||image.height>8192||image.width*image.height>16_000_000||typeof image.dataUrl!=='string'||!/^data:image\/png;base64,[a-z0-9+/]+={0,2}$/i.test(image.dataUrl)){
           this.finishImageCapture(reply.requestId,new Error('模拟视图返回的 PNG 图像无效，请重新截取。'));
-        }else this.finishImageCapture(reply.requestId,undefined,{dataUrl:image.dataUrl,width:image.width,height:image.height});
+        }else {
+          if(image.artwork!==undefined){
+            try{validateFrameArtwork(image.artwork);}catch{this.finishImageCapture(reply.requestId,new Error('步骤动画返回的矢量画面无效。'));return;}
+          }
+          this.finishImageCapture(reply.requestId,undefined,{...(image.artwork?{artwork:image.artwork}:{}),dataUrl:image.dataUrl,width:image.width,height:image.height,...(image.croppedToContent===true?{croppedToContent:true}:{})});
+        }
       }
       return;
     }
@@ -174,7 +188,9 @@ export class SimulatorBridge {
       this.rejectImageCaptures('模拟模型或步骤已切换，请重新截取当前画面。');
       this.currentRevision = message.revision;
       this.loadedRevision=undefined;
-      this.pending = [];
+      // Paper appearance belongs to the document. Its controls can mount
+      // before a pending load, while the simulator frame is still starting.
+      this.pending = message.type==='zhezhi-sim-load'?this.pending.filter(command=>command.type==='zhezhi-sim-paper-print').slice(-1):[];
     }
     if (this.ready) this.post(message);
     else this.pending.push(message);
@@ -209,7 +225,7 @@ export class SimulatorBridge {
         options.signal.addEventListener('abort',abort,{once:true});
         capture.removeAbort=()=>options.signal!.removeEventListener('abort',abort);
       }
-      try{this.post({type:'zhezhi-sim-capture-image',requestId,revision,scale,transparent:options.transparent??true});}
+      try{this.post({type:'zhezhi-sim-capture-image',requestId,revision,scale,transparent:options.transparent??true,...(options.vectorFrame?{vectorFrame:true}:{}),trimTransparent:options.trimTransparent});}
       catch{this.finishImageCapture(requestId,new Error('无法连接模拟视图，请重新打开后截取。'));}
     });
   }

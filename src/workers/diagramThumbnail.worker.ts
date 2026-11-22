@@ -1,5 +1,6 @@
 import {importDiagramProject} from '../app/diagramProject';
 import {diagramLibraryThumbnail} from '../app/diagramLibrary';
+import {restoreDiagramRecoveryPatch} from '../app/diagramRecoveryPatch';
 import {setPreferenceService} from '../app/preferenceStorage';
 import type {DiagramThumbnailReply,DiagramThumbnailRequest} from '../app/diagramThumbnailTask';
 
@@ -17,7 +18,10 @@ scope.onmessage=event=>{
     setPreferenceService({getItem:key=>preferences.get(key)??null,setItem(){throw new Error('缩略图线程不能修改设置。');}});
     // The old getThumbnail fallback intentionally returns image-rich SVGs
     // larger than its 120k on-disk cache limit. Keep the complete preview.
-    scope.postMessage({type:'result',thumbnail:record.thumbnail??diagramLibraryThumbnail(project)});
+    const recovery=event.data.recovery;
+    const thumbnail=recovery?diagramLibraryThumbnail(restoreDiagramRecoveryPatch(recovery.baseKey,project,recovery.patchText)):
+      record.thumbnail??diagramLibraryThumbnail(project);
+    scope.postMessage({type:'result',thumbnail});
   }catch(error){scope.postMessage({type:'error',message:error instanceof Error?error.message:String(error)});}
   finally{setPreferenceService(undefined);}
 };

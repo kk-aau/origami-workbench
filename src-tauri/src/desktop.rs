@@ -8,12 +8,19 @@ use uuid::Uuid;
 
 #[path="desktop_documents.rs"]
 mod documents;
+#[path="desktop_update.rs"]
+mod update;
+#[path="desktop_associations.rs"]
+mod associations;
+#[path="desktop_blender.rs"]
+mod blender;
 
 type Error = Box<dyn std::error::Error + Send + Sync>;
 const MAIN_TITLE: &str = "折纸工坊 · Tauri / Rust";
 const CLOSE_CONFIRM_LABEL: &str = "不保存并关闭";
 
 struct Host {
+    shell_files: associations::Inbox,
     origin: String,
     server: tokio::sync::Mutex<Option<RunningServer>>,
     backend: Arc<backend::AppState>,
@@ -25,6 +32,7 @@ struct Host {
     documents: Mutex<documents::Registry>,
     document_gate: tokio::sync::Mutex<()>,
     exports: Arc<ExportStore>,
+    blender_steps: Arc<blender::StepSessions>,
 }
 
 fn trusted(window: &Webview, host: &Host, labels: &[&str]) -> Result<(), String> {
@@ -66,7 +74,8 @@ fn request_exit(app: AppHandle) {
         let host = handle.state::<Host>();
         let finish = async {
             let exports=host.exports.clone();
-            let _=tauri::async_runtime::spawn_blocking(move||exports.clear()).await;
+            let blender_steps=host.blender_steps.clone();
+            let _=tauri::async_runtime::spawn_blocking(move||{blender_steps.close();exports.clear();}).await;
             let _ = tokio::time::timeout(Duration::from_millis(500), close_log).await;
             let mut guard = host.server.lock().await;
             if let Some(server) = guard.as_mut() { server.shutdown().await; }
@@ -100,9 +109,9 @@ async fn desktop_close_ack(window: Webview, host: State<'_, Host>, request_id: S
 }
 
 #[tauri::command]
-async fn desktop_ready(app: AppHandle, window: Webview, host: State<'_, Host>) -> Result<(), String> {
+async fn desktop_ready(app: AppHandle, window: Webview, host: State<'_, Host>, error_page: Option<bool>) -> Result<(), String> {
     trusted(&window, &host, &["main"])?;
-    documents::ready(&app,&window)
+    documents::ready(&app,&window,error_page.unwrap_or(false))
 
 }
 
@@ -173,21 +182,41 @@ fn test_export_selection(_name:&str)->Result<Option<PathBuf>,String>{
 async fn desktop_open_project(window: Webview, host: State<'_, Host>, kind: String) -> Result<tauri::ipc::Response, String> {
     trusted(&window,&host,&["main"])?;
     let (title, filter, extensions): (&str, &str, &[&str]) = match kind.as_str() {
-        "crease" => ("打开工程或完整作品", "折纸工程与作品", &["oriw","json","fold","cp","opx","ori","orh"]),
-        "diagram" => ("打开折序工程", "折序工程文件", &["json"]),
+        "project" => ("打开文件", "折纸工程、设计与完整作品", &["zcp","zds","oriw","json","fold","cp","opx","ori","orh","tmd","tmd4","tmd5","bps"]),
+        "associated" => ("打开关联文件", "工程文件", &["zcp","zds","ori"]),
+        "crease" => ("打开工程或完整作品", "折纸工程与作品", &["zcp","zds","oriw","json","fold","cp","opx","ori","orh"]),
+        "diagram" => ("打开折序工程", "折序工程文件", &["zds","json"]),
         "design" => ("打开基础形设计", "基础形设计 / TreeMaker / BPS", &["json","tmd","tmd4","tmd5","bps"]),
         "tool-layout" => ("导入工具排版", "工具排版文件", &["json"]),
         _ => return Err("不支持的文件类型。".into()),
     };
-    let _picker=begin_picker(&host,window.label())?;
+    let associated = kind == "associated";
+    let received = if associated {
+        if associations::recipient(&host).as_deref() != Some(window.label()) { return Err("只能从文档区接收关联文件。".into()); }
+        if !test_hidden() { let _=window.window().unminimize(); let _=window.window().set_focus(); }
+        host.shell_files.lock().unwrap().pop_front()
+    } else { None };
+    let _picker = if associated { None } else { Some(begin_picker(&host,window.label())?) };
     let parent=window.window();
+    let exports=host.exports.clone();
     let result=tauri::async_runtime::spawn_blocking(move || {
         let dialog=rfd::FileDialog::new().set_parent(&parent).set_title(title).add_filter(filter,extensions);
-        let selected=match test_selection("ZHEZHI_TAURI_TEST_OPEN_FILE")? {Some(path)=>Some(path),None=>dialog.pick_file()};
-        let _=parent.set_focus();
+        let selected = if associated { received } else {
+            let path=match test_selection("ZHEZHI_TAURI_TEST_OPEN_FILE")? {Some(path)=>Some(path),None=>dialog.pick_file()};
+            let _=parent.set_focus();
+            path
+        };
         let Some(path)=selected else{return Ok(Vec::new())};
-        let name=path.file_name().unwrap_or_default().to_string_lossy().into_owned().into_bytes();
+        let filename=path.file_name().unwrap_or_default().to_string_lossy().into_owned();
         let data=read_snapshot(&path)?;
+        let writable=path.extension().and_then(|ext|ext.to_str()).is_some_and(|ext|match kind.as_str(){
+            "crease"|"associated"=>extensions.iter().any(|allowed|ext.eq_ignore_ascii_case(allowed)),
+            "project"=>["zcp","zds","oriw","json","fold","cp","opx","ori","orh"].iter().any(|allowed|ext.eq_ignore_ascii_case(allowed)),
+            "diagram"|"design"=>ext.eq_ignore_ascii_case("json") || kind=="diagram" && ext.eq_ignore_ascii_case("zds"),
+            _=>false,
+        });
+        let binding=if writable{Some(exports.opened_project(path,&data)?)}else{None};
+        let name=serde_json::to_vec(&json!({"name":filename,"binding":binding})).map_err(|e|e.to_string())?;
         // A binary IPC envelope avoids JSON arrays and their huge per-byte cost.
         let mut frame=Vec::with_capacity(4+name.len()+data.len());
         frame.extend_from_slice(&(name.len() as u32).to_le_bytes()); frame.extend(name); frame.extend(data);
@@ -209,14 +238,39 @@ async fn desktop_pick_directory(window: Webview, host: State<'_, Host>, kind: St
 }
 
 #[tauri::command]
-async fn desktop_prepare_export(window: Webview, host: State<'_, Host>, name: String, bytes: u64) -> Result<Value,String> {
+async fn desktop_prepare_export(window: Webview, host: State<'_, Host>, name: String, bytes: u64, project_file:Option<bool>, binding:Option<String>, verify_only:Option<bool>, size_ticket:Option<String>, blender: Option<bool>, blender_step: Option<String>) -> Result<Value,String> {
     trusted(&window,&host,&["main"])?;
     if host.closing.load(Ordering::SeqCst){return Err("应用正在关闭，未保存导出文件。".into());}
     validate_name(&name)?;
+    if let Some(ticket)=size_ticket {
+        if project_file!=Some(true)||binding.is_some()||blender==Some(true){return Err("工程保存请求无效。".into());}
+        host.exports.set_project_size(window.label(),&ticket,bytes)?;
+        return Ok(json!(true));
+    }
+    if verify_only==Some(true){
+        if project_file!=Some(true)||blender==Some(true)||bytes!=0{return Err("工程校验请求无效。".into());}
+        let id=binding.ok_or("缺少原工程文件关联。")?;
+        let exports=host.exports.clone();
+        let path=tauri::async_runtime::spawn_blocking(move||exports.verify_project(&id)).await.map_err(|e|e.to_string())??;
+        return Ok(json!({"path":path}));
+    }
+    if let Some(step)=blender_step.as_deref(){
+        if blender!=Some(true)||name!="folded-paper.zzanim"{return Err("步骤联动仅支持折叠动画。".into());}
+        blender::validate_step(step)?;
+    }
+    if blender==Some(true){
+        let ticket=host.exports.prepare_blender(window.label(),bytes,name=="folded-paper.zzanim",blender_step)?;
+        return Ok(json!({"cancelled":false,"ticket":ticket,"chunkBytes":CHUNK_BYTES}));
+    }
+    if let Some(id)=binding {
+        if project_file!=Some(true){return Err("工程保存请求无效。".into());}
+        let ticket=host.exports.prepare_project(window.label(),None,Some(id),bytes)?;
+        return Ok(json!({"cancelled":false,"ticket":ticket,"chunkBytes":CHUNK_BYTES}));
+    }
     let _picker=begin_picker(&host,window.label())?;
     let parent=window.window();
     let selected=tauri::async_runtime::spawn_blocking(move || {
-        let mut dialog=rfd::FileDialog::new().set_parent(&parent).set_title("导出作品 · 另存为").set_file_name(&name);
+        let mut dialog=rfd::FileDialog::new().set_parent(&parent).set_title(if project_file==Some(true){"保存工程文件"}else{"导出作品 · 另存为"}).set_file_name(&name);
         if let Some(extension)=Path::new(&name).extension().and_then(|s|s.to_str()) {dialog=dialog.add_filter("导出文件",&[extension]);}
         let chosen=match test_export_selection(&name)?{Some(path)=>Some(path),None=>dialog.save_file()};let _=parent.set_focus();Ok::<_,String>(chosen)
     }).await.map_err(|e|e.to_string());
@@ -224,8 +278,15 @@ async fn desktop_prepare_export(window: Webview, host: State<'_, Host>, name: St
     let Some(target)=selected?? else {return Ok(json!({"cancelled":true}));};
     if host.closing.load(Ordering::SeqCst){return Err("应用正在关闭，未保存导出文件。".into());}
     let exports=host.exports.clone();let owner=window.label().to_string();
-    let ticket=tauri::async_runtime::spawn_blocking(move||exports.prepare(&owner,target,bytes)).await.map_err(|e|e.to_string())??;
-    Ok(json!({"cancelled":false,"ticket":ticket,"chunkBytes":CHUNK_BYTES}))
+    let file_name=target.file_name().map(|s|s.to_string_lossy().into_owned());
+    let ticket=tauri::async_runtime::spawn_blocking(move||if project_file==Some(true){exports.prepare_project(&owner,Some(target),None,bytes)}else{exports.prepare(&owner,target,bytes)}).await.map_err(|e|e.to_string())??;
+    Ok(json!({"cancelled":false,"ticket":ticket,"chunkBytes":CHUNK_BYTES,"fileName":file_name}))
+}
+
+#[tauri::command]
+async fn desktop_blender_step_status(window: Webview, host: State<'_,Host>, step: String) -> Result<bool,String> {
+    trusted(&window,&host,&["main"])?;
+    host.blender_steps.linked(&step)
 }
 
 #[tauri::command]
@@ -261,9 +322,22 @@ async fn desktop_finish_export(window: Webview, host: State<'_, Host>, ticket: S
     trusted(&window,&host,&["main"])?;
     if host.closing.load(Ordering::SeqCst){return Err("应用正在关闭，导出未提交。".into());}
     let exports=host.exports.clone();let owner=window.label().to_string();
-    let result=tauri::async_runtime::spawn_blocking(move||exports.commit(&owner,&ticket)).await.map_err(|e|e.to_string())?;
+    if ticket.starts_with("blender-"){
+        let links=host.blender_steps.clone();
+        return tauri::async_runtime::spawn_blocking(move||{
+            let (path,step)=exports.commit_with_step(&owner,&ticket)?;
+            if let Some(key)=step {
+                let result=links.send(key,&path);
+                let _=fs::remove_file(&path);
+                return result.map(|status|json!({"status":status}));
+            }
+            blender::open_snapshot(&path).inspect_err(|_|{let _=fs::remove_file(&path);})?;
+            Ok(json!({"status":"launched"}))
+        }).await.map_err(|e|e.to_string())?;
+    }
+    let result=tauri::async_runtime::spawn_blocking(move||exports.commit_file(&owner,&ticket)).await.map_err(|e|e.to_string())?;
     activity(&host,if result.is_ok(){"desktop.export.saved"}else{"desktop.export.failed"},json!({"stage":"commit","success":result.is_ok()}));
-    result.map(|path|json!({"status":"saved","path":path}))
+    result.map(|(path,binding)|json!({"status":"saved","path":path,"binding":binding}))
 }
 
 #[tauri::command]
@@ -293,6 +367,26 @@ fn publish_window_state(window: &Window) {
 async fn desktop_window_state(window: Webview, host: State<'_, Host>) -> Result<Value, String> {
     trusted(&window,&host,&["main"])?;
     window_state(&window.window())
+}
+
+#[tauri::command]
+async fn desktop_cp_window(window: Webview, host: State<'_, Host>, action: String) -> Result<bool,String> {
+    let url=window.url().map_err(|e|e.to_string())?;
+    if !window.label().starts_with("cp-") || window.label()!=window.window().label() || url.origin().ascii_serialization()!=host.origin || url.path()!="/" || !url.query_pairs().any(|(key,_)|key=="cpPreview"){
+        return Err("仅适用于独立 CP 窗口。".into());
+    }
+    let window=window.window();
+    match action.as_str(){
+        "pin" => window.set_always_on_top(true),
+        "unpin" => window.set_always_on_top(false),
+        "state" => return window.is_always_on_top().map_err(|e|e.to_string()),
+        "drag" => window.start_dragging(),
+        "minimize" => window.minimize(),
+        "maximize" => if window.is_maximized().map_err(|e|e.to_string())?{window.unmaximize()}else{window.maximize()},
+        "close" => return window.close().map(|_|false).map_err(|e|e.to_string()),
+        _ => return Err("未知的 CP 窗口操作。".into()),
+    }.map_err(|e|e.to_string())?;
+    window.is_always_on_top().map_err(|e|e.to_string())
 }
 
 #[derive(Debug, Deserialize, PartialEq)]
@@ -327,7 +421,7 @@ async fn desktop_open_data_directory(window: Webview, host: State<'_, Host>) -> 
 }
 
 #[cfg(windows)]
-fn single_instance() -> Result<bool, Error> {
+fn single_instance(activate: bool) -> Result<bool, Error> {
     use sha2::{Digest,Sha256};
     use windows_sys::Win32::{Foundation::{GetLastError,CloseHandle,ERROR_ALREADY_EXISTS},System::Threading::CreateMutexW,UI::WindowsAndMessaging::{FindWindowW,ShowWindow,SetForegroundWindow,SW_RESTORE}};
     let name=format!("Local\\ZhezhiWorkbenchTauri-{}",hex::encode(Sha256::digest(runtime_root().to_string_lossy().as_bytes())));
@@ -337,6 +431,7 @@ fn single_instance() -> Result<bool, Error> {
         if mutex.is_null(){return Err(std::io::Error::last_os_error().into());}
         if GetLastError()==ERROR_ALREADY_EXISTS {
             CloseHandle(mutex);
+            if !activate { return Ok(false); }
             for title in [MAIN_TITLE,"折纸工坊 · 正在启动"] {
                 let title:Vec<u16>=title.encode_utf16().chain(Some(0)).collect();
                 let window=FindWindowW(std::ptr::null(),title.as_ptr());
@@ -351,7 +446,7 @@ fn single_instance() -> Result<bool, Error> {
     Ok(true)
 }
 #[cfg(not(windows))]
-fn single_instance() -> Result<bool, Error> {Ok(true)}
+fn single_instance(_activate: bool) -> Result<bool, Error> {Ok(true)}
 
 fn browser_args() -> Option<String> {
     #[cfg(debug_assertions)]
@@ -371,7 +466,9 @@ fn test_hidden() -> bool {
 pub fn run() -> Result<(), Error> {
     fs::create_dir_all(runtime_root())?;
     process_tree::constrain_process_tree().map_err(std::io::Error::other)?;
-    if !single_instance()? {return Ok(());}
+    let associated = associations::argument(std::env::args_os().skip(1))?;
+    if !single_instance(associated.is_none())? {return associations::forward(associated);}
+    let shell_files = associations::start(associated)?;
     let config=server_config(true);
     if !config.dist_dir.join("index.html").is_file() || !config.engine_executable.is_file() {
         return Err("应用资源不完整：请完整解压或重新安装折纸工坊 Tauri 版，保留 EXE 同级的 resources 目录。现有工程不会被删除。".into());
@@ -379,9 +476,9 @@ pub fn run() -> Result<(), Error> {
     tauri::webview_version().map_err(|_| "未检测到可用的 Microsoft Edge WebView2 Runtime。本版复用系统 WebView2；请先修复系统运行环境，或使用保留的 Electron 版。程序未自动下载安装运行环境，现有工程不会被删除。")?;
     let server=tauri::async_runtime::block_on(backend::start(config))?;
     let origin=format!("http://{}",server.address);
-    let host=Host{origin:origin.clone(),backend:server.state.clone(),server:tokio::sync::Mutex::new(Some(server)),closing:AtomicBool::new(false),ready:AtomicBool::new(false),picker_busy:AtomicBool::new(false),picker_owner:Mutex::new(None),close_replies:Mutex::new(HashMap::new()),documents:Mutex::new(documents::Registry::default()),document_gate:tokio::sync::Mutex::new(()),exports:Arc::new(ExportStore::default())};
+    let host=Host{shell_files:shell_files.clone(),origin:origin.clone(),backend:server.state.clone(),server:tokio::sync::Mutex::new(Some(server)),closing:AtomicBool::new(false),ready:AtomicBool::new(false),picker_busy:AtomicBool::new(false),picker_owner:Mutex::new(None),close_replies:Mutex::new(HashMap::new()),documents:Mutex::new(documents::Registry::default()),document_gate:tokio::sync::Mutex::new(()),exports:Arc::new(ExportStore::default()),blender_steps:Arc::new(blender::StepSessions::default())};
     let app=tauri::Builder::default().manage(host)
-        .invoke_handler(tauri::generate_handler![desktop_ready,desktop_close_ack,desktop_cancel_startup,desktop_open_logs,desktop_open_project,desktop_pick_directory,desktop_prepare_export,desktop_write_export,desktop_finish_export,desktop_cancel_export,desktop_print,desktop_window_state,desktop_window_action,desktop_open_data_directory,documents::desktop_documents])
+        .invoke_handler(tauri::generate_handler![desktop_cp_window,desktop_ready,desktop_close_ack,desktop_cancel_startup,desktop_open_logs,desktop_open_project,desktop_pick_directory,desktop_blender_step_status,desktop_prepare_export,desktop_write_export,desktop_finish_export,desktop_cancel_export,desktop_print,desktop_window_state,desktop_window_action,desktop_open_data_directory,documents::desktop_documents])
         .setup(move |app| {
             let handle=app.handle();
             let profile=runtime_root().join("profile");fs::create_dir_all(&profile)?;
@@ -395,6 +492,7 @@ pub fn run() -> Result<(), Error> {
             let cancel=handle.clone();startup.on_window_event(move|event|if let WindowEvent::CloseRequested{api,..}=event {api.prevent_close();if !cancel.state::<Host>().ready.load(Ordering::SeqCst){request_exit(cancel.clone());}else if let Some(startup)=cancel.get_webview_window("startup"){let _=startup.destroy();}});
             documents::create_host(handle,"main","edit").map_err(std::io::Error::other)?;
             documents::create_document(handle,"main","edit",true,None,None,None,None).map_err(std::io::Error::other)?;
+            associations::notify(handle.clone(), shell_files.clone());
             let timeout=handle.clone();tauri::async_runtime::spawn(async move {
                 tokio::time::sleep(Duration::from_secs(35)).await;
                 let host=timeout.state::<Host>();

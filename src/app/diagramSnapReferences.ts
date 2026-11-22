@@ -4,18 +4,19 @@ import type {DiagramAnnotation,DiagramLineAnnotation} from './diagramAnnotations
 import {isDiagramCPLine} from './diagramAnnotations';
 import type {DiagramPose} from './diagramProject';
 import type {ModelViewState} from './modelViewState';
-import {diagramPresentation,diagramFaceVisible,diagramBackgroundLinesForDrawing,isDiagramBackgroundLine} from './diagramDrawing';
+import {diagramPresentation,diagramFaceVisible,diagramBackgroundLinesForDrawing,diagramFoldPreviewCreaseVisible,isDiagramBackgroundLine} from './diagramDrawing';
 import {diagramIllustrationMesh} from './diagramIllustrationMesh';
 import {diagramTearWindowOutline} from './diagramTearWindowGeometry';
 import {diagramPreviewSourceIds,diagramBackgroundSourceIds} from './diagramStationarySnapReferences';
 
 export interface DiagramSnapPreviewSegment {
   id:string;a:Point;b:Point;style:DiagramLineAnnotation['style'];face:number;
-  visibility:'visible'|'hidden'|'unknown';existing?:boolean;
+  visibility:'visible'|'hidden'|'unknown';existing?:boolean;unfolding?:boolean;
 }
 export interface DiagramSnapReferenceOptions {
   pose:DiagramPose|null;view:ModelViewState;annotations:readonly DiagramAnnotation[];
   foldLinkEnabled?:boolean;foldLinkPreview?:readonly DiagramSnapPreviewSegment[];
+  materialFaces?:readonly number[];
 }
 /** Display-only provenance, never stored on source annotations or in the CP.
  * An empty set means a real paper edge or an independently retained route. */
@@ -100,7 +101,7 @@ function coveredInterval(a:Point,b:Point,cell:Cell,eps:number):Interval|null {
 
 /** Static geometry preparation for ordinary line drawing. Call from a memo,
  * not from pointer movement. The saved annotations and material IDs stay intact. */
-export function buildDiagramSnapReferences({pose,view,annotations,foldLinkEnabled=false,foldLinkPreview=[]}:DiagramSnapReferenceOptions):DiagramSnapReference[] {
+export function buildDiagramSnapReferences({pose,view,annotations,foldLinkEnabled=false,foldLinkPreview=[],materialFaces}:DiagramSnapReferenceOptions):DiagramSnapReference[] {
   const eps=pose?epsilonFor(pose.sourceDoc):1e-7,result:DiagramSnapReference[]=[],seen=new Map<string,DiagramSnapReference>();
   const add=(line:DiagramSnapReference)=>{
     if(!finitePoint(line.a)||!finitePoint(line.b)||length(line.a,line.b)<=eps)return;
@@ -109,12 +110,14 @@ export function buildDiagramSnapReferences({pose,view,annotations,foldLinkEnable
     if(old){old.snapSourceIds=old.snapSourceIds?.length&&sources.length?[...new Set([...old.snapSourceIds,...sources])]:[];return;}
     const reference={...line,a:[...line.a] as Point,b:[...line.b] as Point,snapSourceIds:[...sources]};seen.set(key,reference);result.push(reference);
   };
-  const shown=pose?diagramPresentation(pose,view):null,visibleFaces=shown?new Set(shown.visibleOrder):null,faces:ShownFace[]=[];
+  const shown=pose?diagramPresentation(pose,view):null,scope=materialFaces?.length?new Set(materialFaces):null;
+  const order=(shown?.visibleOrder??[]).filter(face=>!scope||scope.has(face));
+  const visibleFaces=shown?new Set(order):null,faces:ShownFace[]=[];
   if(pose&&shown){
     // One mesh serves every boundary and background fragment. Its triangles
     // retain holes, indexed F marks and locally pulled illustration cells.
     const mesh=diagramIllustrationMesh(pose);
-    shown.visibleOrder.forEach((face,rank)=>{
+    order.forEach((face,rank)=>{
       const cells=(mesh.triangles[face]??[]).flatMap(ids=>{
         const points=ids.map(vertex=>shown.vertices[vertex]);if(points.some(point=>!point||!finitePoint(point)))return [];
         const area=cross(points[0],points[1],points[2]);
@@ -167,7 +170,7 @@ export function buildDiagramSnapReferences({pose,view,annotations,foldLinkEnable
     return {exposed,openedAbove,tolerance};
   }
   if(pose&&shown){
-    shown.visibleOrder.forEach((face,rank)=>{
+    order.forEach((face,rank)=>{
       const rings=diagramIllustrationMesh(pose).rings[face];
       rings.forEach((ring,r)=>ring.forEach((vertex,edge)=>{
         const a=shown.vertices[vertex],b=shown.vertices[ring[(edge+1)%ring.length]];if(!a||!b)return;
@@ -178,18 +181,21 @@ export function buildDiagramSnapReferences({pose,view,annotations,foldLinkEnable
   }
   for(const annotation of annotations){
     if(annotation.kind!=='line'||isDiagramBackgroundLine(annotation))continue;
-    if(pose&&annotation.foldFaces?.length&&!annotation.foldFaces.some(face=>diagramFaceVisible(pose,face)))continue;
+    if(pose&&annotation.foldFaces?.length&&!annotation.foldFaces.some(face=>diagramFaceVisible(pose,face)&&(!scope||scope.has(face))))continue;
     // These sources are paint-free: their current presented paper pieces come
     // from the linked preview, and their outside pieces come from the background.
     if(foldLinkEnabled&&(isDiagramCPLine(annotation)||['valley','mountain'].includes(annotation.style)&&annotation.foldFaces?.length!==0))continue;
     for(const part of pieces({...annotation,snapSourceIds:[annotation.id]},lineVisibility(annotation).exposed(Infinity,annotation.foldFaces,false)))add(part);
   }
   if(foldLinkEnabled)for(const segment of foldLinkPreview){
-    if(visibleFaces&&!visibleFaces.has(segment.face))continue;
+    if(!diagramFoldPreviewCreaseVisible(segment,view.showExistingCreases)||visibleFaces&&!visibleFaces.has(segment.face))continue;
     const line:DiagramSnapReference={id:`snap-preview:${segment.id}`,kind:'line',a:segment.a,b:segment.b,style:segment.style,color:'#41634e',width:.1,foldFaces:[segment.face]};
     line.snapSourceIds=diagramPreviewSourceIds(segment,annotations,eps);
     const visibility=lineVisibility(line);
-    if(segment.visibility==='hidden'){
+    if(scope){
+      const owner=byFace.get(segment.face);
+      if(owner)for(const part of pieces(line,visibility.exposed(owner.rank,[segment.face],shown?.solid)))add(part);
+    }else if(segment.visibility==='hidden'){
       const owner=byFace.get(segment.face);if(!shown?.solid||!owner)continue;
       // A previously covered route becomes a reference only in an actual
       // opening of paper above it, and only while no other layer covers it.

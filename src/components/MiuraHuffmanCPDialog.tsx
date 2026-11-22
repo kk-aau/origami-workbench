@@ -1,3 +1,4 @@
+import {DocumentJunctionMarks} from './JunctionWarnings';
 import {useEffect,useMemo,useRef,useState} from 'react';
 import {openAppDialog} from './AppDialog';
 import {generateMiuraHuffmanDocument,miuraHuffmanPreset,validateMiuraHuffmanRecipe,type MiuraHuffmanRecipe} from '../app/miuraHuffmanCP';
@@ -31,7 +32,7 @@ export function MiuraHuffmanCPPlot({doc}:{doc:Doc}){
    <path data-testid="miura-huffman-mm-scale" data-mm={tick} d={`M ${minX} ${-maxY-labelSize*.6} h ${tick}`}/>
    <text x={minX+tick/2} y={-maxY-labelSize*1.2} textAnchor="middle">{fmt(tick)} mm</text>
   </g>
- </svg>;
+ {doc&&<DocumentJunctionMarks doc={doc} flipY spatial/>}</svg>;
 }
 
 export default function MiuraHuffmanCPDialog({initial,onAdoptCP,onClose}:{initial?:MiuraHuffmanRecipe;onAdoptCP?:(doc:Doc)=>boolean;onClose:()=>void}){

@@ -135,3 +135,14 @@ test('dense incident lines use the correct nearest bisector without all-pairs in
   const pointer=at(23.445,30),result=snapDiagramLinePoint(pointer,{anchor:[0,0],lines,radius:1})!;
   assert.equal(result.kind,'bisector');pointClose(result.point,pointer);
 });
+
+test('bisects the actual incident grid families at shifted, rotated, triangular and diagonal nodes',()=>{
+  const origin:Point=[23,-19];
+  for(const [settings,angle] of [[{},45],[{rotation:18},63],[{pattern:'triangular' as const},30],[{diagonal:true},22.5]] as const){
+    const grid={origin,stepX:50,stepY:50,...settings},delta=at(angle+.7,18);
+    const result=snapDiagramLinePoint([origin[0]+delta[0],origin[1]+delta[1]],{anchor:origin,grid,lines:[],radius:1});
+    assert.equal(result?.kind,'bisector');
+    pointClose(result.direction,at(angle,1));assert.equal(result.references.length,2);
+  }
+  assert.equal(snapDiagramLinePoint([16,16],{anchor:[.05,.05],grid:{origin:[0,0],stepX:50,stepY:50},lines:[],radius:1}),null);
+});

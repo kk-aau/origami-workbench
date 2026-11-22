@@ -181,7 +181,7 @@ test('self crossings, self contacts and degeneracy stay unsupported',()=>{
 test('existing Worker dispatch solves concave reanalysis and cancellation/timeout discard its late complete result',async()=>{
  const scope=globalThis as unknown as {onmessage?:(event:{data:FlatWorkerRequest})=>void;postMessage?:(data:{type:string;result:FlatFoldResult})=>void},handler=scope.onmessage,post=scope.postMessage;
  const messages:{type:string;result:FlatFoldResult}[]=[];
- try{scope.postMessage=data=>messages.push(data);await import('../../src/workers/flatFold.worker');scope.onmessage!({data:{kind:'layers',result:geometry()}});assert.equal(messages[0].result.layers.status,'solved');}finally{scope.onmessage=handler;scope.postMessage=post;}
+ try{scope.postMessage=data=>messages.push(data);await import('../../src/workers/flatFold.worker');await scope.onmessage!({data:{kind:'layers',result:geometry()}});assert.equal(messages.find(m=>m.type==='result')?.result.layers.status,'solved');}finally{scope.onmessage=handler;scope.postMessage=post;}
  const Native=globalThis.Worker;let latest:any;
  class MockWorker {onmessage?: (event:{data:unknown})=>void;stopped=false;constructor(){latest=this;}postMessage(){}terminate(){this.stopped=true;}}
  globalThis.Worker=MockWorker as unknown as typeof Worker;

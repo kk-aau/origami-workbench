@@ -97,6 +97,41 @@ test('an appended shared triple detects conflict among already-forced relations 
  assert.equal(search.addTransitivity([[0,1,2]]),false);
 });
 
+test('repairing a shared triple follows contact dependencies and skips independent assignments',()=>{
+ const count=36,index=pairs(count),rules=empty();
+ rules.tortilla_tortilla=[[1,3,2,4]];
+ for(let i=5;i+2<count;i+=3)rules.transitivity.push([i,i+1,i+2]);
+ const initial=new Uint8Array(index.pairs.length),preference=Uint32Array.from({length:count},(_,i)=>i);
+ initial[index.find(0,2)-1]=1;
+ const search=new LayerCandidateSearch(index,rules);assert.ok(search.seed(initial));
+ const old=search.first(preference);assert.ok(old);
+ assert.ok(search.addTransitivity([[0,1,2]]));assert.equal(search.valid(old),false);
+ const result=search.first(preference);assert.ok(result&&search.valid(result));
+ assert.equal(result[index.find(1,2)-1],1);
+ assert.equal(result[index.find(3,4)-1],1,'the connected physical rule is repaired too');
+ assert.equal(search.lastSearch.attempts,0,'both changed relations are proved before any DFS guesses');
+ assert.deepEqual(search.values,initial);
+ const complete=new LayerCandidateSearch(index,{...rules,transitivity:[...rules.transitivity,[0,1,2]]});
+ assert.ok(complete.seed(initial));assert.deepEqual(result,complete.first(preference));
+});
+
+test('a failed local probe preserves the source-order solution after backtracking',()=>{
+ const count=32,index=pairs(count),rules=empty();
+ rules.taco_taco=[[1,3,4,5],[4,0,3,2],[2,3,4,0],[3,2,1,0]];
+ rules.taco_tortilla=[[0,4,2]];rules.tortilla_tortilla=[[2,4,1,0]];
+ rules.transitivity=[[5,0,1],[2,4,0]];
+ for(let i=6;i+2<count;i+=3)rules.transitivity.push([i,i+1,i+2]);
+ const initial=new Uint8Array(index.pairs.length);initial[index.find(0,3)-1]=2;
+ const search=new LayerCandidateSearch(index,rules);assert.ok(search.seed(initial));
+ const preference=(head:number[])=>Uint32Array.from({length:count},(_,i)=>head[i]??i+10);
+ assert.ok(search.first(preference([4,5,1,3,0,2])));
+ assert.ok(search.addTransitivity([[1,2,4]]));
+ const result=search.first(preference([1,4,3,2,5,0]));assert.ok(result&&search.valid(result));
+ assert.ok(search.lastSearch.backtracks>0);
+ const core=index.pairs.flatMap(([,b],i)=>b<6?[result[i]]:[]);
+ assert.deepEqual(core,[2,1,2,1,1,1,1,1,1,2,1,1,1,1,2]);
+});
+
 test('locally legal shared triples do not forbid a global ring absent from any one region',()=>{
  const index=pairs(4),rules=empty(),initial=new Uint8Array(index.pairs.length);
  initial[index.find(0,1)-1]=1;initial[index.find(1,2)-1]=1;initial[index.find(0,2)-1]=2;

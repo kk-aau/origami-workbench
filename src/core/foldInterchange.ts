@@ -3,6 +3,13 @@
 const sharedFields=new Set(['file_spec','file_creator','file_author','file_title','file_description','file_classes','frame_author','frame_title','frame_description','frame_classes','frame_attributes','frame_unit','vertices_coords','edges_vertices','edges_assignment','edges_foldAngle','faces_vertices','faces_edges']);
 const extensionKey='zhezhi:workbench';
 const record=(value:unknown):value is Record<string,unknown>=>!!value&&typeof value==='object'&&!Array.isArray(value);
+const descriptiveFields=['file_author','file_description','frame_author','frame_title','frame_description'];
+export function foldDescriptions(source:unknown):Record<string,unknown>{
+  return record(source)?Object.fromEntries(descriptiveFields.filter(key=>typeof source[key]==='string').map(key=>[key,source[key]])):{};
+}
+export function mergeFoldSourceExtras(previous:unknown,current:Record<string,unknown>){
+  return {...(record(previous)?previous:{}),...current};
+}
 const split=(raw:Record<string,unknown>)=>{
   const standard:Record<string,unknown>={},extra:Record<string,unknown>={};
   for(const [key,value] of Object.entries(raw)){

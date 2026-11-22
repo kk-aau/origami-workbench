@@ -110,7 +110,10 @@ export function reopenSimulationStepFoldedComponents(prepared:PreparedOrigamiMod
   const changed=animation.ranges.filter(r=>Math.abs(r.fromAngle-r.toAngle)>1e-8);
   // Explicit precrease instructions already specify an excursion. Do not
   // replace them with an inferred unfold, or invent motion for unchanged CPs.
-  if(animation.ranges.some(r=>r.viaAngle!==undefined)||!changed.some(r=>!zero(r.fromAngle)&&zero(r.toAngle))||!changed.some(r=>zero(r.fromAngle)&&!zero(r.toAngle)))return null;
+  const reverses=(r:StepRanges['ranges'][number])=>Math.abs(Math.abs(r.fromAngle)-180)<1e-8&&Math.abs(r.toAngle+r.fromAngle)<1e-8&&r.viaAngle===0;
+  // A full MV reversal passes through zero. Unlike a precrease excursion,
+  // this waypoint also permits the adjoining old hinge to open at that time.
+  if(animation.ranges.some(r=>r.viaAngle!==undefined&&!reverses(r))||!changed.some(r=>!zero(r.fromAngle)&&zero(r.toAngle)||reverses(r))||!changed.some(r=>zero(r.fromAngle)&&!zero(r.toAngle)))return null;
   const boundary=new Set<number>();
   prepared.edgesFaces.forEach((faces,e)=>{if(faces.length===1)prepared.edgesVertices[e].forEach(v=>boundary.add(v));});
   const oldIncident=new Map<number,number[]>();

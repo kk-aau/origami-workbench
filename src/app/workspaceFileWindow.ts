@@ -1,3 +1,4 @@
+import {projectFileBinding,rememberFileBinding} from './selectProjectFile';
 import {useEffect,useRef} from 'react';
 import type {DesktopDocumentWorkspace} from '../desktop';
 import type {Doc} from '../core/types';
@@ -6,8 +7,9 @@ import type {BaseDesignSummary} from './baseDesignLibrary';
 import type {DiagramBasicSettings} from './diagramBasicSettings';
 import type {PreparedDiagramImage} from './diagramImageImport';
 import {browserMutate} from './browserStorage';
+import type {ProjectFileKind} from './projectFileRouting';
 
-export interface CPReturnTarget {origin:string;session:string;stepId:string;stateId:string;revision:number;generation:number;label:string}
+export interface CPReturnTarget {origin:string;session:string;stepId:string;stateId:string;revision:number;generation:number;label:string;spatial?:boolean}
 export function libraryFileKey(workspace:DesktopDocumentWorkspace,id:string){
   const library=workspace==='diagram'?'diagram':workspace==='design'?'design':'crease';
   return library+':'+id;
@@ -28,7 +30,7 @@ export type WorkspaceFile =
   | {kind:'workspace-source';doc:Doc|null}
   | {kind:'blank';example?:string}
   | {kind:'stored';id:string}
-  | {kind:'file';file:File}
+  | {kind:'file';file:File;binding?:string;fileType?:ProjectFileKind}
   | {kind:'cp';doc:Doc;returnTarget?:CPReturnTarget}
   | {kind:'diagram-new';name:string;settings:DiagramBasicSettings;paper?:Doc}
   | {kind:'diagram-source';doc:Doc;name:string;settings:DiagramBasicSettings}
@@ -41,7 +43,7 @@ export async function launchWorkspaceFile(workspace:DesktopDocumentWorkspace,fil
   const service=window.desktop?.documents;
   if(!service)throw Error('无法打开工作区窗口。');
   const token=crypto.randomUUID(),key='workspace-launch:'+token;
-  await browserMutate(key,()=>({value:file,result:undefined}));
+  await browserMutate(key,()=>({value:file.kind==='file'?{...file,binding:projectFileBinding(file.file)}:file,result:undefined}));
   const id=file.kind==='stored'?file.id:file.kind==='design-stored'?file.item.id:null;
   try{
     const opened=await service.openWorkspace(workspace,undefined,token,id?libraryFileKey(workspace,id):undefined,file.kind==='cp'&&!!file.returnTarget);
@@ -54,6 +56,8 @@ export async function launchWorkspaceFile(workspace:DesktopDocumentWorkspace,fil
   }
   catch(error){await browserMutate(key,()=>({value:undefined,result:undefined}));throw error;}
 }
-export function takeWorkspaceFile(token:string){
-  return browserMutate<WorkspaceFile,WorkspaceFile|undefined>('workspace-launch:'+token,file=>({value:undefined,result:file}));
+export async function takeWorkspaceFile(token:string){
+  const file=await browserMutate<WorkspaceFile,WorkspaceFile|undefined>('workspace-launch:'+token,file=>({value:undefined,result:file}));
+  if(file?.kind==='file')rememberFileBinding(file.file,file.binding);
+  return file;
 }

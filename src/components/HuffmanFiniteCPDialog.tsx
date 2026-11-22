@@ -1,3 +1,4 @@
+import {DocumentJunctionMarks} from './JunctionWarnings';
 import {useEffect,useMemo,useRef,useState} from 'react';
 import {TessDialog} from './TessellationEditor';
 import {fetchHuffmanFiniteCPSource,huffmanFiniteCPDocument,huffmanFiniteCPSourceKey,huffmanFiniteCPSourceMatches,validateHuffmanFiniteCPRecipe,HUFFMAN_FINITE_CP_EXAMPLES,HUFFMAN_PAIRED_CP_EXAMPLES,type HuffmanFiniteCPRecipe,type HuffmanFiniteCPSource} from '../app/huffmanFiniteCP';
@@ -32,7 +33,7 @@ function WorldPlot({doc,current,active}:{doc:Doc;current:boolean;active:number})
   {doc.segments.map(segment=><path key={segment.id} d={path([segment.a,segment.b])} fill="none" stroke={segment.assignment==='B'?'#283b32':current?'#218d92':'#8656a9'} strokeWidth={segment.assignment==='B'?1.5:2} vectorEffect="non-scaling-stroke"/>)}
   {references.map((reference,i)=><path key={i} d={path(reference)} fill="none" stroke="#8656a9" strokeWidth="1" strokeDasharray="4 4" vectorEffect="non-scaling-stroke"/>)}
   <g fontSize={font} fill="#435b4e">{xs.map(x=><text key={`xt${x}`} x={x} y={v.top+v.height-my*.25} textAnchor="middle">{fmt(x)}</text>)}{ys.map(y=><text key={`yt${y}`} x={v.left+font*5} y={-y} textAnchor="end" dominantBaseline="middle">{fmt(y)}</text>)}<text x={v.left+v.width-mx*.35} y={v.top+v.height-my*.25}>x</text><text x={v.left+font*5} y={v.top+my*.6} textAnchor="end">y</text></g>
- </svg><figcaption>{own.recipe.paperMode==='paired'?'成对四面':'单块三面'} · {current?'当前纸面':'旧参数预览 · 不可采用'} · mm · 虚线为参考母线</figcaption></figure>;
+ {doc&&<DocumentJunctionMarks doc={doc} flipY spatial/>}</svg><figcaption>{own.recipe.paperMode==='paired'?'成对四面':'单块三面'} · {current?'当前纸面':'旧参数预览 · 不可采用'} · mm · 虚线为参考母线</figcaption></figure>;
 }
 
 export default function HuffmanFiniteCPDialog({initial,onClose,onAdoptCP}:{initial?:HuffmanFiniteCPRecipe;onClose:()=>void;onAdoptCP?:(doc:Doc)=>boolean}){

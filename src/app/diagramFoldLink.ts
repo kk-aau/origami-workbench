@@ -1,6 +1,7 @@
 import {DiagramWorkCounter} from './diagramWork';
 import {buildDiagramFold,distance,epsilonFor,polygonArea} from '../core/geometry';
 import {buildDiagramPoseDocFold} from './diagramFoldGeometry';
+import {coincidentFoldMotion} from './diagramCoincidentFoldMotion';
 import {diagramIllustrationMesh} from './diagramIllustrationMesh';
 import {diagramDepthActive} from './diagramDepth';
 import {diagramPiecesStrictlyCoverPoint} from './diagramFoldOcclusion';
@@ -22,6 +23,15 @@ type SourceSegment={s:Segment;source:Segment};
 type ProjectedStroke={face:number;lo:number;hi:number;line:Line;matrix:DiagramFoldMatrix;strokeSpan?:DiagramFoldPreviewSegment['strokeSpan']};
 type FacePiece={cp:Point[];shown:Point[];matrix:DiagramFoldMatrix;cpHoles?:Point[][];shownHoles?:Point[][]};
 type Prepared={pose:DiagramPose;baseCP:Point[];cp:Point[];faces:number[][];holes:number[][][];raw:Point[];shown:Point[];matrices:(DiagramFoldMatrix|null)[];displayMatrices:(DiagramFoldMatrix|null)[];pieces:FacePiece[][];localCells:boolean[];eps:number;budget:DiagramWorkCounter;relations:[number,number][];displayFallback:boolean};
+const motionCache=new WeakMap<Doc,WeakMap<Doc,{key:string;value:ReturnType<typeof coincidentFoldMotion>}>>();
+function foldMotionFor(before:Doc,after:Doc,beforeGraph:FoldGraph,afterGraph:FoldGraph,eps:number){
+  // Camera/style changes reuse the world-space proof. Include geometry in the
+  // key so mutable imported documents cannot reuse an obsolete angle proof.
+  const key=JSON.stringify([beforeGraph,afterGraph,eps]);
+  let variants=motionCache.get(before);if(!variants){variants=new WeakMap();motionCache.set(before,variants);}
+  const previous=variants.get(after);if(previous?.key===key)return previous.value;
+  const value=coincidentFoldMotion(beforeGraph,afterGraph,eps);variants.set(after,{key,value});return value;
+}
 
 const cross=(a:Point,b:Point)=>a[0]*b[1]-a[1]*b[0];
 const sub=(a:Point,b:Point):Point=>[a[0]-b[0],a[1]-b[1]];
@@ -213,6 +223,44 @@ function order(prepared:Prepared,cover:number[]):number[] {
   return pose.view?.side==='back'?bottom:bottom.reverse();
 }
 function screenAssignment(assignment:Assignment,matrix:DiagramFoldMatrix):Assignment{return det(matrix)<0?(assignment==='V'?'M':assignment==='M'?'V':assignment):assignment;}
+function strokePartMatrix(prepared:Prepared,face:number,midpoint:Point):DiagramFoldMatrix {
+  const matrix=prepared.displayMatrices[face]??prepared.pieces[face].find(piece=>contains(midpoint,piece.shown,prepared.eps))?.matrix;
+  if(!matrix)throw Error('当前图示没有可对应的材料纸面，请重新计算折图。');
+  return matrix;
+}
+
+/** A sink has a single material rim. The selection determines where the pen
+ * acts, but its side is read from the artwork actually visible at that spot. */
+function sinkRimAssignment(prepared:Prepared,line:Line,pen:Assignment,parts:DiagramFoldPreviewSegment[],scope?:Set<number>):Assignment {
+  // previewLine emits identical endpoints for every cover of one interval.
+  // An unselected paper may be the top cover above the selected material.
+  const intervals=new Map<string,{part:DiagramFoldPreviewSegment;participates:boolean;visible:number[]}>();
+  for(const part of parts){
+    const key=part.a.join(',');
+    let interval=intervals.get(key);
+    if(!interval){interval={part,participates:false,visible:[]};intervals.set(key,interval);}
+    if(!scope||scope.has(part.face))interval.participates=true;
+    if(diagramFaceVisible(prepared.pose,part.face)&&prepared.pieces[part.face].length)interval.visible.push(part.face);
+  }
+  const tolerance=prepared.eps/distance(line.a,line.b);
+  let reference:{gap:number;point:Point;faces:number[]}|undefined;
+  for(const {part,participates,visible} of intervals.values()){
+    if(!participates||!visible.length)continue;
+    // Compare distances to the interval, so a long interval containing the
+    // stroke centre wins over a shorter interval just outside the centre.
+    const lo=parameter(part.a,line),hi=parameter(part.b,line);
+    const gap=Math.max(0,lo-.5,.5-hi),point=lerp(part.a,part.b,.5);
+    // A centre on a shared endpoint can touch both intervals. Break this tie
+    // in screen coordinates, consistently for either direction of drawing.
+    const earlier=reference&&(point[0]<reference.point[0]||point[0]===reference.point[0]&&point[1]<reference.point[1]);
+    if(!reference||gap<reference.gap-tolerance||Math.abs(gap-reference.gap)<=tolerance&&earlier){
+      reference={gap,point,faces:visible};
+    }
+  }
+  if(!reference)throw Error('沉折线在所选范围内没有可见纸面，请检查选面范围和纸面显示。');
+  const face=order(prepared,reference.faces)[0];
+  return screenAssignment(pen,strokePartMatrix(prepared,face,reference.point));
+}
 function previewLine(prepared:Prepared,line:Line,faceAssignments:Map<number,Assignment>,displayOnly=false,strokeSpan?:DiagramFoldPreviewSegment['strokeSpan'],visibleOnly=false):DiagramFoldPreviewSegment[]{
   const {faces,eps,budget}=prepared,preserveBreaks=displayOnly||diagramDepthActive(prepared.pose),clips=faces.map((_,f)=>clipShownFace(prepared,f,line,preserveBreaks)),length=distance(line.a,line.b);
   const breaks=sortedBreaks([0,1,...clips.flat(2)],length,eps),out:DiagramFoldPreviewSegment[]=[],lastDisplayPart=new Map<number,DiagramFoldPreviewSegment>();
@@ -346,18 +394,18 @@ export function mapDiagramFoldLines(pose:DiagramPose,lines:DiagramLineAnnotation
     // Visibility chooses material faces, not cut-off intervals. Once chosen,
     // the whole finite stroke on that same face also folds behind other paper.
     const topFaces=settings.layers==='top'?new Set(parts.filter(part=>part.visibility==='visible').map(part=>part.face)):undefined;
-    for(const part of parts){
-      if(settings.layers==='selected'&&!selected.has(part.face))continue;
-      if(topFaces&&!topFaces.has(part.face))continue;
-      const matrix=prepared.displayMatrices[part.face]??prepared.pieces[part.face].find(piece=>contains(lerp(part.a,part.b,.5),piece.shown,prepared.eps))?.matrix;
-      if(!matrix)throw Error('当前图示没有可对应的材料纸面，请重新计算折图。');
-      const back=inverse(matrix),assignment=screenAssignment(displayAssignment,matrix),a=applyDiagramFoldMatrix(back,part.a),b=applyDiagramFoldMatrix(back,part.b);
+    const scope=settings.layers==='selected'?selected:topFaces;
+    const participating=scope?parts.filter(part=>scope.has(part.face)):parts;
+    const rimAssignment=line.sinkFold?line.sinkAssignment??sinkRimAssignment(prepared,line,displayAssignment,parts,scope):undefined;
+    for(const part of participating){
+      const matrix=strokePartMatrix(prepared,part.face,lerp(part.a,part.b,.5));
+      const back=inverse(matrix),assignment=rimAssignment??screenAssignment(displayAssignment,matrix),a=applyDiagramFoldMatrix(back,part.a),b=applyDiagramFoldMatrix(back,part.b);
       const magnitude=line.foldAngle===undefined?180:line.foldAngle;
       if(magnitude!==null&&(!Number.isFinite(magnitude)||magnitude<0||magnitude>180))throw Error('折叠角度须为 0 到 180 度。');
-      const intent:Segment={id:`fold-link:${line.id}:${part.face}:${segments.length}`,a,b,assignment,angle:magnitude===null?null:assignment==='M'?-magnitude:magnitude};
+      const intent:Segment={id:`fold-link:${line.id}:${part.face}:${segments.length}`,a,b,assignment,angle:magnitude===null||magnitude===0?magnitude:assignment==='M'?-magnitude:magnitude};
       if(magnitude===null&&line.foldAction==='precrease')throw Error('预折后展开需要明确折角，请指定角度后再预折。');
       const precrease=line.foldAction==='precrease',candidate:Segment=precrease?{...intent,assignment:'F',angle:0}:intent;
-      const unfolded=precrease||!completed.length?[candidate]:segmentPieces(candidate,completed,prepared.eps,prepared.budget,false);
+      const unfolded=precrease||line.sinkFold||!completed.length?[candidate]:segmentPieces(candidate,completed,prepared.eps,prepared.budget,false);
       const clippedToCompleted=unfolded.length!==1||distance(unfolded[0].a,a)>prepared.eps||distance(unfolded[0].b,b)>prepared.eps;
       // A paper edge is not a hinge, even for a press-and-return instruction.
       // Clip in source CP coordinates, after choosing material faces, so a
@@ -435,18 +483,19 @@ function projectSourceStroke(prepared:Prepared,source:Segment):ProjectedStroke[]
  * the CP; drawing new physical creases and fixing the next fold remain rigid. */
 export function projectDiagramFoldCP(pose:DiagramPose,before:Doc,after:Doc,source?:DiagramCPState,precreases:Segment[]=[]):{preview:DiagramFoldPreviewSegment[];warnings:string[]} {
   const prepared=prepare(pose,source),changed=diffSourceSegments(before,after),preview:DiagramFoldPreviewSegment[]=[];
+  const material=new Map<DiagramFoldPreviewSegment,Line>();
   const beforeGraph=buildDiagramPoseDocFold(before,pose).graph;
   if(JSON.stringify(beforeGraph.faces_vertices)!==JSON.stringify(prepared.faces)||JSON.stringify(beforeGraph.vertices_coords)!==JSON.stringify(prepared.baseCP))throw Error('本步操作前 CP 与主图纸面不一致，请重新计算操作前折图。');
   const flat=after.segments.filter(s=>s.assignment==='F'),pending=intersectSourceSegments(after,precreases,flat),pendingSegments=pending.map(item=>item.s);
-  // A fold opened to F has no new CP geometry. Retain its old material M/V
-  // identity, then map it through each paper face's current visible side.
+  // Opening a mountain toward zero moves in the valley direction and vice
+  // versa. Project that motion from the material front onto each visible side.
   const changedFlat=changed.filter(item=>item.s.assignment==='F').map(item=>item.s);
   const unfolding=(['M','V'] as const).flatMap(from=>intersectSourceSegments(after,changedFlat,before.segments.filter(s=>s.assignment===from))
-    .map(item=>({...item,unfoldFrom:from})));
+    .map(item=>({...item,openingDirection:from==='M'?'V' as const:'M' as const})));
   const openingSegments=unfolding.map(item=>item.s);
   const pendingDisplay=pending.flatMap(item=>segmentPieces(item.s,openingSegments,prepared.eps,prepared.budget,false).map(s=>({...item,s})));
   const existing=flat.flatMap(source=>segmentPieces(source,[...pendingSegments,...openingSegments],prepared.eps,prepared.budget,false).map(s=>({s,source})));
-  const lines:(SourceSegment&{existing?:boolean;unfoldFrom?:'M'|'V'})[]=[...changed.filter(item=>['M','V','U'].includes(item.s.assignment)),
+  const lines:(SourceSegment&{existing?:boolean;openingDirection?:'M'|'V'})[]=[...changed.filter(item=>['M','V','U'].includes(item.s.assignment)),
     ...existing.map(item=>({...item,existing:true})),...pendingDisplay.map(item=>({...item,existing:false})),...unfolding.map(item=>({...item,existing:true}))],projected=new Map<Segment,ProjectedStroke[]>();
   for(const item of lines){const {s}=item,parent=item.source;
     let pieces=projected.get(parent);if(!pieces){pieces=projectSourceStroke(prepared,parent);projected.set(parent,pieces);}
@@ -456,14 +505,49 @@ export function projectDiagramFoldCP(pose:DiagramPose,before:Doc,after:Doc,sourc
       const f=piece.face,matrix=piece.matrix,line=projectedStrokePart(piece,lo,hi),span=piece.strokeSpan&&{length:piece.strokeSpan.length,offset:piece.strokeSpan.offset+distance(piece.line.a,line.a)};
       const assignment=screenAssignment(s.assignment,matrix);
       for(const part of previewLine(prepared,line,new Map([[f,assignment]]),true,span)){
-        const opened=item.unfoldFrom?screenAssignment(item.unfoldFrom,matrix):undefined;
+        const opened=item.openingDirection?screenAssignment(item.openingDirection,matrix):undefined;
         const marked=item.existing!==undefined?{...part,assignment:'F' as const,existing:item.existing,
           ...(opened?{unfolding:true}:{}),
           style:opened?(opened==='M'?'mountain' as const:'valley' as const):item.existing?'crease' as const:assignment==='V'?'valley' as const:'mountain' as const}:part;
+        const first=preview.length;
         appendPreview(preview,{...marked,...(!item.existing?{foldAngle:s.angle===null?null:Math.abs(s.angle)}:{})},prepared);
+        if(item.existing===undefined&&(s.assignment==='M'||s.assignment==='V')){
+          const back=inverse(matrix);
+          for(let i=first;i<preview.length;i++)material.set(preview[i],{a:applyDiagramFoldMatrix(back,preview[i].a),b:applyDiagramFoldMatrix(back,preview[i].b)});
+        }
       }
       
     }
+  }
+  // Preserve physical targeting; only the normal drawing hides a redundant
+  // instruction. Pulled/depth illustrations cannot certify world-space motion.
+  if(material.size>1&&!pose.paperDeformation?.nodes.length&&!diagramDepthActive(pose)){
+    let motion:ReturnType<typeof coincidentFoldMotion>|undefined;
+    const active=[...material.keys()],result:DiagramFoldPreviewSegment[]=[];
+    for(const part of preview){
+      const cp=material.get(part),covered:Interval[]=[];
+      if(cp)for(const other of active){
+        prepared.budget.tick();
+        if(other===part||other.visibility!=='visible'||!onLine(other.a,part,prepared.eps)||!onLine(other.b,part,prepared.eps))continue;
+        const ts=[parameter(other.a,part),parameter(other.b,part)].sort((a,b)=>a-b),lo=Math.max(0,ts[0]),hi=Math.min(1,ts[1]);
+        if((hi-lo)*distance(part.a,part.b)<=prepared.eps)continue;
+        const point=lerp(part.a,part.b,(lo+hi)/2);
+        const inside=(p:DiagramFoldPreviewSegment)=>diagramPiecesStrictlyCoverPoint(prepared.pieces[p.face],point,prepared.eps,n=>prepared.budget.tick(n));
+        const higher=other.visibility==='visible'&&(part.visibility!=='visible'||(inside(other)!==inside(part)?inside(other):order(prepared,[part.face,other.face])[0]===other.face));
+        if(!higher)continue;
+        if(motion===undefined)motion=foldMotionFor(before,after,beforeGraph,buildDiagramPoseDocFold(after,pose).graph,prepared.eps);
+        if(!motion?.equivalent(cp,material.get(other)!))continue;
+        covered.push([lo,hi]);
+      }
+      if(!covered.length){result.push(part);continue;}
+      const length=distance(part.a,part.b),stops=sortedBreaks([0,1,...covered.flat()],length,prepared.eps);
+      for(let i=1;i<stops.length;i++){
+        const lo=stops[i-1],hi=stops[i],mid=(lo+hi)/2;if((hi-lo)*length<=prepared.eps)continue;
+        const has=(ranges:Interval[])=>ranges.some(([a,b])=>mid>a&&mid<b);
+        result.push({...part,a:lerp(part.a,part.b,lo),b:lerp(part.a,part.b,hi),...(has(covered)?{redundantFold:true}:{}),...(part.strokeSpan?{strokeSpan:{length:part.strokeSpan.length,offset:part.strokeSpan.offset+lo*length}}:{})});
+      }
+    }
+    preview.splice(0,preview.length,...result);
   }
   return {preview,warnings:prepared.displayFallback?['按当前绘图顺序确定上层，实际层序尚未确认。']:preview.some(p=>p.visibility==='unknown')?['部分折线的遮挡层序尚未确认。']:[]};
 }

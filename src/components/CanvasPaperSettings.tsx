@@ -1,4 +1,6 @@
 import {useId,useMemo,useState} from 'react';
+import PaperPatternControls from './PaperPatternControls';
+import {readPaperPatterns,withPaperPatterns} from '../app/paperPatterns';
 import type {Doc,Point} from '../core/types';
 import {paperPath} from '../app/paper';
 import {createPaperShape,paperShapeFromDoc,paperShapeDoc,preparePaperShapeChange,type PaperShapeKind} from '../app/paperShapes';
@@ -75,6 +77,7 @@ export default function CanvasPaperSettings({doc,onApply,onMessage}:{doc:Doc;onA
         <input aria-label="纸形模板名称" placeholder="纸形名称" maxLength={160} required disabled={saving||!preview.shape} value={name} onChange={event=>setName(event.target.value)}/>
         <button type="submit" disabled={saving||!preview.shape} title="独立保存预览中的纸张边界，不包含折痕、标注或图片">{saving?'保存中…':'保存纸形'}</button>
       </form>
+      <PaperPatternControls value={readPaperPatterns(doc.metadata?.paperPatterns)} onChange={patterns=>onApply(withPaperPatterns(doc,patterns))}/>
       {(problem||preview.error||library.error)&&<p className="canvas-settings-error" role="alert">{problem||preview.error||library.error}</p>}
       {message&&<p className="canvas-settings-note" role="status">{message}</p>}
     </div>

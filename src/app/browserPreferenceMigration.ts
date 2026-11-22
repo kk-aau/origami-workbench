@@ -1,5 +1,6 @@
 import {createDiagramLibrary,emptyDiagramLibrary,diagramLibraryThumbnail,DIAGRAM_LIBRARY_KEY,DIAGRAM_LEGACY_DRAFT_KEY,type DiagramLibraryIndex,type DiagramLibraryEntry,type DiagramLibraryFolder} from './diagramLibrary';
 import {importDiagramProject,type DiagramProject} from './diagramProject';
+import {diagramBranchStepCount} from './diagramBranches';
 import type {Preferences} from './preferenceStorage';
 
 type StorageAccess=Preferences;
@@ -142,7 +143,7 @@ export async function migrateBrowserPreferenceStorage(source:StorageAccess,targe
     const body=JSON.stringify({format:'zhezhi-diagram-library-document',version:1,project,thumbnail:diagramLibraryThumbnail(project)});
     const digest=await fingerprint('legacy-payload:'+signature),originalKey=`zhezhi.diagram-library-doc-${Array.from(digest.slice(0,32),digit=>'abcdefghijklmnop'[parseInt(digit,16)]).join('')}.v1`;
     const draftKey=await placeBody(originalKey,body,signature);
-    merged.documents.push({id,name,folderId:null,createdAt:stamp,modifiedAt:stamp,openedAt:stamp,stepCount:project.steps.length,savedAt:null,draftKey,savedKey:null});receipts.legacy[receipt]=id;importedDocuments++;
+    merged.documents.push({id,name,folderId:null,createdAt:stamp,modifiedAt:stamp,openedAt:stamp,stepCount:diagramBranchStepCount(project),savedAt:null,draftKey,savedKey:null});receipts.legacy[receipt]=id;importedDocuments++;
     return {id,signature};
   }
   const diskLegacy=await disk.cached.getItemAsync(DIAGRAM_LEGACY_DRAFT_KEY),localLegacy=source.getItem(DIAGRAM_LEGACY_DRAFT_KEY);

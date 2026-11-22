@@ -10,11 +10,13 @@ import {createDiagramProject,adoptDiagramPose,updateDiagramAnnotations} from '..
 import {defaultModelView} from '../../src/app/modelViewState';
 import type {DiagramSymbolAnnotation,DiagramAnnotation} from '../../src/app/diagramAnnotations';
 import {diagramPDFDrawingLayout} from '../../src/app/diagramPDFDrawing';
-import {diagramPDFStepSVG} from '../../src/app/diagramPDF';
+import {diagramPDFStepSVG,diagramPDFStepArtwork} from '../../src/app/diagramPDF';
 import {drawingSVG} from '../../src/app/diagramDrawing';
 import {annotationBounds} from '../../src/app/diagramAnnotationSVG';
 import {defaultDiagramPDFOptions,planDiagramPDF,diagramPDFCellContent,DIAGRAM_PDF_LAYOUTS} from '../../src/app/diagramPDFLayout';
 import {readDiagramLineDefaults} from '../../src/app/diagramLineStyles';
+import {readDiagramBasicSettings} from '../../src/app/diagramBasicSettings';
+import {CAD_TURN_LABEL_SIZE} from '../../src/app/diagramCadSymbols';
 const cssHook=registerHooks({load(url,context,nextLoad){return url.endsWith('.css')?{format:'module',source:'export default {};',shortCircuit:true}:nextLoad(url,context);}});
 const {default:DiagramPDFExport,DiagramPDFPagePreview}=await import('../../src/components/DiagramPDFExport');cssHook.deregister();
 
@@ -31,6 +33,33 @@ const inside=(outer:{x:number;y:number;width:number;height:number},inner:typeof 
   const tolerance=1e-9;
   assert.ok(inner.x>=outer.x-tolerance&&inner.y>=outer.y-tolerance&&inner.x+inner.width<=outer.x+outer.width+tolerance&&inner.y+inner.height<=outer.y+outer.height+tolerance,JSON.stringify({outer,inner}));
 };
+
+test('snake export moves exterior instructions to the next side and leaves the paper and interior arrows intact',()=>{
+  const p=fixture(),step=p.steps[0],outside=symbol('outside','flip',[300,50],25),insideArrow=symbol('inside','fold',[25,30],12);
+  const annotations=[outside,insideArrow],snapshot=structuredClone(annotations),box={width:150,height:165};
+  for(const direction of ['left','bottom','top'] as const){
+    const layout=diagramPDFDrawingLayout(step.pose!,annotations,[],box,[],[],undefined,undefined,direction)!;
+    assert.equal(layout.symbols[0].side,direction);assert.deepEqual(layout.main,[insideArrow]);inside(layout.frame,layout.symbols[0].bounds);
+    const drawing=diagramPDFStepArtwork({...step,annotations},p.states,box,undefined,true,undefined,undefined,false,undefined,undefined,direction);
+    assert.match(drawing,/data-pdf-direction-symbol="flip"/);assert.ok(drawing.includes(direction==='left'?'scale(-1 1)':direction==='bottom'?'rotate(90)':'rotate(270)'));
+    assert.match(drawing,/translate\(25 30\)/,'interior fold arrow keeps its authored placement');
+  }
+  assert.deepEqual(annotations,snapshot);
+});
+
+test('a relocated rotation symbol inherits the project label size exactly like an individually styled symbol',()=>{
+  const project=fixture();
+  const arrow={...symbol('right','rotate',[400,50],30),cadProperties:{}};
+  const p=updateDiagramAnnotations(project,project.steps[0].id,[arrow]);
+  const box={width:170,height:105},basic=readDiagramBasicSettings(p);
+  const baseline=diagramPDFStepSVG(p,p.steps[0],box);
+  const settings={...basic,symbolStyles:{rotate:{cadProperties:{[CAD_TURN_LABEL_SIZE]:30}}}};
+  const inherited=diagramPDFStepSVG({...p,basicSettings:settings},p.steps[0],box);
+  const local=updateDiagramAnnotations(p,p.steps[0].id,[{...arrow,cadProperties:{[CAD_TURN_LABEL_SIZE]:30}}]);
+  assert.match(inherited,/data-pdf-direction-symbol="rotate"/);
+  assert.notEqual(inherited,baseline);
+  assert.equal(inherited,diagramPDFStepSVG(local,local.steps[0],box));
+});
 
 test('adding distant view instructions leaves the PDF paper scale exactly unchanged for every selectable grid',()=>{
   const original=fixture(),step=original.steps[0],withSymbols=updateDiagramAnnotations(original,step.id,[symbol('flip','flip',[1400,-320],300),symbol('cw','rotate',[2000,50],900),symbol('ccw','rotateCCW',[-800,30],170)]),snapshot=structuredClone(withSymbols);
@@ -65,6 +94,30 @@ test('paper-overlapping arrows retain saved placement while ordinary SVG still i
   assert.deepEqual(next.steps[0].annotations,annotations);
 });
 
+test('a paper-exterior symbol follows the authored position along its edge in both directions',()=>{
+  const project=fixture(),pose=project.steps[0].pose!,size={width:150,height:165};
+  for(const vertical of [true,false]){
+    const make=(at:number)=>symbol('move','flip',vertical?[250,at]:[at,-250],12);
+    const a=diagramPDFDrawingLayout(pose,[make(25)],[],size)!,b=diagramPDFDrawingLayout(pose,[make(70)],[],size)!;
+    const from=a.symbols[0],to=b.symbols[0];
+    assert.equal(from.side,vertical?'right':'top');
+    assert.ok(Math.abs((vertical?to.y-from.y:to.x-from.x)-45)<1e-9);
+    assert.equal(vertical?from.x:from.y,vertical?to.x:to.y);
+    assert.deepEqual(a.frame,b.frame);
+  }
+});
+
+test('symbols crowded at the edge stay inside the frame and retain their authored order',()=>{
+  const pose=fixture().steps[0].pose!;
+  const marks=[82,83,84,85,86].map((y,i)=>symbol('crowded-'+i,'flip',[500,y],26));
+  const {symbols,frame}=diagramPDFDrawingLayout(pose,[...marks].reverse(),[],{width:130,height:100})!;
+  assert.deepEqual(symbols.map(item=>item.annotation.id),marks.map(item=>item.id));
+  for(const [i,item] of symbols.entries()){
+    inside(frame,item.bounds);
+    if(i)assert.ok(symbols[i-1].bounds.y+symbols[i-1].bounds.height<item.bounds.y);
+  }
+});
+
 test('a direction centered outside the paper uses its margin even when its arrow overlaps or touches the paper edge',()=>{
   const project=fixture(),step=project.steps[0],pose=step.pose!,initial=symbol('near-edge','rotate',[0,0],65),bounds=annotationBounds([initial])!;
   const centered=(x:number):DiagramSymbolAnnotation=>({...initial,position:[x-bounds.x-bounds.width/2,50-bounds.y-bounds.height/2]});
@@ -89,7 +142,7 @@ test('PDF preview embeds the same size-aware SVG used by the PDF page painter',(
 
 test('PDF dialog waits for prepared paper instead of initially exposing a transparent preview or enabled download',()=>{
   const project=fixture();project.steps[0].pose!.result.layers={status:'unknown',message:'尚未恢复层序。'};
-  const markup=renderToStaticMarkup(createElement(DiagramPDFExport,{project,onClose:()=>{}}));
+  const markup=renderToStaticMarkup(createElement(DiagramPDFExport,{project,options:defaultDiagramPDFOptions(project),onSettingsChange:()=>{},onClose:()=>{}}));
   assert.match(markup,/aria-busy="true"/);assert.match(markup,/正在准备步骤折图/);
   assert.doesNotMatch(markup,/data-pdf-step=/);assert.match(markup,/<button[^>]*disabled=""[^>]*>导出 PDF<\/button>/);
 });

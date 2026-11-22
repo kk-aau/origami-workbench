@@ -40,7 +40,11 @@ test('enabling linking stores isolated settings without converting old annotatio
   input.selectedFaces.pop();input.fixed!.point[0]=900;input.fixed!.matrix[4]=800;input.generated![0].a[0]=300;
   assert.deepEqual(next.steps[0].foldLink,settings());assert.deepEqual(posed,original);
   assert.deepEqual(next.states,posed.states);assert.deepEqual(next.steps[0].annotations,posed.steps[0].annotations);
-  assert.deepEqual(next.steps[0].pose,posed.steps[0].pose);
+  const linkedPose=next.steps[0].pose!;
+  const {projectionCenter,...otherView}=linkedPose.view!;
+  // This 100 × 100 sheet folds in half, leaving a 50 × 100 model.
+  assert.ok(projectionCenter&&Math.hypot(projectionCenter[0]-25,projectionCenter[1]-50)<1e-8);
+  assert.deepEqual({...linkedPose,view:otherView},posed.steps[0].pose);
 });
 
 test('project export and import preserve the fixed material anchor and generated crease ledger',()=>{

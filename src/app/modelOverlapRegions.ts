@@ -1,5 +1,8 @@
 import ear from 'rabbit-ear';
+import {memoDiagramOpen} from '../core/diagramOpenMemo';
 import earcut from 'earcut';
+import {buildExactModelTopology,walkExactCoverage} from './modelExactTopology';
+import {contactIslands} from '../core/contactIslands';
 import type {FlatFoldResult,Point} from '../core/types';
 import {polygonArea} from '../core/geometry';
 import {pointBounds} from '../core/pointBounds';
@@ -9,7 +12,7 @@ import {materialLayerRegions} from '../core/materialLayerRegions';
 import {modelPlanarize,type ModelArrangement} from './modelPlanarize';
 import {modelSurfaceEpsilon,modelSurfacePrecision} from './modelSurfacePrecision';
 
-export interface ModelOverlapCell {polygon:Point[];faces:number[];area:number}
+export interface ModelOverlapCell {polygon:Point[];holes?:Point[][];faces:number[];area:number}
 export interface ModelOverlapRegions {cells:ModelOverlapCell[];maxDepth:number;omittedThinRegions:number;epsilon:number}
 type Bounds={minX:number;minY:number;maxX:number;maxY:number};
 type BoundsNode=Bounds&{ids?:number[];left?:BoundsNode;right?:BoundsNode};
@@ -38,13 +41,13 @@ type PlanarArrangement=ModelArrangement&{rings:{face:number;hole:boolean}[];segm
 const planarCache=new WeakMap<FlatFoldResult,{key:string;planar:PlanarArrangement}>();
 /** Reuse one arrangement for coverage and both visible-boundary passes. The
  * value snapshot also detects callers mutating an existing result in place. */
-export function modelPlanarArrangement(result:FlatFoldResult,epsilon:number,visibleFaces?:ReadonlySet<number>):PlanarArrangement{
+export function modelPlanarArrangement(result:FlatFoldResult,epsilon:number,visibleFaces?:ReadonlySet<number>,boundaryEpsilon=epsilon):PlanarArrangement{
  const {vertices,faces}=result.geometry;
- const key=JSON.stringify([epsilon,vertices,faces,result.geometry.graph?.faces_holes??null]);
+ const key=JSON.stringify([epsilon,boundaryEpsilon,vertices,faces,result.geometry.graph?.faces_holes??null]);
  const cached=visibleFaces?undefined:planarCache.get(result);if(cached?.key===key)return cached.planar;
  const edges:[number,number][]=[],seen=new Set<string>();
  faces.forEach((_,f)=>{if(!visibleFaces||visibleFaces.has(f))modelFaceRings(result,f).forEach(face=>face.forEach((a,i)=>{const b=face[(i+1)%face.length],edgeKey=a<b?`${a},${b}`:`${b},${a}`;if(!seen.has(edgeKey)){seen.add(edgeKey);edges.push([a,b]);}}));});
- const graph=modelPlanarize(vertices,edges,epsilon),rings:PlanarArrangement['rings']=[],ringPoints:Point[][]=[],owners=new Map<string,Set<number>>();
+ const graph=modelPlanarize(vertices,edges,epsilon,boundaryEpsilon),rings:PlanarArrangement['rings']=[],ringPoints:Point[][]=[],owners=new Map<string,Set<number>>();
  const segmentKey=(a:Point,b:Point)=>{const first=a.join(','),second=b.join(',');return first<second?`${first};${second}`:`${second};${first}`;};
  const originalIndices=new Map(graph.originalSegments.map(([a,b],index)=>[segmentKey(a,b),index]));
  faces.forEach((_,f)=>{if(!visibleFaces||visibleFaces.has(f))modelFaceRings(result,f).forEach((ring,hole)=>{
@@ -104,7 +107,7 @@ function planarCells(planar:PlanarArrangement,coverAt:(p:Point)=>number[],epsilo
 }
 /** Geometric coverage only, independent of layer order. For a cancellable dynamic
  * preview call in a Worker, never on each main-thread pointermove. */
-export function modelOverlapRegions(result:FlatFoldResult,epsilonOverride?:number):ModelOverlapRegions{
+export function modelOverlapRegions(result:FlatFoldResult,epsilonOverride?:number,boundaryEpsilon?:number):ModelOverlapRegions{
  const {vertices,faces,status}=result.geometry;
  if(status!=='ready'||!vertices.length||!faces.length)throw new Error('请先生成有效模型，再计算重叠区域。');
  if(vertices.some(p=>!Array.isArray(p)||p.length!==2||p.some(n=>!Number.isFinite(n)||Math.abs(n)>1e6)))throw new Error('重叠区域模型坐标无效或超出范围。');
@@ -120,14 +123,14 @@ export function modelOverlapRegions(result:FlatFoldResult,epsilonOverride?:numbe
   }
   const ids=faces.flatMap((_,f)=>edgeOn.includes(f)?[]:[f]),graph=result.geometry.graph!;
   const filtered={...result,geometry:{...result.geometry,faces:ids.map(f=>faces[f]),graph:{...graph,faces_vertices:ids.map(f=>faces[f]),faces_holes:ids.map(f=>graph.faces_holes?.[f]??[]),zhezhi_spatialEdgeOnFaces:[]}}};
-  const regions=modelOverlapRegions(filtered,epsilonOverride);
+  const regions=modelOverlapRegions(filtered,epsilonOverride,boundaryEpsilon);
   return {...regions,cells:regions.cells.map(cell=>({...cell,faces:cell.faces.map(f=>ids[f])}))};
  }
  const weak=result.geometry.graph&&hasWeakMaterialRings(result.geometry.graph);
  if(faces.some(face=>face.length<3||!weak&&new Set(face).size!==face.length||face.some(v=>!Number.isInteger(v)||v<0||v>=vertices.length)))throw new Error('重叠区域纸面索引无效。');
  const epsilon=modelSurfaceEpsilon(vertices,epsilonOverride),coordinateRoundoff=modelSurfacePrecision(vertices).minimumEpsilon;
  if(weak){const graph=result.geometry.graph!;if(JSON.stringify(graph.faces_vertices)!==JSON.stringify(faces)||JSON.stringify(graph.vertices_coords)!==JSON.stringify(vertices))throw Error('弱边界显示与实际计算图不一致。');materialLayerRegions(graph,epsilon);}
- const planar=modelPlanarArrangement(result,epsilon);
+ const planar=modelPlanarArrangement(result,epsilon,undefined,boundaryEpsilon);
  const display:FlatFoldResult={...result,geometry:{...result.geometry,vertices:planar.sourceVertices,...(result.geometry.graph?{graph:{...result.geometry.graph,vertices_coords:planar.sourceVertices}}:{})}};
  // Sub-epsilon paper faces and holes may collapse in the display copy. Keep
  // that loss explicit, including a hole inside an otherwise intact large face.
@@ -137,7 +140,11 @@ export function modelOverlapRegions(result:FlatFoldResult,epsilonOverride?:numbe
   // An actual thin triangle (or hole) may collapse when its long side splits
   // through the opposite tip. Inspect the atomic ring, not its unsplit points.
   const originalArea=polygonArea(ring.map(v=>vertices[v])),polygon=planar.ringPoints[ringIndex++],area=polygonArea(polygon),bounds=modelPolygonBounds(polygon);
-  if(originalArea!==0&&(new Set(polygon.map(p=>p.join(','))).size<3||originalArea*area<=0||Math.abs(area)<=epsilon*epsilon||bounds.maxX-bounds.minX<=epsilon||bounds.maxY-bounds.minY<=epsilon))collapsedRings++;
+  // A retry may align boundary coordinates more coarsely than it sweeps
+  // intersection events. Reject it if that materially shrinks a thin contour
+  // (including a hole), even when three distinct vertices survive.
+  const distorted=boundaryEpsilon!==undefined&&boundaryEpsilon>epsilon&&Math.abs(originalArea-area)>Math.abs(originalArea)*Math.sqrt(Number.EPSILON);
+  if(originalArea!==0&&(distorted||new Set(polygon.map(p=>p.join(','))).size<3||originalArea*area<=0||Math.abs(area)<=epsilon*epsilon||bounds.maxX-bounds.minX<=epsilon||bounds.maxY-bounds.minY<=epsilon))collapsedRings++;
  }
  const faceIndex=modelBoundsIndex(faces.map(face=>modelPolygonBounds(face.map(v=>planar.sourceVertices[v]))));
  const coverAt=(probe:Point)=>faceIndex.at(probe).filter(index=>modelFaceContains(display,index,probe)).sort((a,b)=>a-b);
@@ -226,4 +233,111 @@ export function modelOverlapRegions(result:FlatFoldResult,epsilonOverride?:numbe
  }
  for(const band of prior.values())finish(band);
  return {cells,maxDepth,omittedThinRegions:omittedThinRegions+collapsedRings,epsilon};
+}
+
+function completePlaneRegions(input:FlatFoldResult){
+  const {defaultEpsilon,minimumEpsilon}=modelSurfacePrecision(input.geometry.vertices);
+  let epsilon=defaultEpsilon;
+  for(;;){
+    const regions=modelOverlapRegions(input,epsilon);
+    if(!regions.omittedThinRegions)return regions;
+    if(epsilon<=minimumEpsilon)return regions;
+    epsilon=Math.max(minimumEpsilon,epsilon/8);
+  }
+}
+
+/** Separate event resolution from the normalization of paper coordinates.
+ * Retain the original boundary tolerance while resolving ever closer events.
+ * Material rings and holes are checked again for collapse and distortion. */
+function refinePlaneEvents(input:FlatFoldResult):ModelOverlapRegions{
+ const {defaultEpsilon,minimumEpsilon}=modelSurfacePrecision(input.geometry.vertices);
+ let epsilon=defaultEpsilon;
+ for(;;){
+  epsilon=Math.max(minimumEpsilon,epsilon/8);
+  const regions=modelOverlapRegions(input,epsilon,defaultEpsilon);
+  if(!regions.omittedThinRegions||epsilon===minimumEpsilon)return regions;
+ }
+}
+
+/** Change only the planar sweep basis. The camera, face indices, and depth
+ * functions stay in the caller's frame. Incomplete passes cannot supply cells. */
+export function spatialOverlapRegions(input:FlatFoldResult):ModelOverlapRegions{
+ const geometry=input.geometry;
+ return memoDiagramOpen('overlap',()=>[geometry.status,geometry.vertices,geometry.faces,geometry.graph],()=>computeSpatialOverlapRegions(input));
+}
+function computeSpatialOverlapRegions(input:FlatFoldResult):ModelOverlapRegions{
+ const original=coverageInSweepFrames(input,completePlaneRegions);
+ if(!original.omittedThinRegions)return original;
+ const refined=coverageInSweepFrames(input,refinePlaneEvents);
+ if(!refined.omittedThinRegions)return refined;
+ return exactSpatialIslands(input);
+}
+
+function exactSpatialIslands(input:FlatFoldResult):ModelOverlapRegions{
+ const {faces,vertices,graph}=input.geometry;
+ // Edge-on faces were validated by the floating pass and cover no open cell.
+ const edgeOn=new Set(graph?.zhezhi_spatialEdgeOnFaces as number[]|undefined);
+ const ids=faces.map((_,i)=>i).filter(i=>!edgeOn.has(i));
+ const boundaries={vertices_coords:vertices,faces_vertices:faces,faces_holes:graph?.faces_holes,edges_vertices:[],edges_assignment:[],edges_foldAngle:[]};
+ const groups=contactIslands(ids,boundaries,v=>vertices[v],0);
+ const cells:ModelOverlapCell[]=[];
+ let maxDepth=0;
+ for(const group of groups){
+  if(!group.length)continue;
+  const index=new Map<number,number>(),points:Point[]=[];
+  const localRing=(ring:number[])=>ring.map(v=>{
+   let id=index.get(v);
+   if(id===undefined){id=points.length;index.set(v,id);points.push(vertices[v]);}
+   return id;
+  });
+  const rings=group.map(f=>localRing(faces[f]));
+  const holes=group.map(f=>(graph?.faces_holes?.[f]??[]).map(localRing));
+  const localGraph={...boundaries,vertices_coords:points,faces_vertices:rings,faces_holes:holes};
+  const local:FlatFoldResult={...input,geometry:{...input.geometry,vertices:points,faces:rings,graph:localGraph}};
+  if(groups.length>1){
+   const fast=completePlaneRegions(local);
+   if(!fast.omittedThinRegions){
+    for(const cell of fast.cells)cells.push({...cell,faces:cell.faces.map(f=>group[f])});
+    maxDepth=Math.max(maxDepth,fast.maxDepth);continue;
+   }
+  }
+  // Source endpoint identities, intersection ordering and ring ownership stay
+  // exact through the coverage walk. Only coordinates used for display and
+  // affine depth evaluation are rounded. A tiny positive cell still owns faces.
+  const topology=buildExactModelTopology(local);
+  const {vertexXY,cellRingOffsets,ringVertexOffsets,ringVertices}=topology;
+  walkExactCoverage(topology,{onCell(cell,owners){
+   if(!owners.size)return;
+   const contours:Point[][]=[];
+   for(let r=cellRingOffsets[cell];r<cellRingOffsets[cell+1];r++){
+    const contour:Point[]=[];
+    for(let i=ringVertexOffsets[r];i<ringVertexOffsets[r+1];i++){
+     const v=ringVertices[i]*2;contour.push([vertexXY[v],vertexXY[v+1]]);
+    }
+    contours.push(contour);
+   }
+   const faces=Array.from(owners,f=>group[f]).sort((a,b)=>a-b);
+   maxDepth=Math.max(maxDepth,faces.length);
+   cells.push({polygon:contours[0],...(contours.length>1?{holes:contours.slice(1)}:{}),faces,area:topology.cellArea[cell]});
+  }});
+ }
+ return {cells,maxDepth,omittedThinRegions:0,epsilon:0};
+}
+
+function coverageInSweepFrames(input:FlatFoldResult,resolve:(input:FlatFoldResult)=>ModelOverlapRegions){
+ const original=resolve(input);
+ if(!original.omittedThinRegions)return original;
+ const geometry=input.geometry;
+ // Opposite oblique sweeps are distinct: edges whose crossing abscissae
+ // cluster with +theta may separate with -theta, and vice versa for a
+ // reflected drawing. Accept only a pass that accounts for every region.
+ for(const angle of [Math.PI/7,Math.PI/5,-Math.PI/7,-Math.PI/5]){
+  const c=Math.cos(angle),s=Math.sin(angle);
+  const vertices=geometry.vertices.map(([x,y]):Point=>[c*x-s*y,s*x+c*y]);
+  if(vertices.some(p=>Math.abs(p[0])>1e6||Math.abs(p[1])>1e6))continue;
+  const graph=geometry.graph?{...geometry.graph,vertices_coords:vertices}:undefined;
+  const rotated=resolve({...input,geometry:{...geometry,vertices,graph}});
+  if(!rotated.omittedThinRegions)return {...rotated,cells:rotated.cells.map(cell=>({...cell,polygon:cell.polygon.map(([x,y]):Point=>[c*x+s*y,-s*x+c*y])}))};
+ }
+ return original;
 }

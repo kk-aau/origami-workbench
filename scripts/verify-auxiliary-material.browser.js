@@ -15,7 +15,7 @@ async page => {
   const onError=error=>errors.push(error.message);page.on('pageerror',onError);
   try{
     await page.setViewportSize({width:1200,height:800});
-    for(const name of ['设置并开始使用','关闭窗口','保留当前工程']){const b=button(name);if(await b.count()&&await b.isVisible())await b.click();}
+    for(const name of ['使用默认位置开始','关闭窗口','保留当前工程']){const b=button(name);if(await b.count()&&await b.isVisible())await b.click();}
     await page.getByLabel('折痕工程文件',{exact:true}).setInputFiles('D:/codex/折纸工具/workbench/output/auxiliary-edit-fixtures/material-with-auxiliary.zhezhi.json');
     await page.waitForFunction(()=>document.querySelector('[aria-label="工程名称"]')?.value==='测试 · 材料辅助线编辑');
     if(await button('收起平折').count())await button('收起平折').click();

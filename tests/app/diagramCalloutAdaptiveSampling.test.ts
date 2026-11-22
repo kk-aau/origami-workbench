@@ -1,7 +1,7 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {XMLValidator} from 'fast-xml-parser';
-import {adaptiveLineStroke} from '../../src/app/adaptiveLineStyle';
+import {resolveLineStroke} from '../../src/app/adaptiveLineStyle';
 import {diagramCalloutCPMarkup,diagramCalloutsSVG} from '../../src/app/diagramCalloutSVG';
 import {DISPLAY_PIXEL_MM,creasePatternSVG} from '../../src/app/creasePatternSVG';
 import {defaultCreaseDisplay} from '../../src/app/creaseDisplay';
@@ -12,8 +12,8 @@ const paper:DiagramCallout={id:'paper-detail',source:{kind:'paper',center:[1,0],
 const comparison:DiagramCallout={id:'cp-change',source:{kind:'cp',stateId:'before',center:[1,0],radius:1,locator:{center:[1,0],radius:1}},target:{center:[30,0],radius:10},comparison:{stateId:'after',target:{center:[60,0],radius:20}}};
 
 function adaptiveArtwork(units:number){
-  const stroke=adaptiveLineStroke(2,.7,'7 4',{enabled:true,units,linecap:'round'});
-  return `<line data-detail-line="true" x1="0" y1="0" x2="2" y2="0" stroke="#315ebe" stroke-width="${stroke.width}" stroke-linecap="round"${stroke.dash?` stroke-dasharray="${stroke.dash}"`:''}${stroke.dashOffset===undefined?'':` stroke-dashoffset="${stroke.dashOffset}"`}/>`;
+  const stroke=resolveLineStroke(2,.7,'7 4',{enabled:true,units,linecap:'round'});
+  return `<line data-detail-line="true" x1="0" y1="0" x2="2" y2="0" stroke="#315ebe" stroke-width="${stroke.width}" stroke-linecap="round"${stroke.dash?` stroke-dasharray="${stroke.dash}"`:''}${stroke.pathLength===undefined?'':` pathLength="${stroke.pathLength}"`}${stroke.dashOffset===undefined?'':` stroke-dashoffset="${stroke.dashOffset}"`}/>`;
 }
 
 test('a paper inset resamples original strokes at its enlarged scale instead of copying a limited solid from the main drawing',()=>{

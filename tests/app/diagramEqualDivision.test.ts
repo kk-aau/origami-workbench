@@ -46,7 +46,11 @@ test('ratio edits preserve source rotation properties, mirrors and fixed outer e
 test('new-step editing saves the changed ratio and physical shape, restores it exactly and exports identical label and path geometry',()=>{
   const initial=createDiagramProject(blankDoc('步骤',200,200)),project=appendDiagramStep(initial),step=project.steps.at(-1)!,original=symbol(),placed=updateDiagramAnnotations(project,step.id,[original]),changed=editDiagramEqualDivisionRatio(original,'13648','3'),edited=updateDiagramAnnotations(placed,step.id,[changed]),loaded=importDiagramProject(exportDiagramProject(edited)),restored=loaded.steps.at(-1)!.annotations![0] as DiagramSymbolAnnotation;
   assert.deepEqual(edited.states,placed.states);assert.deepEqual(restored,changed);assert.equal(diagramAnnotationMarkup(restored),diagramAnnotationMarkup(changed));
-  const svg=drawingSVG(null,[restored],'比例示例','3:1');assert.ok(svg.includes(diagramAnnotationMarkup(changed)));assert.match(svg,/>3<\/text>/);assert.match(svg,/>1<\/text>/);close(length(segments(restored).left)/length(segments(restored).right),3);
+  const svg=drawingSVG(null,[restored],'比例示例','3:1');
+  const [, ,width,height]=svg.match(/viewBox="([^"]+)"/)![1].split(' ').map(Number);
+  const units=Math.max(width/1200,height/900);
+  assert.ok(svg.includes(diagramAnnotationMarkup(changed,{units})));
+  assert.match(svg,/>3<\/text>/);assert.match(svg,/>1<\/text>/);close(length(segments(restored).left)/length(segments(restored).right),3);
 });
 
 test('opening an old ratio symbol leaves its exact geometry and original DWG label metadata untouched until an explicit edit',()=>{

@@ -4,6 +4,7 @@ import {blankDoc} from '../../src/app/state';
 import {diagramSimulationGraph} from '../../src/app/diagramSimulationGraph';
 import {diagramSimulationSurfaceOrbitCamera,diagramSimulationSurfaceViewFromCamera,sameDiagramSimulationSurfaceView} from '../../src/app/diagramSimulationSurfaceCamera';
 import {rotateDiagramCameraAxis,type DiagramRotationAxis} from '../../src/app/diagramAxisRotation';
+import {captureCustomGalleryView,galleryStep} from '../../src/app/diagramPDFGallery';
 import {createDiagramProject,applyDiagramSimulationSurface,updateDiagramSimulationSurfaceView,exportDiagramProject,importDiagramProject} from '../../src/app/diagramProject';
 import {diagramSimulationSurfaceCamera,diagramSimulationSurfaceGeometry} from '../../src/app/diagramSimulationSurfaceRender';
 import {prepareDiagramSimulationEditable} from '../../src/app/diagramSimulationEditable';
@@ -31,6 +32,20 @@ test('legacy camera maps exactly to the shared right-handed gizmo and roundtrips
     const next=diagramSimulationSurfaceViewFromCamera(view,camera);assert.equal(next.zoom,view.zoom);assert.ok(sameDiagramSimulationSurfaceView(view,next));
     const v=[.2,.3,.4];close(point(r,v),point(m,v).map((n,i)=>i===1?-n:n));
   }
+});
+
+test('a custom gallery view reproduces the selected simulator orientation without moving the original surface',()=>{
+  const {doc,pose}=fixture(),source=createDiagramProject(doc);
+  const project=applyDiagramSimulationSurface(source,source.activeStepId,pose),step=project.steps[1];
+  const original=structuredClone(step.simulationSurface!.pose.view);
+  const camera=rotateDiagramCameraAxis(diagramSimulationSurfaceOrbitCamera(original),'y',.47);
+  const custom=captureCustomGalleryView(step,camera);
+  assert.equal(custom.camera,undefined);
+  assert.equal(custom.simulationView?.zoom,original.zoom);
+  const loaded=importDiagramProject(exportDiagramProject({...project,exportSettings:{pdf:{gallery:[custom]}}}));
+  const rendered=galleryStep(loaded,loaded.exportSettings!.pdf!.gallery![0]).simulationSurface!;
+  close(diagramSimulationSurfaceOrbitCamera(rendered.pose.view).rotation!,camera.rotation!);
+  assert.deepEqual(step.simulationSurface!.pose.view,original);
 });
 
 test('all three axes rotate about actual world axes, with Z independent from screen roll',()=>{

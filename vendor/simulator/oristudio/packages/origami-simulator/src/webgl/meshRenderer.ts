@@ -91,6 +91,7 @@ export function packCreaseDash(dash: CreaseDash | undefined): {
 }
 
 export interface RenderSettings {
+  paperPrint?:{uv:Float32Array;front?:ImageData;back?:ImageData;source?:{front?:string;back?:string}};
   frontColor: [number, number, number];
   backColor: [number, number, number];
   /** Crease colours by assignment; mountain/valley must differ to be legible. */
@@ -425,14 +426,14 @@ export function meshTopologyFor(
 }
 
 // Interleaved edge-vertex layout: [this, a, b, side, assignment].
-const EDGE_STRIDE = 8;
+const EDGE_STRIDE = 10;
 const EDGE_ATTRS: ReadonlyArray<readonly [string, number]> = [
   ['a_this', 0],
   ['a_a', 1],
   ['a_b', 2],
   ['a_side', 3],
   ['a_assignment', 4],
-  ['a_c',5],['a_d',6],['a_material',7],
+  ['a_c',5],['a_d',6],['a_material',7],['a_windingC',8],['a_windingD',9],
 ];
 
 /** Ribbon vertices per drawn crease: two triangles. */
@@ -463,14 +464,15 @@ function buildEdgeQuads(topology: MeshTopology): {
   const out = new Float32Array(drawn * EDGE_QUAD_VERTICES * EDGE_STRIDE);
   const vertexStart = new Uint32Array(edgeCount + 1);
   let v = 0;
-  let oppositeA=-1,oppositeB=-1,material=1;
+  let oppositeA=-1,oppositeB=-1,material=1,windingC=0,windingD=0;
+  const windings=edgeFaceWindings(topology);
   const emit = (thisIndex: number, a: number, b: number, side: number, assignment: number) => {
     out[v] = thisIndex;
     out[v + 1] = a;
     out[v + 2] = b;
     out[v + 3] = side;
     out[v + 4] = assignment;
-    out[v+5]=oppositeA;out[v+6]=oppositeB;out[v+7]=material;
+    out[v+5]=oppositeA;out[v+6]=oppositeB;out[v+7]=material;out[v+8]=windingC;out[v+9]=windingD;
     v += EDGE_STRIDE;
   };
 
@@ -481,6 +483,7 @@ function buildEdgeQuads(topology: MeshTopology): {
     const a = topology.edgeIndices[e * 2]!;
     const b = topology.edgeIndices[e * 2 + 1]!;
     oppositeA=topology.edgeOpposites?.[e*2]??-1;oppositeB=topology.edgeOpposites?.[e*2+1]??-1;
+    windingC=windings[e*2];windingD=windings[e*2+1];
     material=topology.edgeMaterial?.[e]??(assignment===3?0:1);
     // Two triangles: (Aleft, Aright, Bleft) and (Aright, Bright, Bleft).
     emit(a, a, b, 1, assignment);
@@ -549,6 +552,8 @@ uniform sampler2D u_originalPosition;
 uniform sampler2D u_lastVelocity;
 uniform int u_textureDim;
 ${VIEW_GLSL}
+layout(location=0) in vec2 a_paperUV;
+out vec2 v_paperUV;
 out vec3 v_view;
 out float v_strain;
 
@@ -563,12 +568,17 @@ void main(){
   // same channel upstream reads back for its strain visualization.
   v_strain = texelFetch(u_lastVelocity, texel, 0).w;
   vec3 view = toView(fetchPosition(gl_VertexID));
+  v_paperUV = a_paperUV;
   v_view = view;
   gl_Position = toClip(view);
 }`;
 
 const FACE_FRAG = `#version 300 es
 precision highp float;
+in vec2 v_paperUV;
+uniform sampler2D u_frontPrint;
+uniform sampler2D u_backPrint;
+uniform int u_printMask;
 in vec3 v_view;
 in float v_strain;
 uniform vec3 u_frontColor;
@@ -594,6 +604,12 @@ vec3 hueToRgb(float h){
 void main(){
   vec3 normal = normalize(cross(dFdx(v_view), dFdy(v_view)));
   vec3 base = gl_FrontFacing ? u_frontColor : u_backColor;
+  // The reflected orbit marks the physical front as GL back-facing.
+  if(!gl_FrontFacing && (u_printMask & 1)!=0){
+    vec4 ink=texture(u_frontPrint,v_paperUV);base=mix(base,ink.rgb,ink.a);
+  }else if(gl_FrontFacing && (u_printMask & 2)!=0){
+    vec4 ink=texture(u_backPrint,vec2(1.0-v_paperUV.x,v_paperUV.y));base=mix(base,ink.rgb,ink.a);
+  }
   if (u_normalsMode > 0.5){
     // Derivatives face the screen; undo their back-face flip to retain the
     // oriented triangle normal, matching cross(b-a,c-a) in CPU and SVG.
@@ -640,6 +656,8 @@ in float a_assignment; // crease type
 in float a_c;
 in float a_d;
 in float a_material;
+in float a_windingC;
+in float a_windingD;
 uniform float u_diagramStyle;
 uniform sampler2D u_lastPosition;
 uniform sampler2D u_originalPosition;
@@ -673,6 +691,15 @@ float projectDepth(int index){
 
 void main(){
   v_assignment = int(a_assignment + 0.5);
+  if(v_assignment==1||v_assignment==2){
+    vec3 a=fetchPosition(int(a_a+0.5)),b=fetchPosition(int(a_b+0.5));
+    vec3 u=b-a,eye=u_center+transpose(u_view)*vec3(0.0,0.0,u_camDist)-(a+b)*0.5;
+    float fc=0.0,fd=0.0;
+    if(a_c>=0.0){vec3 n=cross(u,fetchPosition(int(a_c+0.5))-a)*a_windingC;fc=dot(n,eye)/max(length(n),0.000000000001);}
+    if(a_d>=0.0){vec3 n=cross(u,fetchPosition(int(a_d+0.5))-a)*a_windingD;fd=dot(n,eye)/max(length(n),0.000000000001);}
+    float facing=abs(fc)>=abs(fd)?fc:fd;
+    if(facing< -length(eye)*0.000000001)v_assignment=3-v_assignment;
+  }
   v_material=a_material;
   v_folded=1.0;
   if(u_diagramStyle>0.5&&a_c>=0.0&&a_d>=0.0){
@@ -839,6 +866,9 @@ export class MeshRenderer {
   private readonly edgeBuffer: WebGLBuffer;
   private readonly faceVao: WebGLVertexArrayObject;
   private readonly edgeVao: WebGLVertexArrayObject;
+  private printUV:Float32Array|null=null;
+  private printBuffer:WebGLBuffer|null=null;
+  private prints=new Map<number,{image:ImageData;texture:WebGLTexture}>();
   private readonly faceCount: number;
   private readonly edgeVertexCount: number;
   /** Ribbon vertex offset per source edge — see {@link buildEdgeQuads}. */
@@ -957,6 +987,7 @@ export class MeshRenderer {
       gl.bindVertexArray(this.faceVao);
       gl.useProgram(this.faceProgram);
       this.bindCommon(this.faceProgram, this.faceUniforms, camera);
+      this.bindPaperPrint(settings.paperPrint);
       this.setVec3(this.faceProgram, this.faceUniforms, 'u_frontColor', settings.frontColor);
       this.setVec3(this.faceProgram, this.faceUniforms, 'u_backColor', settings.backColor);
       this.setVec3(this.faceProgram, this.faceUniforms, 'u_lightDir', settings.lightDir);
@@ -1044,10 +1075,41 @@ export class MeshRenderer {
     gl.bindVertexArray(null);
   }
 
+  private bindPaperPrint(print:RenderSettings['paperPrint']){
+    const gl=this.gl;
+    if(print&&this.printUV!==print.uv){
+      this.printBuffer??=gl.createBuffer();
+      gl.bindVertexArray(this.faceVao);gl.bindBuffer(gl.ARRAY_BUFFER,this.printBuffer);
+      gl.bufferData(gl.ARRAY_BUFFER,print.uv,gl.STATIC_DRAW);gl.enableVertexAttribArray(0);
+      gl.vertexAttribPointer(0,2,gl.FLOAT,false,0,0);this.printUV=print.uv;
+    }
+    let mask=0;
+    for(const [index,side] of (['front','back'] as const).entries()){
+      const image=print?.[side],prior=this.prints.get(index);
+      if(prior&&prior.image!==image){gl.deleteTexture(prior.texture);this.prints.delete(index);}
+      if(!image)continue;
+      mask|=1<<index;gl.activeTexture(gl.TEXTURE3+index);
+      let cached=this.prints.get(index);
+      if(!cached){
+        const texture=gl.createTexture();if(!texture)throw Error('无法创建纸张图案纹理。');
+        gl.bindTexture(gl.TEXTURE_2D,texture);
+        gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,image);
+        gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR_MIPMAP_LINEAR);gl.generateMipmap(gl.TEXTURE_2D);
+        cached={image,texture};this.prints.set(index,cached);
+      }else gl.bindTexture(gl.TEXTURE_2D,cached.texture);
+      this.setInt(this.faceProgram,this.faceUniforms,index===0?'u_frontPrint':'u_backPrint',3+index);
+    }
+    this.setInt(this.faceProgram,this.faceUniforms,'u_printMask',mask);
+    gl.activeTexture(gl.TEXTURE0);
+  }
+
   dispose(): void {
     const gl = this.gl;
     gl.deleteProgram(this.faceProgram);
     gl.deleteProgram(this.edgeProgram);
+    gl.deleteBuffer(this.printBuffer);
+    for(const {texture} of this.prints.values())gl.deleteTexture(texture);
     gl.deleteBuffer(this.faceElements);
     gl.deleteBuffer(this.edgeBuffer);
     gl.deleteVertexArray(this.faceVao);
@@ -1188,4 +1250,42 @@ function createVao(gl: WebGL2RenderingContext): WebGLVertexArrayObject {
   const vao = gl.createVertexArray();
   if (!vao) throw new Error('Unable to create VAO for the mesh renderer');
   return vao;
+}
+
+type FacingTopology=Pick<MeshTopology,'faceIndices'|'edgeIndices'|'edgeOpposites'>;
+const windingCache=new WeakMap<object,Int8Array>();
+export function edgeFaceWindings(topology:FacingTopology):Int8Array {
+  const cached=windingCache.get(topology);if(cached)return cached;
+  const directions=new Map<string,number>(),indices=topology.faceIndices;
+  for(let i=0;i<indices.length;i+=3){
+    const triangle=[indices[i],indices[i+1],indices[i+2]];
+    for(let k=0;k<3;k++){
+      const a=triangle[k],b=triangle[(k+1)%3],c=triangle[(k+2)%3];
+      directions.set(a+','+b+','+c,1);directions.set(b+','+a+','+c,-1);
+    }
+  }
+  const values=new Int8Array(topology.edgeIndices.length);
+  for(let edge=0;edge<values.length/2;edge++){
+    const a=topology.edgeIndices[edge*2],b=topology.edgeIndices[edge*2+1];
+    for(let side=0;side<2;side++)values[edge*2+side]=directions.get(a+','+b+','+(topology.edgeOpposites?.[edge*2+side]??-1))??0;
+  }
+  windingCache.set(topology,values);return values;
+}
+
+/** M/V describes the material front. Reverse the displayed role on the material back. */
+export function cameraEdgeAssignment(code:number,topology:FacingTopology,edge:number,points:ArrayLike<number>,eye:readonly number[]):number {
+  if(code!==1&&code!==2)return code;
+  const a=topology.edgeIndices[edge*2]*3,b=topology.edgeIndices[edge*2+1]*3;
+  const u=[0,1,2].map(k=>points[b+k]-points[a+k]),ray=[0,1,2].map(k=>eye[k]-(points[a+k]+points[b+k])/2);
+  const signs=edgeFaceWindings(topology);
+  let facing=0;
+  for(let side=0;side<2;side++){
+    const index=topology.edgeOpposites?.[edge*2+side]??-1;if(index<0)continue;
+    const v=[0,1,2].map(k=>points[index*3+k]-points[a+k]);
+    const n=[u[1]*v[2]-u[2]*v[1],u[2]*v[0]-u[0]*v[2],u[0]*v[1]-u[1]*v[0]];
+    const length=Math.hypot(...n);if(!length)continue;
+    const value=n.reduce((sum,x,k)=>sum+x*ray[k],0)*signs[edge*2+side]/length;
+    if(Math.abs(value)>Math.abs(facing))facing=value;
+  }
+  return facing< -Math.hypot(...ray)*1e-9?3-code:code;
 }

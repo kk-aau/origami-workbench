@@ -66,6 +66,22 @@ function coveredEdgePose():DiagramPose {
     spatial:{version:1,vertices:spatialVertices,faceTransforms:[{rotation:[1,0,0,0,0,-1,0,1,0],translation:[0,0,1]},{rotation:[1,0,0,0,1,0,0,0,1],translation:[0,0,4]}],measuredAngles:[],camera:{yaw:0,elevation:0}}};
 }
 const spans=(markup:string)=>[...markup.matchAll(/x1="([^"]+)" y1="[^"]+" x2="([^"]+)"/g)].map(m=>[Math.min(+m[1],+m[2]),Math.max(+m[1],+m[2])]);
+
+test('a camera translation cannot expose the middle of a covered crease in an oblique view',()=>{
+  const pose=coveredEdgePose(),angle=35*Math.PI/180,c=Math.cos(angle),s=Math.sin(angle);
+  const points:Point[]=[[0,0],[10,0],[10,2],[0,2],[4,-2],[8,-2],[8,2],[4,2]];
+  pose.spatial!.vertices=points.map(([x,y],i)=>[100000+x,y,i<4?0:0.000001]);
+  pose.spatial!.faceTransforms=[0,0.000001].map(z=>({rotation:[1,0,0,0,1,0,0,0,1],translation:[0,0,z]}));
+  pose.spatial!.camera={yaw:0,elevation:0,rotation:[c,0,-s,0,1,0,s,0,c]};
+  pose.result.geometry.vertices=pose.spatial!.vertices.map(([x,y,z])=>[x*c-z*s,y]);
+  Object.assign(pose.result.geometry.graph!,{vertices_coords:pose.result.geometry.vertices,edges_vertices:[[0,1]],edges_assignment:['V'],zhezhi_spatialEdgeOnFaces:[]});
+  pose.spatial!.measuredAngles=[180];
+  const first=spans(diagramSpatialEdgeMarkup(pose,pose.view!,'#41634e'));
+  assert.equal(first.length,2);
+  const moved=structuredClone(pose);
+  moved.spatial!.camera.offset=[0,0,500000];
+  assert.deepEqual(spans(diagramSpatialEdgeMarkup(moved,moved.view!,'#41634e')),first);
+});
 test('zero-area silhouettes are clipped by real depth, can reappear through hidden covers, and reverse for the back camera',()=>{
   const pose=coveredEdgePose(),before=structuredClone(pose),front=spans(diagramSpatialEdgeMarkup(pose,pose.view!,'#41634e'));
   assert.ok(front.length);assert.ok(front.every(([a,b])=>b<=4||a>=8),'the covered middle must not leak through');
@@ -102,6 +118,10 @@ test('adjacent opaque faces jointly cover an underlying edge on their shared F s
   pose.spatial!.faceTransforms.push(structuredClone(pose.spatial!.faceTransforms[1]));
   const pieces=spans(diagramSpatialEdgeMarkup(pose,pose.view!,'#41634e'));
   assert.ok(pieces.length);assert.ok(pieces.every(([a,b])=>b<=4||a>=8),'the shared upper seam is still opaque paper');
+  const oblique=structuredClone(pose);
+  // Independent material vertices project to the same seam within roundoff.
+  oblique.result.geometry.vertices[9][1]+=5e-13;oblique.spatial!.vertices[9][1]+=5e-13;
+  assert.deepEqual(spans(diagramSpatialEdgeMarkup(oblique,oblique.view!,'#41634e')),pieces);
   assert.ok(spans(diagramSpatialEdgeMarkup({...pose,hiddenFaces:[2]},pose.view!,'#41634e')).some(([a,b])=>a===0&&b===10),'a sole remaining outer edge must not acquire fake covering area');
 
   const holed=coveredEdgePose(),hole:Point[]=[[5,-1],[7,-1],[7,1],[5,1]];
@@ -122,6 +142,9 @@ test('coplanar edge occlusion follows only order paths through faces covering th
   pose.spatial!.measuredAngles=[180];pose.result.layers.faceOrders=[[2,0,1],[1,2,1]];
   const local=spans(diagramSpatialEdgeMarkup(pose,pose.view!,'#41634e'));
   assert.ok(local.length);assert.ok(local.every(([a,b])=>b<=4||a>=8),'a proven local path through the seam face hides the lower edge');
+  const rounded=structuredClone(pose);
+  for(let v=0;v<4;v++)rounded.spatial!.vertices[v][2]+=1.21e-10;
+  assert.deepEqual(spans(diagramSpatialEdgeMarkup(rounded,rounded.view!,'#41634e')),local,'vertex depth roundoff must respect the certified local cover');
   const remote=structuredClone(pose);
   for(let v=8;v<12;v++){remote.result.geometry.vertices[v][1]+=10;remote.spatial!.vertices[v][1]+=10;}
   const remotePieces=spans(diagramSpatialEdgeMarkup(remote,remote.view!,'#41634e'));

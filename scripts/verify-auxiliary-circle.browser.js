@@ -49,7 +49,7 @@ async page=>{
  await page.evaluate(()=>{window.__auxiliaryCircleOriginalConfirm=window.confirm;window.confirm=()=>true;});
  try{
   await page.getByLabel('工程名称',{exact:true}).waitFor();await page.waitForTimeout(250);
-  for(const name of ['设置并开始使用','关闭窗口','保留当前工程']){const b=button(name);if(await b.count()&&await b.isVisible())await b.click();}
+  for(const name of ['使用默认位置开始','关闭窗口','保留当前工程']){const b=button(name);if(await b.count()&&await b.isVisible())await b.click();}
   await canvas.waitFor();await command.waitFor();if(await button('收起平折').count())await button('收起平折').click();
   await page.locator('.header-actions').getByText('设置',{exact:true}).click();await page.getByRole('tab',{name:'命令编辑',exact:true}).click();
   const commandSettings=page.locator('[data-storage-settings] .tool-command-settings');await commandSettings.getByRole('checkbox',{name:'画布直接键入命令',exact:true}).check();await commandSettings.getByRole('button',{name:'保存并应用',exact:true}).click();

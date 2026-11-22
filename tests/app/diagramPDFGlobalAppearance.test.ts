@@ -59,9 +59,27 @@ test('linked instruction lines and ghosted existing creases use the same PDF pal
   assert.ok(old.some(annotation=>annotation.id.startsWith('cp-existing:')));
   project=reconcileDiagramFoldAnnotations(project,project.activeStepId,[...old,teachingLine('instruction',{a:[0,30],b:[100,30],foldFaces:undefined})]);
   const snapshot=structuredClone(project),settings=changeGlobalDiagramLineStyle(palette(),'crease',{color:'#235689',width:1.5,strokePattern:'dashed'});
-  const svg=diagramPDFStepSVG(project,project.steps[0],undefined,settings);
-  assert.match(svg,/<g opacity="0\.55"><line[^>]*stroke="#235689" stroke-width="1\.5"[^>]*stroke-dasharray="10\.5 6"/);
-  assert.ok(lines(svg).some(line=>line.includes('stroke="#123456" stroke-width="2"')&&line.includes('stroke-dasharray="2 8"')));
+  const svg=diagramPDFStepSVG(project,project.steps[0],undefined,settings,false);
+  const painted=[...svg.matchAll(/<g opacity="([^"]+)"><line\b([^>]*)>/g)].map(([,opacity,attrs])=>({
+    opacity,attrs:Object.fromEntries([...attrs.matchAll(/([\w-]+)="([^"]*)"/g)].map(([,name,value])=>[name,value])),
+  }));
+  const [, ,frameWidth,frameHeight]=svg.match(/viewBox="([^"]+)"/)![1].split(' ').map(Number);
+  const penScale=Math.min(1,2.5*Math.max(frameWidth/512,frameHeight/384));
+  for(const category of [
+    {color:'#235689',opacity:'0.55',width:1.5,dashRatios:[7,4],fragments:[[50,0,50,30],[50,30,50,100]]},
+    {color:'#123456',opacity:'1',width:2,dashRatios:[1,4],fragments:[[0,30,50,30],[50,30,100,30]]},
+  ]){
+    const matching=painted.filter(line=>line.attrs.stroke===category.color);
+    assert.deepEqual(matching.map(({attrs})=>['x1','y1','x2','y2'].map(key=>Number(attrs[key]))),category.fragments);
+    for(const {opacity,attrs} of matching){
+      const width=Number(attrs['stroke-width']);
+      assert.equal(opacity,category.opacity);
+      // The viewBox is rounded for serialization; the pen uses the unrounded frame.
+      assert.ok(Math.abs(width-category.width*penScale)<0.0001);
+      const dash=attrs['stroke-dasharray'].split(' ').map(Number);
+      assert.deepEqual(dash.map(value=>Math.round(value/width*1e6)/1e6),category.dashRatios);
+    }
+  }
   assert.deepEqual(project,snapshot);
   assert.ok(project.states[0].doc.segments.some(segment=>segment.id==='existing'&&segment.assignment==='F'&&segment.angle===0));
 });

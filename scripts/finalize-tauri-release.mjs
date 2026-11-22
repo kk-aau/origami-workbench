@@ -39,7 +39,7 @@ const groups={host:0,frontend:0,engine:0,legal:0,other:0};
 for(const file of payload.files){const group=file.path==='zhezhi-workbench-tauri.exe'?'host':file.path.startsWith('resources/dist/')?'frontend':file.path.startsWith('resources/engine/')?'engine':file.path.startsWith('resources/legal/')?'legal':'other';groups[group]+=file.bytes;}
 const engineEvidence=await read(`${evidence}/engine-reuse.json`);
 if(!engineEvidence.regressionBoundary)throw Error('Engine regression scope is missing');
-const report={id,version:pkg.version,candidate:config.candidate,created:new Date().toISOString(),architecture:'Tauri / Rust / system WebView2',validation,payloadBytes:payload.totalBytes,payloadGroups:groups,sourceDelivery:'separate-release-attachments',embeddedSourceArchives:0,sourceAvailability:availability,artifacts:delivered,engineRegression:engineEvidence.regressionBoundary,unsigned:true,systemWebView2Required:true};
+const report={id,version:pkg.version,candidate:config.candidate,created:new Date().toISOString(),architecture:'Tauri / Rust / system WebView2',validation,payloadBytes:payload.totalBytes,payloadGroups:groups,sourceDelivery:'separate-release-attachments',embeddedSourceArchives:0,sourceAvailability:availability,artifacts:delivered,engineRegression:engineEvidence.regressionBoundary,unsigned:payload.signed!==true,systemWebView2Required:true};
 const reportName=`RELEASE-${id}.json`;await writeFile(path.join(destination,reportName),JSON.stringify(report,null,2));
 const checksum=[...delivered.map(a=>`${a.sha256}  ${a.file}`),`${await sha(path.join(destination,reportName))}  ${reportName}`].join('\n')+'\n';
 await writeFile(path.join(destination,`SHA256SUMS-${id}.txt`),checksum);await writeFile(path.join(destination,'SHA256SUMS.txt'),checksum);

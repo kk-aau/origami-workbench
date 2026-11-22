@@ -53,23 +53,38 @@ export class BaseDesignLibrary {
   }
   return {text,bank:this.cachedBank};
  }
- private confirm(text:string,bank:BaseDesignBank,summaries?:readonly BaseDesignSummary[]){this.cachedText=text;this.cachedBank=bank;this.cachedSummaries=summaries;}
+ private confirm(text:string|null,bank:BaseDesignBank,summaries?:readonly BaseDesignSummary[]){this.cachedText=text;this.cachedBank=bank;this.cachedSummaries=summaries;}
  /** UI lists contain only immutable metadata. Copy an individual source when
   * opening it, instead of cloning every saved source on each refresh. */
  listSummaries():readonly BaseDesignSummary[]{const {bank}=this.bank();return this.cachedSummaries??(this.cachedSummaries=immutableSummaries(summarizeBaseDesignBank(bank)));}
  get(id:string):BaseDesignEntry|undefined {const entry=this.bank().bank.entries.find(item=>item.id===id);return entry?structuredClone(entry):undefined;}
  list(){return structuredClone(this.bank().bank.entries).sort((a,b)=>b.updated.localeCompare(a.updated));}
+ private commitEntry(id:string,expectedRevision:string|undefined,replacement:BaseDesignEntry|null,content?:string){
+  let {text,bank}=this.bank();
+  for(let attempt=0;attempt<3;attempt++){
+   const old=bank.entries.find(item=>item.id===id);
+   if(old?.revision!==expectedRevision)throw Error(replacement?'此设计已在另一窗口修改或删除。当前内容仍保留，请导出备份或另存新文档。':'设计文档已变化，请刷新后重试。');
+   const entries=bank.entries.filter(item=>item.id!==id);
+   if(replacement)entries.push(replacement);
+   const next={...bank,entries},encoded=JSON.stringify(next);
+   if(this.storage.compareAndSet?.(KEY,text,encoded)){
+    const summaries=this.cachedSummaries?.filter(item=>item.id!==id);
+    if(summaries&&replacement){summaries.push(summary(replacement,content));summaries.sort((a,b)=>b.updated.localeCompare(a.updated));}
+    this.confirm(encoded,next,summaries&&immutableSummaries(summaries));return;
+   }
+   const fresh=this.storage.getItemFresh?this.storage.getItemFresh(KEY):this.storage.getItem(KEY);
+   if(fresh===text)break;
+   bank=readBaseDesignBank(fresh);text=fresh;this.confirm(text,bank);
+  }
+  throw Error('设计文档库刚有更新，暂存未完成。请重试；当前编辑仍保留。');
+ }
  write(project:BaseDesignProject,previous:Pick<BaseDesignEntry,'id'|'revision'|'saved'>|null,saved=false):BaseDesignEntry {
-  const {text,bank:current}=this.bank(),content=serializeBaseDesign(project),bank={...current,entries:[...current.entries]},old=previous?bank.entries.find(e=>e.id===previous.id):null;
-  if(previous&&old?.revision!==previous.revision)throw new Error('此设计已在另一窗口修改或删除。当前内容仍保留，请导出备份或另存新文档。');
+  const content=serializeBaseDesign(project);
   const entry:BaseDesignEntry={id:previous?.id??crypto.randomUUID(),revision:crypto.randomUUID(),updated:new Date().toISOString(),project:structuredClone(project),saved:saved?content:previous?.saved??null};
-  bank.entries=bank.entries.filter(e=>e.id!==entry.id);bank.entries.push(entry);
-  const encoded=JSON.stringify(bank);if(!this.storage.compareAndSet?.(KEY,text,encoded))throw new Error('设计文档库刚有更新，暂存未完成。请重试；当前编辑仍保留。');
-  const summaries=this.cachedSummaries?immutableSummaries([...this.cachedSummaries.filter(item=>item.id!==entry.id),summary(entry,content)].sort((a,b)=>b.updated.localeCompare(a.updated))):undefined;
-  this.confirm(encoded,bank,summaries);
+  this.commitEntry(entry.id,previous?.revision,entry,content);
   return structuredClone(entry);
  }
- remove(entry:Pick<BaseDesignEntry,'id'|'revision'>){const {text,bank:current}=this.bank(),old=current.entries.find(e=>e.id===entry.id);if(old?.revision!==entry.revision)throw new Error('设计文档已变化，请刷新后重试。');const bank={...current,entries:current.entries.filter(e=>e.id!==entry.id)},encoded=JSON.stringify(bank);if(!this.storage.compareAndSet?.(KEY,text,encoded))throw new Error('文档库刚有更新，请刷新后重试。');this.confirm(encoded,bank,this.cachedSummaries?immutableSummaries(this.cachedSummaries.filter(item=>item.id!==entry.id)):undefined);}
+ remove(entry:Pick<BaseDesignEntry,'id'|'revision'>){this.commitEntry(entry.id,entry.revision,null);}
 }
 
 function prepareBank(text:string|null):Promise<{bank:BaseDesignBank;summaries:BaseDesignSummary[]}>{

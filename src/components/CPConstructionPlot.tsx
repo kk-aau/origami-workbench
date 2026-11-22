@@ -1,3 +1,5 @@
+import {PlotLine,PlotStrokeGroup} from './PlotStrokeGroup';
+import {DocumentJunctionMarks} from './JunctionWarnings';
 import {useEffect,useRef,useState,type PointerEvent as ReactPointerEvent} from 'react';
 import type {Doc,Point} from '../core/types';
 type View={x:number;y:number;width:number;height:number};
@@ -18,9 +20,9 @@ export default function CPConstructionPlot({points,doc,label,selected,onSelect,o
   onPointerUp={e=>{if(gesture.current?.id===e.pointerId)gesture.current=null;if(e.currentTarget.hasPointerCapture(e.pointerId))e.currentTarget.releasePointerCapture(e.pointerId);}} onPointerCancel={()=>{gesture.current=null;}}>
   <g className="sgm-grid">{xs.map(n=><line key={'x'+n} x1={n} x2={n} y1={view.y} y2={view.y+view.height}/>)}{ys.map(n=><line key={'y'+n} x1={view.x} x2={view.x+view.width} y1={-n} y2={-n}/>)}</g>
   <g className="sgm-ticks" fontSize={font}>{xs.map(n=><text key={'x'+n} x={n} y={view.y+view.height-font*.45} textAnchor="middle">{fmt(n)}</text>)}{ys.map(n=><text key={'y'+n} x={view.x+font*.45} y={-n-font*.2}>{fmt(n)}</text>)}</g>
-  {doc?.segments.map(s=><line key={s.id} data-segment-id={s.id} data-assignment={s.assignment} x1={s.a[0]} y1={-s.a[1]} x2={s.b[0]} y2={-s.b[1]} className={s.assignment==='B'?'sgm-border':'sgm-result'} strokeDasharray={s.assignment==='V'?'6 4':undefined}><title>{s.id} · {s.assignment}</title></line>)}
+  <PlotStrokeGroup>{doc?.segments.map(s=><PlotLine key={s.id} data-segment-id={s.id} data-assignment={s.assignment} x1={s.a[0]} y1={-s.a[1]} x2={s.b[0]} y2={-s.b[1]} widthPixels={s.assignment==='B'?1.6:1.3} className={s.assignment==='B'?'sgm-border':'sgm-result'} dash={s.assignment==='V'?'6 4':undefined}><title>{s.id} · {s.assignment}</title></PlotLine>)}</PlotStrokeGroup>
   {points&&<><polyline className="sgm-source" points={points.map(([a,b])=>`${a},${-b}`).join(' ')} pointerEvents="none"/>{points.map((p,i)=>({p,i})).sort((a,b)=>Number(a.i===selected)-Number(b.i===selected)).map(({p:[a,b],i})=><g key={i}><circle data-source-point={i} aria-label={`路径点 ${i+1}`} className="sgm-point" cx={a} cy={-b} r={font*.45} data-selected={i===selected} onPointerDown={onMove?e=>begin(e,i):undefined} onClick={()=>onSelect?.(i)}><title>{i+1} · ({fmt(a)}, {fmt(b)}) mm</title></circle><text className="sgm-point-label" fontSize={font} x={a+font*.7} y={-b-font*.6} pointerEvents="none">{i+1}</text></g>)}</>}
   <text fontSize={font} className="sgm-unit" x={view.x+view.width-font*.5} y={view.y+font*1.3} textAnchor="end">{axes[0]} / mm · {axes[1]} / mm</text>
- </svg><nav><button aria-label={`${label}缩小`} onClick={()=>zoom(1.25)}>−</button><button aria-label={`${label}适合画布`} onClick={()=>setNavigation(null)}>适合画布</button><button aria-label={`${label}放大`} onClick={()=>zoom(.8)}>＋</button><span>滚轮缩放 · 拖动查看{onMove?' · 拖点改形':''}</span></nav></section>;
+ {doc&&<DocumentJunctionMarks doc={doc} flipY/>}</svg><nav><button aria-label={`${label}缩小`} onClick={()=>zoom(1.25)}>−</button><button aria-label={`${label}适合画布`} onClick={()=>setNavigation(null)}>适合画布</button><button aria-label={`${label}放大`} onClick={()=>zoom(.8)}>＋</button><span>滚轮缩放 · 拖动查看{onMove?' · 拖点改形':''}</span></nav></section>;
 }
 

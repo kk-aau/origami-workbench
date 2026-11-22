@@ -9,28 +9,44 @@ import {diagramCalloutLocator} from './diagramCallouts';
 import type {ModelViewState} from './modelViewState';
 import type {Point} from '../core/types';
 
-export function prepareExistingCreases(project:DiagramProject):DiagramProject {
+export interface CreasePreparation {
+  /** IDs of authored, already projected drawings in this exact saved view. */
+  saved?:ReadonlySet<string>;
+  completed?:Set<string>;
+  failed?:Set<string>;
+}
+export function prepareExistingCreases(project:DiagramProject,preparation?:CreasePreparation):DiagramProject {
   let next=refreshChangedViewDrawings(resyncDiagramStepViews(project),project);
   const updates:{stepId:string;annotations:DiagramAnnotation[]}[]=[];
-  for(const step of next.steps){
+  for(const [index,step] of next.steps.entries()){
     if(!step.foldLink?.enabled||!step.pose||step.pose.sourceStateId!==step.beforeId)continue;
     const after=project.states.find(state=>state.id===step.afterId);
     if(!after?.doc.segments.some(segment=>segment.assignment==='F'))continue;
+    if(preparation?.saved?.has(step.id)&&step===project.steps[index])continue;
     try{
       const annotations=cleanDiagramAnimationTimings(prepareDiagramFoldDrawing(next,step.id,undefined,true));
       // A saved drawing may already contain every inherited crease. Preserve
       // its immutable branch instead of committing an identical replacement.
       // Older files still need the first-symbol bookkeeping on first restore.
       const needsSymbolRecord=!step.firstSymbolPlaced&&annotations.some(item=>item.kind==='symbol');
-      if(!needsSymbolRecord&&JSON.stringify(annotations)===JSON.stringify(step.annotations??[]))continue;
+      if(!needsSymbolRecord&&JSON.stringify(annotations)===JSON.stringify(step.annotations??[])){
+        preparation?.completed?.add(step.id);
+        continue;
+      }
       updates.push({stepId:step.id,annotations});
-    }catch{/* Keep stale model snapshots until the user regenerates them. */}
+    }catch{preparation?.failed?.add(step.id);/* Keep stale model snapshots until the user regenerates them. */}
   }
-  try{return updateDiagramAnnotationsBatch(next,updates);}
+  try{
+    const result=updateDiagramAnnotationsBatch(next,updates);
+    for(const update of updates)preparation?.completed?.add(update.stepId);
+    return result;
+  }
   catch{
     // Retain the previous per-step recovery behavior if one legacy overlay
     // cannot be committed. Never publish a partially validated batch.
-    for(const {stepId,annotations} of updates){try{next=updateDiagramAnnotations(next,stepId,annotations);}catch{/* Keep the saved overlay. */}}
+    for(const {stepId,annotations} of updates){try{
+      next=updateDiagramAnnotations(next,stepId,annotations);preparation?.completed?.add(stepId);
+    }catch{preparation?.failed?.add(stepId);/* Keep the saved overlay. */}}
     return next;
   }
 }
@@ -38,6 +54,12 @@ export function prepareExistingCreases(project:DiagramProject):DiagramProject {
 function reframeConstructionPoints(points:Point[],pose:DiagramPose,from:ModelViewState,to:ModelViewState):Point[]{
   const old=modelProjection(pose.result.geometry.vertices,from.side==='back',from.rotation,from?.projectionCenter),shown=modelProjection(pose.result.geometry.vertices,to.side==='back',to.rotation,to?.projectionCenter),zero=old.project([0,0]);
   return points.map(p=>shown.project(old.unprojectDelta([p[0]-zero[0],p[1]-zero[1]])));
+}
+
+/** Geometry workers may finish after the export dialog has edited this project. */
+export function applyDiagramDrawingEdit(next:DiagramProject,current:DiagramProject):DiagramProject {
+  const drawing=next.exportSettings===current.exportSettings?next:{...next,exportSettings:current.exportSettings};
+  return refreshChangedViewDrawings(drawing,current);
 }
 
 /** Reproject material-bound drawing aids when an inherited paper direction changes. */

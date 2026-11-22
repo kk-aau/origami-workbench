@@ -1,3 +1,5 @@
+import {PlotLine,PlotStrokeGroup} from './PlotStrokeGroup';
+import {DocumentJunctionMarks} from './JunctionWarnings';
 import {useEffect,useMemo,useRef,useState} from 'react';
 import {TessDialog} from './TessellationEditor';
 import {YOSHIMURA_MIURA_MIXED_EXAMPLE,YOSHIMURA_MIURA_RUNS_EXAMPLE,YOSHIMURA_MIURA_DOUBLE_SPIRAL_EXAMPLE,validateYoshimuraMiuraRecipe,prepareYoshimuraMiuraPreview,yoshimuraMiuraSourceMatches,type YoshimuraMiuraRecipe,type YoshimuraMiuraSource} from '../app/yoshimuraMiuraCP2534';
@@ -19,9 +21,9 @@ function Plot({doc,source,selected,onSelect,isCurrent}:{doc:Doc;source:Yoshimura
   <g stroke="#d2dedb" strokeWidth={line*.45}>{ticks(width).map(x=><line key={'x'+x} x1={x} y1={0} x2={x} y2={height}/>)}{ticks(height).map(y=><line key={'y'+y} x1={0} y1={y} x2={width} y2={y}/>)}</g>
   {source.columns.slice(0,-1).map((x,i)=><rect key={i} data-column={i} x={x*scale} y={0} width={source.columnWidths[i]*scale} height={height} fill={isCurrent&&i===selected?'#ac71b2':'transparent'} opacity={isCurrent&&i===selected?.16:1} onClick={()=>{if(isCurrent)onSelect(i);}}><title>第{i+1}列，α={label(source.anglesDeg[i])}°；{isCurrent?'点击选择':'上一次有效预览'}</title></rect>)}
   <g fill="#43584f" fontSize={font}>{ticks(width).map(x=><text key={'x'+x} x={x} y={-font*.7} textAnchor="middle">{label(x)}</text>)}{ticks(height).map(y=><text key={'y'+y} x={-font*.65} y={y+font*.32} textAnchor="end">{label(y)}</text>)}<text x={width} y={-margin*.68} textAnchor="end">X / mm</text><text x={-margin*.65} y={height} textAnchor="middle" transform={`rotate(-90 ${-margin*.65} ${height})`}>Y / mm</text></g>
-  <g pointerEvents="none">{doc.segments.map(s=><line key={s.id} x1={s.a[0]} y1={s.a[1]} x2={s.b[0]} y2={s.b[1]} stroke={s.assignment==='B'||!isCurrent?'#171c1d':'#168b9b'} strokeWidth={line*(s.assignment==='B'?1.8:1.3)} strokeDasharray={s.assignment==='V'?`${line*5} ${line*3}`:undefined}/>)} </g>
+  <g pointerEvents="none"><PlotStrokeGroup>{doc.segments.map(s=><PlotLine key={s.id} x1={s.a[0]} y1={s.a[1]} x2={s.b[0]} y2={s.b[1]} stroke={s.assignment==='B'||!isCurrent?'#171c1d':'#168b9b'} widthPixels={s.assignment==='B'?1.8:1.3} dash={s.assignment==='V'?'5 3':undefined}/>)}</PlotStrokeGroup> </g>
   <g stroke="#3c5f55" fill="#3c5f55" strokeWidth={line}><line x1={0} y1={height+margin*.55} x2={rulerStep} y2={height+margin*.55}/><text x={rulerStep/2} y={height+margin*.55-font*.6} fontSize={font} textAnchor="middle" stroke="none">{label(rulerStep)} mm</text></g>
- </svg><figcaption>{isCurrent?'黑 · 纸边　青 · 当前 CP（谷虚线 / 山实线）　紫 · 选中列':'黑 · 上一次有效预览，当前参数尚不可采用'}</figcaption><p>{source.recipe.unitSizeMm} mm / 原单位 · 视窗不移动或归一化几何</p></figure>;
+ {doc&&<DocumentJunctionMarks doc={doc} spatial/>}</svg><figcaption>{isCurrent?'黑 · 纸边　青 · 当前 CP（谷虚线 / 山实线）　紫 · 选中列':'黑 · 上一次有效预览，当前参数尚不可采用'}</figcaption><p>{source.recipe.unitSizeMm} mm / 原单位 · 视窗不移动或归一化几何</p></figure>;
 }
 export default function YoshimuraMiuraCP2534Dialog({initial,onClose,onAdoptCP}:{initial?:YoshimuraMiuraRecipe;onClose:()=>void;onAdoptCP?:(doc:Doc)=>boolean}){
  const [draft,setDraft]=useState<Draft>(()=>draftFor(initial??YOSHIMURA_MIURA_MIXED_EXAMPLE)),[selected,setSelected]=useState(0),[result,setResult]=useState<{key:string;source:YoshimuraMiuraSource;doc:Doc}|null>(null),[busy,setBusy]=useState(false),[buildError,setBuildError]=useState(''),[errorCode,setErrorCode]=useState(''),[adoptError,setAdoptError]=useState(''),[view,setView]=useState<'cp'|'static-3d'>('cp'),[camera,setCamera]=useState<OriginalArrayCamera>(()=>({...INITIAL_ORIGINAL_ARRAY_CAMERA}));

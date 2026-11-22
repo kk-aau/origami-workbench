@@ -1,11 +1,11 @@
-import { buildFold, collinearOverlap, distance, epsilonFor, segmentIntersection, sub } from './geometry';
+import { buildFold, collinearOverlap, distance, epsilonFor, segmentIntersection, sub, type BuildFoldResult } from './geometry';
 import { validateDoc, type DiagnosticResult, type Doc, type Issue, type Point } from './types';
 import {hasMaterialTopology,inspectMaterialTopology} from './materialTopology';
 import {flatCreaseLayerRegions} from './flatCreaseSupport';
 import {overlappingSegmentPairs} from './segmentPairs';
 
 /** Local necessary conditions, not a certificate of global flat-foldability or rigid motion. */
-export function diagnose(doc: Doc): DiagnosticResult {
+export function diagnose(doc: Doc, onTopology?: (fold: BuildFoldResult) => void): DiagnosticResult {
   const issues: Issue[] = [];
   let checkedVertices = 0, skippedVertices = 0;
   const add = (code: string, severity: Issue['severity'], message: string, segmentIds: string[] = [], point?: Point) => issues.push({ id: `${code}-${issues.length}`, code, severity, message, segmentIds, ...(point ? { point } : {}) });
@@ -36,7 +36,8 @@ export function diagnose(doc: Doc): DiagnosticResult {
   if (!lines.some(s => s.assignment === 'B')) add('no-boundary', 'error', '缺少纸张边界。纸张宽高仅是单位与视图信息，不能替代边界线。');
   if (issues.some(i => i.severity === 'error')) return finish();
   try {
-    const { graph, edgeSourceIds } = buildFold(doc);
+    const fold = buildFold(doc);
+    const { graph, edgeSourceIds } = fold;
     let finiteFlatCreases=false;
     try{finiteFlatCreases=flatCreaseLayerRegions(graph,eps)!==null;}catch{/* Invalid F routes keep the ordinary dangling-edge diagnostic. */}
     const incident = graph.vertices_coords.map(() => [] as number[]);
@@ -73,6 +74,7 @@ export function diagnose(doc: Doc): DiagnosticResult {
         if (Math.abs(m - valley) !== 2) add('maekawa', 'error', `前川条件不满足：山折 ${m}、谷折 ${valley}，数量之差的绝对值应为 2。`, ids, point);
       }
     }
+    onTopology?.(fold);
   } catch (e) { add('topology', 'error', `无法建立纸面：${(e as Error).message}`); }
   return finish();
 

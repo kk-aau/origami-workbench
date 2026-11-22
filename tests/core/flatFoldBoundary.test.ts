@@ -10,6 +10,20 @@ import {simulationLayerOrder} from '../../src/engine/simLayerOrder';
 import {overlappingMaterialPairs,singleMountainFold} from '../fixtures/layerBoundaryCases';
 import type {LayerNode} from '../../src/core/layerSolutions';
 
+test('initial flat fold reuses the diagnosed topology while diagram F marks keep their own material faces',t=>{
+  const doc=singleMountainFold(10);
+  const fold=doc.segments.at(-1)!;fold.assignment='F';fold.angle=0;
+  const populate=t.mock.method(ear.graph,'populate');
+  const ordinary=computeFlatFold(doc);
+  assert.equal(ordinary.layers.status,'solved',ordinary.layers.message);
+  assert.equal(ordinary.geometry.faces.length,2);
+  assert.equal(populate.mock.callCount(),1);
+  const diagram=computeFlatFold(doc,undefined,{flatCreases:'marks'});
+  assert.equal(diagram.layers.status,'solved',diagram.layers.message);
+  assert.equal(diagram.geometry.faces.length,1);
+  assert.equal(diagram.geometry.graph?.zhezhi_flatCreases,'marks');
+});
+
 test('visible-face filtering counts all 131072 genuine material candidates and can select past the old scan cap',()=>{
   const doc=overlappingMaterialPairs(),before=structuredClone(doc),constraints=[{face:32,side:'white' as const}];
   assert.equal(diagnose(doc).summary.errors,0);

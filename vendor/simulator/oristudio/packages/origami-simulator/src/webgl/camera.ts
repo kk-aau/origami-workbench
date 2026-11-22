@@ -259,13 +259,15 @@ export interface ProjectedVertices {
    * the eye. The rasterizer maps inverse eye distance to NDC depth; interpolating
    * this raw view depth across screen-space triangles would give wrong occlusion.
    */
-  view: Float32Array;
+  view: Float32Array|Float64Array;
   /** Pixel-space `x, y` per vertex, 2 floats each, origin top-left. */
-  screen: Float32Array;
+  screen: Float32Array|Float64Array;
   count: number;
 }
 
 export interface ProjectVerticesOptions {
+  /** CPU vector clipping must retain the depth buffer's double arithmetic. */
+  precision?:'single'|'double';
   /**
    * Apply the one-point perspective divide. True (the default) matches the
    * WebGL renderer and the workbench software depth renderer. False provides
@@ -282,6 +284,8 @@ export interface ProjectVerticesOptions {
  * the user composed. Keeping the one JS statement of that math here, beside the
  * uniforms it consumes, is what makes the two testable against each other.
  */
+export function projectVertices(positions:Float32Array,camera:CameraUniforms,options?:ProjectVerticesOptions&{precision?:'single'}):ProjectedVertices&{view:Float32Array;screen:Float32Array};
+export function projectVertices(positions:Float32Array,camera:CameraUniforms,options:ProjectVerticesOptions):ProjectedVertices;
 export function projectVertices(
   positions: Float32Array,
   camera: CameraUniforms,
@@ -289,8 +293,9 @@ export function projectVertices(
 ): ProjectedVertices {
   const perspective = options.perspective ?? true;
   const count = Math.floor(positions.length / 3);
-  const view = new Float32Array(count * 3);
-  const screen = new Float32Array(count * 2);
+  const Buffer=options.precision==='double'?Float64Array:Float32Array;
+  const view = new Buffer(count * 3);
+  const screen = new Buffer(count * 2);
 
   for (let vertex = 0; vertex < count; vertex += 1) {
     const [x, y, depth] = toViewSpace(

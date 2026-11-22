@@ -495,7 +495,7 @@
     "group": "精确构造",
     "kind": "交互模式",
     "source": "continuousSymmetricDrawAction",
-    "description": "continuousSymmetricDrawAction · CONTINUOUS_SYMMETRIC_DRAW_52 / MH·ContinuousSymmetricDraw · L · 两点确定初始方向，遇折线将上一段映射后继续，山谷逐段交替；共线分点及符合条件的 T 形可继续，其余多线顶点、纸边或闭环停止。完整路径预览后确认，停止原因明确，整组撤销。",
+    "description": "continuousSymmetricDrawAction · CONTINUOUS_SYMMETRIC_DRAW_52 / MH·ContinuousSymmetricDraw · L · 两点定向后默认预览整条折射路径。点已有线段可在首次相交处截止，也可直接点路径指定终点。遇到分歧可选择续接方向或选择终点。支持山谷交替，“自动截止”可恢复整条路径。确认后可整组撤销。",
     "status": "基础可用，变体待齐",
     "tool": "continuous"
   },

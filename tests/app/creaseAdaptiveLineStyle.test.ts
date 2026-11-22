@@ -2,7 +2,7 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {XMLParser} from 'fast-xml-parser';
 import {creaseLineStyle,creaseLineStroke,creaseLineSourceSpan,creaseShortLineTitle} from '../../src/app/creaseLineStyle';
-import {adaptiveLineStroke,ADAPTIVE_LINE_STYLE_KEY} from '../../src/app/adaptiveLineStyle';
+import {resolveLineStroke,ADAPTIVE_LINE_STYLE_KEY} from '../../src/app/adaptiveLineStyle';
 import {creasePatternSVG,DISPLAY_PIXEL_MM} from '../../src/app/creasePatternSVG';
 import {defaultCreaseDisplay,previewOrieditaDisplay} from '../../src/app/creaseDisplay';
 import {buildDiagramFold} from '../../src/core/geometry';
@@ -16,7 +16,12 @@ const svg=(doc:ReturnType<typeof blankDoc>,enabled:boolean,units?:number)=>new X
 test('CP adapter disabled preserves exact original styles, width and auxiliary colour',()=>{
  for(const assignment of ['M','V','A','U','B','F'] as const)for(const style of ['WORKBENCH','COLOR','BLACK_TWO_DOT','COLOR_AND_SHAPE'] as const){
   const source={...segment(.1,assignment),...(assignment==='A'?{displayColor:'#abcdef'}:{})},base=creaseLineStyle(source,style,.25),stroke=creaseLineStroke(source,style,4,.25,false,true);
-  assert.deepEqual(stroke,{color:base.color,...(base.dash===undefined?{}:{dash:base.dash}),width:1,limited:false});
+  assert.equal(stroke.color,base.color);assert.equal(stroke.width,1);assert.equal(stroke.dash,base.dash);assert.equal(stroke.limited,false);
+  if(base.dash){
+   const values=pattern(base.dash)!,period=values.reduce((sum,n)=>sum+n,0);
+   assert.ok(stroke.pathLength!>0);assert.ok(stroke.dashOffset!>0&&stroke.dashOffset!<values[0]);
+   assert.ok(Math.abs(stroke.pathLength!/period-Math.round(stroke.pathLength!/period))<1e-9);
+  }else assert.equal(stroke.pathLength,undefined);
  }
 });
 
@@ -55,10 +60,10 @@ test('trusted source spans preserve pattern and phase across graph intersection 
  const strokes=rows.map(edge=>{
   const [a,b]=built.graph.edges_vertices[edge],p=built.graph.vertices_coords[a],q=built.graph.vertices_coords[b],sourceSpan=creaseLineSourceSpan(source,p,q)!;
   assert.ok(sourceSpan);assert.equal(sourceSpan.span.length,100);
-  return adaptiveLineStroke(Math.hypot(p[0]-q[0],p[1]-q[1]),1.6,'10 3 2 3',{enabled:true,units:1,span:sourceSpan.span});
+  return resolveLineStroke(Math.hypot(p[0]-q[0],p[1]-q[1]),1.6,'10 3 2 3',{enabled:true,units:1,span:sourceSpan.span});
  });
  assert.ok(strokes.every(s=>s.dash==='10 3 2 3'&&!s.limited));
- assert.equal(strokes[0].dashOffset,undefined);assert.ok(Math.abs(strokes[1].dashOffset!-.1)<1e-10);assert.equal(strokes[2].dashOffset,14);
+ for(const [i,offset] of [0,.1,50].entries())assert.ok(Math.abs(strokes[i].dashOffset!-(5+offset*.9)%18)<1e-10);
  assert.deepEqual(doc,before);
 });
 

@@ -26,6 +26,26 @@ const close=(a:Point,b:Point)=>assert.ok(distance(a,b)<1e-6,`${a} != ${b}`);
 const stroke=(a:Point,b:Point,face:number):DiagramLineAnnotation=>({id:'crease',kind:'line',a,b,style:'valley',color:'#123456',width:1,foldFaces:[face]});
 const mix=(points:Point[],w:number[]):Point=>[0,1].map(axis=>points.reduce((sum,p,i)=>sum+p[axis]*w[i],0)) as Point;
 
+test('split middle sheets of a six-face square base share two relief levels at every expansion angle',()=>{
+ const doc=blankDoc('双正方形',100,100);
+ doc.segments.push({id:'h',a:[0,50],b:[100,50],assignment:'V',angle:180},
+  {id:'v',a:[50,0],b:[50,100],assignment:'V',angle:180},
+  {id:'d',a:[0,100],b:[100,0],assignment:'M',angle:-180});
+ const result=computeFlatFold(doc);
+ assert.equal(result.layers.status,'solved');assert.equal(result.geometry.faces.length,6);
+ for(const direction of [0,135,242]){
+  const pose:DiagramPose={sourceStateId:'cp',sourceRevision:0,sourceDoc:doc,result,view:{...defaultModelView(),depth:{amount:.1,direction}}};
+  const mesh=diagramIllustrationMesh(pose);
+  const offset=(x:number,y:number):Point=>{
+   const v=mesh.graph.vertices_coords.findIndex(p=>p[0]===x&&p[1]===y);assert.ok(v>=0);
+   return [mesh.vertices[v][0]-result.geometry.vertices[v][0],mesh.vertices[v][1]-result.geometry.vertices[v][1]];
+  };
+  close(offset(100,0),offset(0,100));
+  close(offset(50,0),offset(0,50));close(offset(100,50),offset(50,100));
+  assert.ok(distance(offset(0,0),offset(100,100))>1,'both outer layers still separate');
+ }
+});
+
 test('display relief preserves source CP and physical vertices, shares every hinge, and restores exactly',()=>{
  const {pose}=fixture(),before=structuredClone(pose),mesh=diagramIllustrationMesh(pose);
  assert.ok(diagramDepthAvailable(pose));assert.notDeepEqual(mesh.vertices,pose.result.geometry.vertices);

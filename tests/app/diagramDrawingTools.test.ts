@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import type {Point} from '../../src/core/types';
 import type {DiagramAnnotation,DiagramLineAnnotation,DiagramSymbolAnnotation} from '../../src/app/diagramAnnotations';
 import {
-  snapDiagramPoint,snapDiagramSymbolPoint,snapDiagramSymbolAxisPoint,snapDiagramSymbolRotationPoint,intersectDiagramLines,diagramLineIntersections,diagramNearbyLineIntersections,diagramGridLineIntersections,constructDiagramLine,bisectDiagramLines,trimDiagramLine,extendDiagramLine,
+  snapDiagramPoint,snapDiagramSymbolPoint,snapDiagramSymbolAxisPoint,snapDiagramSymbolRotationPoint,intersectDiagramLines,diagramLineIntersections,diagramNearbyLineIntersections,diagramGridLineIntersections,constructDiagramLine,bisectDiagramLines,trimDiagramLine,
   transformDiagramAnnotations,copyDiagramAnnotations,diagramAnnotationsInBox,diagramEraseHits,diagramVisibleRect,snapDiagramTranslation,diagramMoveSnapTargets,
   pointHitsDiagramAnnotation,pickDiagramAnnotation,
 } from '../../src/app/diagramDrawingTools';
@@ -216,17 +216,11 @@ test('trim removes only the clicked finite interval and preserves two independen
   const source=line('source',[0,0],[100,0]),crossings=[line('left',[30,-10],[30,10]),line('right',[70,-10],[70,10])];
   const trimmed=trimDiagramLine(source,[source,...crossings],[50,0],()=> 'second')!;
   assert.equal(trimmed.length,2);assert.equal(trimmed[0].id,'source');assert.equal(trimmed[1].id,'second');
+  assert.deepEqual(intersectDiagramLines(source,crossings[0])!.point,[30,0]);
   close(trimmed[0].b[0],30);close(trimmed[1].a[0],70);assert.deepEqual(source.b,[100,0]);
   const outer=trimDiagramLine(source,[source,...crossings],[10,0])!;
   assert.equal(outer.length,1);close(outer[0].a[0],30);assert.equal(outer[0].id,'source');
   assert.equal(trimDiagramLine(source,[source,line('too-short',[50,2],[50,5])],[10,0]),null);
-});
-test('extend selects the nearest crossing in the clicked endpoint direction and respects target extent',()=>{
-  const source=line('source',[0,0],[10,0]),targets=[line('left',[-5,-10],[-5,10]),line('near',[20,-10],[20,10]),line('far',[30,-10],[30,10]),line('non-crossing',[15,3],[15,5])];
-  assert.deepEqual(extendDiagramLine(source,[source,...targets],[9,0])!.b,[20,0]);
-  assert.deepEqual(extendDiagramLine(source,[source,...targets],[1,0])!.a,[-5,0]);
-  assert.equal(extendDiagramLine(source,[source,line('parallel',[0,5],[10,5])],[9,0]),null);
-  assert.deepEqual(intersectDiagramLines(source,line('cross',[5,-10],[5,10]))!.point,[5,0]);
 });
 test('box selection catches crossing lines and swept erasure cannot skip fast crossings',()=>{
   const annotations=[line('cross',[-20,0],[20,0]),line('away',[30,30],[40,40]),line('vertical',[10,-20],[10,20])];

@@ -288,3 +288,17 @@ test('custom-angle crossings use the displayed finite grid instead of old 45-deg
  assert.ok(free&&distancePoint(free,node)<1e-9,'lattice governs custom-angle nodes, even when a legacy snap callback is supplied');
  const physical=point('real',[x+.01,3]);assert.equal(snapCreaseDrawingPoint(pointer,{...options,points:[physical]}).target,physical);
 });
+
+test('a drawn flat crease and a visible grid line can form an angle for an anchored construction',()=>{
+  const anchor:Point=[0,13],pointer:Point=[7.5,31.2];
+  const existing:Segment={id:'old-F',a:[-10,3],b:[10,23],assignment:'F',angle:0};
+  const grid:CreaseDrawingSnapGrid={visible:true,scope:'paper',contains:()=>true,snap:()=>[0,0],lattice:{origin:[0,0],stepX:50,stepY:50}};
+  const options={enabled:true,anchor,radius:1,points:[],segments:[existing],relationLines:[existing],grid,projectToSegments:false};
+  const result=snapCreaseDrawingPoint(pointer,options);
+  assert.equal(result.kind,'bisector');assert.ok(result.relation?.references.some(ref=>ref.id===existing.id));
+  assert.ok(Math.abs((result.point[1]-13)/result.point[0]-Math.tan(3*Math.PI/8))<1e-9);
+  for(const override of [{visible:false},{scope:'off' as const},{contains:()=>false}]){
+    assert.equal(snapCreaseDrawingPoint(pointer,{...options,grid:{...grid,...override}}).kind,'none');
+  }
+  assert.equal(snapCreaseDrawingPoint(pointer,{...options,relationLines:undefined}).kind,'none');
+});

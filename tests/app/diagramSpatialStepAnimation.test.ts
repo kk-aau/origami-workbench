@@ -57,7 +57,7 @@ for(const target of [-135,-90,-45,45,90,135])test(`first fold really reaches ${t
   assert.deepEqual(project,saved);
 });
 
-for(const [from,to] of [[90,135],[135,45],[-90,-45],[90,0]])test(`partial pose ${from} -> ${to} keeps actual 3D start and a fixed material region`,()=>{
+for(const [from,to] of [[90,135],[135,45],[-90,-45],[90,0],[-45,90],[135,-90]])test(`partial pose ${from} -> ${to} keeps actual 3D start and a fixed material region`,()=>{
   const {project,stepId}=fixture(from,to),value=planned(project,stepId);
   const active=value.clip.animation.ranges.filter(r=>Math.abs(r.fromAngle-r.toAngle)>1e-5);assert.ok(active.length);
   assert.ok(active.every(r=>Math.abs(r.fromAngle-from)<1e-5&&r.toAngle===to));
@@ -102,13 +102,11 @@ test('a partial before CP without a snapshot is solved in 3D, while a legacy fal
   assert.throws(()=>buildDiagramStepAnimation(legacy,stepId),/重新计算真实空间姿态/);
 });
 
-test('unknown endpoints, stale spatial snapshots and a direct mountain/valley reversal reject explicitly',()=>{
+test('unknown endpoints and stale spatial snapshots reject explicitly',()=>{
   const {project,stepId}=fixture(90,135),unknown=updateDiagramCP(project,project.steps[0].afterId,docAt(null));
   assert.throws(()=>buildDiagramStepAnimation(unknown,stepId),/未知折角/);
   const stale=structuredClone(project);stale.steps[0].pose!.sourceRevision++;
   assert.throws(()=>buildDiagramStepAnimation(stale,stepId),/操作前 CP 已变化/);
-  const reversed=updateDiagramCP(project,project.steps[0].afterId,docAt(-90));
-  assert.throws(()=>buildDiagramStepAnimation(reversed,stepId),/反转/);
 });
 
 test('an explicitly fixed raised face stays fixed while the opposite paper changes angle',()=>{

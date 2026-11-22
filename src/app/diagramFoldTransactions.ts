@@ -8,6 +8,7 @@ import {diagramFoldBackgroundLines,diagramFoldPreviewAttributes,diagramFoldPrevi
 import {modelProjection} from './modelProjection';
 import type {ModelViewState} from './modelViewState';
 import {defaultDiagramStrokePattern,defaultDiagramLineDefaults} from './diagramLineStyles';
+import {buildDiagramSinkSegments} from './diagramSinkFold';
 import {applyDiagramFoldSegments,diffDiagramFoldCP,subtractDiagramFoldSegments,intersectDiagramFoldSegments,retainDiagramPrecreaseIntents,mapDiagramFoldLines,projectDiagramFoldCP,diagramFoldStartingFace} from './diagramFoldLink';
 
 export const defaultDiagramFoldLink=():DiagramFoldLinkSettings=>({enabled:false,layers:'top',selectedFaces:[]});
@@ -38,7 +39,9 @@ function operationPreview(pose:DiagramPose,before:DiagramCPState,after:Doc,precr
   // The authoritative after CP still keeps that MV: present its retained
   // press-and-return intent as a precrease, rather than dropping this bank.
   const parts=extra.preview.filter(part=>part.existing===false||part.unfolding)
-    .map(part=>part.unfolding?{...part,existing:false,unfolding:false}:part);
+    .map((part):DiagramFoldPreviewSegment=>part.unfolding
+      ?{...part,style:part.style==='valley'?'mountain':'valley',existing:false,unfolding:false}
+      :part);
   const eps=Math.max(1e-6,Math.max(before.doc.paper.width,before.doc.paper.height)*1e-8);
   const overlaps=(a:{a:Point;b:Point},b:{a:Point;b:Point})=>{
     const dx=a.b[0]-a.a[0],dy=a.b[1]-a.a[1],length=Math.hypot(dx,dy);if(length<=eps)return false;
@@ -76,38 +79,56 @@ export function reconcileDiagramFoldAnnotations(project:DiagramProject,stepId:st
     ...intersectDiagramFoldSegments(after.doc,ledger.filter(s=>s.assignment==='F'),config.precreases??[])];
   let baseline=subtractDiagramFoldSegments(after.doc,owned);
   if(owned.length){
-    const uncovered=subtractDiagramFoldSegments(before.doc,owned,false);
-    const restore=diffDiagramFoldCP(uncovered,before.doc);
-    baseline=applyDiagramFoldSegments(baseline,restore);
+    const originals=config.generatedOriginals??diffDiagramFoldCP(subtractDiagramFoldSegments(before.doc,owned,false),before.doc);
+    baseline=applyDiagramFoldSegments(baseline,originals);
   }
+  const sinkRims=new Map<string,Segment[]>();
+  const previousSinks=new Map((original.annotations??[]).filter((a):a is DiagramLineAnnotation=>a.kind==='line'&&!!a.sinkFold).map(a=>[a.id,a]));
   const mappedSegments:Segment[]=[],intent:Segment[]=[],nextAnnotations=annotations.filter(a=>!isDiagramCPExistingLine(a)).map(annotation=>{
     if(!isLinkedFoldLine(annotation))return annotation;
+    const previous=annotation.sinkFold?previousSinks.get(annotation.id):undefined;
+    if(previous?.sinkAssignment&&previous.style!==annotation.style&&previous.sinkAssignment===annotation.sinkAssignment){
+      annotation={...annotation,sinkAssignment:previous.sinkAssignment==='M'?'V':'M'};
+    }
     const effective=annotation.foldFaces?{...config,layers:'selected' as const,selectedFaces:annotation.foldFaces}:config;
     // An explicitly empty material range is a dormant crease. Keep its drawing
     // handle, but remove previously generated CP geometry until a range is
     // explicitly reapplied. Ordinary movement must not activate other layers.
     if(annotation.foldFaces&&!annotation.foldFaces.length)return annotation;
     const mapped=mapDiagramFoldLines(pose,[annotation],effective,before);
-    mappedSegments.push(...mapped.segments);
+    if(annotation.sinkFold){
+      const group=annotation.sinkGroup??annotation.id;
+      const rim=sinkRims.get(group)??[];
+      rim.push(...mapped.segments);
+      sinkRims.set(group,rim);
+    }else mappedSegments.push(...mapped.segments);
     intent.push(...mapped.precreases);
     // Existing linked creases retain their material identities even when moved
     // temporarily outside the paper. Newly drawn creases capture only faces
     // actually included by the chosen layer range, after clipping/filtering.
     const faces=[...new Set(mapped.preview.map(part=>part.face))].sort((a,b)=>a-b);
-    return !annotation.foldFaces&&faces.length?{...annotation,foldFaces:faces}:annotation;
+    if(!annotation.foldFaces&&faces.length)annotation={...annotation,foldFaces:faces};
+    const assignment=mapped.segments[0]?.assignment;
+    if(annotation.sinkFold&&!annotation.sinkAssignment&&(assignment==='M'||assignment==='V'))annotation={...annotation,sinkAssignment:assignment};
+    return annotation;
   });
   // A precrease never unfolds a previously folded edge. Actual folds drawn in
   // this step also take precedence over a coincident precrease instruction.
   const active=mappedSegments.filter(s=>s.assignment!=='F'),flat=mappedSegments.filter(s=>s.assignment==='F');
   const retained=subtractDiagramFoldSegments({...baseline,segments:flat},[...baseline.segments.filter(s=>['M','V','U'].includes(s.assignment)),...active],false).segments;
-  const normalized=normalizeDiagramCP(applyDiagramFoldSegments(baseline,[...retained,...active]));
+  let result=applyDiagramFoldSegments(baseline,[...retained,...active]);
+  for(const rim of sinkRims.values())result=applyDiagramFoldSegments(result,buildDiagramSinkSegments(result,rim));
+  const normalized=normalizeDiagramCP(result);
   if(normalized.conflicts)throw new Error('映射折线与现有 CP 赋型冲突，请检查作用纸层。');
   const doc=cleanFixed(normalized.doc,config),generated=diffDiagramFoldCP(baseline,doc).filter(s=>['M','V','U','F'].includes(s.assignment));
   const precreases=retainDiagramPrecreaseIntents(before.doc,doc,intent);
   const inherited=projectDiagramFoldCP(pose,before.doc,doc,before,precreases).preview.filter(p=>p.existing);
   let next=updateDiagramAnnotations(project,stepId,[...nextAnnotations,...previewAnnotations(inherited,stepId,(original.annotations??[]).filter(isDiagramCPExistingLine),nextAnnotations.map(a=>a.id))]);
   if(!same(after.doc,doc))next=updateDiagramCP(next,after.id,doc);
-  return updateDiagramFoldLink(next,stepId,{...config,drawingVersion:1,generated,...(intent.length||config.precreases?{precreases}:{})});
+  const {generatedOriginals:_oldOriginals,generatedRevision:_oldRevision,...nextConfig}=config;
+  const generatedOriginals=sinkRims.size?intersectDiagramFoldSegments(baseline,baseline.segments.filter(s=>['M','V','U','F'].includes(s.assignment)),generated):undefined;
+  const generatedRevision=next.states.find(state=>state.id===after.id)!.revision;
+  return updateDiagramFoldLink(next,stepId,{...nextConfig,drawingVersion:1,generated,...(generatedOriginals?{generatedOriginals,generatedRevision}:{}),...(intent.length||config.precreases?{precreases}:{})});
 }
 
 /** The layer picker edits either the selection or the defaults for future
@@ -223,7 +244,7 @@ function previewAnnotations(preview:DiagramFoldPreviewSegment[],stepId:string,pr
 
 /** Reproject editable line handles after a camera-side/model rotation change,
  * without touching CP revisions or ownership. */
-export function prepareDiagramFoldDrawing(project:DiagramProject,stepId:string,previousView?:ModelViewState,preserveDrawing=false):DiagramAnnotation[] {
+export function prepareDiagramFoldDrawing(project:DiagramProject,stepId:string,previousView?:ModelViewState,preserveDrawing=false,drawingPose?:DiagramPose):DiagramAnnotation[] {
   const {step,before,after,pose}=context(project,stepId);
   let annotations=step.annotations??[];
   if(previousView){
@@ -245,15 +266,24 @@ export function prepareDiagramFoldDrawing(project:DiagramProject,stepId:string,p
   // handles, their selected paper faces and animation references. Regenerate
   // only inherited F marks; real CP/geometry edits keep the rebuild path below.
   const current=step.foldLink?.drawingVersion===1;
-  if((previousView||preserveDrawing)&&current){
+  const sameSinkDrawing=annotations.some(a=>a.kind==='line'&&a.sinkFold)&&(!drawingPose||
+    drawingPose.sourceStateId===pose.sourceStateId&&drawingPose.sourceRevision===pose.sourceRevision&&
+    same(drawingPose.result.geometry.vertices,pose.result.geometry.vertices)&&same(drawingPose.result.geometry.faces,pose.result.geometry.faces)&&same(drawingPose.view,pose.view));
+  if((previousView||preserveDrawing||sameSinkDrawing)&&current){
     const keep=annotations.filter(a=>!isDiagramCPExistingLine(a));
     return [...keep,...previewAnnotations(mapped.preview.filter(part=>part.existing),stepId,annotations.filter(isDiagramCPExistingLine),keep.map(a=>a.id))];
   }
-  const keep=[...annotations.filter(a=>isLinkedFoldLine(a)?a.foldFaces?.length===0:!isDiagramCPLine(a)),...diagramFoldBackgroundLines(pose,annotations)];
+  const keep=retainUnlinkedArtwork(drawingPose??pose,annotations);
   return [...keep,...previewAnnotations(mapped.preview,stepId,annotations.filter((a):a is DiagramLineAnnotation=>a.kind==='line'),keep.map(a=>a.id))];
 }
-export function refreshDiagramFoldDrawing(project:DiagramProject,stepId:string,previousView?:ModelViewState,preserveDrawing=false):DiagramProject {
-  return updateDiagramAnnotations(project,stepId,prepareDiagramFoldDrawing(project,stepId,previousView,preserveDrawing));
+/** Only a line outside the paper when it was drawn is background ink.
+ * Classifying old screen coordinates against a newly folded silhouette would
+ * leave a ghost crease wherever the paper used to be. */
+function retainUnlinkedArtwork(drawingPose:DiagramPose,annotations:DiagramAnnotation[]):DiagramAnnotation[]{
+  return [...annotations.filter(a=>isLinkedFoldLine(a)?a.foldFaces?.length===0:!isDiagramCPLine(a)),...diagramFoldBackgroundLines(drawingPose,annotations.filter(a=>a.kind!=='line'||!a.sinkFold))];
+}
+export function refreshDiagramFoldDrawing(project:DiagramProject,stepId:string,previousView?:ModelViewState,preserveDrawing=false,drawingPose?:DiagramPose):DiagramProject {
+  return updateDiagramAnnotations(project,stepId,prepareDiagramFoldDrawing(project,stepId,previousView,preserveDrawing,drawingPose));
 }
 
 /** Explicitly present the authoritative after CP on this step's before pose.
@@ -267,31 +297,80 @@ export function updateDiagramFoldDrawingFromCP(project:DiagramProject,stepId:str
   // Validate flat-paper rigidity and the current source before producing any
   // new handle. This also rejects legacy pulled poses without a state archive.
   mapDiagramFoldLines(pose,[],{...settings,enabled:true},before);
+  if(step.annotations?.some(a=>a.kind==='line'&&a.sinkFold)&&settings.drawingVersion===1){
+    const adopted=prepareDiagramFoldCPAdoption(project,stepId,after.doc);
+    const next=updateDiagramAnnotations(project,stepId,adopted.annotations);
+    return updateDiagramFoldLink(next,stepId,{...adopted.settings,enabled:true,...(adopted.settings.generatedOriginals?{generatedRevision:after.revision}:{})});
+  }
   const precreases=retainDiagramPrecreaseIntents(before.doc,after.doc,settings.precreases??[]);
   const mapped=operationPreview(pose,before,after.doc,precreases,step.annotations??[]);
-  const keep=[...(step.annotations??[]).filter(a=>isLinkedFoldLine(a)?a.foldFaces?.length===0:!isDiagramCPLine(a)),...diagramFoldBackgroundLines(pose,step.annotations??[])];
+  const keep=retainUnlinkedArtwork(pose,step.annotations??[]);
   const changed=diffDiagramFoldCP(before.doc,after.doc),generated=[...changed.filter(s=>['M','V','U'].includes(s.assignment)),
     ...intersectDiagramFoldSegments(after.doc,changed.filter(s=>s.assignment==='F'),precreases)];
   const next=updateDiagramAnnotations(project,stepId,[...keep,...previewAnnotations(mapped.preview,stepId,(step.annotations??[]).filter((a):a is DiagramLineAnnotation=>a.kind==='line'),keep.map(a=>a.id))]);
-  return updateDiagramFoldLink(next,stepId,{...settings,enabled:true,generated,...(settings.precreases?{precreases}:{})});
+  const {generatedOriginals:_oldOriginals,generatedRevision:_oldRevision,...config}=settings;
+  return updateDiagramFoldLink(next,stepId,{...config,enabled:true,generated,...(settings.precreases?{precreases}:{})});
+}
+
+/** A CP edit away from a sink must not turn its rim and reversed interior
+ * into independent drawing instructions. Peel its owned changes off for the
+ * ordinary handle projection, while keeping the authoritative CP intact. */
+function retainedSinks(pose:DiagramPose,before:DiagramCPState,after:Doc,target:Doc,settings:DiagramFoldLinkSettings,annotations:DiagramAnnotation[]){
+  const groups=new Map<string,DiagramLineAnnotation[]>();
+  for(const line of annotations){
+    if(line.kind!=='line'||!line.sinkFold||!line.foldFaces?.length)continue;
+    const id=line.sinkGroup??line.id,group=groups.get(id)??[];
+    group.push(line);groups.set(id,group);
+  }
+  let ordinary=target;const kept:DiagramLineAnnotation[]=[];
+  if(!groups.size)return {ordinary,kept};
+  const changed=[...diffDiagramFoldCP(after,target),...diffDiagramFoldCP(target,after)];
+  const masks:Segment[]=[];
+  for(const group of groups.values()){
+    try{
+      const rim=group.flatMap(line=>mapDiagramFoldLines(pose,[line],{...settings,layers:'selected',selectedFaces:line.foldFaces!},before).segments);
+      const previous=buildDiagramSinkSegments(after,rim);
+      // A new or removed interior line, as well as an edited rim, makes the
+      // explicitly edited CP authoritative for this particular sink.
+      if(changed.length&&intersectDiagramFoldSegments(target,changed,[...previous,...buildDiagramSinkSegments(target,rim)]).length)continue;
+      kept.push(...group);masks.push(...previous);
+    }catch{
+      // A replacement CP may even remove a material face or make the former
+      // rim a paper edge. Its validated CP gets ordinary projected handles.
+    }
+  }
+  if(masks.length){
+    const owned=intersectDiagramFoldSegments(target,settings.generated??[],masks);
+    ordinary=applyDiagramFoldSegments(subtractDiagramFoldSegments(target,owned),intersectDiagramFoldSegments(target,settings.generatedOriginals??[],owned));
+  }
+  return {ordinary,kept};
 }
 
 /** CP is authoritative on a CP edit. Its difference supplies editable drawing
  * lines; symbols and ordinary construction marks retain their identities. */
-export function prepareDiagramFoldCPAdoption(project:DiagramProject,stepId:string,doc:Doc){
+export function prepareDiagramFoldCPAdoption(project:DiagramProject,stepId:string,doc:Doc,drawingPose?:DiagramPose){
   const {step,before,after,pose}=context(project,stepId),settings=step.foldLink??defaultDiagramFoldLink();
   const normalized=normalizeDiagramCP(doc);if(normalized.conflicts)throw new Error('操作后 CP 有重叠赋型冲突，请先处理再应用。');
   const prepared=cleanFixed(normalized.doc,settings);
   const precreases=retainDiagramPrecreaseIntents(before.doc,prepared,settings.precreases??[]);
-  const mapped=operationPreview(pose,before,prepared,precreases,step.annotations??[]);
-  const keep=[...(step.annotations??[]).filter(a=>isLinkedFoldLine(a)?a.foldFaces?.length===0:!isDiagramCPLine(a)),...diagramFoldBackgroundLines(pose,step.annotations??[])];
+  const externalEdit=settings.generatedRevision!==undefined&&settings.generatedRevision!==after.revision;
+  if(!drawingPose&&!externalEdit&&step.foldLink?.drawingVersion===1&&step.annotations?.some(a=>a.kind==='line'&&a.sinkFold)&&same(after.doc,prepared)){
+    return {doc:prepared,changed:false,annotations:prepareDiagramFoldDrawing(project,stepId,undefined,true),settings};
+  }
+  const previous=externalEdit?applyDiagramFoldSegments(before.doc,settings.generated??[]):after.doc;
+  const sink=retainedSinks(pose,before,previous,prepared,settings,step.annotations??[]);
+  const mapped=operationPreview(pose,before,sink.ordinary,precreases,step.annotations??[]);
+  const keep=[...retainUnlinkedArtwork(drawingPose??pose,step.annotations??[]),...sink.kept];
   const annotations=[...keep,...previewAnnotations(mapped.preview,stepId,(step.annotations??[]).filter((a):a is DiagramLineAnnotation=>a.kind==='line'),keep.map(a=>a.id))];
   const changed=diffDiagramFoldCP(before.doc,prepared),generated=[...changed.filter(s=>['M','V','U'].includes(s.assignment)),
     ...intersectDiagramFoldSegments(prepared,changed.filter(s=>s.assignment==='F'),precreases)];
-  return {doc:prepared,changed:!same(after.doc,prepared),annotations,settings:{...settings,generated,...(settings.precreases?{precreases}:{})}};
+  const {generatedOriginals:_oldOriginals,generatedRevision:_oldRevision,...config}=settings;
+  const originals=sink.kept.length?intersectDiagramFoldSegments(before.doc,before.doc.segments.filter(s=>['M','V','U','F'].includes(s.assignment)),generated):undefined;
+  const updated=!same(after.doc,prepared);
+  return {doc:prepared,changed:updated,annotations,settings:{...config,generated,...(originals?{generatedOriginals:originals,generatedRevision:after.revision+Number(updated)}:{}),...(settings.precreases?{precreases}:{})}};
 }
-export function adoptDiagramFoldCP(project:DiagramProject,stepId:string,doc:Doc):DiagramProject {
-  const answer=prepareDiagramFoldCPAdoption(project,stepId,doc),{after}=context(project,stepId);
+export function adoptDiagramFoldCP(project:DiagramProject,stepId:string,doc:Doc,drawingPose?:DiagramPose):DiagramProject {
+  const answer=prepareDiagramFoldCPAdoption(project,stepId,doc,drawingPose),{after}=context(project,stepId);
   let next=answer.changed?updateDiagramCP(project,after.id,answer.doc):project;
   next=updateDiagramAnnotations(next,stepId,answer.annotations);
   return updateDiagramFoldLink(next,stepId,answer.settings);

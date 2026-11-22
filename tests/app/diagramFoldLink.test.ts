@@ -2,7 +2,7 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {blankDoc} from '../../src/app/state';
 import {computeFlatFold} from '../../src/core/flatFold';
-import {buildFold,distance} from '../../src/core/geometry';
+import {buildFold,distance,polygonArea} from '../../src/core/geometry';
 import type {Doc,Point,Segment} from '../../src/core/types';
 import type {DiagramPose} from '../../src/app/diagramProject';
 import type {DiagramLineAnnotation} from '../../src/app/diagramAnnotations';
@@ -110,7 +110,7 @@ test('CP difference ignores IDs, endpoint reversal, and arbitrary line subdivisi
   after.segments.push(segment([20,60],[80,60],'M','new'));assert.equal(diffDiagramFoldCP(before,after).length,1);
 });
 
-test('opening an existing fold to F keeps its M/V identity on each current visible paper face',()=>{
+test('opening a hinge to F shows the direction toward zero on each material bank and reverses on the back',()=>{
   for(const assignment of ['M','V'] as const){
     const {doc,pose}=fixture();doc.segments.find(s=>s.id==='old-fold')!.assignment=assignment;
     doc.segments.find(s=>s.id==='old-fold')!.angle=assignment==='M'?-180:180;
@@ -118,12 +118,17 @@ test('opening an existing fold to F keeps its M/V identity on each current visib
     after.segments.find(s=>s.id==='old-fold')!.assignment='F';after.segments.find(s=>s.id==='old-fold')!.angle=0;
     const front=projectDiagramFoldCP(folded,doc,after).preview.filter(part=>part.unfolding);
     assert.ok(front.length>0);assert.ok(front.every(part=>part.assignment==='F'&&part.existing&&['valley','mountain'].includes(part.style!)));
-    assert.ok(front.some(part=>part.style===(assignment==='M'?'mountain':'valley')));
+    const {vertices,faces}=folded.result.geometry,material=buildFold(doc).graph.vertices_coords;
+    for(const part of front){
+      const ring=faces[part.face],reflected=polygonArea(ring.map(v=>vertices[v]))*polygonArea(ring.map(v=>material[v] as Point))<0;
+      const opensAsValley=(assignment==='M')!==reflected;
+      assert.equal(part.style,opensAsValley?'valley':'mountain');
+    }
     assert.ok(!projectDiagramFoldCP(folded,after,after).preview.some(part=>part.unfolding));
     folded.view={...folded.view,side:'back'};
     const back=projectDiagramFoldCP(folded,doc,after).preview.filter(part=>part.unfolding);
     assert.equal(back.length,front.length);
-    assert.deepEqual(back.map(part=>part.style).sort(),front.map(part=>part.style==='valley'?'mountain':'valley').sort());
+    for(const part of back)assert.equal(part.style,front.find(other=>other.face===part.face)!.style==='valley'?'mountain':'valley');
   }
 });
 

@@ -4,7 +4,7 @@ import type {FaceOrder} from './layerSolutions';
 import {convexFacesOverlap,convexLayerContacts,type ConvexLayerConstraints} from './convexLayerContacts';
 import {faceRelationComponents} from './faceRelationComponents';
 import {layerThreeCycles} from './layerThreeCycles';
-import {registerCoveragePairs,type RegionCoverage,type RegionCoverageCertificate,type RegionProgress} from './regionTournament';
+import {contactComparisonRows,coveragePairMembership,nonContactRows,type RegionCoverage,type RegionCoverageCertificate,type RegionProgress} from './regionTournament';
 import {checkRegionCoverage,type RegionCoverageChecker} from './regionCoverageChecker';
 import {LayerPairIndex as PairIndex,LayerCandidateSearch as CandidateRules} from './layerCandidateSearch';
 import {createLayerRegionPruning} from './layerRegionPruning';
@@ -22,7 +22,7 @@ function pairOrder(index:PairIndex,values:Uint8Array):number[]|null{
   return order.length===index.faces?order:null;
 }
 
-export interface ConvexLayerCandidate{orders:FaceOrder[];faceOrder?:number[];coverageCertificate?:RegionCoverageCertificate}
+export interface ConvexLayerCandidate{orders:FaceOrder[];faceOrder?:number[];coverageCertificate?:RegionCoverageCertificate;nonContactRows?:Uint32Array}
 export interface ConvexLayerCandidateOptions {
   coverage?:RegionCoverage;
   /** Hard user relations, or a selected candidate being extended as-is.
@@ -61,7 +61,7 @@ export function solveConvexLayerCandidate(graph:FoldGraph,epsilon:number,options
   const count=graph.faces_vertices!.length,overlap=convexFacesOverlap(graph,epsilon);
   const constraints=convexLayerContacts(graph,epsilon),winding=ear.graph.makeFacesWinding(graph);
   const adjacent=ear.layer.solveFlatAdjacentEdges(graph,winding);
-  const polygons=ear.graph.makeFacesPolygon(graph,epsilon).map((p,f)=>winding[f]?p:p.reverse()) as Point[][];
+  const polygons=options.coverage?undefined:ear.graph.makeFacesPolygon(graph,epsilon).map((p,f)=>winding[f]?p:p.reverse()) as Point[][];
   return solveLayerContactCandidate({count,overlap,constraints,winding,adjacent,polygons},epsilon,options);
 }
 
@@ -81,9 +81,10 @@ export function solveLayerContactCandidate(problem:LayerContactProblem,epsilon:n
   };
   if(!polygons&&!options.coverage)throw Error('凹面层序候选必须提供完整原面区域覆盖。');
   overlap.forEach((row,a)=>row.forEach(b=>{if(a<b)index.term(a,b);}));
+  let touches:ReturnType<typeof coveragePairMembership>|undefined;
   if(options.coverage){
     if(options.coverage.faceCount!==count)throw Error('精确覆盖与层序求解的纸面编号不一致。');
-    registerCoveragePairs(options.coverage,index.pairs,(a,b)=>{index.term(a,b);},options.onProgress);
+    touches=coveragePairMembership(options.coverage,(a,b)=>{index.term(a,b);},options.onProgress);
   }
   for(const key of Object.keys(adjacent)){const [a,b]=key.split(' ').map(Number);index.term(a,b);}
   for(const row of options.fixedOrders??[]){
@@ -91,6 +92,14 @@ export function solveLayerContactCandidate(problem:LayerContactProblem,epsilon:n
     index.term(row[0],row[1]);
   }
   const rules=new CandidateRules(index,constraints);
+  // The rule index now includes every real pair as well as all auxiliary
+  // terms. Subsequent transitivity clauses can only refer to existing ids.
+  let excluded:Uint32Array|undefined;
+  if(touches){
+    excluded=touches.count===index.pairs.length?new Uint32Array(0):nonContactRows(index.pairs,touches);
+    touches=undefined;
+  }
+  const contacts=excluded?contactComparisonRows(index.pairs,excluded):undefined;
   const failed=()=>{for(const conflict of rules.conflicts)options.onConflict?.(conflict);return null;};
   const initial=new Uint8Array(index.pairs.length);
   for(const [key,value]of Object.entries(adjacent)){const [a,b]=key.split(' ').map(Number);initial[index.find(a,b)-1]=value;}
@@ -99,22 +108,41 @@ export function solveLayerContactCandidate(problem:LayerContactProblem,epsilon:n
     if(initial[id]&&initial[id]!==canonical){options.onConflict?.(makeLayerConflict('relative-order','constraint',[a,b],{relations:[{above:a,below:b},{above:b,below:a}]}));return null;}initial[id]=canonical;
   }
   if(!rules.seed(initial))return failed();
-  const root=rules.values.slice(),preference=new Uint32Array(count);
-  let rootOrder=pairOrder(index,root);
-  if(!rootOrder){
-    // A local cycle does not erase the useful ordering of other components.
-    // Within a component this is only a search preference, never a constraint.
-    const {component}=faceRelationComponents(count,index.pairs,root);
-    rootOrder=Array.from({length:count},(_,i)=>i).sort((a,b)=>component[a]-component[b]||a-b);
-  }
-  rootOrder.forEach((f,i)=>{preference[f]=i;});
+  const preference=new Uint32Array(count);
+  let rootCyclic=false,rankedRootSize=-1;
+  let preservesRootOrder:((below:number,above:number,id:number)=>boolean)|undefined;
+  const rankForcedRelations=()=>{
+    // Forced assignments only grow between trials. An unchanged root has
+    // exactly the same ranking; an existing cycle survives every extension.
+    if(rules.trail.length===rankedRootSize)return;
+    const previousSize=rankedRootSize;rankedRootSize=rules.trail.length;
+    if(preservesRootOrder){
+      let unchanged=true;
+      for(let i=previousSize;i<rankedRootSize;i++){
+        const v=rules.trail[i],[a,b]=index.pairs[v],firstAbove=rules.values[v]===1;
+        if(!preservesRootOrder(firstAbove?b:a,firstAbove?a:b,v+1)){unchanged=false;break;}
+      }
+      if(unchanged)return;
+    }
+    let order=rootCyclic?null:pairOrder(index,rules.values);
+    if(!order){
+      rootCyclic=true;
+      const ranking=faceRelationComponents(count,index.pairs,rules.values,index.pairs.length>=65_536?(a,b)=>index.find(a,b):undefined);
+      const {component}=ranking;preservesRootOrder=ranking.preservesOrder;
+      order=Array.from({length:count},(_,i)=>i).sort((a,b)=>component[a]-component[b]||a-b);
+    }
+    order.forEach((f,i)=>{preference[f]=i;});
+  };
+  rankForcedRelations();
   let iteration=0;
   while(true){
     options.onProgress?.('candidate',{iteration:++iteration,pairs:index.pairs.length,transitivity:rules.transitivityCount});
     const candidate=rules.first(preference,prepareRegionPruning);options.onProgress?.('search',{...rules.lastSearch});if(!candidate)return failed();
-    if(!rules.valid(candidate))throw Error('层序候选未通过全部接触约束复核。');
-    const faceOrder=pairOrder(index,candidate);let added=0;const newTriangles:number[][]=[];
-    if(!faceOrder&&polygons){
+    // Material-region certification is mandatory whenever coverage exists.
+    // A global drawing order is useful only for the final certified result.
+    let faceOrder=options.coverage||rootCyclic?null:pairOrder(index,candidate);
+    let added=0;const newTriangles:number[][]=[];
+    if(!faceOrder&&polygons&&!options.coverage){
       const {component,sizes}=faceRelationComponents(count,index.pairs,candidate);
       // Batching limits temporary storage, not the scope of verification: only
       // a full pass with zero violations may certify this candidate. A directed
@@ -128,21 +156,21 @@ export function solveLayerContactCandidate(problem:LayerContactProblem,epsilon:n
       }
     }
     let coverageCertificate:RegionCoverageCertificate|undefined;
-    if(!added&&options.coverage){
-      const checked=(options.coverageChecker??checkRegionCoverage)(options.coverage,index.pairs,candidate,options.onProgress);
+    if(options.coverage&&contacts){
+      const checked=(options.coverageChecker??checkRegionCoverage)(options.coverage,contacts.pairs,contacts.values(candidate),options.onProgress);
       for(const triangle of checked.triangles){newTriangles.push(triangle);added++;}
       options.onProgress?.('coverage-constraints',{iteration,added,total:rules.transitivityCount+added});
       if(!added){if(!checked.complete||!checked.certificate)throw Error('精确区域没有完成全部层序复核。');coverageCertificate=checked.certificate;}
     }
     if(!added){
+      if(!rules.valid(candidate))throw Error('层序候选未通过全部接触约束复核。');
+      if(options.coverage&&!rootCyclic)faceOrder=pairOrder(index,candidate);
       const orders:FaceOrder[]=index.pairs.map(([a,b],i)=>[a,b,(candidate[i]===1?1:-1)*(winding[b]?1:-1)]);
-      return {orders,...(faceOrder?{faceOrder}:{}),...(coverageCertificate?{coverageCertificate}:{})};
+      return {orders,...(faceOrder?{faceOrder}:{}),...(coverageCertificate?{coverageCertificate,nonContactRows:excluded}:{})};
     }
     if(!rules.addTransitivity(newTriangles))return failed();
     // New necessary transitivity clauses can strengthen the forced root.
     // Prefer its order before any guesses; never promote a candidate to root.
-    const forcedOrder=pairOrder(index,rules.values);
-    const component=forcedOrder?undefined:faceRelationComponents(count,index.pairs,rules.values).component;
-    (forcedOrder??Array.from({length:count},(_,i)=>i).sort((a,b)=>component![a]-component![b]||a-b)).forEach((f,i)=>{preference[f]=i;});
+    rankForcedRelations();
   }
 }

@@ -1,0 +1,6 @@
+interface:
+  display_name: "折纸工坊开发"
+  short_description: "维护折纸工坊迁移版，定位折痕与纸层问题、保护历史修复并按要求交付"
+  default_prompt: "使用 $origami-workbench-dev 处理折纸工坊当前任务，先定位相关状态与历史约束，按授权范围实施并说明验证边界。"
+policy:
+  allow_implicit_invocation: true

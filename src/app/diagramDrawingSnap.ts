@@ -2,13 +2,14 @@ import type {Point} from '../core/types';
 import type {DiagramLineAnnotation} from './diagramAnnotations';
 import {snapDiagramSymbolPoint,snapDiagramSymbolAxisPoint,diagramNearbyLineIntersections,diagramGridLineIntersections,pointDiagramLineDistance} from './diagramDrawingTools';
 import {diagramAnglePoint} from './diagramPrecisionTools';
-import {snapDiagramLinePoint,type DiagramLineSnapResult} from './diagramLineSnap';
+import {snapDiagramLinePoint,type DiagramLineSnapReference,type DiagramLineSnapResult} from './diagramLineSnap';
 import {diagramSnapGrid,diagramGridIsNode,type DiagramSnapGrid} from './diagramGrid';
 
 interface DrawingSnapOptions {
   enabled:boolean;radius:number;targets:Point[];lines:readonly DiagramLineAnnotation[];
   /** Reuse geometry prepared when references change, never on each pointer move. */
   intersections?:readonly Point[];
+  angleReferences?:readonly DiagramLineSnapReference[];incoming?:DiagramLineSnapReference;
   gridSpacing?:number;gridDiagonalSpacing?:number;grid?:DiagramSnapGrid;anchor?:Point;shiftKey?:boolean;altKey?:boolean;anglePreset?:number;
 }
 export interface DiagramSnapFeedback {kind:'point'|'intersection'|'grid-intersection'|'edge'|'grid';label:string;point:Point}
@@ -20,8 +21,14 @@ export function snapDiagramDrawingLine(pointer:Point,options:DrawingSnapOptions)
   const {anchor,radius,lines,gridSpacing,anglePreset=0,shiftKey=false,altKey=false}=options,enabled=options.enabled&&!altKey;
   const grid=diagramSnapGrid(options.grid,gridSpacing);
   const intersections=enabled?(options.intersections??diagramNearbyLineIntersections(pointer,lines,radius)):[];
-  const gridIntersections=enabled?diagramGridLineIntersections(pointer,lines,grid,radius,options.gridDiagonalSpacing):[];
-  const targets=enabled?[...options.targets,...intersections,...gridIntersections]:options.targets;
+  const paperTargets=enabled?[...options.targets,...intersections]:[];
+  // A projected paper junction can fall just off a grid line. Its incident
+  // creases then cross the grid at different points on either side of it.
+  // Offer those crossings only when a free endpoint has no paper target.
+  const constrained=!!anchor&&(shiftKey||anglePreset>0);
+  const nearPaperTarget=!constrained&&paperTargets.some(p=>Math.hypot(p[0]-pointer[0],p[1]-pointer[1])<radius);
+  const gridIntersections=enabled&&!nearPaperTarget?diagramGridLineIntersections(pointer,lines,grid,radius,options.gridDiagonalSpacing):[];
+  const targets=gridIntersections.length?[...paperTargets,...gridIntersections]:paperTargets;
   const base={enabled,radius,targets,gridSpacing,grid,anchor,constrain:shiftKey};
   const separation=(a:Point,b:Point)=>Math.hypot(a[0]-b[0],a[1]-b[1]);
   const eps=Math.max(1e-8,radius*1e-6);
@@ -35,8 +42,9 @@ export function snapDiagramDrawingLine(pointer:Point,options:DrawingSnapOptions)
     return kind?{kind,point:[...point],label:{point:'端点 / 纸角',intersection:'交点','grid-intersection':'折痕与网格交点',edge:'在线段上',grid:'网格点'}[kind]}:undefined;
   }
   if(!anchor){const point=snapDiagramSymbolPoint(pointer,{...base,lines:[...lines]});return {point,relation:null,target:targetAt(point)};}
+  const relationOptions={anchor,lines,radius,grid,gridDiagonalSpacing:options.gridDiagonalSpacing,angleReferences:options.angleReferences,incoming:options.incoming};
   const classify=(point:Point):DiagramDrawingSnap=>{
-    const candidate=enabled?snapDiagramLinePoint(point,{anchor,lines,radius}):null;
+    const candidate=enabled?snapDiagramLinePoint(point,relationOptions):null;
     const delta:Point=[point[0]-anchor[0],point[1]-anchor[1]],length=Math.hypot(...delta);
     const aligned=candidate&&length>eps&&Math.abs(delta[0]*candidate.direction[1]-delta[1]*candidate.direction[0])<=eps&&delta[0]*candidate.direction[0]+delta[1]*candidate.direction[1]>0;
     return {point,relation:aligned?{...candidate,point:[...point]}:null,target:targetAt(point)};
@@ -47,7 +55,7 @@ export function snapDiagramDrawingLine(pointer:Point,options:DrawingSnapOptions)
   let fixed:Point|undefined,distance=radius;
   for(const target of targets){const d=Math.hypot(pointer[0]-target[0],pointer[1]-target[1]);if(d<distance){fixed=target;distance=d;}}
   if(fixed)return classify([...fixed]);
-  const relation=snapDiagramLinePoint(pointer,{anchor,lines,radius});
+  const relation=snapDiagramLinePoint(pointer,relationOptions);
   if(relation){
     // Preserve the detected direction while landing exactly on a nearby finite
     // edge. A second snap must not accumulate into a jump beyond the pointer.

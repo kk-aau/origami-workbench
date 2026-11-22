@@ -59,5 +59,12 @@ export function prepareDiagramLocalLayerProbe(pose:DiagramPose){
     const polygons=(byFace.get(face)??[]).map(cell=>cell.shown);
     return {polygons,polygonFaces:polygons.map(()=>face),faces:[face],points:[] as Point[],label:`纸面 F${face+1}`};
   }
-  return {at,fromCP,faceSample,highlight};
+  function materialPoint(face:number,point:Point):Point|null {
+    for(const cell of byFace.get(face)??[]){
+      const w=weights(point,cell.shown,eps);
+      if(w)return [0,1].map(axis=>w.reduce((n,v,i)=>n+v*cell.cp[i][axis],0)) as Point;
+    }
+    return null;
+  }
+  return {at,fromCP,faceSample,highlight,materialPoint};
 }

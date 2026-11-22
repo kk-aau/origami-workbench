@@ -8,6 +8,9 @@ export interface ExactCellLayerCertificate {
 export interface FlatExactProof {
  topology:ExactModelTopology;
  certificate:ExactCellLayerCertificate;
+ physicalOrdersOnly?:true;
+ /** Sorted indices into the exact faceOrders snapshot captured by this proof. */
+ nonContactRows?:Uint32Array;
 }
 export interface FlatSurfaceBinding {
  geometry:string;geometryStatus:FlatFoldResult['geometry']['status'];layers:FlatFoldResult['layers'];layerStatus:FlatFoldResult['layers']['status'];

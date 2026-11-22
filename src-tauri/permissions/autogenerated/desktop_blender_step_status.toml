@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-desktop-blender-step-status"
+description = "Enables the desktop_blender_step_status command without any pre-configured scope."
+commands.allow = ["desktop_blender_step_status"]
+
+[[permission]]
+identifier = "deny-desktop-blender-step-status"
+description = "Denies the desktop_blender_step_status command without any pre-configured scope."
+commands.deny = ["desktop_blender_step_status"]

@@ -32,12 +32,20 @@ export function diagramPiecesStrictlyCoverPoint(pieces:readonly DiagramOcclusion
   }
   if(contacts.length<2)return false;
   const tau=Math.PI*2,angles:number[]=[],cones:Point[][]=[];
+  const seams:{a:Point;b:Point;direction:Point}[]=[];
+  const coincides=(a:Point,b:Point)=>Math.hypot(a[0]-b[0],a[1]-b[1])<=eps;
   for(const triangle of contacts){
     const sign=Math.sign(cross(sub(triangle[1],triangle[0]),sub(triangle[2],triangle[0]))),normals:Point[]=[];
     if(!sign)continue;
     for(let i=0;i<3;i++){
       tick();const a=triangle[i],b=triangle[(i+1)%3];if(!onEdge(point,a,b,eps))continue;
-      const edge=sub(b,a),length=Math.hypot(...edge),angle=(Math.atan2(edge[1],edge[0])+tau)%tau;
+      // The same projected seam can come from separately transformed vertices.
+      // Reuse its direction only when both endpoints match the geometric test.
+      let edge=sub(b,a);
+      const seam=seams.find(s=>{tick();return coincides(a,s.a)&&coincides(b,s.b)||coincides(a,s.b)&&coincides(b,s.a);});
+      if(seam)edge=coincides(a,seam.a)?seam.direction:[-seam.direction[0],-seam.direction[1]];
+      else seams.push({a,b,direction:edge});
+      const length=Math.hypot(...edge),angle=(Math.atan2(edge[1],edge[0])+tau)%tau;
       normals.push([-edge[1]*sign/length,edge[0]*sign/length]);angles.push(angle,(angle+Math.PI)%tau);
     }
     if(!normals.length)return true;

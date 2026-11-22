@@ -1,3 +1,4 @@
+import {DocumentJunctionMarks} from './JunctionWarnings';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Doc, FoldGraph } from '../core/types';
 import { getPaperBounds } from '../app/paper';
@@ -50,7 +51,7 @@ export default function StartingFacePicker({doc,graph,current,onApply,onCancel}:
       viewBox={`${view.x} ${view.y} ${view.width} ${view.height}`} style={{display:'block',width:'100%',height:240,touchAction:'none',userSelect:'none',background:'#fffefb',border:'1px solid #d3ddd0'}}>
       {graph.faces_vertices?.map((face,i)=><polygon key={i} pointerEvents="fill" role="button" tabIndex={0} aria-label={`起始面候选 F${i+1}`} aria-pressed={candidate===i} points={face.map(v=>graph.vertices_coords[v].join(',')).join(' ')} fill={candidate===i?'#d9c9e8':i===current?'#dbe7d7':'#fffefb'} stroke={candidate===i?'#8052ad':'#aebdac'} strokeWidth={candidate===i?2:1} vectorEffect="non-scaling-stroke" onClick={()=>setCandidate(i)} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();setCandidate(i);}}}><title>{`点击选择 F${i+1} 为起始面候选`}</title></polygon>)}
       <g pointerEvents="none">{doc.segments.map(s=><line key={s.id} x1={s.a[0]} y1={s.a[1]} x2={s.b[0]} y2={s.b[1]} stroke={segmentDisplayColor(s)} strokeWidth=".7" vectorEffect="non-scaling-stroke"/>)}</g>
-    </svg>
+    <DocumentJunctionMarks doc={doc}/></svg>
     {pointer&&<div role="tooltip" style={{position:'fixed',left:Math.max(8,Math.min(pointer.x+14,window.innerWidth-210)),top:Math.max(8,pointer.y-62),width:190,padding:'8px 10px',background:'#fffefb',border:'1px solid #8052ad',borderRadius:4,color:'#5d3c7c',fontSize:12,pointerEvents:'none',zIndex:30}}>{candidate===null?'点击纸面内部，选择起始面。':'可另点一个面，或点击“应用起始面”。'}</div>}
     <p className="note" role="status">{candidate===null?'请点击展开图中的一个面。':`候选 F${candidate+1}：应用后点击“计算平折结果”重新求解。`}</p>
     <button className="primary" disabled={candidate===null} onClick={()=>{if(candidate!==null)onApply(candidate);}}>应用起始面</button>{' '}

@@ -2,7 +2,8 @@ import {test,mock} from 'node:test';
 import assert from 'node:assert/strict';
 import {Worker as NodeWorker} from 'node:worker_threads';
 import {RegionTournament,checkCoverageTournaments,type RegionCoverage,type RegionPair} from '../../src/core/regionTournament';
-import {buildRegionTransitionSchedule,checkRegionTransitionChunks} from '../../src/core/regionTransitionSchedule';
+import {buildRegionTransitionSchedule,checkRegionTransitionChunks,regionProofParts} from '../../src/core/regionTransitionSchedule';
+import {RegionCandidateSnapshot,regionChunkMembership} from '../../src/core/regionParallelCandidates';
 import {RegionParallelPoolOwner,REGION_CONTROL,failRegionPool,waitForRegionPool,type RegionParallelPoolData} from '../../src/core/regionParallelProtocol';
 import {createWorkerRegionCoverageChecker} from '../../src/core/regionParallelChecker';
 import {regionParallelWorkerCount,REGION_MAX_WORKERS} from '../../src/core/regionParallelHardware';
@@ -11,7 +12,7 @@ import {startFlatFold} from '../../src/core/workerClient';
 const C=REGION_CONTROL;
 const pairsFor=(n:number):RegionPair[]=>{const result:RegionPair[]=[];for(let a=0;a<n;a++)for(let b=a+1;b<n;b++)result.push([a,b]);return result;};
 function coverage(faceCount:number,groups:number[][]):RegionCoverage{return{faceCount,cellCount:groups.length,walk(v){const active=new Set<number>();groups.forEach((ids,cell)=>{const wanted=new Set(ids),removed=[...active].filter(f=>!wanted.has(f)),added=ids.filter(f=>!active.has(f));for(const f of removed)active.delete(f);for(const f of added)active.add(f);v.onTransition?.({removed,added});v.onCell?.(cell,active);});const removed=[...active];active.clear();v.onTransition?.({removed,added:[]});}};}
-function pool():RegionParallelPoolData{const schedule=buildRegionTransitionSchedule(coverage(3,[[0,1,2],[]]));return{id:1,workers:2,batchSize:10,schedule,matrix:new Uint32Array(new SharedArrayBuffer(12)),certificate:new SharedArrayBuffer(24),control:new Int32Array(new SharedArrayBuffer((C.slots+2*C.stride)*4)),triangles:new Uint32Array(new SharedArrayBuffer(320))};}
+function pool():RegionParallelPoolData{const schedule=buildRegionTransitionSchedule(coverage(3,[[0,1,2],[]]));return{id:1,workers:2,batchSize:10,schedule,matrix:new Uint32Array(new SharedArrayBuffer(12)),dirtyChunks:new Uint32Array(new SharedArrayBuffer(4)),precheckJobs:new Uint32Array(new SharedArrayBuffer(schedule.chunks.length*4)),chunkGenerations:new Uint32Array(new SharedArrayBuffer(schedule.chunks.length*4)),writtenAt:new Uint32Array(new SharedArrayBuffer(8)),certificate:new SharedArrayBuffer(24),control:new Int32Array(new SharedArrayBuffer((C.slots+2*C.stride)*4)),triangles:new Uint32Array(new SharedArrayBuffer(320))};}
 
 test('partitioned exact schedules match every tournament through five faces, including holes and rollback',()=>{
  for(let n=0;n<=5;n++){
@@ -51,6 +52,44 @@ test('DFS backtracking and nonsequential real cell IDs retain exact coverage acr
  const expected=checkCoverageTournaments(source,pairs,values);assert.ok(expected.complete&&expected.certificate);assert.deepEqual(output.top,expected.certificate.top);assert.deepEqual(output.bottom,expected.certificate.bottom);assert.deepEqual(output.depth,expected.certificate.depth);
 });
 
+test('a changed comparison dirties every possible co-covered chunk across bit words, and replaced pair identities force a complete rebuild',()=>{
+ const groups=Array.from({length:70},(_,i)=>i===1||i===32||i===67?[0,1]:[2,3]),source=coverage(4,groups),schedule=buildRegionTransitionSchedule(source,70);
+ const pairs=pairsFor(4),values=new Uint8Array(pairs.length).fill(1),matrix=new RegionTournament(4,pairs,values).packedComparisons!.slice(),mask=new Uint32Array(Math.ceil(schedule.chunks.length/32));
+ const membership=regionChunkMembership(schedule),snapshot=new RegionCandidateSnapshot(pairs,values);
+ values[0]=2;
+ assert.equal(snapshot.update(pairs,values,matrix,4,membership,mask),true);
+ for(const i of [1,32,67])assert.ok(mask[i>>>5]&(1<<(i&31)));
+ for(const i of [8,24,55])assert.equal(mask[i>>>5]&(1<<(i&31)),0);
+ assert.deepEqual(matrix,new RegionTournament(4,pairs,values).packedComparisons);
+ values[3]=0;const before=matrix.slice();assert.throws(()=>snapshot.update(pairs,values,matrix,4,membership,mask),/未赋值/);assert.deepEqual(matrix,before);
+ values[3]=1;[pairs[0],pairs[1]]=[pairs[1],pairs[0]];assert.equal(snapshot.update(pairs,values,matrix,4,membership,mask),false);
+});
+
+test('fine proofs retain original DFS witness choice across clean gaps, cyclic boundaries, bounded searches and reordered active sets',()=>{
+ const shapes=[[1,2,0],[2,0],[3,0],[0,1,3,5],[1,3,5],[2,4],[4],[2,4,3],[3,2,4],[2,0,4,3],[0,1,2,3,4,5],[3,4,1],[5],[4,5]];
+ const groups=Array.from({length:179},(_,i)=>shapes[(i*5+Math.floor(i/12))%shapes.length]);
+ const input=coverage(6,groups),original=buildRegionTransitionSchedule(input,4),fine=buildRegionTransitionSchedule(input,4,3),pieces=regionProofParts(fine);
+ assert.ok(pieces.length>32);
+ const indices=new Map(pieces.map((piece,i)=>[piece,i])),generations=new Uint32Array(pieces.length),writtenAt=new Uint32Array(groups.length);
+ const pairs=pairsFor(6),values=new Uint8Array(pairs.length).fill(1),snapshot=new RegionCandidateSnapshot(pairs,values),membership=regionChunkMembership(fine),dirty=new Uint32Array(Math.ceil(pieces.length/32));
+ const matrix=new RegionTournament(6,pairs,values).packedComparisons!.slice();
+ const out=()=>({top:new Int32Array(groups.length),bottom:new Int32Array(groups.length),depth:new Uint32Array(groups.length)}),reused=out();
+ let skips=0,conflicts=0;
+ for(let g=1;g<=168;g++){
+  if(g===168)values.fill(1);else if(g%5)values[(g*13)%values.length]=3-values[(g*13)%values.length];
+  assert.ok(snapshot.update(pairs,values,matrix,6,membership,dirty));
+  for(let i=0;i<pieces.length;i++){if(dirty[i>>>5]&(1<<(i&31)))generations[i]=0;else if(generations[i])skips++;}
+  const reference=out(),batch=g%3?2:100,proof={indices,generations,writtenAt,generation:g};
+  for(let lane=0;lane<2;lane++){
+   const expected=checkRegionTransitionChunks(original,original.chunks.filter((_,i)=>i%2===lane),new RegionTournament(6,pairs,values),reference,batch);
+   const actual=checkRegionTransitionChunks(fine,fine.chunks.filter((_,i)=>i%2===lane),new RegionTournament(6,pairs,values),reused,batch,undefined,proof);
+   assert.deepEqual(actual,expected);conflicts+=expected.triangles.length;
+  }
+  if(g===168){assert.deepEqual(reused,reference);for(const part of pieces){const stamp=generations[indices.get(part)!];assert.ok(stamp);for(let i=part.firstVisit;i<part.firstVisit+part.cells;i++)assert.equal(writtenAt[i],stamp);}}
+ }
+ assert.ok(skips>100&&conflicts>100);
+});
+
 test('a failure between the version read and condition check cannot lose the wakeup',()=>{
  const data=pool(),load=Atomics.load;let injected=false,waited=false;
  const loadMock=mock.method(Atomics,'load',((array:any,index:number)=>{const value=load(array,index);if(array===data.control&&index===C.signal&&!injected){injected=true;failRegionPool(data.control);}return value;}) as typeof Atomics.load);
@@ -84,8 +123,50 @@ test('real parallel workers retain complete certificates across changed generati
  for(const answer of result.answers){assert.deepEqual(answer.result,answer.reference);assert.ok(answer.result.certificate.top.buffer instanceof ArrayBuffer);}
  assert.notDeepEqual(result.answers[0].result.certificate.top,result.answers[1].result.certificate.top);
 });
-test('real checker hard crash and wrong protocol wake a blocked solver and permanently fall back to complete CPU checking',{timeout:30000},async()=>{
- for(const failure of ['crash','protocol']){const result=await runReal({failure});assert.equal(result.messages.filter((m:any)=>m.type==='region-pool-init').length,1);assert.ok(result.messages.some((m:any)=>m.type==='region-parallel-status'&&m.status==='fallback'));for(const answer of result.answers)assert.deepEqual(answer.result,answer.reference);}
+test('actual workers reuse unaffected proofs across stable and changed candidates and clear previously exposed certificates',{timeout:30000},async()=>{
+ const groups=Array.from({length:80},(_,i)=>i<40?[0,1]:[2,3]);
+ const values=[[1,1,1,1,1,1],[1,1,1,1,1,1],[2,1,1,1,1,1],[2,1,1,1,1,2],[1,1,1,1,1,2]];
+ const result=await runReal({groups,values});
+ for(const answer of result.answers)assert.deepEqual(answer.result,answer.reference);
+ assert.ok(!result.messages.some((m:any)=>m.status==='fallback'));
+});
+
+test('incremental proofs preserve the fresh per-worker DFS witness sequence for every candidate on four faces',{timeout:30000},async()=>{
+ const shapes=[[0,1,2],[2,3],[0,1,2,3],[1,2,3],[],[0,1,3],[0,2,3]];
+ const groups=Array.from({length:137},(_,i)=>shapes[(i*11+Math.floor(i/13))%shapes.length]);
+ const pairs=pairsFor(4),values=Array.from({length:64},(_,i)=>pairs.map((_,bit)=>1+(((i^(i>>>1))>>>bit)&1)));
+ const source=coverage(4,groups),schedule=buildRegionTransitionSchedule(source);
+ const result=await runReal({groups,values,workers:3,batchSize:3});
+ values.forEach((candidate,i)=>{
+  const out={top:new Int32Array(groups.length),bottom:new Int32Array(groups.length),depth:new Uint32Array(groups.length)};
+  const fresh=Array.from({length:3},(_,worker)=>checkRegionTransitionChunks(schedule,schedule.chunks.filter((_,j)=>j%3===worker),new RegionTournament(4,pairs,candidate),out,3));
+  const ordered=fresh.flatMap(row=>row.triangles).sort((a,b)=>a.visit-b.visit),seen=new Set<string>();
+  const expected=ordered.filter(record=>{const key=record.triangle.join(',');if(seen.has(key))return false;seen.add(key);return true;}).slice(0,3).map(record=>record.triangle);
+  assert.deepEqual(result.answers[i].result.triangles,expected);
+  assert.equal(result.answers[i].result.complete,fresh.every(row=>row.complete));
+ });
+ assert.ok(!result.messages.some((m:any)=>m.status==='fallback'));
+});
+test('real checker hard crash, wrong protocol or corrupt matrix slice wake all waiters and fall back to complete CPU checking',{timeout:30000},async()=>{
+ for(const failure of ['crash','protocol','invalid-matrix','stale-slot']){const result=await runReal({failure});assert.equal(result.messages.filter((m:any)=>m.type==='region-pool-init').length,1);assert.ok(result.messages.some((m:any)=>m.type==='region-parallel-status'&&m.status==='fallback'));for(const answer of result.answers)assert.deepEqual(answer.result,answer.reference);}
+});
+test('new cycles invalidate old proofs; clearing a cycle yields the exact fresh certificate',{timeout:30000},async()=>{
+ const groups=Array.from({length:90},(_,i)=>i<60?[0,1,2]:[2,3]);
+ const result=await runReal({groups,values:[[1,1,1,1,1,1],[1,2,1,1,1,1],[1,1,1,1,1,1]]});
+ for(const answer of result.answers)assert.deepEqual(answer.result,answer.reference);
+ assert.ok(result.answers[1].result.triangles.length);assert.ok(!('certificate' in result.answers[1].result));
+ assert.ok(!result.messages.some((m:any)=>m.status==='fallback'));
+});
+
+test('idle workers can precheck changed regions without choosing a different cycle witness',{timeout:30000},async()=>{
+ const groups=Array.from({length:128},(_,i)=>Math.floor(i/2)%4===0?[0,1,2]:[2,3]);
+ for(const values of [[[1,1,1,1,1,1],[1,2,1,1,1,1]],[[1,1,1,1,1,1],[2,2,1,1,1,1]]]){
+  const run=await runReal({groups,values,workers:4});
+  const pool=run.messages.find((m:any)=>m.type==='region-pool-init').pool;
+  assert.ok(Atomics.load(pool.control,C.precheckCount)>0);
+  assert.ok(!run.messages.some((m:any)=>m.status==='fallback'));
+  for(const answer of run.answers)assert.deepEqual(answer.result,answer.reference);
+ }
 });
 test('unavailable shared-memory acceleration uses complete CPU checking without starting a pool',async()=>{
  const result=await runReal({enabled:false});assert.equal(result.childCount,0);for(const answer of result.answers)assert.deepEqual(answer.result,answer.reference);

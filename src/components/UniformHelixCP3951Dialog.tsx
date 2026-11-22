@@ -1,3 +1,5 @@
+import {PlotLine,PlotStrokeGroup} from './PlotStrokeGroup';
+import {DocumentJunctionMarks} from './JunctionWarnings';
 import {useEffect,useMemo,useState} from 'react';
 import {TessDialog} from './TessellationEditor';
 import {UNIFORM_HELIX_CP_3951_EXAMPLE,validateUniformHelixCP3951Recipe,prepareUniformHelixCP3951Preview,uniformHelixCP3951SourceMatches,
@@ -22,11 +24,11 @@ function MillimetrePlot({doc,guides,recipe}:{doc:Doc;guides:boolean;recipe:Unifo
   <g fill="#506170" fontSize={labelSize}>{xTicks.map(x=><text key={'x'+x} x={x} y={minY-margin*.32} textAnchor="middle">{label(x)}</text>)}{yTicks.map(y=><text key={'y'+y} x={minX-margin*.12} y={y+size*.3} textAnchor="end">{label(y)}</text>)}<text x={maxX} y={minY-margin*.65} textAnchor="end">X → / mm</text><text x={minX-margin*.65} y={maxY} textAnchor="middle" transform={`rotate(-90 ${minX-margin*.65} ${maxY})`}>Y ↓ / mm</text></g>
   {graph.faces_vertices!.map((f,i)=><polygon key={i} points={f.map(v=>points[v].join(',')).join(' ')} fill={i?'#dcebe7':'#e0e7f1'} stroke="none" opacity=".8"/>)}
   {guides&&<g data-testid="uniform3951-unit-reference" fill="none" stroke="#aa668e" strokeWidth={stroke} strokeDasharray={`${span*.013} ${span*.008}`}><polyline points={refChain('Left')}/><polyline points={refChain('Right')}/></g>}
-  {doc.segments.map(s=><line key={s.id} data-source-segment={s.id} x1={s.a[0]} y1={s.a[1]} x2={s.b[0]} y2={s.b[1]} stroke={s.assignment==='B'?'#233243':'#246ab0'} strokeWidth={stroke*1.5} strokeDasharray={s.assignment==='U'?`${span*.007} ${span*.004}`:undefined}/>)}
+  <PlotStrokeGroup>{doc.segments.map(s=><PlotLine key={s.id} data-source-segment={s.id} x1={s.a[0]} y1={s.a[1]} x2={s.b[0]} y2={s.b[1]} stroke={s.assignment==='B'?'#233243':'#246ab0'} widthPixels={1.5} dash={s.assignment==='U'?'3.5 2':undefined}/>)}</PlotStrokeGroup>
   <polyline points={chain(0)} fill="none" stroke="#246ab0" strokeWidth={stroke*2}/><polyline points={chain(n)} fill="none" stroke="#c37435" strokeWidth={stroke*2}/><polyline points={chain(2*n)} fill="none" stroke="#2a7b69" strokeWidth={stroke*2}/>
   {[0,n-1].map(i=><g key={i} fill="#246ab0"><circle cx={points[i][0]} cy={points[i][1]} r={size*.6}/><text x={points[i][0]+(points[i][0]>(minX+maxX)/2?-size:size)} y={points[i][1]+(points[i][1]>(minY+maxY)/2?-size:labelSize*1.25)} textAnchor={points[i][0]>(minX+maxX)/2?'end':'start'} fontSize={labelSize}>{i?'终点':'起点'} u={label(i?recipe.parameterEnd:recipe.parameterStart)}</text></g>)}
   <g data-testid="uniform3951-mm-scale" stroke="#35475d" fill="#35475d" strokeWidth={stroke}><line x1={rulerX} y1={rulerY} x2={rulerX+step} y2={rulerY}/><line x1={rulerX} y1={rulerY-size*.4} x2={rulerX} y2={rulerY+size*.4}/><line x1={rulerX+step} y1={rulerY-size*.4} x2={rulerX+step} y2={rulerY+size*.4}/><text x={rulerX+step/2} y={rulerY-size*.65} stroke="none" fontSize={labelSize} textAnchor="middle">{label(step)} mm</text></g>
- </svg><figcaption><span>蓝 · 原曲线弦 U</span><span>橙 · 左纸边 B</span><span>绿 · 右纸边 B</span>{guides&&<span>紫虚线 · 原单位宽参考</span>}</figcaption><p>网格 {label(step)} mm · 1 原坐标单位 = 1 mm；显示仅改变视窗。</p></figure>;
+ {doc&&<DocumentJunctionMarks doc={doc} spatial/>}</svg><figcaption><span>蓝 · 原曲线弦 U</span><span>橙 · 左纸边 B</span><span>绿 · 右纸边 B</span>{guides&&<span>紫虚线 · 原单位宽参考</span>}</figcaption><p>网格 {label(step)} mm · 1 原坐标单位 = 1 mm；显示仅改变视窗。</p></figure>;
 }
 
 export default function UniformHelixCP3951Dialog({initial,onClose,onAdoptCP}:{initial?:UniformHelixCP3951Recipe;onClose:()=>void;onAdoptCP?:(doc:Doc)=>boolean}){

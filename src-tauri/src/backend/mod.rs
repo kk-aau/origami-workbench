@@ -9,6 +9,7 @@ pub mod operations;
 pub mod design;
 pub mod pdf;
 pub mod document_workers;
+mod diagram_open_cache;
 
 pub use server::{start, AppState, RunningServer, ServerConfig};
 pub use validation::validate_doc;

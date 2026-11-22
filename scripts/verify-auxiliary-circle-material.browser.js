@@ -39,7 +39,7 @@ async page=>{
  await page.evaluate(()=>{window.__auxiliaryCircleMaterialConfirm=window.confirm;window.confirm=()=>true;});
  try{
   await page.setViewportSize({width:1200,height:800});
-  for(const name of ['设置并开始使用','关闭窗口','保留当前工程']){const b=button(name);if(await b.count()&&await b.isVisible())await b.click();}
+  for(const name of ['使用默认位置开始','关闭窗口','保留当前工程']){const b=button(name);if(await b.count()&&await b.isVisible())await b.click();}
   const file=page.getByLabel('折痕工程文件',{exact:true});
   await file.setInputFiles('D:/codex/折纸工具/workbench/output/auxiliary-edit-fixtures/material-with-auxiliary.zhezhi.json');
   // The importer clears its file input once loaded. Read the actual loaded

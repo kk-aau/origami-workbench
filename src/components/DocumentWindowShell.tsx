@@ -6,6 +6,10 @@ import {preferenceStorage} from '../app/preferenceStorage';
 import WindowControls,{handleDesktopTitlebarMouseDown} from './WindowControls';
 import {ChromeIcon} from './HeaderMenu';
 import './DocumentWindowShell.css';
+import ProjectFileDrop from './ProjectFileDrop';
+import {identifyProjectFile} from '../app/projectFileRoutingTask';
+import {projectFileWorkspace} from '../app/projectFileRouting';
+import {launchWorkspaceFile} from '../app/workspaceFileWindow';
 
 const workspaceNames={edit:'折痕编辑',design:'基础形设计',tess:'镶嵌设计',sim:'三维模拟',diagram:'折序绘图'};
 const dragType='application/x-zhezhi-document';
@@ -24,8 +28,10 @@ export default function DocumentWindowShell(){
  const [snapshot,setSnapshot]=useState<DesktopDocumentSnapshot|null>(null),[layout,setLayout]=useState<DocumentWindowLayout>(()=>createDocumentWindowLayout());
  const [failure,setFailure]=useState(''),[working,setWorking]=useState(false),[draggedId,setDraggedId]=useState<string|null>(null),[fallbackMenu,setFallbackMenu]=useState<{kind:MenuKind;items:DesktopDocumentMenuItem[];x:number;y:number}|null>(null);
  const [dropSlot,setDropSlot]=useState<{id:string;after:boolean}|null>(null);
+ const [updateVersion,setUpdateVersion]=useState(''),[updateMessage,setUpdateMessage]=useState('');
+ const checking=useRef<ReturnType<NonNullable<typeof service>['checkUpdate']>|null>(null);
  const snapshotRef=useRef(snapshot),layoutRef=useRef(layout),stage=useRef<HTMLDivElement>(null),paneElements=useRef(new Map<string,HTMLDivElement>()),disposed=useRef(false);
- const pendingBounds=useRef<DesktopDocumentBounds[]|null>(null),sendingBounds=useRef(false),lastBounds=useRef(''),dragged=useRef<(DraggedDocument&{handled:boolean})|null>(null);
+ const pendingBounds=useRef<{rects:DesktopDocumentBounds[];viewport:{width:number;height:number}}|null>(null),sendingBounds=useRef(false),lastBounds=useRef(''),dragged=useRef<(DraggedDocument&{handled:boolean})|null>(null);
  const tabButtons=useRef(new Map<string,HTMLButtonElement>());
  const clearDragHints=useCallback(()=>{setDraggedId(null);setDropSlot(null);},[]);
  useEffect(()=>{
@@ -54,6 +60,25 @@ export default function DocumentWindowShell(){
  const ownViews=snapshot?.documents.filter(item=>item.windowId===snapshot.windowId)??[];
  const home=ownViews.find(item=>item.home),ownDocuments=ownViews.filter(item=>!item.home),documents=new Map((snapshot?.documents??[]).map(item=>[item.id,item]));
  const active=documents.get(layout.activeId??'');
+ const checkUpdate=useCallback(async(manual:boolean)=>{
+  if(!service)return;
+  if(manual)setUpdateMessage('正在检查更新…');
+  const pending=checking.current??(checking.current=service.checkUpdate());
+  try{
+   const {available,current,latest}=await pending;
+   if(disposed.current)return;
+   setUpdateVersion(available?latest:'');
+   if(available)setUpdateMessage('');
+   else if(manual)setUpdateMessage(current===latest?`已是最新版本 ${current}`:`当前 ${current}，公开版本 ${latest}`);
+  }catch(error){if(manual&&!disposed.current)setUpdateMessage(message(error));}
+  finally{if(checking.current===pending)checking.current=null;}
+ },[service]);
+ const mainShell=snapshot?.windowId==='main';
+ useEffect(()=>{
+  if(!mainShell)return;
+  const timer=window.setTimeout(()=>void checkUpdate(false),1000);
+  return ()=>window.clearTimeout(timer);
+ },[mainShell,checkUpdate]);
  const command=useCallback(async(value:DesktopDocumentCommand,id=layoutRef.current.activeId??home?.id)=>{
   if(!service||!id)throw Error('请先新建或选择作品。');
   if(id===home?.id&&!['new','open','settings','library'].includes(value)&&!value.startsWith('workspace:'))return;
@@ -67,8 +92,8 @@ export default function DocumentWindowShell(){
  const sendBounds=useCallback(async()=>{
   if(!service||sendingBounds.current)return;sendingBounds.current=true;
   try{while(pendingBounds.current&&!disposed.current){
-   const rects=pendingBounds.current;pendingBounds.current=null;const signature=JSON.stringify(rects);if(signature===lastBounds.current)continue;
-   try{await service.setBounds(rects);lastBounds.current=signature;}
+   const measurement=pendingBounds.current;pendingBounds.current=null;const {rects,viewport}=measurement;const signature=JSON.stringify(measurement);if(signature===lastBounds.current)continue;
+   try{await service.setBounds(rects,viewport);lastBounds.current=signature;}
    catch(cause){
     let obsolete=false;
     try{const latest=await service.list();const owned=new Set(latest.documents.filter(item=>item.windowId===latest.windowId).map(item=>item.id));obsolete=rects.some(rect=>!owned.has(rect.id));ingest(latest);}catch{/* Keep the original layout error when ownership cannot be checked. */}
@@ -81,25 +106,29 @@ export default function DocumentWindowShell(){
   const current=snapshotRef.current;if(!service||!current)return;
   for(const group of documentGroups(layoutRef.current.root)){if(group.selectedId)tabButtons.current.get(group.selectedId)?.closest<HTMLElement>('[data-document-tab]')?.scrollIntoView({block:'nearest',inline:'nearest'});}
   const rectangles=new Map<string,DOMRect>();for(const group of documentGroups(layoutRef.current.root)){const element=paneElements.current.get(group.id);const id=element?.dataset.nativeDocument;if(element&&id)rectangles.set(id,element.getBoundingClientRect());}
-  pendingBounds.current=current.documents.filter(item=>item.windowId===current.windowId).map(({id})=>{
+  const rects=current.documents.filter(item=>item.windowId===current.windowId).map(({id})=>{
    const box=rectangles.get(id);
    // A hidden native view keeps its last size. Zero dimensions skip the native resize.
    if(!box||box.width<1||box.height<1)return {id,x:0,y:0,width:0,height:0,visible:false};
    return {id,x:box.x,y:box.y,width:box.width,height:box.height,visible:true};
   });
+  if(window.innerWidth<1||window.innerHeight<1)return;
+  pendingBounds.current={rects,viewport:{width:window.innerWidth,height:window.innerHeight}};
   void sendBounds();
  },[service,sendBounds]);
  const ownership=ownViews.map(item=>item.id).join(',');
  useLayoutEffect(()=>{
   let request=0;const update=()=>{cancelAnimationFrame(request);request=requestAnimationFrame(measure);};
   const observer=new ResizeObserver(update);if(stage.current)observer.observe(stage.current);for(const element of paneElements.current.values())observer.observe(element);
+  const off=window.desktop?.window?.onStateChanged(()=>{lastBounds.current='';update();});
   window.addEventListener('resize',update);update();
-  return()=>{observer.disconnect();window.removeEventListener('resize',update);cancelAnimationFrame(request);};
+  return()=>{off?.();observer.disconnect();window.removeEventListener('resize',update);cancelAnimationFrame(request);};
  },[layout,ownership,measure]);
  useEffect(()=>{document.title=active?`${active.title||'未命名作品'} · 折纸工坊`:'折纸工坊';},[active?.title]);
 
  async function act(id:string){
   setFallbackMenu(null);
+  if(id==='check-update'){void checkUpdate(true);return;}
   if(id==='new'){await create();return;}
   if(id==='open'||id==='workspace-open'){await command('open');return;}
   if(id==='close'){if(active)await service?.close(active.id);await refresh();return;}
@@ -108,7 +137,7 @@ export default function DocumentWindowShell(){
  }
  function menuItems(kind:MenuKind):DesktopDocumentMenuItem[]{
   const enabled=!!active?.ready,editable=enabled&&!active?.busy&&!active?.saving;
-  if(kind==='file')return[{id:'new',label:'新建作品\tCtrl+N'},{id:'open',label:'打开作品…\tCtrl+O',enabled:!!service},{id:'save-artwork',label:'保存完整作品…\tCtrl+S',enabled:editable},{id:'file-workspace-separator',label:'',separator:true},{id:'workspace-open',label:`打开${workspaceFiles[active?.workspace??'edit']}工程…`,enabled:editable},{id:'save',label:`保存${workspaceFiles[active?.workspace??'edit']}工程`,enabled:editable},{id:'export',label:'导出当前工作区…',enabled:editable},{id:'print',label:(active?.workspace==='diagram'?'打印折序…':'打印折痕图…')+'\tCtrl+P',enabled:editable&&active?.workspace!=='design'},{id:'file-separator',label:'',separator:true},{id:'library',label:'打开文档库',enabled:editable},{id:'artwork-overview',label:'作品总览与恢复副本',enabled},{id:'settings',label:'工作区选项…',enabled},{id:'file-close-separator',label:'',separator:true},{id:'close',label:'关闭当前作品\tCtrl+W',enabled:!!active},{id:'close-window',label:'关闭窗口'}];
+  if(kind==='file')return[{id:'new',label:'新建作品\tCtrl+N'},{id:'open',label:'打开作品…\tCtrl+O',enabled:!!service},{id:'save-file',label:'保存作品\tCtrl+S',enabled:editable},{id:'save-file-as',label:'另存为…\tCtrl+Shift+S',enabled:editable},{id:'file-workspace-separator',label:'',separator:true},{id:'workspace-open',label:`打开${workspaceFiles[active?.workspace??'edit']}工程…`,enabled:editable},{id:'export',label:'导出当前工作区…',enabled:editable},{id:'print',label:(active?.workspace==='diagram'?'打印折序…':'打印折痕图…')+'\tCtrl+P',enabled:editable&&active?.workspace!=='design'},{id:'file-separator',label:'',separator:true},{id:'library',label:'打开文档库',enabled:editable},{id:'artwork-overview',label:'作品总览与恢复副本',enabled},{id:'settings',label:'工作区选项…',enabled},{id:'check-update',label:'检查更新…',enabled:!!service},{id:'file-close-separator',label:'',separator:true},{id:'close',label:'关闭当前作品\tCtrl+W',enabled:!!active},{id:'close-window',label:'关闭窗口'}];
   if(kind==='edit')return[{id:'undo',label:'撤销\tCtrl+Z',enabled:editable},{id:'redo',label:'重做\tCtrl+Shift+Z',enabled:editable}];
   if(kind==='workspace')return (Object.keys(workspaceNames) as (keyof typeof workspaceNames)[]).map(value=>({id:'workspace:'+value,label:workspaceNames[value],checked:active?.workspace===value,enabled:!!(active??home)?.ready}));
   return [];
@@ -123,11 +152,11 @@ export default function DocumentWindowShell(){
    if(event.defaultPrevented||event.repeat||event.isComposing||event.altKey||!(event.ctrlKey||event.metaKey))return;
    const target=event.target as HTMLElement|null;if(target?.closest('input,textarea,select,[contenteditable=true]'))return;
    const value=event.key.toLowerCase();let action:string|undefined;
-   if(value==='n')action='new';else if(value==='w')action='close';else if(value==='s')action='save-artwork';else if(value==='o')action='open';else if(value==='z')action=event.shiftKey?'redo':'undo';else if(value==='y')action='redo';
+   if(value==='n')action='new';else if(value==='w')action='close';else if(value==='s')action=event.shiftKey?'save-file-as':'save-file';else if(value==='o')action='open';else if(value==='z')action=event.shiftKey?'redo':'undo';else if(value==='y')action='redo';
    if(action){event.preventDefault();void run(()=>act(action!));}
   };
   window.addEventListener('keydown',key);
-  const off=window.desktop?.onCommand(value=>{if(value==='open'){void run(()=>act('open'));return;}if(value==='save'){void run(()=>command('save-artwork'));return;}if(value==='print'){void run(()=>command('print'));return;}void run(()=>command(value));});
+  const off=window.desktop?.onCommand(value=>{if(value==='open'){void run(()=>act('open'));return;}if(value==='save'){void run(()=>command('save-file'));return;}if(value==='print'){void run(()=>command('print'));return;}void run(()=>command(value));});
   return()=>{window.removeEventListener('keydown',key);off?.();};
  });
  useEffect(()=>{if(!fallbackMenu)return;const close=()=>setFallbackMenu(null),escape=(event:KeyboardEvent)=>{if(event.key==='Escape')close();};window.addEventListener('pointerdown',close);window.addEventListener('keydown',escape);return()=>{window.removeEventListener('pointerdown',close);window.removeEventListener('keydown',escape);};},[fallbackMenu]);
@@ -165,13 +194,13 @@ export default function DocumentWindowShell(){
    return;
   }
   if(action==='tab-options'){await activate(id);await command('settings',id);return;}
-  if(action==='tab-save')await command('save-artwork',id);
+  if(action==='tab-save')await command('save-file',id);
  }
  async function tabContext(event:MouseEvent,id:string){
   event.preventDefault();event.stopPropagation();if(!service||working)return;
   const current=snapshotRef.current,item=current?.documents.find(item=>item.id===id);if(!item)return;
   const group=documentGroups(layoutRef.current.root).find(group=>group.documentIds.includes(id));
-  const items:DesktopDocumentMenuItem[]=[{id:'tab-save',label:'保存完整作品',enabled:item.ready&&!item.busy&&!item.saving},{id:'tab-options',label:'工作区选项…',enabled:item.ready},{id:'tab-close-separator',label:'',separator:true},{id:'tab-close',label:'关闭作品'},{id:'tab-close-others',label:'关闭其他作品',enabled:ownDocuments.length>1},{id:'tab-close-right',label:'关闭右侧作品',enabled:!!group&&group.documentIds.indexOf(id)<group.documentIds.length-1}];
+  const items:DesktopDocumentMenuItem[]=[{id:'tab-save',label:'保存工程',enabled:item.ready&&!item.busy&&!item.saving},{id:'tab-options',label:'工作区选项…',enabled:item.ready},{id:'tab-close-separator',label:'',separator:true},{id:'tab-close',label:'关闭作品'},{id:'tab-close-others',label:'关闭其他作品',enabled:ownDocuments.length>1},{id:'tab-close-right',label:'关闭右侧作品',enabled:!!group&&group.documentIds.indexOf(id)<group.documentIds.length-1}];
   const box=event.currentTarget.getBoundingClientRect();await run(async()=>{const selected=await service.popupMenu(items,{x:event.clientX||box.left+8,y:event.clientY||box.bottom});if(selected)await tabAction(selected,id);});
  }
  async function showTabList(event:MouseEvent<HTMLButtonElement>,group:DocumentGroup){
@@ -195,13 +224,18 @@ export default function DocumentWindowShell(){
   </section>;
  }
  return <div className="document-window-shell" data-window-id={snapshot?.windowId??''}>
+  <ProjectFileDrop onError={setFailure} onOpen={async(file,signal)=>{
+    const fileType=await identifyProjectFile(file,signal);signal.throwIfAborted();
+    await launchWorkspaceFile(projectFileWorkspace(fileType),{kind:'file',file,fileType});
+  }}/>
   <header className="document-window-header" onMouseDown={handleDesktopTitlebarMouseDown}>
    <div className="document-window-brand"><svg viewBox="0 0 28 28" aria-hidden="true"><path d="M3 3h22v22H3ZM3 3l22 22M25 3 3 25M14 3v22"/></svg><span>折纸工坊</span></div>
    <nav className="document-window-menus" aria-label="应用菜单" data-no-window-drag>{(['file','edit','workspace'] as MenuKind[]).map((kind,index)=><button type="button" key={kind} onClick={event=>void openMenu(kind,event)} aria-haspopup="menu" disabled={working}>{['文件','编辑',active?workspaceNames[active.workspace]:'工作区'][index]}{kind==='workspace'&&<ChromeIcon name="down"/>}</button>)}</nav>
    <div className="document-window-drag-space" aria-hidden="true"/>
    <div className="document-window-actions" data-no-window-drag>
     <button type="button" title="打开作品（Ctrl+O）" aria-label="打开作品" onClick={()=>void run(()=>act('open'))} disabled={!service||working}>打开</button>
-    <button type="button" className="primary" onClick={()=>void run(()=>command('save-artwork'))} disabled={!active?.ready||active?.saving||active?.busy||working}>{active?.saving?'保存中…':'保存作品'}</button>
+    <button type="button" className="primary" title="保存作品（Ctrl+S）" onClick={()=>void run(()=>command('save-file'))} disabled={!active?.ready||active?.saving||active?.busy||working}>{active?.saving?'保存中…':'保存作品'}</button>
+    <button type="button" title="另存为（Ctrl+Shift+S）" onClick={()=>void run(()=>command('save-file-as'))} disabled={!active?.ready||active?.saving||active?.busy||working}>另存为</button>
     <button type="button" className="document-options-button" aria-label="工作区选项" title="工作区选项、帮助与工程信息" disabled={!active?.ready||working} onClick={()=>void run(()=>command('settings'))}><ChromeIcon name="settings"/></button>
    </div>
    <WindowControls onError={setFailure}/>
@@ -209,7 +243,7 @@ export default function DocumentWindowShell(){
   <main className="document-window-stage" ref={stage} onDragOver={dragOver} onDragLeave={event=>{if(!event.relatedTarget&&!dragged.current)setDraggedId(null);}}>
    {service?groupView(documentGroups(layout.root)[0]):<div className="document-window-empty">请从桌面版打开作品窗口</div>}
   </main>
-  <footer className="document-window-status"><span className="document-window-online">● 本机运行</span><span>{active?`${active.title||'未命名作品'} · ${workspaceNames[active.workspace]}${active.dirty?' · 尚未保存':''}`:'文档区'}</span><span className="document-window-status-spacer"/>{failure?<span role="alert" className="document-window-error" title={failure}>{failure}</span>:<span>{ownDocuments.length} 个作品{working?' · 正在处理':''}</span>}</footer>
+  <footer className="document-window-status"><span className="document-window-online">● 本机运行</span><span>{active?`${active.title||'未命名作品'} · ${workspaceNames[active.workspace]}${active.dirty?' · 尚未保存':''}`:'文档区'}</span><span className="document-window-status-spacer"/>{updateMessage&&<span role="status" title={updateMessage}>{updateMessage}</span>}{updateVersion&&<button className="document-window-update" title="打开发行页，查看版本说明并下载" onClick={()=>void run(()=>service!.openReleasePage())}>发现新版 {updateVersion} · 查看更新</button>}{failure?<span role="alert" className="document-window-error" title={failure}>{failure}</span>:<span>{ownDocuments.length} 个作品{working?' · 正在处理':''}</span>}</footer>
   {fallbackMenu&&<div className="document-window-fallback-menu" role="menu" aria-label="应用菜单" style={{left:fallbackMenu.x,top:fallbackMenu.y}} onPointerDown={event=>event.stopPropagation()}>{fallbackMenu.items.map(item=>item.separator?<hr key={item.id}/>:<button type="button" key={item.id} disabled={item.enabled===false} role={item.checked!==undefined?'menuitemcheckbox':'menuitem'} aria-checked={item.checked} onClick={()=>void run(()=>act(item.id))}>{item.checked?'✓ ':''}{item.label.replace('\t','　')}</button>)}</div>}
  </div>;
 }

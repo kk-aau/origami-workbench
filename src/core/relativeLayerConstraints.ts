@@ -5,6 +5,10 @@ import {validateLayerSolutionTree,type FaceOrder,type LayerNode} from './layerSo
 import type {FlatFoldResult,FlatLayerPreference,Point} from './types';
 
 const pair=(a:number,b:number)=>a<b?`${a}:${b}`:`${b}:${a}`;
+/** Absence from a tolerance-based solution tree is not proof of zero area. */
+export class MissingLayerOverlapError extends Error {
+  constructor(){super('指定纸面之间没有可认证的重叠关系，请选择实际重叠的两个纸面。');this.name='MissingLayerOverlapError';}
+}
 export function validateRelativeLayerConstraints(required:FlatLayerPreference[],faceCount:number):void {
   try{validateLayerPreferences(required,faceCount);}catch{throw Error('相对层序约束需要当前模型中两个不同纸面的有效编号。');}
 }
@@ -38,7 +42,7 @@ export function constrainLayerSolutionTree(tree:LayerNode,vertices:Point[],faces
     scopes.set(node,keys);return keys;
   };
   const all=scope(tree);
-  for(const key of expected.keys())if(!all.has(key))throw Error('指定纸面之间没有可认证的重叠关系，请选择实际重叠的两个纸面。');
+  for(const key of expected.keys())if(!all.has(key))throw new MissingLayerOverlapError();
   const cache=new Map<LayerNode,LayerNode|null>();
   const prune=(node:LayerNode):LayerNode|null=>{
     if(cache.has(node))return cache.get(node)!;

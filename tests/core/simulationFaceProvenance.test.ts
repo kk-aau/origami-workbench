@@ -1,3 +1,4 @@
+import {OrigamiModel} from '../../vendor/simulator/oristudio/packages/origami-simulator/src/model';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {prepareFoldModel} from '../../vendor/simulator/oristudio/packages/origami-simulator/src/prepare';
@@ -77,7 +78,7 @@ test('hole triangulation and FOLD round trip retain the exact original face prov
   const marker = prepared.fold.zhezhi_simulation_mesh as {sourceFaceCount: number; triangleSourceFaces: number[]};
   assert.equal(marker.sourceFaceCount, 1);
   assert.deepEqual(marker.triangleSourceFaces, prepared.triangleSourceFaces);
-  const snapshot = simulationFoldSnapshot(prepared, prepared.positions, 0, 0);
+  const snapshot = simulationFoldSnapshot(prepared, new OrigamiModel(prepared).originalPositions, 0, 0);
   const reloaded = prepareSimulationDocument(JSON.parse(JSON.stringify(snapshot))).prepared;
   assert.deepEqual(reloaded.triangleSourceFaces, prepared.triangleSourceFaces);
   assert.equal(reloaded.sourceFaceCount, 1);

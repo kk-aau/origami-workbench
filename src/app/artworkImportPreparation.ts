@@ -1,8 +1,7 @@
 import type {ArtworkProject} from './artworkProject';
 import {prepareArtworkProject,prepareParsedArtworkProject} from './artworkProject';
 import type {DiagramProject} from './diagramProject';
-import {exportDiagramProject,importDiagramProject} from './diagramProject';
-import {normalizeDiagramProjectCP} from './diagramCP';
+import {normalizeImportedDiagramCP} from './diagramCP';
 import {prepareExistingCreases} from './diagramProjectPreparation';
 import {curveDesignFromDocument} from './curveDesignProject';
 import {registerDiagramProjectSaveBlob} from './diagramProjectTransport';
@@ -37,7 +36,9 @@ export function prepareArtworkImport(value:string|unknown,onStage?:(message:stri
   curveDesignFromDocument(project.editor);
   if(project.diagram){
     onStage?.('正在后台准备折序与完整交点');
-    project.diagram=prepareExistingCreases(normalizeDiagramProjectCP(importDiagramProject(exportDiagramProject(project.diagram))).project);
+    // The artwork codec has already imported every snapshot in chronological
+    // order. Apply only the drawing-specific preparation to that owned result.
+    project.diagram=prepareExistingCreases(normalizeImportedDiagramCP(project.diagram).project);
   }
   onStage?.('正在准备作品显示数据');
   return {project,preparation:{editorSignature:JSON.stringify(project.editor)}};

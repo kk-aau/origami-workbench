@@ -5,7 +5,7 @@ import {DIAGRAM_LINE_STYLES,DIAGRAM_STROKE_PATTERN_LABELS,diagramLineDasharray,t
 import ColorPicker from '../ui/ColorPicker';
 import './DiagramLineStyleControls.css';
 import {useAdaptiveLineStyle} from '../app/useAdaptiveLineStyle';
-import {adaptiveLineStroke} from '../app/adaptiveLineStyle';
+import {resolveLineStroke} from '../app/adaptiveLineStyle';
 
 interface AppearanceProps {
   value:DiagramLineAppearance;
@@ -40,21 +40,18 @@ interface Props {
   adaptiveLineStyle?:boolean;
 }
 export function DiagramLineStyleControls({lineStyle,defaults,onLine,onChange,disabled=false,compact=false,adaptiveLineStyle}:Props) {
-  const [globalAdaptiveLines,setAdaptiveLines]=useAdaptiveLineStyle(),adaptiveLines=adaptiveLineStyle??globalAdaptiveLines;
-  const [adaptiveError,setAdaptiveError]=useState('');
+  const [globalAdaptiveLines]=useAdaptiveLineStyle(),adaptiveLines=adaptiveLineStyle??globalAdaptiveLines;
   return <div className="diagram-line-style-controls" data-diagram-line-style-controls="true">
     <div className="diagram-line-category-controls" role="group" aria-label="选择绘图线条类别">
       {DIAGRAM_LINE_STYLES.map(style=>{
         const paint=defaults[style],width=Math.max(.9,Math.min(2.4,paint.width*1.6)),label=LINE_LABELS[style];
-        const preview=adaptiveLineStroke(30,width,diagramLineDasharray(style,width,paint.strokePattern),{enabled:adaptiveLines,units:1,linecap:'round'});
+        const preview=resolveLineStroke(30,width,diagramLineDasharray(style,width,paint.strokePattern),{enabled:adaptiveLines,units:1,linecap:'round'});
         return <button key={style} type="button" data-diagram-line-category={style} aria-label={`绘制${label}`} aria-pressed={lineStyle===style} disabled={disabled} title={style==='boundary'?'绘制边界标记；不改变纸张或 CP':`绘制${label}`} onClick={()=>onLine(style)}>
-          <svg viewBox="0 0 34 10" aria-hidden="true"><line x1="2" y1="5" x2="32" y2="5" stroke={paint.color} strokeWidth={preview.width} strokeLinecap="round" strokeDasharray={preview.dash} strokeDashoffset={preview.dashOffset}/></svg><span>{label}</span>
+          <svg viewBox="0 0 34 10" aria-hidden="true"><line x1="2" y1="5" x2="32" y2="5" stroke={paint.color} strokeWidth={preview.width} strokeLinecap="round" strokeDasharray={preview.dash} strokeDashoffset={preview.dashOffset} pathLength={preview.pathLength}/></svg><span>{label}</span>
         </button>;
       })}
     </div>
-    {!compact&&<><DiagramLineAppearanceControls key={lineStyle} value={defaults[lineStyle]} onChange={patch=>onChange(lineStyle,patch)} disabled={disabled} ariaLabel={`${LINE_LABELS[lineStyle]}全局`}/>
-    <label className="diagram-adaptive-line-control" title="按显示长度调整虚线密度和粗细，帮助区分短折痕"><input type="checkbox" aria-label="自适应线型" checked={adaptiveLines} disabled={disabled} onChange={event=>{try{setAdaptiveLines(event.currentTarget.checked);setAdaptiveError('');}catch{setAdaptiveError('显示设置未保存，请检查本机存储后重试。');}}}/>自适应线型</label></>}
-    {adaptiveError&&<span role="alert">{adaptiveError}</span>}
+    {!compact&&<DiagramLineAppearanceControls key={lineStyle} value={defaults[lineStyle]} onChange={patch=>onChange(lineStyle,patch)} disabled={disabled} ariaLabel={`${LINE_LABELS[lineStyle]}全局`}/>}
   </div>;
 }
 export default DiagramLineStyleControls;

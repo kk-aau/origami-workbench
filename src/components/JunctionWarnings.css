@@ -1,0 +1,10 @@
+.junction-warnings{position:relative;min-width:0;font-size:12px;color:#804517;background:#fff5e6;text-align:left}
+.junction-warnings>summary{cursor:pointer;padding:3px 8px;overflow-wrap:anywhere}
+.junction-warnings>ul{position:absolute;z-index:12;left:0;top:100%;min-width:min(290px,80vw);max-height:180px;overflow:auto;margin:0;padding:6px 10px 6px 26px;background:#fffaf2;border:1px solid #dcc9ab;box-shadow:0 2px 6px #0002}
+.diagram-footer .junction-warnings>ul{top:auto;bottom:100%}
+.cp-detached-settings .junction-warnings>ul{position:static;min-width:0;padding-left:16px}
+
+.junction-warnings li svg{vertical-align:middle}
+.diagram-cp-interactive-error svg{width:100%;min-height:0;flex:1}
+.cp-junction-switch{display:inline-flex;align-items:center;gap:4px;white-space:nowrap;cursor:pointer}
+.cp-junction-switch input{margin:0}

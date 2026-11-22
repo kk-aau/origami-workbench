@@ -14,7 +14,8 @@
       "capabilities": [
         "main-local",
         "startup-local",
-        "shell-local"
+        "shell-local",
+        "cp-preview-local"
       ]
     }
   },

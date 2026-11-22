@@ -30,7 +30,7 @@
 .diagram-symbol-library{max-height:290px;overflow-y:auto;scrollbar-width:thin;padding-right:3px;align-content:start}.diagram-symbol-item span{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.diagram-component-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-bottom:12px}.diagram-symbol-components{background:#f2f6ee}
 .diagram-guide-toggle{display:flex;align-items:center;gap:5px;margin:12px 0 6px;color:var(--diagram-muted);cursor:pointer}.diagram-guide-toggle input{accent-color:var(--diagram-accent);margin:0}
 .diagram-cad-flip-field{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:45px;padding:7px 10px;border:1px solid var(--diagram-line);border-radius:4px;background:var(--diagram-sheet);color:var(--diagram-muted)}.diagram-cad-flip-field input{accent-color:var(--diagram-accent)}
-.diagram-edit-layout{display:grid;grid-template-columns:minmax(0,1fr) auto;flex:1;min-height:0;min-width:0;margin-top:8px;border-top:1px solid var(--diagram-line)}
+.diagram-edit-layout{display:grid;grid-template-columns:minmax(0,1fr);flex:1;min-height:0;min-width:0;margin-top:8px;border-top:1px solid var(--diagram-line)}
 .diagram-illustration{display:flex;flex-direction:column;min-height:0;min-width:0;overflow:hidden}
 .diagram-paper-work-area{display:flex;flex:1;min-height:0;min-width:0;overflow:hidden}.diagram-paper-work-area>.diagram-model-surface{flex:1;min-width:0;min-height:0}
 .diagram-step-caption{display:grid;grid-template-columns:minmax(0,1fr) 106px;gap:14px;padding:10px 13px 12px;border-top:1px solid var(--diagram-line);background:#f4f7ef;flex-shrink:0;min-width:0}
@@ -41,7 +41,7 @@
 @media(max-width:1280px){.diagram-step-caption{grid-template-columns:minmax(0,1fr) 86px;gap:8px;padding:8px}.diagram-step-caption textarea{font-size:10px}.diagram-step-caption>label>span{margin-bottom:4px}.diagram-step-navigation small{font-size:7px}.diagram-canvas-controls{right:8px;bottom:8px;max-width:calc(100% - 16px)}.diagram-canvas-actions{gap:1px}.diagram-canvas-actions button{padding:2px 3px}}
 @media(max-height:720px){.diagram-step-caption{padding-top:7px;padding-bottom:7px}.diagram-step-caption textarea{min-height:39px;max-height:75px}.diagram-step-navigation{gap:3px}.diagram-layer-status{padding-top:5px;padding-bottom:5px}}
 .diagram-transform-fields{display:grid;grid-template-columns:minmax(0,1fr) 80px;align-items:end;gap:8px;margin:14px 0 8px}.diagram-transform-fields button{height:29px;font-size:10px;padding:4px}.diagram-selection-actions{margin-top:6px}
-.diagram-model-svg.diagram-tool-pan{cursor:grab}.diagram-model-svg.diagram-tool-pan:active{cursor:grabbing}.diagram-model-svg.diagram-tool-erase{cursor:cell}.diagram-model-svg.diagram-tool-polyline,.diagram-model-svg.diagram-tool-perpendicular,.diagram-model-svg.diagram-tool-parallel,.diagram-model-svg.diagram-tool-bisector{cursor:crosshair}.diagram-model-svg.diagram-tool-trim,.diagram-model-svg.diagram-tool-extend{cursor:pointer}
+.diagram-model-svg.diagram-tool-pan{cursor:grab}.diagram-model-svg.diagram-tool-pan:active{cursor:grabbing}.diagram-model-svg.diagram-tool-erase{cursor:cell}.diagram-model-svg.diagram-tool-polyline,.diagram-model-svg.diagram-tool-perpendicular,.diagram-model-svg.diagram-tool-parallel,.diagram-model-svg.diagram-tool-bisector{cursor:crosshair}.diagram-model-svg.diagram-tool-trim{cursor:pointer}
 .diagram-canvas-readout{position:absolute;left:14px;bottom:14px;color:#8b9b83;font-size:9px;pointer-events:none;background:#fffefad9;padding:4px 6px;border-radius:3px}
 @media(max-width:1280px){.diagram-drafting-bar{padding:6px 8px}.diagram-drafting-bar>div{gap:5px}.diagram-symbol-library{max-height:245px}.diagram-symbol-filters{grid-template-columns:minmax(0,1fr) 80px}}
 .diagram-fold-link-controls header label{display:flex;align-items:center;gap:5px;font-size:11px;color:#426a55}
@@ -66,9 +66,9 @@
 .diagram-step-caption-fields label>span{display:flex;align-items:center;gap:9px;font-size:10px;font-weight:600;margin-bottom:5px;color:#48634e}
 .diagram-step-caption-fields .diagram-step-title-field{display:grid;grid-template-columns:64px minmax(0,1fr);align-items:center;gap:8px}
 .diagram-step-title-field>span{margin-bottom:0!important}
-.diagram-step-title-field input{width:100%;min-width:0;height:28px;border:1px solid #d3dfcf;border-radius:4px;padding:4px 8px;background:var(--diagram-sheet);color:var(--diagram-ink);font:inherit;font-size:11px}
-.diagram-step-title-field input::placeholder{color:var(--diagram-muted)}
-.diagram-step-title-field input:focus-visible,.diagram-step-caption textarea:focus-visible{outline:2px solid #426f59;outline-offset:1px}
+.diagram-step-title-field textarea{width:100%;min-width:0;min-height:40px;resize:vertical;border:1px solid #d3dfcf;border-radius:4px;padding:4px 8px;background:var(--diagram-sheet);color:var(--diagram-ink);font:inherit;font-size:11px}
+.diagram-step-title-field textarea::placeholder{color:var(--diagram-muted)}
+.diagram-step-title-field textarea:focus-visible,.diagram-step-caption textarea:focus-visible{outline:2px solid #426f59;outline-offset:1px}
 .diagram-drafting-bar .diagram-paper-parameters{column-gap:12px;row-gap:6px}
 .diagram-paper-parameters input[type=color]{width:24px;height:22px;padding:2px;border:1px solid var(--diagram-line);border-radius:3px;background:var(--diagram-sheet);cursor:pointer}
 .diagram-paper-parameters .number-field{display:flex;align-items:center;gap:6px;margin:0;min-width:0}
@@ -83,3 +83,12 @@
 .diagram-precision-settings>summary:focus-visible{outline:2px solid #47785c;outline-offset:2px;border-radius:3px}
 .diagram-precision-settings[open]>summary{margin-bottom:8px}
 .diagram-precision-settings+.diagram-selection-actions{margin-top:12px}
+
+.diagram-editor-cp-choices{border:0;padding:0;margin:0;display:grid;gap:4px;min-width:0}
+.diagram-editor-cp-choices legend{font-weight:600;margin-bottom:8px}
+.diagram-editor-cp-choices label{display:flex;align-items:center;gap:8px;padding:7px 9px;border-radius:4px;cursor:pointer}
+.diagram-editor-cp-choices label:has(:checked){background:var(--ui-dialog-soft,#edf3eb)}
+.diagram-editor-cp-choices span{min-width:0;overflow-wrap:anywhere}
+.diagram-editor-cp-choices small{display:block;opacity:.72}
+
+.diagram-rename-dialog textarea{box-sizing:border-box;min-width:0;width:100%;min-height:54px;resize:vertical;font:inherit;padding:6px 8px}

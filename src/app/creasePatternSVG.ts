@@ -1,5 +1,6 @@
 import {creasePaintOrder} from './creasePaintOrder';
 import {validateDoc,type Doc} from '../core/types';
+import {readPaperPatterns} from './paperPatterns';
 import {getDrawingBounds,getPaperBounds,getGridReferenceBounds,paperPath,paperFillRule,type Bounds} from './paper';
 import {objectsSVG} from './drawingObjects';
 import {DISPLAY_PIXEL_MM,validateCreaseDisplay,type CreaseDisplay} from './creaseDisplay';
@@ -50,14 +51,16 @@ export function creasePatternSVG(doc:Doc,preferences:CreaseDisplay,crop?:Bounds,
  if(!Number.isFinite(units)||units<=0||typeof adaptive!=='boolean')throw new Error('折痕线型显示参数无效。');
  if(![bounds.x,bounds.y,bounds.width,bounds.height].every(Number.isFinite)||bounds.width<=0||bounds.height<=0)throw new Error('导出范围无效。');
  const {x,y,width,height}=bounds,outline=paperPath(doc),backgroundGrid=gridSVG(doc,bounds,outline,units,grid);
+ const front=readPaperPatterns(doc.metadata?.paperPatterns)?.front,paper=getPaperBounds(doc);
+ const printed=front&&outline?`<defs><clipPath id="cp-paper-print"><path d="${outline}" clip-rule="${paperFillRule(doc)}"/></clipPath></defs><image href="${front}" x="${paper.x}" y="${paper.y}" width="${paper.width}" height="${paper.height}" preserveAspectRatio="none" clip-path="url(#cp-paper-print)"/>`:'';
  // Keep original paper and export bounds even when boundary strokes are hidden.
  const segments=doc.segments.filter(s=>!(strokeOptions?.hideExistingCreases&&s.assignment==='F')&&(s.assignment==='A'?visible.auxiliary:visible.main));
  const objects=doc.objects?.filter(o=>(o.kind!=='mark'||visible.marks)&&(o.kind!=='text'||visible.comments));
  const lines=creasePaintOrder(segments).map(s=>{
   const stroke=creaseLineStroke(s,display.lineStyle,s.assignment==='A'?display.auxLineWidth:display.lineWidth,units,adaptive,display.roundedEnds,display.auxLineStyle,strokeOptions?.solidCreases),title=creaseShortLineTitle(s,stroke.limited);
-  const attributes=`x1="${s.a[0]}" y1="${s.a[1]}" x2="${s.b[0]}" y2="${s.b[1]}" stroke="${stroke.color}" stroke-width="${stroke.width}" stroke-linecap="${display.roundedEnds?'round':'butt'}"${stroke.dash?` stroke-dasharray="${stroke.dash}"`:''}${stroke.dashOffset===undefined?'':` stroke-dashoffset="${stroke.dashOffset}"`}`;
+  const attributes=`x1="${s.a[0]}" y1="${s.a[1]}" x2="${s.b[0]}" y2="${s.b[1]}" stroke="${stroke.color}" stroke-width="${stroke.width}" stroke-linecap="${display.roundedEnds?'round':'butt'}"${stroke.dash?` stroke-dasharray="${stroke.dash}"`:''}${stroke.pathLength===undefined?'':` pathLength="${stroke.pathLength}"`}${stroke.dashOffset===undefined?'':` stroke-dashoffset="${stroke.dashOffset}"`}`;
   return title?`<line ${attributes}><title>${title}</title></line>`:`<line ${attributes}/>`;
  }).join('');
- return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}mm" height="${height}mm" overflow="hidden" shape-rendering="${display.antiAlias?'geometricPrecision':'crispEdges'}" viewBox="${x} ${y} ${width} ${height}"><path d="${outline}" fill="white" fill-rule="${paperFillRule(doc)}"/>${backgroundGrid}${lines}${visible.main?creaseVerticesSVG(segments,display,DISPLAY_PIXEL_MM):''}${objectsSVG({...doc,objects},(display.markLineWidth??1.3)*DISPLAY_PIXEL_MM)}</svg>`;
+ return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}mm" height="${height}mm" overflow="hidden" shape-rendering="${display.antiAlias?'geometricPrecision':'crispEdges'}" viewBox="${x} ${y} ${width} ${height}"><path d="${outline}" fill="white" fill-rule="${paperFillRule(doc)}"/>${printed}${backgroundGrid}${lines}${visible.main?creaseVerticesSVG(segments,display,DISPLAY_PIXEL_MM):''}${objectsSVG({...doc,objects},(display.markLineWidth??1.3)*DISPLAY_PIXEL_MM)}</svg>`;
 }
 

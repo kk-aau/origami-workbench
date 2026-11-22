@@ -96,7 +96,7 @@ async page=>{
  const pageError=error=>errors.push(error.message);page.on('pageerror',pageError);
  await page.evaluate(()=>{window.__sim100StyleOriginalConfirm=window.confirm;window.confirm=()=>true;});
  try{
-  for(const name of ['设置并开始使用','关闭窗口','保留当前工程'])if(await button(name).count())await button(name).click();
+  for(const name of ['使用默认位置开始','关闭窗口','保留当前工程'])if(await button(name).count())await button(name).click();
   for(const backend of ['webgl2','cpu']){
    await page.setViewportSize({width:1200,height:800});
    const source=paper(backend);await upload('折痕工程文件',source);

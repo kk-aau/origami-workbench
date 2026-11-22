@@ -3,24 +3,101 @@ import assert from 'node:assert/strict';
 import {buildDiagramFold} from '../../src/core/geometry';
 import {computeFlatFold} from '../../src/core/flatFold';
 import {createDiagramSpatialPose,reprojectDiagramSpatialPose,validateDiagramSpatialPose,restoreDiagramSpatialLayers,prepareDiagramSpatialHistory,cloneDiagramPoseWithSpatialProof,diagramSpatialContactOrders,completedSpatialCreases,spatialFaceMatrix,projectDiagramSpatialPoint,liftDiagramFoldMatrix} from '../../src/app/diagramSpatialPose';
+import {solveSpatialLayerContacts,spatialContactGeometry} from '../../src/app/diagramSpatialLayerSolver';
 import {applyRigidFoldTransform} from '../../src/core/rigidFoldGeometry';
+import {createDiagramProject,adoptDiagramPose,exportDiagramProject,importDiagramProject,prepareParsedDiagramProject,type DiagramPose} from '../../src/app/diagramProject';
+import {artworkCRC32} from '../../src/app/artworkZipIntegrity';
+import {blankDoc} from '../../src/app/state';
 import {modelOverlapRegions} from '../../src/app/modelOverlapRegions';
 import {modelRegionLayers} from '../../src/app/modelRegionLayers';
-import type {DiagramPose} from '../../src/app/diagramProject';
-import type {Doc,Point,Segment} from '../../src/core/types';
+import type {Doc,Point,Segment,FoldGraph} from '../../src/core/types';
 
 function document(first=90,second=-45):Doc {
   const segments:Segment[]=[{id:'b0',a:[0,0],b:[90,0],assignment:'B',angle:0},{id:'b1',a:[90,0],b:[90,90],assignment:'B',angle:0},{id:'b2',a:[90,90],b:[0,90],assignment:'B',angle:0},{id:'b3',a:[0,90],b:[0,0],assignment:'B',angle:0},
     {id:'crease-1',a:[30,0],b:[30,90],assignment:first<0?'M':'V',angle:first},{id:'crease-2',a:[60,0],b:[60,90],assignment:second>0?'V':'M',angle:second}];
   return {schemaVersion:2,name:'空间角度测试',paper:{width:90,height:90},segments};
 }
+test('an edge-on material basis stays edge-on after translation in an oblique screen frame',()=>{
+ const spatial=createDiagramSpatialPose(document()).spatial;
+ const rotation=[.6,-.8,0,.8,.6,0,0,0,1];
+ const basis=(shift:number)=>spatialFaceMatrix({...spatial,camera:{yaw:0,elevation:0,rotation},
+   faceTransforms:[{rotation:[.6,0,.8,.8,0,-.6,0,1,0],translation:[shift,shift,0]}]},0);
+ assert.deepEqual(basis(800000).slice(0,4),basis(0).slice(0,4));
+});
+
 function spatialPose(doc:Doc,previous?:DiagramPose,camera?:{yaw:number;elevation:number}):DiagramPose {
   const value=createDiagramSpatialPose(doc,0,undefined,previous,camera);return {sourceStateId:'cp',sourceRevision:0,sourceDoc:structuredClone(doc),...value};
 }
+test('portable contact groups survive title edits and an invalid locked order falls back even with a matching checksum',()=>{
+  const doc=document(180,90),project=createDiagramProject(doc),step=project.steps[0],pose=spatialPose(doc);
+  pose.spatial!.layerContacts=solveSpatialLayerContacts(buildDiagramFold(doc).graph,pose.spatial!,[],undefined,pose.result,true).contacts;
+  const raw=JSON.parse(exportDiagramProject(adoptDiagramPose(project,step.id,step.beforeId,pose.result,undefined,pose.spatial)));
+  assert.equal(raw.spatialContactSolutions.groups.length,1);
+  raw.steps[0].title='修改文字';
+  const plain={...raw};delete plain.spatialContactSolutions;
+  const expected=prepareParsedDiagramProject(structuredClone(plain));
+  const load=(expectedHits:number)=>{
+    let hits:number|undefined;
+    const actual=prepareParsedDiagramProject(structuredClone(raw),undefined,(stage,n)=>{if(stage==='restore')hits=n;});
+    assert.deepEqual(actual,expected);assert.equal(hits,expectedHits);
+  };
+  load(1);
+  const edited=structuredClone(raw);
+  const source=edited.states.find((s:{id:string})=>s.id===step.beforeId);
+  source.revision++;
+  edited.steps[0].pose.sourceRevision=source.revision;
+  for(const mode of ['flat','spatial','pulled']){
+    const variant=edited.steps[0].paperStates?.[mode];
+    if(variant)variant.sourceRevision=source.revision;
+  }
+  let revisionHits:number|undefined;
+  prepareParsedDiagramProject(edited,undefined,(stage,n)=>{if(stage==='restore')revisionHits=n;});
+  assert.equal(revisionHits,0);
+  const entry=raw.spatialContactSolutions.groups[0];
+  entry.orders[0][2]*=-1;
+  const bytes=new TextEncoder().encode(JSON.stringify([entry.input,entry.orders]));
+  entry.checksum=bytes.length.toString(36)+'-'+artworkCRC32(bytes).toString(16);
+  load(0);
+  raw.spatialContactSolutions={version:100,groups:[]};load(0);
+});
+test('advancing folds in the same fixed frame preserves the camera exactly across steps',()=>{
+  const fixed={point:[10,10] as Point,matrix:[1,0,0,1,0,0] as [number,number,number,number,number,number],
+    spatialTransform:{rotation:[Math.cos(.3),-Math.sin(.3),0,Math.sin(.3),Math.cos(.3),0,0,0,1],translation:[50,250,0] as [number,number,number]}};
+  const first=document(),camera={yaw:15,elevation:30,pivot:[.25,106.25,0] as [number,number,number]};
+  let pose:DiagramPose={sourceStateId:'cp',sourceRevision:0,sourceDoc:first,...createDiagramSpatialPose(first,0,fixed,undefined,camera)};
+  const initial=structuredClone(pose.spatial!.camera);
+  for(const angle of [70,60,45]){
+    const doc=document(angle),next=createDiagramSpatialPose(doc,0,fixed,pose);
+    assert.deepEqual(next.spatial.camera,initial);
+    assert.deepEqual(next.spatial.faceTransforms[0],fixed.spatialTransform);
+    assert.equal(next.result.layers.status,'solved');
+    pose={...pose,sourceDoc:doc,...next};
+  }
+});
 function flatPose(doc=document(180,-180)):DiagramPose {
   const result=computeFlatFold(doc,undefined,{flatCreases:'marks'});assert.equal(result.geometry.status,'ready');assert.equal(result.layers.status,'solved',result.layers.message);
   return {sourceStateId:'cp',sourceRevision:0,sourceDoc:structuredClone(doc),result};
 }
+test('saving and reopening a corrected hinge loop uses its original anchored solve mode',()=>{
+  const doc=blankDoc('分段铰链',100,100),joint:Point=[50+1e-10,50];
+  // The two parts of the same hinge have slightly different directions.
+  // Both paths pass rigidity checks but produce distinct transforms.
+  const rays:[Point,number][]=[[[50,0],60],[[50,100],60],[[0,50],0],[[100,50],0]];
+  rays.forEach(([end,angle],i)=>doc.segments.push({id:'ray-'+i,a:joint,b:end,assignment:'V',angle}));
+  const original=createDiagramSpatialPose(doc,0),base=original.spatial.referenceFace!;
+  assert.ok(Number.isInteger(base));
+  const root=(base+1)%original.spatial.faceTransforms.length,other=createDiagramSpatialPose(doc,root);
+  assert.equal(other.spatial.referenceFace,base);
+  assert.deepEqual(other.spatial.faceTransforms[root],{rotation:[1,0,0,0,1,0,0,0,1],translation:[0,0,0]});
+  const project=createDiagramProject(doc),step=project.steps[0];
+  const saved=exportDiagramProject(adoptDiagramPose(project,step.id,step.beforeId,other.result,undefined,other.spatial));
+  const loaded=importDiagramProject(saved).steps[0].pose!;
+  assert.equal(loaded.result.layers.status,'solved');
+  assert.equal(loaded.result.geometry.startingFace,root);
+  assert.equal(loaded.spatial!.referenceFace,base);
+  assert.deepEqual(loaded.spatial!.faceTransforms,other.spatial.faceTransforms);
+  assert.deepEqual(loaded.spatial!.vertices,other.spatial.vertices);
+});
 const sortedOrders=(rows:NonNullable<DiagramPose['result']['layers']['faceOrders']>)=>[...rows].sort((a,b)=>a[0]-b[0]||a[1]-b[1]||a[2]-b[2]);
 
 test('partial angles persist real 3D coordinates and the SVG is their actual orthographic projection',()=>{
@@ -68,6 +145,9 @@ test('a first edge-on spatial view retains the verified contacts of a flat prede
   assert.equal(pose.result.layers.faceOrders!.length,0);
   assert.equal(diagramSpatialContactOrders(pose).length,3,'all three touching pairs survive their zero-area projection');
   const original=structuredClone([previous,pose]);
+  const [archivedPrevious,archivedPose]=structuredClone(original);
+  assert.deepEqual(diagramSpatialContactOrders(archivedPose,[archivedPrevious]),diagramSpatialContactOrders(pose));
+  assert.deepEqual([archivedPrevious,archivedPose],original);
   for(const camera of [{yaw:30,elevation:35},{yaw:-40,elevation:-35},{yaw:0,elevation:180}]){
     const next=reprojectDiagramSpatialPose(pose,camera,JSON.parse(JSON.stringify([previous,pose])));
     assert.equal(next.result.layers.status,'solved');
@@ -113,6 +193,20 @@ test('finite matrix layout, actual angles, material identity and both projection
 
 test('interior depth crossing is rejected as a real projected face intersection',()=>{
   assert.throws(()=>spatialPose(document(150,150)),/相交/);
+});
+
+test('a transverse rim contact extends along a straight boundary past its shared corners',()=>{
+  const graph:FoldGraph={vertices_coords:[],edges_vertices:[],edges_assignment:[],edges_foldAngle:[],faces_vertices:[[0,1,2,3],[4,5,6,7,8]]};
+  const spatial=createDiagramSpatialPose(document()).spatial;
+  spatial.faceTransforms=[
+    {rotation:[1,0,0,0,0,-1,0,1,0],translation:[0,0,0]},
+    {rotation:[1,0,0,0,1,0,0,0,1],translation:[0,0,0]}];
+  spatial.vertices=[[0,0,0],[10,0,0],[10,0,5],[0,0,5],
+    [0,-1e-12,0],[10,-1e-12,0],[15,-1e-12,0],[15,10,0],[0,10,0]];
+  const side=()=>spatialContactGeometry(graph,spatial).boundarySide(0,1);
+  assert.equal(side(),-1);
+  spatial.vertices[6][1]=-.01;
+  assert.equal(side(),0);
 });
 
 test('top-down edge-on faces retain material identity without zero-sign layer certificates',()=>{
@@ -254,4 +348,23 @@ test('a living verified spatial predecessor survives shared cache eviction witho
   retained.result.layers=original;
   retained.sourceDoc.segments.find(s=>s.id==='crease-2')!.angle=-46;
   assert.throws(()=>spatialPose(document(180,-100),retained),/材料字段|空间姿态|来源 CP/);
+});
+
+test('translating two overlapping sheets parallel to their plane preserves contacts and a real gap',()=>{
+  const square:Point[]=[[0,0],[1,0],[1,1],[0,1]];
+  const graph:FoldGraph={vertices_coords:[...square,...square.map(([x,y]):Point=>[x+2,y])],
+    faces_vertices:[[0,1,2,3],[4,5,6,7]],faces_edges:[[0,1,2,3],[4,5,6,7]],
+    edges_vertices:[[0,1],[1,2],[2,3],[3,0],[4,5],[5,6],[6,7],[7,4]],
+    edges_faces:[[0],[0],[0],[0],[1],[1],[1],[1]],edges_assignment:Array(8).fill('B'),edges_foldAngle:Array(8).fill(0)};
+  function solve(offset:number,gap:number){
+    const spatial:NonNullable<DiagramPose['spatial']>={version:1,camera:{yaw:0,elevation:0},measuredAngles:Array(8).fill(0),
+      vertices:graph.vertices_coords.map(([x,y],v)=>[offset+x-(v<4?0:2),y,v<4?0:gap]),
+      faceTransforms:[0,1].map(i=>({rotation:[1,0,0,0,1,0,0,0,1],translation:[offset-2*i,0,i*gap]})),layerConstraints:[[0,1,1]]};
+    return solveSpatialLayerContacts(graph,spatial,[]).contacts;
+  }
+  const expected=solve(0,0);assert.equal(expected.length,1);
+  for(const offset of [0,1e6,-1e6]){
+    assert.deepEqual(solve(offset,0),expected);
+    assert.throws(()=>solve(offset,1e-8),/间距/);
+  }
 });

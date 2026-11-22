@@ -9,7 +9,8 @@ export interface DiagramLayerDisplayState {status:'ready'|'pending'|'unsupported
 export interface DiagramLayerDisplayIssue {stepId:string;message:string}
 export interface DiagramLayerDisplayProgress {completed:number;total:number;stepId:string}
 export interface DiagramLayerDisplayPreparation {project:DiagramProject;issues:DiagramLayerDisplayIssue[];cancelled:boolean}
-export interface DiagramLayerDisplayOptions {stepIds?:readonly string[];timeoutMs?:number;onProgress?:(progress:DiagramLayerDisplayProgress)=>void}
+export const DIAGRAM_PREVIEW_TIMEOUT_MS=15_000;
+export interface DiagramLayerDisplayOptions {purpose?:'preview'|'export';stepIds?:readonly string[];timeoutMs?:number;onProgress?:(progress:DiagramLayerDisplayProgress)=>void}
 
 /** Display preparation adds only disposable certificates. Normalize the
  * implicit default candidate before the normal saving boundary so a legacy
@@ -131,7 +132,7 @@ export function startDiagramLayerDisplayPreparation(project:DiagramProject,optio
         const reused=cached(key);
         if(reused)result={...pose.result,layers:reused};
         else{
-          active=startFlatLayerReanalysis(pose.result,{timeoutMs:options.timeoutMs??15_000,solutionIndex:requestedDiagramLayerSolutionIndex(pose),constraints:pose.result.layers.constraints});
+          active=startFlatLayerReanalysis(pose.result,{timeoutMs:options.timeoutMs??(options.purpose==='export'?Infinity:DIAGRAM_PREVIEW_TIMEOUT_MS),solutionIndex:requestedDiagramLayerSolutionIndex(pose),constraints:pose.result.layers.constraints});
           result=await active.promise;active=undefined;
         }
         if(cancelled)break;

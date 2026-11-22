@@ -27,6 +27,20 @@ test('corrupt refreshed content never becomes a writable empty bank',async()=>{
  const store=repository(),library=new BaseDesignLibrary(store.storage);await library.ready();library.write(newBaseDesign('tree'),null);store.disk.set(key,'{broken');
  await assert.rejects(library.ready(true));assert.equal(library.isReady(),false);assert.throws(()=>library.write(newBaseDesign('box'),null),/正在读取/);assert.equal(store.disk.get(key),'{broken');
 });
+test('independent cached windows merge disjoint designs and protect conflicting revisions',async()=>{
+ const store=repository();
+ const windowStore=():Preferences=>({...store.storage,getItemFresh:key=>store.disk.get(key)??null});
+ const a=new BaseDesignLibrary(windowStore()),b=new BaseDesignLibrary(windowStore());
+ await Promise.all([a.ready(),b.ready()]);
+ const first=a.write(newBaseDesign('tree'),null),second=b.write(newBaseDesign('box'),null);
+ const changed=a.write({...first.project,name:'A 编辑'},first);
+ b.remove(second);
+ assert.deepEqual(readBaseDesignBank(store.disk.get(key)!).entries.map(e=>e.project.name),['A 编辑']);
+ assert.throws(()=>b.write(first.project,first),/另一窗口/);
+ assert.throws(()=>b.remove(first),/已变化/);
+ a.remove(changed);
+ assert.deepEqual(readBaseDesignBank(store.disk.get(key)!).entries,[]);
+});
 test('returned projects and entries cannot mutate the validated cache',async()=>{
  const store=repository(),library=new BaseDesignLibrary(store.storage);await library.ready();const source=newBaseDesign('tree'),entry=library.write(source,null);
  source.name='source changed';entry.project.name='returned changed';const list=library.list();list[0].project.name='list changed';

@@ -27,7 +27,7 @@ function Preview({entry,getThumbnail,large=false}:{entry:DiagramLibraryEntry;get
     if(!node||typeof IntersectionObserver==='undefined'){load();return()=>{live=false;};}
     const observer=new IntersectionObserver(entries=>{if(entries.some(item=>item.isIntersecting)){observer.disconnect();load();}},{root:node.closest('.diagram-library-main'),rootMargin:'160px'});
     observer.observe(node);return()=>{live=false;observer.disconnect();};
-  },[getThumbnail,entry.id,entry.draftKey,entry.savedKey]);
+  },[getThumbnail,entry.id,entry.draftKey,entry.savedKey,entry.recoveryKey,entry.modifiedAt]);
   return <div ref={element} className={'diagram-library-preview'+(large?' is-large':'')}>
     {thumbnail?<img loading="lazy" decoding="async" src={svgSource(thumbnail)} alt={`${entry.name}绘图缩略图`} draggable={false}/>:<div className="diagram-library-preview-empty"><Icon name="folder"/><span>折序绘图</span></div>}
     <span className={'diagram-library-status'+(diagramLibraryIsDraft(entry)?' is-draft':'')}>{diagramLibraryIsDraft(entry)?'草稿':'已保存'}</span>

@@ -1,4 +1,5 @@
 import type {RenderSettings} from '../../vendor/simulator/oristudio/packages/origami-simulator/src/webgl/meshRenderer';
+import {visiblePixelBounds} from '../core/rasterBounds';
 
 /** Preserve the viewport's apparent line weight and dash spacing at higher resolution. */
 export function scaleSimulationImageSettings(settings:RenderSettings,scale:number):RenderSettings {
@@ -34,6 +35,13 @@ export function simulationImageFromBackgrounds(black:Uint8Array|Uint8ClampedArra
   }
   if(!visible)throw new Error('当前视图没有可截取的纸面或折线，请调整视角或显示选项后重试。');
   return output;
+}
+
+/** Bounds of the rendered paper and ink, including partially covered edge pixels. */
+export function simulationInkBounds(rgba:Uint8ClampedArray,width:number,height:number) {
+  const bounds=visiblePixelBounds(rgba,width,height);
+  if(!bounds)throw new Error('当前视图没有可截取的纸面或折线。');
+  return bounds;
 }
 
 /** WebGL readPixels starts at the bottom; Canvas ImageData starts at the top. */

@@ -25,6 +25,17 @@ test('certified coplanar paper order wins over triangle IDs from both sides and 
   }
 });
 
+test('a rigid stack preserves its known face when hinge closure leaves roundoff near zero height',()=>{
+  const camera=cameraUniforms({yaw:0,pitch:0,zoom:.8},[0,0,0],1,160,160);
+  const positions=trianglePair.slice();
+  for(let v=3;v<6;v++)positions[v*3+1]=2e-13;
+  const indices=new Uint32Array([0,1,2,3,5,4]),raster=new SimulationRasterizer();
+  const expected=centre(raster.render(positions,model(indices.slice(0,3)),camera,settings),camera);
+  const contact={triangleSourceFaces:[0,1],faceOrders:[[0,1,-1]] as [number,number,number][]};
+  assert.notDeepEqual(centre(raster.render(positions,model(indices),camera,settings,undefined,contact),camera),expected);
+  assert.deepEqual(centre(raster.render(positions,model(indices),camera,settings,undefined,{...contact,rigidContact:()=>true}),camera),expected);
+});
+
 function fanFixture(){
   const points=[[-.8731416,-.725362],[.967322,-.725362],[.967322,.845719],[-.8731416,.845719]];
   const lift=([x,z]:number[])=>[x,.1234567+x*.257136+z*.343273,z];

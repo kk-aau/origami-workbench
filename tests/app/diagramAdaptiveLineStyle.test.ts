@@ -63,6 +63,21 @@ test('12px teaching strokes preserve distinct full mountain/valley patterns and 
   assert.deepEqual(authored,saved);
 });
 
+test('small folded models use the same pen for existing, linked, and newly drawn lines at every magnification',()=>{
+  for(const [style,width,assignment] of [['crease',.45,'F'],['valley',.7,'V']] as const){
+    const source=annotation(style,12.5,{width}),segment:DiagramFoldPreviewSegment={id:'projected',a:source.a,b:source.b,face:0,assignment,style,existing:style==='crease',visibility:'visible'};
+    for(const units of [.1,.025,2]){
+      const [drawn]=lines(render(null,[source],true,units));
+      const [linked]=lines(render(null,[],true,units,[segment]));
+      near(number(drawn,'stroke-width'),number(linked,'stroke-width'));
+      assert.equal(drawn['@_stroke-dasharray'],linked['@_stroke-dasharray']);
+      const pixels=number(drawn,'stroke-width')/units;
+      assert.ok(pixels>=.65-1e-7&&pixels<=width*2.5+1e-7);
+      assert.deepEqual(lines(render(null,[source],false,units))[0],drawn,'older flags keep the same readable stroke');
+    }
+  }
+});
+
 test('explicit solid and custom paint stay authored while a 4px mountain reports its visible detail limit',()=>{
   const solid=annotation('mountain',.2,{strokePattern:'solid',color:'#a14367',width:3}),short=annotation('mountain',4,{a:[50,30],b:[54,30]});
   const output=render(null,[solid,short],true),rendered=lines(output);
@@ -72,11 +87,25 @@ test('explicit solid and custom paint stay authored while a 4px mountain reports
   assert.ok(number(rendered[1],'stroke-width')>0&&number(rendered[1],'stroke-width')<=short.width);
 });
 
-test('disabled diagram rendering is exactly the legacy markup and adds no fragment phase or display metadata',()=>{
+test('both ends of long, short and reversed teaching strokes fall inside ink',()=>{
+  for(const strokePattern of ['dashed','dash-dot','dotted'] as const)for(const length of [2.3,19,83.5])for(const enabled of [true,false]){
+    const source=annotation('valley',length,{a:[length,0],b:[0,0],strokePattern});
+    const node=lines(render(null,[source],enabled))[0];
+    if(!node['@_stroke-dasharray']){assert.equal(node['@_data-line-detail-limited'],'true');continue;}
+    const pattern=dash(node),period=pattern.reduce((a,b)=>a+b);
+    for(const distance of [0,number(node,'pathLength')]){
+      const phase=(number(node,'stroke-dashoffset')+distance)%period;
+      near(phase,pattern[0]/2);
+    }
+  }
+});
+
+test('legacy display flags retain automatic pen scaling, endpoint fit and short-line hints',()=>{
   for(const source of [annotation(),annotation('valley'),annotation('auxiliary'),annotation('mountain',.1,{strokePattern:'solid',color:'#abc'})]){
-    const legacy=diagramAnnotationMarkup(source);
-    assert.equal(diagramAnnotationMarkup(source,{enabled:false,units:1,span:{length:100,offset:17}}),legacy);
-    const drawing=render(null,[source],false);assert.ok(drawing.includes(legacy));assert.doesNotMatch(drawing,/data-adaptive-line|data-line-detail-limited|stroke-dashoffset/);
+    const current=lines(render(null,[source],true)),legacy=lines(render(null,[source],false));
+    assert.deepEqual(legacy,current);
+    assert.deepEqual(legacy,lines(diagramAnnotationMarkup(source)));
+    assert.equal(legacy[0]['@_stroke'],source.color);
   }
 });
 
@@ -99,7 +128,9 @@ test('projected folds on different layers share one dash pattern through overlap
           near(number(node,'x1'),start);
           assert.equal(node['@_stroke-dasharray'],reference['@_stroke-dasharray']);
           assert.equal(node['@_stroke-width'],reference['@_stroke-width']);
-          near(Number(node['@_stroke-dashoffset']??0)%period,(Number(reference['@_stroke-dashoffset']??0)+start-20)%period);
+          const scale=number(reference,'pathLength')/80;
+          near(number(node,'pathLength'),(number(node,'x2')-start)*scale);
+          near(number(node,'stroke-dashoffset')%period,(number(reference,'stroke-dashoffset')+(start-20)*scale)%period);
         }
       }
     }
@@ -133,7 +164,7 @@ test('linked occlusion fragments share the full stroke pattern and phase instead
     near(number(rendered[i],'stroke-dashoffset'),(number(full,'stroke-dashoffset')+fragments[i].strokeSpan!.offset)%period);
     assert.equal(rendered[i]['@_data-line-detail-limited'],undefined);assert.equal(rendered[i]['@_stroke'],source.color);
   }
-  assert.ok(render(pose,[source],false,1,fragments).includes(diagramAnnotationMarkup({...source,a:fragments[1].a,b:fragments[1].b})));
+  assert.ok(render(pose,[source],false,1,fragments).includes(diagramAnnotationMarkup({...source,a:fragments[1].a,b:fragments[1].b},{enabled:false,units:1,span:fragments[1].strokeSpan})));
   assert.deepEqual({source,pose,fragments},saved);validateDiagramAnnotations([source]);
 });
 
@@ -153,7 +184,9 @@ test('PDF resamples at the final point size: a tiny panel reports its limit and 
   assert.equal(smallLine['@_data-line-detail-limited'],'true');assert.equal(smallLine['@_stroke-dasharray'],undefined);assert.match(String(smallLine.title),/放大/);
   const viewBox=String(parsed(largeSVG).svg['@_viewBox']).split(/\s+/).map(Number),units=Math.max(viewBox[2]/(large.width*96/72),viewBox[3]/(large.height*96/72));
   preservesPattern(largeLine,source);readable(largeLine,units);assert.equal(largeLine['@_data-line-detail-limited'],undefined);
-  for(const size of [small,large])assert.ok(diagramPDFStepSVG(project,step,size,palette(),false).includes(diagramAnnotationMarkup(source)));
+  for(const [size,expected] of [[small,smallLine],[large,largeLine]] as const){
+    assert.deepEqual(lines(diagramPDFStepSVG(project,step,size,palette(),false)).find(node=>node['@_stroke']===source.color),expected);
+  }
   const moved=structuredClone(project);moved.steps[0].pose!.view={...defaultModelView(),cameras:{'front-solid':{x:900,y:-500,width:2,height:2,rotation:12}}};
   assert.equal(diagramPDFStepSVG(moved,moved.steps[0],large,palette(),true),largeSVG);
   validateDiagramProject(project);const exported=exportDiagramProject(project);assert.doesNotMatch(exported,/strokeSpan|adaptiveLineStyle|dashOffset/);
@@ -170,13 +203,13 @@ test('free drawings without a pose use the final padded PDF viewBox for readable
     const viewBox=String(parsed(svg).svg['@_viewBox']).split(/\s+/).map(Number),units=Math.max(viewBox[2]/(size.width*96/72),viewBox[3]/(size.height*96/72));
     if(limited){assert.equal(node['@_data-line-detail-limited'],'true');assert.equal(node['@_stroke-dasharray'],undefined);}
     else{preservesPattern(node,source);readable(node,units);assert.equal(node['@_data-line-detail-limited'],undefined);}
-    assert.ok(diagramPDFStepSVG(project,step,size,palette(),false).includes(diagramAnnotationMarkup(source)));
+    assert.deepEqual(lines(diagramPDFStepSVG(project,step,size,palette(),false)).find(item=>item['@_stroke']===source.color),node);
     near(number(node,'x1'),source.a[0]);near(number(node,'x2'),source.b[0]);
   }
   assert.deepEqual(project,saved);
 });
 
-test('CP-only cover fallback uses its final panel size and honors the explicit adaptation flag',()=>{
+test('CP-only cover fallback uses the final panel size even for a legacy display flag',()=>{
   const doc=blankDoc('封面 CP 最终比例',100,100);doc.segments.push({id:'tiny-mountain',a:[20,30],b:[22,30],assignment:'M',angle:-180});
   const project=createDiagramProject(doc),step=project.steps[0],saved=structuredClone(project);
   const sourceLine=(svg:string)=>lines(svg).find(node=>number(node,'x1')===20&&number(node,'y1')===30)!;
@@ -193,8 +226,8 @@ test('CP-only cover fallback uses its final panel size and honors the explicit a
   for(const size of [small,large]){
     const svg=diagramPDFCoverSVG(project,step,palette(),false,size),box=String(parsed(svg).svg['@_viewBox']).split(/\s+/).map(Number),outputUnits=Math.max(box[2]/(size.width*96/72),box[3]/(size.height*96/72));
     const expected=sourceLine(creasePatternSVG(doc,defaultCreaseDisplay(),undefined,undefined,{enabled:false,units:outputUnits}));
-    assert.deepEqual(sourceLine(svg),expected,'a disabled cover still uses its actual output pixel scale without adapting the authored pattern');
-    assert.equal(sourceLine(svg).title,undefined);
+    assert.deepEqual(sourceLine(svg),expected,'the cover uses the same final pixel scale as its CP');
+    assert.deepEqual(sourceLine(svg),size===small?smallLine:largeLine);
   }
   assert.deepEqual(project,saved);
 });

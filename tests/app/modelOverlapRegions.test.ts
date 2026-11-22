@@ -1,11 +1,33 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import type {FlatFoldResult,Point} from '../../src/core/types';
-import {modelBoundsIndex,modelOverlapRegions,modelPolygonBounds} from '../../src/app/modelOverlapRegions';
+import {modelBoundsIndex,modelOverlapRegions,spatialOverlapRegions,modelPolygonBounds} from '../../src/app/modelOverlapRegions';
 import {groupFlagstoneFaces} from '../../src/app/flagstoneFaceGroups';
+import {polygonArea} from '../../src/core/geometry';
 const rect=(x:number,y:number,w:number,h:number):Point[]=>[[x,y],[x+w,y],[x+w,y+h],[x,y+h]];
 function model(polygons:Point[][]):FlatFoldResult{const vertices:Point[]=[],faces:number[][]=[];for(const poly of polygons){const offset=vertices.length;vertices.push(...poly);faces.push(poly.map((_,i)=>offset+i));}return {geometry:{status:'ready',message:'',vertices,faces},layers:{status:'unknown',message:'不计算层序'},warnings:[]};}
 function areas(result:ReturnType<typeof modelOverlapRegions>){const sums:Record<string,number>={};for(const c of result.cells){const key=c.faces.join(',');sums[key]=(sums[key]??0)+c.area;}return sums;}
+test('oblique sweeps recover all five near-coincident faces in either handedness',()=>{
+ const points:Point[]=[
+  [12.4788909649825,193.24232279466779],[12.482728475524818,180.74279602885645],[24.98272574849902,180.74656981754083],
+  [12.480826406559977,186.9382089121832],[12.482791788817435,180.74279604797945],[12.482759527093044,180.85149704716147],
+  [18.730808356740734,186.9944463061043],[12.480826406559483,186.9382089121708],[12.482791788798473,180.74279604797397],
+  [12.482791788823286,180.74279604797204],[12.374085587332246,180.74276322921568],[6.176443022284458,186.9362733878983],
+  [12.591495768520911,180.7428288660555],[12.591495768541874,180.74282886605187],[18.785145366688678,186.94014441668898],
+  [12.374085587358303,180.7427632292282],[6.1764430222973035,186.9362733879012],
+ ];
+ const faces=[[0,1,2,6],[3,14,13,4,15,16],[5,9,12],[7,8,10,11],[7,16,15,8]];
+ for(const sign of [-1,1]){
+  const input=model([]);input.geometry.vertices=points.map(([x,y])=>[sign*x,y]);input.geometry.faces=faces;
+  const regions=spatialOverlapRegions(input);
+  assert.equal(regions.omittedThinRegions,0);
+  faces.forEach((ring,f)=>{
+   const expected=Math.abs(polygonArea(ring.map(v=>input.geometry.vertices[v])));
+   const area=regions.cells.filter(c=>c.faces.includes(f)).reduce((sum,c)=>sum+Math.abs(polygonArea(c.polygon)),0);
+   assert.ok(Math.abs(area-expected)<expected*1e-8);
+  });
+ }
+});
 test('overlap cells give exact coverage for disjoint, shared-edge and coincident faces',()=>{
  assert.deepEqual(areas(modelOverlapRegions(model([rect(0,0,10,10),rect(10,0,10,10),rect(30,0,10,10)]))),{'0':100,'1':100,'2':100});
  const same=modelOverlapRegions(model([rect(0,0,10,10),rect(0,0,10,10)]));assert.deepEqual(areas(same),{'0,1':100});assert.equal(same.maxDepth,2);
@@ -140,4 +162,93 @@ test('atomic collinear spans cannot silently erase a real slanted thin face or h
  const resolved=model([rect(0,0,100,100),[[20,20],[80,80],[50,50+1e-6]]]),regions=modelOverlapRegions(resolved);
  assert.ok(regions.cells.filter(cell=>cell.faces.includes(1)).reduce((sum,cell)=>sum+cell.area,0)>2.9e-5);
  assert.equal(regions.omittedThinRegions,0);
+});
+
+test('spatial coverage recovers near-coincident projected triangles in the saved camera frame',()=>{
+ const polygons:Point[][]=[
+  [[-0.03547866434446145,142.84645139835726],[6.238159400411167,130.62245094689652],[-0.011826221451402896,130.60958499546294]],
+  [[6.1672020717463845,167.3330501555585],[9.298107993383962,164.28026653055713],[3.0481223715400465,164.26740057913022]],
+  [[6.1672020717463845,167.3330501555585],[3.0481223715400465,164.26740057913022],[9.298107993392271,164.28026653059976]],
+  [[-0.03547866436051006,142.8464513983743],[6.226333178942506,136.74088414834637],[-0.0236524429302171,136.72801819692367]],
+ ];
+ const input=model(polygons),regions=spatialOverlapRegions(input);
+ assert.equal(regions.omittedThinRegions,0);
+ for(const [face,[a,b,c]] of polygons.entries()){
+  const area=Math.abs((b[0]-a[0])*(c[1]-a[1])-(b[1]-a[1])*(c[0]-a[0]))/2;
+  const cells=regions.cells.filter(cell=>cell.faces.includes(face));
+  assert.ok(Math.abs(cells.reduce((sum,cell)=>sum+cell.area,0)-area)<1e-8);
+  for(const {polygon} of cells)for(const [x,y] of polygon){
+   assert.ok(x>=Math.min(a[0],b[0],c[0])-1e-8&&x<=Math.max(a[0],b[0],c[0])+1e-8);
+   assert.ok(y>=Math.min(a[1],b[1],c[1])-1e-8&&y<=Math.max(a[1],b[1],c[1])+1e-8);
+  }
+ }
+});
+
+test('near-coincident contact edges retain every material face while resolving distinct sweep events',()=>{
+ const vertices:Point[]=[
+  [2.3786822511694233e-10,37.49999999991494],
+  [-1.4321877017676636e-14,24.999999999999986],
+  [4.4758641237762217e-13,12.499999999999964],
+  [-1.5809631381813296e-11,12.500000000001217],
+  [-2.8142271840208683e-11,18.695647442687804],
+  [-6.24999999999976,18.749999999999808],
+  [5.328515406688382e-13,12.499999999999993],
+  [6.250000000000293,18.750000000000284],
+  [-1.432187701766775e-14,25.000000000000043],
+  [5.673239655834227e-14,25.000000000000043],
+  [3.661165235521803,12.499921743071535],
+  [8.080621746224477,8.08054348928811],
+  [9.911197650190337,6.249999999991328],
+  [12.500000000002135,12.500000000007521],
+  [-12.49999999991908,25.000000000080345],
+  [5.612732500992422e-13,12.499999999999993],
+  [-12.499999999999535,12.499999999999487],
+  [12.499999999995332,12.499999999992427],
+  [6.304384769500815,18.695615230468682],
+  [-0.10876731673509014,12.499999999979744],
+  [0.10864291186268109,12.5000000000012],
+  [-6.442414956130412e-05,12.60870511429149],
+  [-6.331330136083452e-05,12.499999999975124],
+  [-6.331329306169536e-05,12.500000000001245],
+ ];
+ const faces=[[6,9,7],[6,5,8],[14,15,16],[14,16,2,1,0],[17,12,11,10],[21,19,22],[3,13,18,4],[4,18,20,23]];
+ for(const sign of [1,-1]){
+  const polygons=faces.map(row=>row.map(i=>[sign*vertices[i][0],vertices[i][1]] as Point));
+  const result=spatialOverlapRegions(model(polygons));
+  assert.equal(result.omittedThinRegions,0);
+  polygons.forEach((polygon,f)=>{
+   const expected=Math.abs(polygonArea(polygon));
+   const actual=result.cells.reduce((sum,cell)=>sum+(cell.faces.includes(f)?cell.area:0),0);
+   assert.ok(Math.abs(actual-expected)<=expected*1e-8);
+  });
+ }
+});
+
+test('coarser boundary alignment cannot certify a thin face or hole distorted by normalization',()=>{
+ const strip=rect(0,1+8e-9,4,1.6e-8),base=rect(0,0,10,1);
+ const separate=model([base,strip]);
+ assert.ok(modelOverlapRegions(separate,1e-12,1e-8).omittedThinRegions>0);
+ const hole=model([rect(0,0,10,10),base]);
+ const offset=hole.geometry.vertices.length;
+ hole.geometry.vertices.push(...strip);
+ hole.geometry.graph={faces_holes:[[strip.map((_,i)=>offset+i)],[]]} as NonNullable<typeof hole.geometry.graph>;
+ assert.ok(modelOverlapRegions(hole,1e-12,1e-8).omittedThinRegions>0);
+});
+
+test('spatial exact overlay keeps a narrow open gap, a paper sliver, a hole and detached material',()=>{
+ const width=2**-48;
+ const input=model([rect(0,0,2,2),rect(2+width,0,width,2),rect(8,0,1,1)]);
+ const offset=input.geometry.vertices.length;
+ input.geometry.vertices.push(...rect(1,0.25,width,1));
+ input.geometry.graph={vertices_coords:input.geometry.vertices,faces_vertices:input.geometry.faces,
+  edges_vertices:[],edges_assignment:[],edges_foldAngle:[],faces_holes:[[[offset,offset+1,offset+2,offset+3]],[],[]]};
+ const original=structuredClone(input);
+ const regions=spatialOverlapRegions(input),totals=areas(regions);
+ assert.equal(regions.omittedThinRegions,0);
+ assert.equal(regions.epsilon,0);
+ assert.equal(regions.maxDepth,1);
+ assert.equal(totals['0'],4-width);
+ assert.equal(totals['1'],2*width);
+ assert.equal(totals['2'],1);
+ assert.deepEqual(input,original);
 });

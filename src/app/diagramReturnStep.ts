@@ -1,6 +1,6 @@
 import {buildDiagramFold,distance,epsilonFor,pointOnSegment,polygonArea} from '../core/geometry';
 import {hasMaterialTopology} from '../core/materialTopology';
-import {applyRigidFoldTransform,solveRigidFoldGeometry,type RigidFoldPoint3} from '../core/rigidFoldGeometry';
+import {applyRigidFoldTransform,rigidFoldReferenceFace,solveRigidFoldGeometry,type RigidFoldPoint3} from '../core/rigidFoldGeometry';
 import type {Doc,FlatFoldResult,FoldGraph,Point,Segment} from '../core/types';
 import {advanceDiagramStep,defaultDiagramCanvas,selectDiagramStep,updateDiagramCP,validateDiagramProject,type DiagramCPState,type DiagramIdFactory,type DiagramPose,type DiagramProject,type DiagramStep} from './diagramProject';
 import {getDiagramReturnTarget} from './diagramReturnReference';
@@ -149,10 +149,11 @@ function rebaseAggregation(pose:DiagramPose,state:DiagramCPState):{pose:DiagramP
       if(source<0||pose.spatial!.measuredAngles[source]===null)throw Error('返回目标的自适应折角无法对应到累计折痕。');
       return pose.spatial!.measuredAngles[source];
     });
-    const solved=solveRigidFoldGeometry(graph,{startingFace,fixedFaceTransform:pose.spatial.faceTransforms[pose.result.geometry.startingFace??0],edgesFoldAngle:angles});
+    const referenceFace=pose.spatial.referenceFace===undefined?undefined:rigidFoldReferenceFace(graph);
+    const solved=solveRigidFoldGeometry(graph,{startingFace,referenceFace,preferStableHinges:referenceFace!==undefined,fixedFaceTransform:pose.spatial.faceTransforms[pose.result.geometry.startingFace??0],edgesFoldAngle:angles});
     if(solved.status!=='ready')throw Error('返回目标的真实空间姿态无法恢复：'+solved.message);
     if(solved.vertices.some((p,i)=>Math.hypot(...p.map((v,k)=>v-world[i][k]))>solved.diagnostics.positionToleranceMm*4))throw Error('累计折痕的空间解与目标聚合姿态不同，未替换目标状态。');
-    next.spatial={version:1,vertices:solved.vertices,faceTransforms:solved.faceTransforms,measuredAngles:solved.measuredAngles,camera:structuredClone(pose.spatial.camera)};
+    next.spatial={version:1,...(referenceFace===undefined?{}:{referenceFace}),vertices:solved.vertices,faceTransforms:solved.faceTransforms,measuredAngles:solved.measuredAngles,camera:structuredClone(pose.spatial.camera)};
     validateDiagramSpatialPose(next,true);restoreDiagramSpatialLayers(next,pose);
     if(pose.displayOrder)next.displayOrder=pose.displayOrder.map(f=>mapping[f]);
   }

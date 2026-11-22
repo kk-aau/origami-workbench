@@ -1,8 +1,8 @@
 import type {RegionTransitionSchedule} from './regionTransitionSchedule';
 import {REGION_MAX_WORKERS} from './regionParallelHardware';
-export const REGION_CONTROL={generation:0,signal:1,error:2,ready:3,cancelled:4,completed:5,slots:8,stride:4} as const;
+export const REGION_CONTROL={generation:0,signal:1,error:2,ready:3,cancelled:4,completed:5,validated:6,precheckCount:7,precheckCursor:8,prechecked:9,slots:10,stride:4} as const;
 export const REGION_UNWRITTEN=-2147483648;
-export interface RegionParallelPoolData {id:number;workers:number;batchSize:number;schedule:RegionTransitionSchedule;matrix:Uint32Array;certificate:ArrayBufferLike;control:Int32Array;triangles:Uint32Array}
+export interface RegionParallelPoolData {id:number;workers:number;batchSize:number;schedule:RegionTransitionSchedule;matrix:Uint32Array;dirtyChunks:Uint32Array;chunkGenerations:Uint32Array;writtenAt:Uint32Array;precheckJobs:Uint32Array;certificate:ArrayBufferLike;control:Int32Array;triangles:Uint32Array}
 export type RegionParallelMessage={type:'region-pool-init';pool:RegionParallelPoolData}|{type:'region-pool-dispose';id:number}|{type:'region-parallel-status';status:'enabled'|'fallback';workers:number;reason?:string};
 export function notifyRegionPool(control:Int32Array){Atomics.add(control,REGION_CONTROL.signal,1);Atomics.notify(control,REGION_CONTROL.signal);}
 export function failRegionPool(control:Int32Array){Atomics.store(control,REGION_CONTROL.error,1);notifyRegionPool(control);}

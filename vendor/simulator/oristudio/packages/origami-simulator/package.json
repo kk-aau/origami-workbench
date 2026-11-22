@@ -36,7 +36,8 @@
     "bench:gpu-stability": "vitest run --config vitest.bench.config.ts bench/gpuStability.bench.ts --disable-console-intercept"
   },
   "dependencies": {
-    "earcut": "^3.0.2"
+    "earcut": "^3.0.2",
+    "fflate": "0.8.3"
   },
   "peerDependencies": {},
   "devDependencies": {

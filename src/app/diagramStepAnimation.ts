@@ -13,9 +13,12 @@ import {resolveStartingFace} from './flatFoldSettings';
 import {defaultModelColors,type ModelColors} from './modelColors';
 import {buildDiagramPartialCreaseAnimation} from './diagramPartialCreaseAnimation';
 import {inferDiagramPrecreaseActions} from './diagramInferredPrecrease';
+import {diagramAnimationTargetCreases} from './diagramAnimationCreases';
 import {diagramAnimationSourceSegments,diagramAnimationMaterialTimings} from './diagramAnimationTiming';
 import {hasSpatialFoldAngles} from './diagramSpatialPose';
 import {buildDiagramSpatialStepAnimation} from './diagramSpatialStepAnimation';
+import {diagramAnimationDisplayOrder} from './diagramAnimationDisplayOrder';
+import {diagramFlatAnimationCamera} from './diagramSimulationSurfaceCamera';
 
 export interface DiagramStepAnimationClip {
   camera?:import('../engine/simPose').SimulationPose['view'];
@@ -27,6 +30,7 @@ export interface DiagramStepAnimationClip {
   finalGeometry?:FlatFoldResult;
   initialGeometry?:FlatFoldResult;
   initialContactOrder?:import('../engine/simStepContactOrder').SimulationStepInitialOrder;
+  initialDisplayOrder?:import('../engine/simStepContactOrder').SimulationStepInitialOrder;
   warnings?:string[];
 }
 type Route={segment:Segment;fromAngle:number;toAngle:number;viaAngle?:number};
@@ -115,14 +119,13 @@ export function buildDiagramStepAnimation(project:DiagramProject,stepId:string,o
       return angles[0]??0;
     };
     const fromAngle=semantics(beforeSegments),toAngle=semantics(afterSegments);
-    if(fromAngle*toAngle<0)throw Error('同一折痕从山折直接反转为谷折的动作暂不支持，请拆成展开和再折两步。');
     const pending=[...new Set(precreases.filter(s=>covers(segment,s,eps)).map(angle))];
     if(pending.length>1)throw Error('同一预折痕具有相反的折叠方向，请明确山谷属性。');
     // A press on a folded lower layer can leave its endpoint CP unchanged.
     // Preserve the authored open-and-return action instead of discarding it
     // merely because both endpoints still describe the same mountain/valley.
     // A newly folded or oppositely assigned crease never becomes this cycle.
-    const viaAngle=fromAngle===0&&toAngle===0?pending[0]:
+    const viaAngle=fromAngle*toAngle<0?0:fromAngle===0&&toAngle===0?pending[0]:
       fromAngle===toAngle&&fromAngle!==0&&pending[0]===fromAngle?0:undefined;
     return {segment:{...segment,id:`animation-edge-${index}`,assignment:toAngle<0?'M':toAngle>0?'V':'F',angle:toAngle},fromAngle,toAngle,...(viaAngle!==undefined?{viaAngle}:{})};
   });
@@ -234,7 +237,8 @@ export function buildDiagramStepAnimation(project:DiagramProject,stepId:string,o
   const retainedCreases=prepared.edgesVertices.flatMap(([a,b],e)=>
     prepared.edgesAssignment[e]!=='B'&&before.doc.segments.some(s=>s.assignment==='F'&&covers({a:cp[a],b:cp[b]},s,eps))?[e]:[]);
   const timings=diagramAnimationMaterialTimings(step.annotations??[],diagramAnimationSourceSegments(step.annotations??[],pose,before,step.foldLink),prepared.edgesVertices,cp,ranges,eps);
-  const animation:SimulationStepAnimation={version:1,sourceSignature,initialPositions,ranges,fixedVertices,bendingFixedVertices:fixedSeedVertices,retainedCreases,...(timings?{timings}:{})};
+  const targetCreases=diagramAnimationTargetCreases(prepared.edgesVertices,cp,after.doc.segments,eps);
+  const animation:SimulationStepAnimation={version:1,sourceSignature,initialPositions,ranges,targetCreases,fixedVertices,bendingFixedVertices:fixedSeedVertices,retainedCreases,...(timings?{timings}:{})};
   validateSimulationStepAnimationStructure(animation,prepared,sourceSignature);
   // Final state uses this same indexed material subdivision. F daughter cells
   // remain coplanar; they are not given invented layer relations.
@@ -260,11 +264,12 @@ export function buildDiagramStepAnimation(project:DiagramProject,stepId:string,o
   });
   const initialGeometry=computeFlatGeometry(initialGraph,eps,{startingFace:fixedFace});
   if(initialGeometry.geometry.status!=='ready')throw Error('本步初始材料网格不能保持原平折姿态。');
-  initialGeometry.geometry.vertices=fold.vertices_coords.map(p=>{
+  const projectPoint=(p:Point)=>{
     const owner=polygons.findIndex(poly=>containing(p,poly,eps));
     if(owner<0)throw Error('本步初始材料网格缺少纸面来源。');
     return applyDiagramFoldMatrix(matrices[owner],p);
-  });
+  };
+  initialGeometry.geometry.vertices=fold.vertices_coords.map(projectPoint);
   initialGeometry.geometry.graph={...initialGeometry.geometry.graph!,vertices_coords:structuredClone(initialGeometry.geometry.vertices)};
   delete initialGeometry.geometry.graph.faces_matrix;delete initialGeometry.geometry.graph.faces_matrix2;delete initialGeometry.geometry.graph.faces_normal;
   // Keep the drawing's selected solution when new creases subdivide its faces.
@@ -292,5 +297,6 @@ export function buildDiagramStepAnimation(project:DiagramProject,stepId:string,o
     if(vertex<0||distance(finalGeometry.geometry.vertices[vertex],shown[v])>eps*20)throw Error('本步折叠会改变指定固定区域的位置，请检查作用纸层并拆分相互牵连的动作。');
   }
   const index=project.states.findIndex(s=>s.id===before.id);
-  return {fold,animation,initialGeometry,finalGeometry,colors:structuredClone(step.pose?.view?.colors??defaultModelColors()),beforeLabel:`CP${index}`,afterLabel:`CP${index+1}`,...(warnings.length?{warnings}:{})};
+  const initialDisplayOrder=diagramAnimationDisplayOrder(pose,fold,poly=>polygons.findIndex(parent=>poly.every(p=>containing(p,parent,eps))),projectPoint);
+  return {fold,animation,initialGeometry,finalGeometry,initialDisplayOrder,camera:diagramFlatAnimationCamera(step,pose),colors:structuredClone(step.pose?.view?.colors??defaultModelColors()),beforeLabel:`CP${index}`,afterLabel:`CP${index+1}`,...(warnings.length?{warnings}:{})};
 }

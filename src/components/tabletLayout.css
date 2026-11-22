@@ -36,7 +36,7 @@
 /* Folding diagrams: keep the canvas mounted while tools move into sheets. */
 .app.web-tablet .diagram-workspace.diagram-compact-workspace:not(.is-library){display:flex;min-width:0;position:relative;padding:0}
 .app.web-tablet .diagram-workspace .diagram-main{container-type:normal;flex:1;min-width:0;min-height:0}
-.app.web-tablet .diagram-workspace .diagram-step-rail,.app.web-tablet .diagram-workspace .diagram-context-shelf,.app.web-tablet .diagram-workspace .diagram-symbol-dock,.app.web-tablet .diagram-workspace .diagram-cp-shelf,.app.web-tablet .diagram-workspace .diagram-drafting-bar{display:none}
+.app.web-tablet .diagram-workspace .diagram-step-rail,.app.web-tablet .diagram-workspace .diagram-context-shelf,.app.web-tablet .diagram-workspace .diagram-cp-shelf,.app.web-tablet .diagram-workspace .diagram-drafting-bar{display:none}
 .app.web-tablet .diagram-workspace .diagram-body{grid-template-columns:minmax(0,1fr);min-height:0;padding:4px}
 .app.web-tablet .diagram-workspace .diagram-body>.panel-divider{display:none}
 .app.web-tablet .diagram-workspace .diagram-edit-layout{grid-template-columns:minmax(0,1fr)}
@@ -47,7 +47,7 @@
 .app.web-tablet .diagram-workspace .diagram-toolbar-end button{flex:0 0 auto;min-height:40px;font-size:12px}
 .app.web-tablet .diagram-workspace[data-tablet-panel=steps] .diagram-step-rail,
 .app.web-tablet .diagram-workspace[data-tablet-panel=layers] .diagram-context-shelf,
-.app.web-tablet .diagram-workspace[data-tablet-panel=symbols] .diagram-symbol-dock,
+.app.web-tablet .diagram-workspace[data-tablet-panel=symbols] .diagram-context-shelf,
 .app.web-tablet .diagram-workspace[data-tablet-panel=cp]:not(.is-comparison) .diagram-cp-shelf,
 .app.web-tablet .diagram-workspace[data-tablet-panel=styles] .diagram-drafting-bar{display:flex;position:absolute;inset:54px auto 8px 8px;z-index:25;width:min(320px,85vw);max-width:none;max-height:none;flex-direction:column;background:var(--paper);border:1px solid var(--line);border-radius:7px;box-shadow:0 6px 24px #233b2929;overflow:auto;overscroll-behavior:contain;margin:0}
 .app.web-tablet .diagram-workspace[data-tablet-panel=cp] .diagram-cp-shelf{left:auto;right:8px;width:min(360px,85vw)}
@@ -80,16 +80,14 @@
 
 /* Keep nested sheets and precision popovers outside the canvas/toolbar clipping. */
 .app.web-tablet .diagram-workspace[data-tablet-panel=layers] .diagram-context-shelf,
-.app.web-tablet .diagram-workspace[data-tablet-panel=symbols] .diagram-symbol-dock{position:fixed;inset:var(--tablet-sheet-top,148px) auto calc(62px + env(safe-area-inset-bottom)) 8px}
+.app.web-tablet .diagram-workspace[data-tablet-panel=symbols] .diagram-context-shelf{position:fixed;inset:var(--tablet-sheet-top,148px) auto calc(62px + env(safe-area-inset-bottom)) 8px}
+.app.web-tablet .diagram-workspace[data-tablet-panel=symbols] .diagram-context-shelf{bottom:auto;max-height:calc(100dvh - var(--tablet-sheet-top,148px) - 62px - env(safe-area-inset-bottom))}
+.app.web-tablet .diagram-workspace[data-tablet-panel=symbols] .diagram-shelf-scroll>:not(.diagram-drawing-tools),
+.app.web-tablet .diagram-workspace[data-tablet-panel=symbols] .diagram-drawing-tools>:not(.diagram-symbol-dock){display:none}
+.app.web-tablet .diagram-workspace .diagram-context-shelf :is(.diagram-tool-group,.diagram-precision-buttons,.diagram-layer-command-row){grid-template-columns:repeat(auto-fill,minmax(56px,1fr))}
 .app.web-tablet .diagram-workspace[data-tablet-panel=cp]:not(.is-comparison) .diagram-cp-shelf{left:auto;right:8px;width:min(360px,85vw)}
 .app.web-tablet .tablet-panel-bar>button[aria-expanded=true],
 .app.web-tablet .diagram-workspace .tablet-panel-bar>button[aria-expanded=true]:hover{background:#355f4c;color:#fff;border-color:#355f4c}
-.app.web-tablet .diagram-workspace .diagram-symbol-dock-body{grid-template-columns:minmax(0,1fr) 70px}
-.app.web-tablet .diagram-workspace .diagram-symbol-dock-symbols{grid-template-columns:repeat(2,minmax(0,1fr))}
-.app.web-tablet .diagram-workspace .diagram-symbol-dock-categories button{min-height:48px;font-size:12px;word-break:normal}
-.app.web-tablet .diagram-workspace .diagram-symbol-dock-search{min-height:40px;font-size:13px}
-.app.web-tablet .diagram-workspace .diagram-symbol-dock-item span{font-size:11px}
-.app.web-tablet .diagram-workspace .diagram-symbol-auto-arrow button{min-height:44px;font-size:12px}
 .app.web-tablet .diagram-workspace .diagram-drafting-bar input:not([type=checkbox]),
 .app.web-tablet .diagram-workspace .diagram-drafting-bar select,
 .app.web-tablet .diagram-workspace .diagram-context-shelf select{min-height:40px;font-size:13px}
@@ -99,3 +97,5 @@
 .app.web-tablet .diagram-workspace .diagram-comparison-cp button{min-height:40px;font-size:12px}
 
 .app.web-tablet .diagram-document-heading :is(.diagram-view-tools button,.diagram-view-menu>button){min-height:40px}
+
+.app.web-tablet .diagram-workspace .diagram-shelf-scroll{display:contents}

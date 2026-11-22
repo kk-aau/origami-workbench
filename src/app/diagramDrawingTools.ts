@@ -2,7 +2,7 @@ import type {Point} from '../core/types';
 import {overlappingSegmentPairs} from '../core/segmentPairs';
 import type {DiagramAnnotation,DiagramLineAnnotation,DiagramSymbolAnnotation} from './diagramAnnotations';
 import {DIAGRAM_ANNOTATION_LIMITS,validateDiagramAnnotations} from './diagramAnnotations';
-import {symbolNativeGrips,pointHitsDiagramSymbol,symbolIntersectsSegment,symbolIntersectsBox,type DiagramAnnotationBounds} from './diagramAnnotationSVG';
+import {symbolNativeGrips,pointHitsDiagramSymbol,symbolIntersectsSegment,symbolIntersectsBox,type DiagramAnnotationBounds,type DiagramSymbolInkOptions} from './diagramAnnotationSVG';
 import {diagramSnapGrid,diagramGridNodes,diagramGridAxes,type DiagramSnapGrid} from './diagramGrid';
 
 const EPS=1e-9;
@@ -211,12 +211,12 @@ export function pointDiagramLineDistance(p:Point,line:Pick<DiagramLineAnnotation
   const t=denom>EPS?Math.max(0,Math.min(1,dot(sub(p,line.a),direction)/denom)):0;
   return magnitude(sub(p,add(line.a,mul(direction,t))));
 }
-export function pointHitsDiagramAnnotation(p:Point,a:DiagramAnnotation,tolerance:number):boolean {
+export function pointHitsDiagramAnnotation(p:Point,a:DiagramAnnotation,tolerance:number,options?:DiagramSymbolInkOptions):boolean {
   if(a.kind==='line')return pointDiagramLineDistance(p,a)<=tolerance+a.width/2;
-  return pointHitsDiagramSymbol(a,p,tolerance);
+  return pointHitsDiagramSymbol(a,p,tolerance,options);
 }
-export function pickDiagramAnnotation(annotations:DiagramAnnotation[],point:Point,tolerance:number):DiagramAnnotation|null {
-  for(let i=annotations.length-1;i>=0;i--)if(pointHitsDiagramAnnotation(point,annotations[i],tolerance))return annotations[i];
+export function pickDiagramAnnotation(annotations:DiagramAnnotation[],point:Point,tolerance:number,options?:DiagramSymbolInkOptions):DiagramAnnotation|null {
+  for(let i=annotations.length-1;i>=0;i--)if(pointHitsDiagramAnnotation(point,annotations[i],tolerance,options))return annotations[i];
   return null;
 }
 function inside(p:Point,box:DiagramAnnotationBounds):boolean {return p[0]>=box.x-EPS&&p[0]<=box.x+box.width+EPS&&p[1]>=box.y-EPS&&p[1]<=box.y+box.height+EPS;}
@@ -226,22 +226,22 @@ function segmentIntersectsBox(a:Point,b:Point,box:DiagramAnnotationBounds):boole
   const corners:Point[]=[[x,y],[x+w,y],[x+w,y+h],[x,y+h]];
   return corners.some((p,i)=>{const hit=intersectDiagramLines({a,b},{a:p,b:corners[(i+1)%4]});return !!hit&&hit.t>=-EPS&&hit.t<=1+EPS&&hit.u>=-EPS&&hit.u<=1+EPS;});
 }
-export function diagramAnnotationsInBox(annotations:DiagramAnnotation[],a:Point,b:Point):string[] {
+export function diagramAnnotationsInBox(annotations:DiagramAnnotation[],a:Point,b:Point,options?:DiagramSymbolInkOptions):string[] {
   const box={x:Math.min(a[0],b[0]),y:Math.min(a[1],b[1]),width:Math.abs(b[0]-a[0]),height:Math.abs(b[1]-a[1])};
   return annotations.filter(annotation=>{
     if(annotation.kind==='line')return segmentIntersectsBox(annotation.a,annotation.b,box);
-    return symbolIntersectsBox(annotation,a,b);
+    return symbolIntersectsBox(annotation,a,b,undefined,options);
   }).map(a=>a.id);
 }
 /** Use swept segments rather than sampled cursor points, so fast erasing never skips lines. */
-export function diagramEraseHits(annotations:DiagramAnnotation[],from:Point,to:Point,tolerance:number):string[] {
+export function diagramEraseHits(annotations:DiagramAnnotation[],from:Point,to:Point,tolerance:number,options?:DiagramSymbolInkOptions):string[] {
   return annotations.filter(a=>{
     if(a.kind==='line'){
       const hit=intersectDiagramLines(a,{a:from,b:to});
       if(hit&&hit.t>=0&&hit.t<=1&&hit.u>=0&&hit.u<=1)return true;
       return Math.min(pointDiagramLineDistance(from,a),pointDiagramLineDistance(to,a),pointDiagramLineDistance(a.a,{a:from,b:to}),pointDiagramLineDistance(a.b,{a:from,b:to}))<=tolerance+a.width/2;
     }
-    return symbolIntersectsSegment(a,from,to,tolerance);
+    return symbolIntersectsSegment(a,from,to,tolerance,options);
   }).map(a=>a.id);
 }
 
@@ -274,14 +274,6 @@ export function trimDiagramLine(line:DiagramLineAnnotation,lines:DiagramLineAnno
   if(high<1-EPS)result.push({...structuredClone(line),id:result.length?idFactory():line.id,a:add(line.a,mul(direction,high))});
   return result;
 }
-/** Extend only the clicked near endpoint to the first finite crossing with another line. */
-export function extendDiagramLine(line:DiagramLineAnnotation,lines:DiagramLineAnnotation[],point:Point):DiagramLineAnnotation|null {
-  const atStart=magnitude(sub(point,line.a))<magnitude(sub(point,line.b));
-  const hits=lines.filter(l=>l.id!==line.id).flatMap(other=>{const hit=intersectDiagramLines(line,other);return hit&&hit.u>=-EPS&&hit.u<=1+EPS&&(atStart?hit.t< -EPS:hit.t>1+EPS)?[hit]:[];});
-  hits.sort((a,b)=>atStart?b.t-a.t:a.t-b.t);const hit=hits[0];
-  return hit?{...structuredClone(line),...(atStart?{a:hit.point}:{b:hit.point})}:null;
-}
-
 export type DiagramTransform={kind:'translate';delta:Point}|{kind:'rotate';center:Point;angle:number}|{kind:'scale';center:Point;factor:number}|{kind:'mirror';axis:'x'|'y';center:Point}|{kind:'mirrorLine';a:Point;b:Point};
 /** Transform the drawing overlay only; CPs and step poses are intentionally absent. */
 export function transformDiagramAnnotations(annotations:DiagramAnnotation[],ids:string[],transform:DiagramTransform):DiagramAnnotation[] {
@@ -346,8 +338,13 @@ export function mirrorCopyDiagramAnnotations(annotations:DiagramAnnotation[],ids
   return {annotations:next,ids:copies.map(annotation=>annotation.id)};
 }
 
+/** Drawing units per CSS pixel when the whole rectangle fits in the viewport. */
+export function diagramViewportUnits(rect:{width:number;height:number},size:{width:number;height:number}):number {
+  return Math.max(rect.width/Math.max(1,size.width),rect.height/Math.max(1,size.height));
+}
+
 /** Expand around the same center to the SVG viewport aspect ratio, with uniform units. */
 export function diagramVisibleRect(rect:DiagramAnnotationBounds,size:{width:number;height:number}):DiagramAnnotationBounds {
-  const units=Math.max(rect.width/Math.max(1,size.width),rect.height/Math.max(1,size.height)),width=size.width*units,height=size.height*units;
+  const units=diagramViewportUnits(rect,size),width=size.width*units,height=size.height*units;
   return {x:rect.x+(rect.width-width)/2,y:rect.y+(rect.height-height)/2,width,height};
 }

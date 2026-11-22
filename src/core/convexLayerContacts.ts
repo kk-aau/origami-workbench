@@ -3,6 +3,8 @@ import type {FoldGraph,Point} from './types';
 import {BoundsIndex} from './boundsIndex';
 import {reportFlatComputationProgress} from './flatComputationProgress';
 import {screenLayerPairs} from './layerPairScreening';
+import {gpuFaceVertices} from './gpuFaceVertices';
+import {faceVertexPredicate} from './faceVertexFilter';
 
 export type LayerCategory='taco_taco'|'taco_tortilla'|'tortilla_tortilla'|'transitivity';
 export type ConvexLayerConstraints=Record<LayerCategory,number[][]>;
@@ -40,7 +42,7 @@ export function convexEdgesFacesOverlap(graph:FoldGraph,epsilon:number):number[]
     row.forEach(v=>{cluster[v]=i;});const box=bounds(row.map(v=>points[v]));contactPadding=Math.max(contactPadding,box[2]-box[0],box[3]-box[1]);
   });
   edges.forEach(([a,b],e)=>{clusterEdges[cluster[a]].push(e);if(cluster[a]!==cluster[b])clusterEdges[cluster[b]].push(e);});
-  const verticesEdges=points.map(()=>new Set<number>()),edgeVertices=edges.map(()=>[] as number[]),edgesEdges=edges.map(()=>new Set<number>()),facesVertices=faces.map(()=>new Set<number>());
+  const verticesEdges=points.map(()=>new Set<number>()),edgeVertices=edges.map(()=>[] as number[]),edgesEdges=edges.map(()=>new Set<number>());
   reportFlatComputationProgress({stage:'contacts-vertices',label:'复核顶点与纸边接触',completed:0,total:edges.length});
   for(let e=0;e<edges.length;e++){
     if((e&1023)===0)reportFlatComputationProgress({stage:'contacts-vertices',label:'复核顶点与纸边接触',completed:e,total:edges.length});
@@ -51,22 +53,17 @@ export function convexEdgesFacesOverlap(graph:FoldGraph,epsilon:number):number[]
   }
   for(let a=0;a<edges.length;a++)for(const b of edgeIndex.query(edgeBounds[a],epsilon,a))if(ear.math.intersectLineLine(lines[a],lines[b],ear.math.excludeS,ear.math.excludeS,epsilon).point!==undefined){edgesEdges[a].add(b);edgesEdges[b].add(a);}
   reportFlatComputationProgress({stage:'contacts-faces',label:'复核纸面覆盖',completed:0,total:faces.length});
-  for(let f=0;f<faces.length;f++){
+  const gpuVertices=gpuFaceVertices(points,faces,epsilon);
+  const facesVertices=gpuVertices??faces.map(()=>new Set<number>());
+  if(!gpuVertices)for(let f=0;f<faces.length;f++){
     if((f&511)===0)reportFlatComputationProgress({stage:'contacts-faces',label:'复核纸面覆盖',completed:f,total:faces.length});
-    const polygon=faces[f].map(v=>points[v]);
-    const sides=new Float64Array(polygon.length);
-    for(let v=0;v<points.length;v++){
-      // Upstream compares unnormalized cross products and treats ALL false
-      // half-plane tests as overlap too. On tiny faces this can include a
-      // distant point, so no distance/bounds rejection is sound here.
-      let sum=0;
-      for(let k=0;k<polygon.length;k++){const a=polygon[k],b=polygon[(k+1)%polygon.length];sides[k]=(b[0]-a[0])*(points[v][1]-a[1])-(b[1]-a[1])*(points[v][0]-a[0]);sum+=sides[k];}
-      const sign=Math.sign(sum),first=sides[0]*sign>epsilon;let same=true;
-      for(let k=1;k<sides.length;k++)if((sides[k]*sign>epsilon)!==first){same=false;break;}
-      if(same)facesVertices[f].add(v);
-    }
+    const accept=faceVertexPredicate(points,faces[f],epsilon);
+    for(let v=0;v<points.length;v++)if(accept(v))facesVertices[f].add(v);
   }
   const result=edges.map(()=>[] as number[]),seen=new Uint32Array(edges.length);
+  // Two sets reused per edge. Face walks can repeat a vertex, so counting
+  // matching positions in a ring would change the upstream incidence rule.
+  const included=new Set<number>(),remaining=new Set<number>();
   for(let f=0;f<faces.length;f++){
    if((f&511)===0)reportFlatComputationProgress({stage:'contacts-rules',label:'建立纸层接触约束',completed:f,total:faces.length});
    // A successful count is exactly two, so at least one of its three terms
@@ -78,16 +75,24 @@ export function convexEdgesFacesOverlap(graph:FoldGraph,epsilon:number):number[]
    for(const v of faces[f]){for(const e of verticesEdges[v])add(e);for(const e of clusterEdges[cluster[v]])add(e);}
    for(const other of faceEdges[f]){for(const e of edgesEdges[other])add(e);for(const v of edgeVertices[other])for(const e of incidentEdges[v])add(e);}
    for(const v of facesVertices[f])for(const e of incidentEdges[v])add(e);
-   candidates.sort((a,b)=>a-b);
+   // Each output row is appended in ascending face order, independently of
+   // the order in which this one face visits its candidate edges.
    for(const e of candidates){
     const [a,b]=edges[e];
     if(!overlap(faceBounds[f],edgeBounds[e],contactPadding)&&!facesVertices[f].has(a)&&!facesVertices[f].has(b))continue;
-    const vertices=faces[f].filter(v=>verticesEdges[v].has(e)||cluster[v]===cluster[a]||cluster[v]===cluster[b]),remaining=new Set(vertices),included=new Set(vertices);
-    faces[f].forEach((v,k)=>{const w=faces[f][(k+1)%faces[f].length];if(included.has(v)&&included.has(w)){remaining.delete(v);remaining.delete(w);}});
-    const crossing=faceEdges[f].filter(other=>verticesEdges[a].has(other)||verticesEdges[b].has(other)||edgesEdges[e].has(other));
-    const interior=Number(facesVertices[f].has(a))+Number(facesVertices[f].has(b));
-    if(remaining.size+crossing.length+interior!==2)continue;
-    if(remaining.size===1&&crossing.length===1&&edges[crossing[0]].includes(remaining.values().next().value!))continue;
+    let count=Number(facesVertices[f].has(a))+Number(facesVertices[f].has(b)),crossings=0,lastCrossing=-1;
+    for(const other of faceEdges[f])if(verticesEdges[a].has(other)||verticesEdges[b].has(other)||edgesEdges[e].has(other)){
+     count++;crossings++;lastCrossing=other;if(count>2)break;
+    }
+    if(count>2)continue;
+    included.clear();remaining.clear();
+    const ring=faces[f];
+    for(const v of ring)if(verticesEdges[v].has(e)||cluster[v]===cluster[a]||cluster[v]===cluster[b]){included.add(v);remaining.add(v);}
+    if(included.size)for(let k=0;k<ring.length;k++){
+     const v=ring[k],w=ring[(k+1)%ring.length];if(included.has(v)&&included.has(w)){remaining.delete(v);remaining.delete(w);}
+    }
+    if(count+remaining.size!==2)continue;
+    if(remaining.size===1&&crossings===1&&edges[lastCrossing].includes(remaining.values().next().value!))continue;
     result[e].push(f);
    }
   }

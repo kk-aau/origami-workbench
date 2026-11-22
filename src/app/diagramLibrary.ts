@@ -1,5 +1,7 @@
+import {resolveLineStroke,readAdaptiveLineStyle} from './adaptiveLineStyle';
 import {preferenceStorage} from './preferenceStorage';
-import {exportDiagramProject,importDiagramProject,type DiagramProject} from './diagramProject';
+import {exportDiagramProject,importDiagramProject,validateDiagramProject,type DiagramProject} from './diagramProject';
+import {diagramBranchStepCount} from './diagramBranches';
 import {drawingSVG,diagramDrawingFrame,diagramZoomArtwork} from './diagramDrawing';
 import {diagramStepZoom} from './diagramStepZoom';
 import {diagramCalloutCPMarkup} from './diagramCalloutSVG';
@@ -7,6 +9,8 @@ import {defaultCreaseDisplay} from './creaseDisplay';
 import {projectDiagramFoldCP} from './diagramFoldLink';
 import {diagramDrawingRotationFrame,rotateDiagramDrawingSVG} from './diagramDrawingRotation';
 import {sameDiagramProjectContent} from './diagramProjectContent';
+import {makeDiagramRecoveryPatch,restoreDiagramRecoveryPatch,type DiagramRecoveryPatch} from './diagramRecoveryPatch';
+import type {DiagramThumbnailRecovery} from './diagramThumbnailTask';
 import {api} from './api';
 import {WEB_APP} from './webRuntime';
 
@@ -19,6 +23,7 @@ export interface DiagramLibraryFolder {id:string;name:string;parentId:string|nul
 export interface DiagramLibraryEntry {
   id:string;name:string;folderId:string|null;createdAt:number;modifiedAt:number;openedAt:number;
   stepCount:number;savedAt:number|null;draftKey:string|null;savedKey:string|null;
+  recoveryKey?:string;
   /** Unreferenced revision slots are reused; each drawing needs at most three
    * payload keys rather than accumulating one empty key per autosave. */
   spareKeys?:string[];
@@ -32,20 +37,22 @@ export interface DiagramLibraryIndex {
 type StorageAccess=Pick<Storage,'getItem'|'setItem'>&{compareAndSet?:(key:string,expectedValue:string|null,value:string)=>boolean;getItemAsync?:(key:string)=>Promise<string|null>;retainRecords?:(keys:readonly string[])=>()=>void};
 export class DiagramLibraryConflictError extends Error {readonly code='DIAGRAM_LIBRARY_CONFLICT';constructor(){super('绘图已在其他窗口修改或删除，本次保存未覆盖原内容。请下载当前工程备份，或另存为新绘图后继续。');}}
 interface StoredDocument {format:'zhezhi-diagram-library-document';version:1;project:DiagramProject;thumbnail:string|null}
-export type DiagramLibraryBackgroundRequest=({project:DiagramProject}|{promoteDraftKey:string})&{settings:DiagramLibrarySaveOptions;openedHead?:string;legacyDraft?:boolean};
+export type DiagramLibraryBackgroundRequest=({project:DiagramProject}|{promoteDraftKey:string}|{patch:DiagramRecoveryPatch;name:string;stepCount:number})&{settings:DiagramLibrarySaveOptions;openedHead?:string;legacyDraft?:boolean};
 export interface DiagramLibraryBackgroundResult {entry:DiagramLibraryEntry;index:DiagramLibraryIndex;thumbnail:string|null;warnings:string[]}
 interface LibraryOptions {
+  /** Exact private object received from the import Worker's prepared blob. */
+  preparedImport?:DiagramProject;
   now?:()=>number;idFactory?:()=>string;onWarning?:(message:string)=>void;
   /** The worker receives the editor's original head, never a freshly loaded
    * external revision falsely adopted as this window's base. */
   openedHeads?:ReadonlyMap<string,string>;
   backgroundSave?:(request:DiagramLibraryBackgroundRequest)=>Promise<DiagramLibraryBackgroundResult>;
-  prepareThumbnail?:(storedText:string)=>Promise<string|null>;
+  prepareThumbnail?:(storedText:string,recovery?:DiagramThumbnailRecovery)=>Promise<string|null>;
 }
 export interface DiagramLibrarySaveOptions {id?:string;folderId?:string|null;kind:'draft'|'saved';onlyIfLibraryMissing?:boolean}
 export interface DiagramLibraryDeleteResult {index:DiagramLibraryIndex;warning:string|null}
 export const emptyDiagramLibrary=():DiagramLibraryIndex=>({format:'zhezhi-diagram-library',version:1,documents:[],folders:[],lastOpenId:null});
-export const diagramLibraryIsDraft=(entry:DiagramLibraryEntry)=>entry.draftKey!==entry.savedKey||entry.savedKey===null;
+export const diagramLibraryIsDraft=(entry:DiagramLibraryEntry)=>!!entry.recoveryKey||entry.draftKey!==entry.savedKey||entry.savedKey===null;
 /** A migration can rename an imported document or assign it a new id. Match
  * its full drawing before allowing the open workspace to save into that id. */
 export function findDiagramLibraryDocument(index:DiagramLibraryIndex,project:DiagramProject,load:(id:string)=>DiagramProject,preferredId:string|null):DiagramLibraryEntry|null {
@@ -79,6 +86,10 @@ function validateIndex(value:unknown):asserts value is DiagramLibraryIndex {
     ids.add(doc.id);
   }
   const liveKeys=new Set(index.documents.flatMap(doc=>[doc.draftKey,doc.savedKey].filter((key):key is string=>!!key))),spareKeys=new Set<string>();
+  for(const doc of index.documents)if(doc.recoveryKey!==undefined){
+    if(typeof doc.recoveryKey!=='string'||!DOCUMENT_KEY.test(doc.recoveryKey)||liveKeys.has(doc.recoveryKey))throw Error('折序自动恢复目录损坏。');
+    liveKeys.add(doc.recoveryKey);
+  }
   for(const doc of index.documents)if(doc.spareKeys!==undefined){
     if(!Array.isArray(doc.spareKeys)||doc.spareKeys.length>2||doc.spareKeys.some(snapshotKey=>typeof snapshotKey!=='string'||!DOCUMENT_KEY.test(snapshotKey)||liveKeys.has(snapshotKey)||spareKeys.has(snapshotKey)))throw new Error('折序绘图修订目录损坏。');
     for(const snapshotKey of doc.spareKeys)spareKeys.add(snapshotKey);
@@ -90,8 +101,14 @@ function validateIndex(value:unknown):asserts value is DiagramLibraryIndex {
 function fallbackCP(project:DiagramProject):string {
   const step=project.steps.find(item=>item.id===project.activeStepId)??project.steps[0],doc=project.states.find(state=>state.id===step.beforeId)!.doc;
   const w=doc.paper.width,h=doc.paper.height,pad=Math.max(w,h)*.08;
-  const lines=doc.segments.slice(0,550).map(segment=>`<path d="M ${segment.a.join(' ')} L ${segment.b.join(' ')}" fill="none" stroke="${segment.assignment==='M'?'#b06957':segment.assignment==='V'?'#65899d':'#526b5b'}" stroke-width="${Math.max(w,h)*.002}"${segment.assignment==='V'?' stroke-dasharray="3 2"':''}/>`).join('');
   const zoom=diagramStepZoom(project,step.id)?.region,frame=zoom?diagramDrawingFrame(null,[],undefined,[],true,[],zoom):{x:-pad,y:-pad,width:w+pad*2,height:h+pad*2};
+  const output=diagramDrawingRotationFrame(frame,step.canvas?.drawingRotation??0);
+  const units=Math.max(output.width/240,output.height/180),enabled=project.basicSettings?.adaptiveLines??readAdaptiveLineStyle();
+  const lines=doc.segments.slice(0,550).map(({a,b,assignment})=>{
+    const pen=resolveLineStroke(Math.hypot(b[0]-a[0],b[1]-a[1]),1,assignment==='V'?'3 2':undefined,{enabled,units,pen:'pixels'});
+    const pattern=pen.dash?` stroke-dasharray="${pen.dash}" stroke-dashoffset="${pen.dashOffset}" pathLength="${pen.pathLength}"`:'';
+    return `<path d="M ${a.join(' ')} L ${b.join(' ')}" fill="none" stroke="${assignment==='M'?'#b06957':assignment==='V'?'#65899d':'#526b5b'}" stroke-width="${pen.width}"${pattern}/>`;
+  }).join('');
   return rotateDiagramDrawingSVG(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="${frame.x} ${frame.y} ${frame.width} ${frame.height}">${diagramZoomArtwork(`<rect x="0" y="0" width="${w}" height="${h}" fill="#f5ecd5"/>${lines}`,zoom,'library-cp')}</svg>`,step.canvas?.drawingRotation??0);
 }
 
@@ -103,8 +120,8 @@ export function diagramLibraryThumbnail(project:DiagramProject):string {
     const before=project.states.find(state=>state.id===step.beforeId)!,after=project.states.find(state=>state.id===step.afterId)!;
     const preview=step.paperVisible!==false&&step.pose&&step.foldLink?.enabled?projectDiagramFoldCP(step.pose,before.doc,after.doc,project.states.find(state=>state.id===step.pose!.sourceStateId),step.foldLink.precreases).preview:undefined;
     const zoom=diagramStepZoom(project,step.id)?.region,drawingRotation=step.canvas?.drawingRotation??0,thumbnailFrame=diagramDrawingRotationFrame(diagramDrawingFrame(step.pose,step.annotations??[],undefined,step.images,step.paperVisible,step.callouts,zoom,step.simulationSurface),drawingRotation);
-    const svg=drawingSVG(step.pose,step.annotations??[],'','',preview,step.images,step.paperVisible,undefined,step.callouts,(stateId,sourceUnits,hideExistingCreases)=>{const state=project.states.find(item=>item.id===stateId);return state?diagramCalloutCPMarkup(state.doc,defaultCreaseDisplay(),{units:sourceUnits,hideExistingCreases}):'';},{units:Math.max(thumbnailFrame.width/240,thumbnailFrame.height/180)},zoom,drawingRotation,step.simulationSurface);
-    return svg.length<=THUMBNAIL_LIMIT||step.images?.length||step.simulationSurface?svg:fallbackCP(project);
+    const svg=drawingSVG(step.pose,step.annotations??[],'','',preview,step.images,step.paperVisible,undefined,step.callouts,(stateId,sourceUnits,hideExistingCreases)=>{const state=project.states.find(item=>item.id===stateId);return state?diagramCalloutCPMarkup(state.doc,defaultCreaseDisplay(),{units:sourceUnits,hideExistingCreases}):'';},{symbolStyles:project.basicSettings?.symbolStyles,units:Math.max(thumbnailFrame.width/240,thumbnailFrame.height/180)},zoom,drawingRotation,step.simulationSurface,project.basicSettings?.paperPatterns);
+    return svg.length<=THUMBNAIL_LIMIT||step.images?.length||step.simulationSurface||project.basicSettings?.paperPatterns?svg:fallbackCP(project);
   }catch{return fallbackCP(project);}
 }
 
@@ -118,16 +135,16 @@ export function createDiagramLibrary(storage:StorageAccess=preferenceStorage,opt
   let committedDirectory:{baseline:string|null;text:string}|undefined;
   let legacyMigration:Promise<DiagramLibraryIndex>|undefined;
   const openedHeads=new Map<string,string>(options.openedHeads);
-  const confirmedContent=new Map<string,{project:DiagramProject;entry:DiagramLibraryEntry}>();
-  const rememberContent=(id:string,project:DiagramProject,entry:DiagramLibraryEntry)=>{
-    confirmedContent.delete(id);confirmedContent.set(id,{project,entry:structuredClone(entry)});
+  const confirmedContent=new Map<string,{project:DiagramProject;base:DiagramProject;entry:DiagramLibraryEntry}>();
+  const rememberContent=(id:string,project:DiagramProject,entry:DiagramLibraryEntry,base=project)=>{
+    confirmedContent.delete(id);confirmedContent.set(id,{project,base,entry:structuredClone(entry)});
     while(confirmedContent.size>2)confirmedContent.delete(confirmedContent.keys().next().value!);
   };
-  type BackgroundJob={project:DiagramProject;settings:DiagramLibrarySaveOptions;legacyDraft:boolean;coalesce:boolean;waiters:{resolve:(entry:DiagramLibraryEntry)=>void;reject:(error:unknown)=>void}[]};
+  type BackgroundJob={project:DiagramProject;settings:DiagramLibrarySaveOptions;legacyDraft:boolean;coalesce:boolean;incremental:boolean;waiters:{resolve:(entry:DiagramLibraryEntry)=>void;reject:(error:unknown)=>void}[]};
   const backgroundQueue:BackgroundJob[]=[],backgroundIdle:(()=>void)[]=[];
   let backgroundRunning=false;
   const hasPendingSave=()=>backgroundRunning||backgroundQueue.length>0;
-  const head=(entry:DiagramLibraryEntry)=>JSON.stringify([entry.draftKey,entry.savedKey,entry.modifiedAt,entry.name]);
+  const head=(entry:DiagramLibraryEntry)=>JSON.stringify([entry.draftKey,entry.savedKey,entry.modifiedAt,entry.name,...entry.recoveryKey?[entry.recoveryKey]:[]]);
   const compare=(key:string,expected:string|null,value:string)=>{
     if(storage.compareAndSet)return storage.compareAndSet(key,expected,value);
     // Custom synchronous stores used by import validation and embedders retain
@@ -139,7 +156,7 @@ export function createDiagramLibrary(storage:StorageAccess=preferenceStorage,opt
   // Explicit document opens always re-read and validate the current payload.
   const documentCache=new Map<string,StoredDocument>(),thumbnailCache=new Map<string,string|null>(),thumbnailLoads=new Map<string,Promise<string|null>>();
   const discardCache=(snapshotKey:string)=>{documentCache.delete(snapshotKey);thumbnailCache.delete(snapshotKey);thumbnailLoads.delete(snapshotKey);};
-  const cacheDocument=(snapshotKey:string,value:StoredDocument)=>{documentCache.delete(snapshotKey);documentCache.set(snapshotKey,value);thumbnailCache.set(snapshotKey,value.thumbnail);while(documentCache.size>2)documentCache.delete(documentCache.keys().next().value!);};
+  const cacheDocument=(snapshotKey:string,value:StoredDocument)=>{documentCache.delete(snapshotKey);documentCache.set(snapshotKey,value);if(value.thumbnail!==null)thumbnailCache.set(snapshotKey,value.thumbnail);while(documentCache.size>2)documentCache.delete(documentCache.keys().next().value!);};
   const read=():DiagramLibraryIndex=>{
     const stored=storage.getItem(DIAGRAM_LIBRARY_KEY);
     const raw=committedDirectory&&stored===committedDirectory.baseline?committedDirectory.text:stored;
@@ -147,7 +164,7 @@ export function createDiagramLibrary(storage:StorageAccess=preferenceStorage,opt
     readRaw=raw;if(raw===null||raw===''){cachedIndex=emptyDiagramLibrary();return emptyDiagramLibrary();}
     let index:unknown;try{index=JSON.parse(raw);}catch{throw new Error('折序文档目录损坏，请先导出当前工程。');}
     validateIndex(index);
-    for(const entry of index.documents){const previous=cachedIndex?.documents.find(doc=>doc.id===entry.id);if(previous&&previous.modifiedAt!==entry.modifiedAt){if(entry.draftKey)discardCache(entry.draftKey);if(entry.savedKey)discardCache(entry.savedKey);}}
+    for(const entry of index.documents){const previous=cachedIndex?.documents.find(doc=>doc.id===entry.id);if(previous&&(previous.modifiedAt!==entry.modifiedAt||previous.recoveryKey!==entry.recoveryKey)){for(const key of [entry.draftKey,entry.savedKey,previous.recoveryKey,entry.recoveryKey])if(key)discardCache(key);}}
     cachedIndex=structuredClone(index);return structuredClone(index);
   };
   const readAsync=async()=>{if(storage.getItemAsync)await storage.getItemAsync(DIAGRAM_LIBRARY_KEY);return read();};
@@ -165,7 +182,11 @@ export function createDiagramLibrary(storage:StorageAccess=preferenceStorage,opt
   const clear=(snapshotKey:string,expectedValue:string|null,committed=true)=>{discardCache(snapshotKey);try{compare(snapshotKey,expectedValue,'');return true;}catch{if(committed)try{options.onWarning?.('绘图已保存，旧修订暂未清理；请检查本机存储空间。');}catch{/* Notification failure cannot change a committed snapshot. */}return false;}};
   const save=(project:DiagramProject,settings:DiagramLibrarySaveOptions):DiagramLibraryEntry=>{
     if(hasPendingSave())throw Error('绘图正在后台保存，请等待完成后重试。');
-    const validProject=importDiagramProject(exportDiagramProject(project));
+    let validProject:DiagramProject;
+    if(project===options.preparedImport&&!settings.id&&settings.kind==='draft'){
+      validateDiagramProject(project);
+      validProject=project;
+    }else validProject=importDiagramProject(exportDiagramProject(project));
     let staged:{key:string;body:string;snapshot:StoredDocument;thumbnail:string}|undefined;
     try{for(let attempt=0;attempt<4;attempt++){
       const index=read(),expected=readRaw,previous=settings.id?index.documents.find(entry=>entry.id===settings.id):null;
@@ -173,7 +194,7 @@ export function createDiagramLibrary(storage:StorageAccess=preferenceStorage,opt
       if(settings.id&&!previous)throw new DiagramLibraryConflictError();
       const existingKey=previous?.draftKey??previous?.savedKey;
       const previousBodies=new Map<string,string|null>();
-      for(const oldKey of new Set([previous?.draftKey,previous?.savedKey]))if(oldKey&&index.documents.filter(entry=>entry.draftKey===oldKey||entry.savedKey===oldKey).length===1)try{previousBodies.set(oldKey,storage.getItem(oldKey));}catch{/* Optional cleanup must not prevent a protected save. */}
+      for(const oldKey of new Set([previous?.draftKey,previous?.savedKey,previous?.recoveryKey]))if(oldKey&&index.documents.filter(entry=>entry.draftKey===oldKey||entry.savedKey===oldKey||entry.recoveryKey===oldKey).length===1)try{previousBodies.set(oldKey,storage.getItem(oldKey));}catch{/* Optional cleanup must not prevent a protected save. */}
       if(previous){
         const opened=openedHeads.get(previous.id);
         if(opened!==undefined&&opened!==head(previous))throw new DiagramLibraryConflictError();
@@ -199,15 +220,15 @@ export function createDiagramLibrary(storage:StorageAccess=preferenceStorage,opt
         }
         snapshotKey=staged.key;
       }
-      const entry:DiagramLibraryEntry={id,name,folderId,createdAt:previous?.createdAt??stamp,modifiedAt:snapshotKey!==existingKey?stamp:previous?.modifiedAt??stamp,openedAt:stamp,stepCount:validProject.steps.length,
+      const entry:DiagramLibraryEntry={id,name,folderId,createdAt:previous?.createdAt??stamp,modifiedAt:snapshotKey!==existingKey?stamp:previous?.modifiedAt??stamp,openedAt:stamp,stepCount:diagramBranchStepCount(validProject),
         savedAt:settings.kind==='saved'?stamp:previous?.savedAt??null,draftKey:snapshotKey,savedKey:settings.kind==='saved'?snapshotKey:previous?.savedKey??null};
       const otherKeys=new Set(index.documents.filter(doc=>doc.id!==id).flatMap(doc=>[doc.draftKey,doc.savedKey,...(doc.spareKeys??[])]));
-      entry.spareKeys=[...new Set([...(previous?.spareKeys??[]),previous?.draftKey,previous?.savedKey])].filter((key):key is string=>!!key&&key!==entry.draftKey&&key!==entry.savedKey&&!otherKeys.has(key)).slice(0,2);
+      entry.spareKeys=[...new Set([...(previous?.spareKeys??[]),previous?.recoveryKey,previous?.draftKey,previous?.savedKey])].filter((key):key is string=>!!key&&key!==entry.draftKey&&key!==entry.savedKey&&!otherKeys.has(key)).slice(0,2);
       index.documents=previous?index.documents.map(doc=>doc.id===id?entry:doc):[...index.documents,entry];index.lastOpenId=id;
       try{write(index,expected);}catch(error){if(error instanceof DiagramLibraryConflictError&&attempt<3)continue;throw error;}
       openedHeads.set(entry.id,head(entry));staged=undefined;
       let live=index;try{live=read();}catch{/* Cleanup is optional after commit. */}
-      const liveKeys=new Set(live.documents.flatMap(doc=>[doc.savedKey,doc.draftKey].filter((key):key is string=>!!key)));
+      const liveKeys=new Set(live.documents.flatMap(doc=>[doc.savedKey,doc.draftKey,doc.recoveryKey].filter((key):key is string=>!!key)));
       for(const [oldKey,oldBody] of previousBodies)if(!liveKeys.has(oldKey))clear(oldKey,oldBody);
       rememberContent(entry.id,project,entry);
       return structuredClone(entry);
@@ -221,7 +242,7 @@ export function createDiagramLibrary(storage:StorageAccess=preferenceStorage,opt
     if(hasPendingSave())throw Error('绘图正在后台保存，请等待完成后重试。');
     for(let attempt=0;attempt<4;attempt++){
       const index=read(),expected=readRaw,previous=requireEntry(index,id);
-      if(openedHeads.get(id)!==head(previous)||previous.draftKey!==draftKey)throw new DiagramLibraryConflictError();
+      if(openedHeads.get(id)!==head(previous)||previous.draftKey!==draftKey||previous.recoveryKey)throw new DiagramLibraryConflictError();
       if(previous.savedKey===draftKey)return structuredClone(previous);
       const oldKey=previous.savedKey,oldBody=oldKey?storage.getItem(oldKey):null,stamp=now();
       const entry={...previous,savedKey:draftKey,savedAt:stamp,openedAt:stamp};
@@ -236,6 +257,28 @@ export function createDiagramLibrary(storage:StorageAccess=preferenceStorage,opt
     }
     throw new DiagramLibraryConflictError();
   };
+  const saveRecovery=(id:string,patch:DiagramRecoveryPatch,name:string,stepCount:number):DiagramLibraryEntry=>{
+    const body=JSON.stringify(patch);
+    let staged:string|undefined;
+    try{
+      for(let attempt=0;attempt<4;attempt++){
+        const index=read(),previous=requireEntry(index,id),expected=readRaw;
+        if(openedHeads.get(id)!==head(previous)||previous.draftKey!==patch.baseKey)throw new DiagramLibraryConflictError();
+        if(!staged){
+          staged=previous.spareKeys?.find(key=>compare(key,'',body)||compare(key,null,body));
+          if(!staged){const key=newKey();if(!compare(key,null,body))throw new DiagramLibraryConflictError();staged=key;}
+        }
+        const old=previous.recoveryKey,oldBody=old?storage.getItem(old):null;
+        const spareKeys=[...new Set([old,...(previous.spareKeys??[])])].filter((key):key is string=>!!key&&key!==staged).slice(0,2);
+        const entry={...previous,name:nameOf(name),modifiedAt:now(),stepCount,recoveryKey:staged,spareKeys};
+        index.documents=index.documents.map(item=>item.id===id?entry:item);
+        try{write(index,expected);}catch(error){if(error instanceof DiagramLibraryConflictError&&attempt<3)continue;throw error;}
+        staged=undefined;if(old)clear(old,oldBody);
+        openedHeads.set(id,head(entry));return entry;
+      }
+      throw new DiagramLibraryConflictError();
+    }finally{if(staged)clear(staged,body,false);}
+  };
   const runBackground=async()=>{
     if(backgroundRunning)return;
     const job=backgroundQueue.shift();if(!job)return;
@@ -244,26 +287,30 @@ export function createDiagramLibrary(storage:StorageAccess=preferenceStorage,opt
       if(!options.backgroundSave)throw Error('后台绘图保存服务尚未准备好，当前内容仍保留。');
       const confirmed=job.settings.id?confirmedContent.get(job.settings.id):undefined;
       const unchanged=!!confirmed&&(job.settings.folderId===undefined||job.settings.folderId===confirmed.entry.folderId)&&sameDiagramProjectContent(confirmed.project,job.project);
-      if(unchanged&&(job.settings.kind==='draft'||confirmed.entry.savedKey===confirmed.entry.draftKey)){
-        rememberContent(confirmed.entry.id,job.project,confirmed.entry);
+      if(unchanged&&(job.settings.kind==='draft'||!diagramLibraryIsDraft(confirmed.entry))){
+        rememberContent(confirmed.entry.id,job.project,confirmed.entry,confirmed.base);
         for(const waiter of job.waiters)waiter.resolve(structuredClone(confirmed.entry));return;
       }
       const directoryBaseline=storage.getItem(DIAGRAM_LIBRARY_KEY);
-      const result=await options.backgroundSave({...unchanged&&confirmed.entry.draftKey?{promoteDraftKey:confirmed.entry.draftKey}:{project:job.project},settings:job.settings,openedHead:job.settings.id?openedHeads.get(job.settings.id):undefined,legacyDraft:job.legacyDraft});
+      const incremental=job.incremental&&job.settings.kind==='draft'&&confirmed?.entry.draftKey;
+      const payload=incremental?{patch:makeDiagramRecoveryPatch(incremental,confirmed!.base,job.project),name:job.project.name,stepCount:diagramBranchStepCount(job.project)}:
+        unchanged&&confirmed.entry.draftKey&&!confirmed.entry.recoveryKey?{promoteDraftKey:confirmed.entry.draftKey}:{project:job.project};
+      const result=await options.backgroundSave({...payload,settings:job.settings,openedHead:job.settings.id?openedHeads.get(job.settings.id):undefined,legacyDraft:job.legacyDraft});
       validateIndex(result.index);
       if(!result.entry||!result.index.documents.some(entry=>entry.id===result.entry.id&&JSON.stringify(entry)===JSON.stringify(result.entry))||job.settings.id&&result.entry.id!==job.settings.id||result.thumbnail!==null&&typeof result.thumbnail!=='string'||!Array.isArray(result.warnings)||result.warnings.some(warning=>typeof warning!=='string'))throw Error('后台绘图保存返回了无效结果。');
       // Saving may race a later external revision. Claim only the exact head
       // committed by our worker; the next read still detects that external edit.
       openedHeads.set(result.entry.id,head(result.entry));
-      rememberContent(result.entry.id,job.project,result.entry);
+      rememberContent(result.entry.id,job.project,result.entry,incremental?confirmed!.base:job.project);
       cachedIndex=structuredClone(result.index);readRaw=JSON.stringify(result.index);
       committedDirectory={baseline:directoryBaseline,text:readRaw};
       // The exact worker receipt already confirms persistence. A later optional
       // cache refresh must not turn that successful save into an error.
       if(storage.getItemAsync)try{await storage.getItemAsync(DIAGRAM_LIBRARY_KEY);}catch{try{options.onWarning?.('绘图已保存，目录刷新暂未完成；当前内容仍保留。');}catch{/* A notification cannot undo the confirmed commit. */}}
       documentCache.clear();
-      const liveKeys=new Set(result.index.documents.flatMap(entry=>[entry.draftKey,entry.savedKey]));
+      const liveKeys=new Set(result.index.documents.flatMap(entry=>[entry.draftKey,entry.savedKey,entry.recoveryKey]));
       for(const key of thumbnailCache.keys())if(!liveKeys.has(key))thumbnailCache.delete(key);
+      for(const key of thumbnailLoads.keys())if(!liveKeys.has(key))thumbnailLoads.delete(key);
       if(result.entry.draftKey&&result.thumbnail!==null)thumbnailCache.set(result.entry.draftKey,result.thumbnail);
       for(const warning of result.warnings)try{options.onWarning?.(warning);}catch{/* Notifications cannot undo a committed save. */}
       for(const waiter of job.waiters)waiter.resolve(structuredClone(result.entry));
@@ -276,15 +323,15 @@ export function createDiagramLibrary(storage:StorageAccess=preferenceStorage,opt
   };
   // As with edit/history snapshots, callers retain immutable project branches
   // while requests are queued. Only the latest confirmed snapshot can skip work.
-  const saveAsync=(project:DiagramProject,settings:DiagramLibrarySaveOptions,saveOptions:{legacyDraft?:boolean;coalesce?:boolean}={}):Promise<DiagramLibraryEntry>=>new Promise((resolve,reject)=>{
+  const saveAsync=(project:DiagramProject,settings:DiagramLibrarySaveOptions,saveOptions:{legacyDraft?:boolean;coalesce?:boolean;incremental?:boolean}={}):Promise<DiagramLibraryEntry>=>new Promise((resolve,reject)=>{
     const last=backgroundQueue.at(-1),coalesce=saveOptions.coalesce===true;
-    if(coalesce&&last?.coalesce&&last.settings.id===settings.id&&last.settings.kind===settings.kind){
+    if(coalesce&&last?.coalesce&&last.incremental===(saveOptions.incremental===true)&&last.settings.id===settings.id&&last.settings.kind===settings.kind){
       last.project=project;last.settings={...settings};last.legacyDraft=saveOptions.legacyDraft===true;last.waiters.push({resolve,reject});
-    }else backgroundQueue.push({project,settings:{...settings},legacyDraft:saveOptions.legacyDraft===true,coalesce,waiters:[{resolve,reject}]});
+    }else backgroundQueue.push({project,settings:{...settings},legacyDraft:saveOptions.legacyDraft===true,coalesce,incremental:saveOptions.incremental===true,waiters:[{resolve,reject}]});
     void runBackground();
   });
   return {
-    read,readAsync,save,saveAsync,hasPendingSave,promoteDraft,
+    read,readAsync,save,saveAsync,hasPendingSave,promoteDraft,saveRecovery,
     migrateLegacyAsync(prepare:(text:string)=>Promise<DiagramProject>):Promise<DiagramLibraryIndex>{
       if(legacyMigration)return legacyMigration;
       const task=(async()=>{
@@ -305,17 +352,28 @@ export function createDiagramLibrary(storage:StorageAccess=preferenceStorage,opt
       if(!snapshotKey)throw new Error('这个绘图尚无手动保存版本。');
       const raw=storage.getItemAsync?await storage.getItemAsync(snapshotKey):storage.getItem(snapshotKey);
       if(!raw)throw new Error('绘图内容缺失，请导入备份工程。');
-      let project=await prepare(raw);const latest=requireEntry(await readAsync(),id);
+      const base=await prepare(raw);
+      let project=version==='latest'&&entry.recoveryKey?restoreDiagramRecoveryPatch(snapshotKey,base,storage.getItemAsync?await storage.getItemAsync(entry.recoveryKey):storage.getItem(entry.recoveryKey)):base;
+      const latest=requireEntry(await readAsync(),id);
       if(head(entry)!==head(latest))throw new DiagramLibraryConflictError();
       if(project.name!==entry.name)project={...project,name:entry.name};openedHeads.set(id,head(entry));
-      if(version==='latest'||snapshotKey===entry.draftKey)rememberContent(id,project,entry);else confirmedContent.delete(id);
+      if(version==='latest'||snapshotKey===entry.draftKey&&!entry.recoveryKey)rememberContent(id,project,entry,base);else confirmedContent.delete(id);
       return project;
     },
     async getThumbnailAsync(id:string):Promise<string|null>{
       const entry=requireEntry(cachedIndex??read(),id),snapshotKey=(entry.draftKey??entry.savedKey)!;
-      if(thumbnailCache.has(snapshotKey))return thumbnailCache.get(snapshotKey)??null;
-      const loading=thumbnailLoads.get(snapshotKey);if(loading)return loading;
+      const previewKey=entry.recoveryKey??snapshotKey;
+      if(thumbnailCache.has(previewKey))return thumbnailCache.get(previewKey)??null;
+      const loading=thumbnailLoads.get(previewKey);if(loading)return loading;
       const task=(async()=>{
+        if(entry.recoveryKey){
+          const readBody=(key:string)=>storage.getItemAsync?storage.getItemAsync(key):storage.getItem(key);
+          const [raw,patchText]=await Promise.all([readBody(snapshotKey),readBody(entry.recoveryKey)]);
+          if(!raw||!patchText)throw Error('绘图内容或自动恢复记录缺失。');
+          if(options.prepareThumbnail)return options.prepareThumbnail(raw,{baseKey:snapshotKey,patchText});
+          const base=decode(snapshotKey).project;
+          return diagramLibraryThumbnail(restoreDiagramRecoveryPatch(snapshotKey,base,patchText));
+        }
         if(storage===preferenceStorage&&!WEB_APP){
           const result=await api<{thumbnail:string|null}>('storage/thumbnail?key='+encodeURIComponent(snapshotKey));
           if(result.thumbnail!==null&&typeof result.thumbnail!=='string')throw Error('绘图缩略图格式无效。');
@@ -326,9 +384,9 @@ export function createDiagramLibrary(storage:StorageAccess=preferenceStorage,opt
         if(storage.getItemAsync)await storage.getItemAsync(snapshotKey);
         const document=decode(snapshotKey);return document.thumbnail??diagramLibraryThumbnail(document.project);
       })();
-      thumbnailLoads.set(snapshotKey,task);
-      try{const thumbnail=await task;if(thumbnailLoads.get(snapshotKey)===task)thumbnailCache.set(snapshotKey,thumbnail);return thumbnail;}
-      finally{if(thumbnailLoads.get(snapshotKey)===task)thumbnailLoads.delete(snapshotKey);}
+      thumbnailLoads.set(previewKey,task);
+      try{const thumbnail=await task;if(thumbnailLoads.get(previewKey)===task)thumbnailCache.set(previewKey,thumbnail);return thumbnail;}
+      finally{if(thumbnailLoads.get(previewKey)===task)thumbnailLoads.delete(previewKey);}
     },
     getCachedThumbnail:(snapshotKey:string|null):string|null=>snapshotKey?thumbnailCache.get(snapshotKey)??null:null,
     waitForPendingSaves:():Promise<void>=>hasPendingSave()?new Promise(resolve=>backgroundIdle.push(resolve)):Promise.resolve(),
@@ -346,14 +404,19 @@ export function createDiagramLibrary(storage:StorageAccess=preferenceStorage,opt
     load(id:string,version:'latest'|'saved'='latest'):DiagramProject {
       const entry=requireEntry(read(),id),snapshotKey=version==='saved'?entry.savedKey:entry.draftKey??entry.savedKey;
       if(!snapshotKey)throw new Error('这个绘图尚无手动保存版本。');
-      const project=importDiagramProject(JSON.stringify(decode(snapshotKey,true).project));project.name=entry.name;openedHeads.set(id,head(entry));
-      if(version==='latest'||snapshotKey===entry.draftKey)rememberContent(id,project,entry);else confirmedContent.delete(id);
+      const base=importDiagramProject(JSON.stringify(decode(snapshotKey,true).project));
+      let project=version==='latest'&&entry.recoveryKey?restoreDiagramRecoveryPatch(snapshotKey,base,storage.getItem(entry.recoveryKey)):base;
+      if(project.name!==entry.name)project={...project,name:entry.name};openedHeads.set(id,head(entry));
+      if(version==='latest'||snapshotKey===entry.draftKey&&!entry.recoveryKey)rememberContent(id,project,entry,base);else confirmedContent.delete(id);
       return project;
     },
     getThumbnail(id:string):string|null {
       const entry=requireEntry(cachedIndex??read(),id),snapshotKey=(entry.draftKey??entry.savedKey)!;
-      const cached=thumbnailCache.get(snapshotKey);if(cached)return cached;
-      const document=decode(snapshotKey),thumbnail=document.thumbnail??diagramLibraryThumbnail(document.project);thumbnailCache.set(snapshotKey,thumbnail);return thumbnail;
+      const previewKey=entry.recoveryKey??snapshotKey,cached=thumbnailCache.get(previewKey);if(cached)return cached;
+      const document=decode(snapshotKey),thumbnail=entry.recoveryKey?
+        diagramLibraryThumbnail(restoreDiagramRecoveryPatch(snapshotKey,document.project,storage.getItem(entry.recoveryKey))):
+        document.thumbnail??diagramLibraryThumbnail(document.project);
+      thumbnailCache.set(previewKey,thumbnail);return thumbnail;
     },
     markOpen(id:string):void {const index=read(),entry=requireEntry(index,id);entry.openedAt=now();index.lastOpenId=id;write(index);},
     createFolder(name:string,parentId:string|null=null):DiagramLibraryFolder {
@@ -376,12 +439,12 @@ export function createDiagramLibrary(storage:StorageAccess=preferenceStorage,opt
       if(storage.getItemAsync){
         await readAsync();
         const entry=requireEntry(read(),id);
-        const keys=[...new Set([entry.draftKey,entry.savedKey,...(entry.spareKeys??[]),DIAGRAM_LEGACY_DRAFT_KEY])].filter((key):key is string=>!!key);
+        const keys=[...new Set([entry.draftKey,entry.savedKey,entry.recoveryKey,...(entry.spareKeys??[]),DIAGRAM_LEGACY_DRAFT_KEY])].filter((key):key is string=>!!key);
         release=storage.retainRecords?.(keys)??release;
         await Promise.all(keys.map(key=>storage.getItemAsync!(key)));
       }
       const index=read(),originalIndex=readRaw,entry=requireEntry(index,id),legacy=storage.getItem(DIAGRAM_LEGACY_DRAFT_KEY);
-      const keys=new Set([entry.draftKey,entry.savedKey,...(entry.spareKeys??[])]);
+      const keys=new Set([entry.draftKey,entry.savedKey,entry.recoveryKey,...(entry.spareKeys??[])]);
       const otherKeys=new Set(index.documents.filter(doc=>doc.id!==id).flatMap(doc=>[doc.draftKey,doc.savedKey,...(doc.spareKeys??[])])),ownedBodies=new Map<string,string|null>();
       for(const snapshotKey of keys)if(snapshotKey&&!otherKeys.has(snapshotKey))ownedBodies.set(snapshotKey,storage.getItem(snapshotKey));
       let legacyProject:string|undefined;

@@ -1,6 +1,6 @@
 import type {Point} from '../core/types';
 import {validateDiagramCadAttributes,validateDiagramCadProperties,type DiagramSymbolAnnotation} from './diagramAnnotations';
-import {cadAttributeDefinitions,cadPropertyDefinitions,getCadBlockByHandle,getCadSymbolBlock,type CadSymbolAction,type CadSymbolBlock,type CadSymbolEntity,type CadSymbolParameter} from './diagramCadSymbols';
+import {CAD_POINT_RADIUS,CAD_REPEAT_GAP,CAD_STAR_POINTS,cadAttributeDefinitions,cadPropertyDefinitions,getCadBlockByHandle,getCadSymbolBlock,type CadSymbolAction,type CadSymbolBlock,type CadSymbolEntity,type CadSymbolParameter} from './diagramCadSymbols';
 import {diagramCadGripSources,diagramCadPropertySupported} from './diagramCadGripSource';
 
 type Matrix=readonly [number,number,number,number,number,number];
@@ -293,7 +293,28 @@ export function buildCadSymbolGeometry(a:DiagramSymbolAnnotation):CadSymbolGeome
  // flip action; no duplicate paths or fabricated source entities are needed.
  if(a.symbol==='rotateCCW')a={...a,cadProperties:{...a.cadProperties,'翻转状态1':1-(a.cadProperties?.['翻转状态1']??0)}};
  const block=getCadSymbolBlock(a.symbol);if(!block)throw new Error('缺少原插件符号定义。');
- const normalization=defaultNormalization(block),{states,parameterMatrices,joints}=evaluatedStates(block,a),primitives:CadSymbolPrimitive[]=[];
+ let normalization=defaultNormalization(block);
+ const {states,parameterMatrices,joints}=evaluatedStates(block,a),primitives:CadSymbolPrimitive[]=[];
+ if((a.symbol==='referencePoint'||a.symbol==='filledReferencePoint')&&a.cadProperties?.[CAD_POINT_RADIUS]!==undefined){
+  const factor=a.cadProperties[CAD_POINT_RADIUS]/50;
+  normalization=compose([factor,0,0,factor,0,0],normalization);
+ }
+ if(a.symbol==='star'&&a.cadProperties?.[CAD_STAR_POINTS]!==undefined&&a.cadProperties[CAD_STAR_POINTS]!==5){
+  const count=a.cadProperties[CAD_STAR_POINTS],outline=states.find(state=>state.entity.entity==='LWPOLYLINE')!;
+  const radii=outline.points!.map(p=>Math.hypot(...p)),outer=Math.max(...radii),inner=Math.min(...radii);
+  outline.points=Array.from({length:count*2},(_,i):Point=>{
+   const angle=Math.PI/2-i*Math.PI/count,radius=i%2?inner:outer;
+   return [radius*Math.cos(angle),radius*Math.sin(angle)];
+  });
+  const hatch=states.find(state=>state.entity.entity==='HATCH')!;
+  hatch.entity={...hatch.entity,paths:[{boundary_handles:[[outline.entity.handle]]}]};
+ }
+ if(a.symbol==='repeatMark'&&a.cadProperties?.[CAD_REPEAT_GAP]!==undefined){
+  const shift=(a.cadProperties[CAD_REPEAT_GAP]-20)/(2*normalization[0]);
+  // The hatch belongs to the left marker; the second polyline is the right marker.
+  const right=states.filter(state=>state.entity.entity==='LWPOLYLINE').at(-1)!;
+  for(const state of states)state.matrix=compose([1,0,0,1,state===right?shift:-shift,0],state.matrix);
+ }
  const controls=propertyControls(block,a,normalization,parameterMatrices),unsupportedPropertyKeys=block.propertyDefinitions.filter(d=>unsupported(block,d.key)).map(d=>d.key);
  if(a.symbol==='rotateCCW')for(const control of controls)if(control.key==='翻转状态1'){
   // The variant's visible native state is inverted; persist grip edits back in

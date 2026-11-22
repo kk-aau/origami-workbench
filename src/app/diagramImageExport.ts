@@ -1,41 +1,51 @@
 import {Zip,ZipPassThrough} from 'fflate';
 import type {DiagramCPState,DiagramProject,DiagramStep} from './diagramProject';
-import {diagramPDFStepArtwork,type DiagramPDFPreparationOptions} from './diagramPDF';
-import {diagramPDFCellContent,planDiagramPDF,type DiagramPDFOptions,type DiagramPDFRect} from './diagramPDFLayout';
+import {prepareDiagramExportProject,diagramPDFStepArtwork,type DiagramPDFPreparationOptions} from './diagramPDF';
+import {resolveDiagramPanel,planDiagramPDF,type DiagramPDFOptions,type DiagramPDFRect} from './diagramPDFLayout';
+import {diagramExportPagePanels,diagramExportPanelArtwork,type DiagramExportPanel} from './diagramExportPanel';
+import type {DiagramSymbolStyles} from './diagramSymbolStyles';
 import {embedDiagramPDFSVG,normalizeDiagramPDFStrokes} from './diagramPDFPage';
 import {readDiagramLineDefaults,type DiagramLineDefaults} from './diagramLineStyles';
 import {readAdaptiveLineStyle} from './adaptiveLineStyle';
 import type {DiagramZoomRegion} from './diagramZoomGeometry';
 import {diagramStepZooms} from './diagramStepZoom';
-import {startDiagramLayerDisplayPreparation} from './diagramLayerDisplay';
 import {rasterizeDiagramThumbnail} from './diagramThumbnailRaster';
 
-export interface DiagramStepImagePanel {stepIndex:number;size:Pick<DiagramPDFRect,'width'|'height'>}
+export type DiagramStepImagePanel=DiagramExportPanel;
 const cancelled=()=>new DOMException('步骤图片导出已取消。','AbortError');
 function checkCancelled(signal?:AbortSignal){if(signal?.aborted)throw cancelled();}
 
 /** Use the actual PDF panel dimensions, including first-page layout and the
  * caption space. The image itself contains artwork only, with no page text. */
-export function diagramStepImagePanels(project:DiagramProject,options:DiagramPDFOptions):DiagramStepImagePanel[] {
-  const plan=planDiagramPDF(project,options),panels=new Map<number,DiagramStepImagePanel>();
-  for(const page of plan.pages)for(const cell of page.cells){
-    const {width,height}=diagramPDFCellContent(project.steps[cell.stepIndex],cell,options,plan).imageRect;
-    panels.set(cell.stepIndex,{stepIndex:cell.stepIndex,size:{width,height}});
-  }
-  return plan.selected.map(index=>{const panel=panels.get(index);if(!panel)throw new Error(`第 ${index+1} 步缺少图片排版范围。`);return panel;});
+export function diagramStepImagePanels(project:DiagramProject,options:DiagramPDFOptions,plan=planDiagramPDF(project,options)):DiagramStepImagePanel[] {
+  return plan.pages.flatMap((_,pageIndex)=>diagramExportPagePanels(project,options,plan,pageIndex));
+}
+
+function imageSVG(size:Pick<DiagramPDFRect,'width'|'height'>,artwork:string){
+  return `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${size.width}" height="${size.height}" viewBox="0 0 ${size.width} ${size.height}" font-family="Microsoft YaHei,PingFang SC,Noto Sans CJK SC,sans-serif"><rect width="${size.width}" height="${size.height}" fill="white"/>${artwork}</svg>`;
 }
 
 /** Shared panel wrapper for cached thumbnails and image export. Stroke
  * normalization is deliberately performed by the browser caller afterwards. */
-export function diagramStepImageSVG(step:DiagramStep,states:readonly DiagramCPState[],size:Pick<DiagramPDFRect,'width'|'height'>,palette:DiagramLineDefaults,adaptiveLines:boolean,zoom?:DiagramZoomRegion|null):string {
+export function diagramStepImageSVG(step:DiagramStep,states:readonly DiagramCPState[],size:Pick<DiagramPDFRect,'width'|'height'>,palette:DiagramLineDefaults,adaptiveLines:boolean,zoom?:DiagramZoomRegion|null,patterns?:import('./paperPatterns').PaperPatterns,processFigure=false,symbolStyles?:DiagramSymbolStyles):string {
   if(!(size.width>0&&size.height>0&&Number.isFinite(size.width)&&Number.isFinite(size.height)))throw new Error('步骤图片排版尺寸无效。');
-  const artwork=diagramPDFStepArtwork(step,states,size,palette,adaptiveLines,zoom);
-  return `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${size.width}" height="${size.height}" viewBox="0 0 ${size.width} ${size.height}" font-family="Microsoft YaHei,PingFang SC,Noto Sans CJK SC,sans-serif"><rect width="${size.width}" height="${size.height}" fill="white"/>${embedDiagramPDFSVG(artwork,{x:0,y:0,...size},'step-image-')}</svg>`;
+  const artwork=diagramPDFStepArtwork(step,states,size,palette,adaptiveLines,zoom,patterns,processFigure,symbolStyles);
+  return imageSVG(size,embedDiagramPDFSVG(artwork,{x:0,y:0,...size},'step-image-'));
 }
 
-export function diagramStepImageFilename(step:DiagramStep,index:number):string {
+/** Compose a panel once for the on-screen preview and the exported PNG. */
+export function diagramStepImagePanelSVG(project:DiagramProject,panel:DiagramStepImagePanel,palette:DiagramLineDefaults,adaptiveLines:boolean,mainZooms?:ReturnType<typeof diagramStepZooms>,scales?:Map<string,number|null>):string {
+  const drawing=diagramExportPanelArtwork(project,panel,{x:0,y:0,...panel.size},palette,adaptiveLines,scales,mainZooms);
+  const size=drawing.markerRect?{...panel.size,width:Math.max(panel.size.width,drawing.markerRect.x+drawing.markerRect.width+2)}:panel.size;
+  return imageSVG(size,embedDiagramPDFSVG(drawing.svg,drawing.rect,'step-image-')+drawing.marker);
+}
+
+export function diagramStepImageFilename(step:DiagramStep,index:number,figureIndex?:number,branchLabel?:string):string {
   const title=step.title.trim().replace(/[\\/:*?"<>|\u0000-\u001f]/g,'_').replace(/[. ]+$/g,'').slice(0,100)||'步骤';
-  return `${String(index+1).padStart(3,'0')}_${title}.png`;
+  const suffix=figureIndex===undefined?'':`-${String(figureIndex+1).padStart(3,'0')}`;
+  const number=(branchLabel??String(index+1)).replace(/^\d+/,value=>value.padStart(3,'0'))
+    .replace(/[%\\/:*?"<>|\u0000-\u001f]/g,c=>'%'+c.charCodeAt(0).toString(16).padStart(2,'0'));
+  return `${number}${suffix}_${title}.png`;
 }
 
 /** Canvas encoders usually label PNGs as 96 DPI. Replace only that metadata;
@@ -63,17 +73,8 @@ export function diagramImagePNG300DPI(input:Uint8Array):Uint8Array<ArrayBuffer> 
 
 /** An image package has no cover; only the selected panels need certificates.
  * Explicit export waits for complete layer analysis until the user cancels. */
-export async function prepareDiagramImageProject(project:DiagramProject,options:DiagramPDFOptions,preparation:DiagramPDFPreparationOptions={}):Promise<DiagramProject> {
-  checkCancelled(preparation.signal);
-  const ids=diagramStepImagePanels(project,options).map(panel=>project.steps[panel.stepIndex]).filter(step=>step.pose&&step.paperVisible!==false).map(step=>step.id);
-  const task=startDiagramLayerDisplayPreparation(project,{stepIds:ids,timeoutMs:Infinity,onProgress:preparation.onProgress});
-  const cancel=()=>task.cancel();preparation.signal?.addEventListener('abort',cancel,{once:true});
-  try{
-    const result=await task.promise;checkCancelled(preparation.signal);
-    if(result.cancelled)throw cancelled();
-    if(result.issues.length)throw new Error('折图层序尚未就绪，未导出。'+result.issues.map(issue=>`第 ${project.steps.findIndex(step=>step.id===issue.stepId)+1} 步：${issue.message}`).join('；'));
-    return result.project;
-  }finally{preparation.signal?.removeEventListener('abort',cancel);}
+export function prepareDiagramImageProject(project:DiagramProject,options:DiagramPDFOptions,preparation:DiagramPDFPreparationOptions={}):Promise<DiagramProject> {
+  return prepareDiagramExportProject(project,options,preparation,false);
 }
 
 /** Each PNG is generated sequentially at 300 DPI. PNG is already compressed,
@@ -81,20 +82,23 @@ export async function prepareDiagramImageProject(project:DiagramProject,options:
 export async function exportDiagramImagesZIP(project:DiagramProject,options:DiagramPDFOptions,onProgress?:(completed:number,total:number)=>void,palette:DiagramLineDefaults=readDiagramLineDefaults(),preparation:DiagramPDFPreparationOptions={}):Promise<Blob> {
   checkCancelled(preparation.signal);
   const savedOptions=structuredClone(options),linePalette=structuredClone(palette),adaptiveLines=readAdaptiveLineStyle();
-  const snapshot=await prepareDiagramImageProject(project,savedOptions,preparation),panels=diagramStepImagePanels(snapshot,savedOptions),zooms=diagramStepZooms(snapshot);
+  const snapshot=await prepareDiagramImageProject(project,savedOptions,preparation),panels=diagramStepImagePanels(snapshot,savedOptions);
+  const zooms=snapshot.branchSteps?.length?undefined:diagramStepZooms(snapshot);
   if(document.fonts?.ready)await document.fonts.ready;checkCancelled(preparation.signal);
   const chunks:ArrayBuffer[]=[];let zipFailure:Error|undefined,finished=false;
   const zip=new Zip((error,data,final)=>{if(error)zipFailure=error;else{chunks.push(new Uint8Array(data).buffer);if(final)finished=true;}});
   const abort=()=>zip.terminate();preparation.signal?.addEventListener('abort',abort,{once:true});
   try{
+    const scales=new Map<string,number|null>();
     for(let index=0;index<panels.length;index++){
       checkCancelled(preparation.signal);
-      const {stepIndex,size}=panels[index],step=snapshot.steps[stepIndex];
-      const svg=normalizeDiagramPDFStrokes(diagramStepImageSVG(step,snapshot.states,size,linePalette,adaptiveLines,zooms.get(step.id)?.region));
-      const image=await rasterizeDiagramThumbnail(svg,{width:size.width*300/72,height:size.height*300/72,signal:preparation.signal});
+      const panel=panels[index],{stepIndex,figureIndex}=panel,{step}=resolveDiagramPanel(snapshot,panel);
+      const svg=normalizeDiagramPDFStrokes(diagramStepImagePanelSVG(snapshot,panel,linePalette,adaptiveLines,zooms,scales));
+      const output=svg.match(/viewBox="([^"]+)"/)![1].split(/\s+/).map(Number);
+      const image=await rasterizeDiagramThumbnail(svg,{width:output[2]*300/72,height:output[3]*300/72,signal:preparation.signal});
       checkCancelled(preparation.signal);
       const bytes=diagramImagePNG300DPI(new Uint8Array(await image.arrayBuffer()));checkCancelled(preparation.signal);
-      const file=new ZipPassThrough(diagramStepImageFilename(step,stepIndex));zip.add(file);file.push(bytes,true);
+      const file=new ZipPassThrough(diagramStepImageFilename(step,stepIndex,figureIndex,panel.branchLabel));zip.add(file);file.push(bytes,true);
       if(zipFailure)throw zipFailure;
       onProgress?.(index+1,panels.length);
       await new Promise<void>(resolve=>setTimeout(resolve,0));

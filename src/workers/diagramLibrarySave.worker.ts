@@ -17,15 +17,16 @@ async function save(input:DiagramLibrarySaveRequest):Promise<void>{
     if('projectBlob' in input.request){
       const {projectBlob,...rest}=input.request;
       if(!(projectBlob instanceof Blob)||projectBlob.type!=='application/json'||!projectBlob.size)throw Error('后台绘图保存数据无效，当前内容尚未提交。');
-      // Still run the full library codec and conflict checks below. The Blob is
-      // a transport optimization, never a persisted validation certificate.
+      // Only the import Worker's immutable payload takes this route. A project
+      // field from a file cannot opt an edited graph into the prepared path.
       request={...rest,project:JSON.parse(await projectBlob.text())};
     }else request=input.request;
+    const preparedImport='projectBlob' in input.request&&'project' in request&&!request.legacyDraft?request.project:undefined;
     if(webPreferences){
       const values=new Map(webPreferences),updates=new Map<string,string>();
       const storage:Preferences={getItem:key=>values.get(key)??null,setItem(key,value){values.set(key,value);updates.set(key,value);},compareAndSet(key,expected,value){if((values.get(key)??null)!==expected)return false;values.set(key,value);updates.set(key,value);return true;}};
       setPreferenceService(storage);
-      const result=runDiagramLibraryBackgroundSave(request,storage);
+      const result=runDiagramLibraryBackgroundSave(request,storage,preparedImport);
       scope.postMessage({id,type:'result',result,webUpdates:[...updates]});return;
     }
     const preference=(action:'get'|'set'|'compareAndSet',key:string,value?:string,expectedValue?:string|null):string|null|boolean=>{
@@ -43,7 +44,7 @@ async function save(input:DiagramLibrarySaveRequest):Promise<void>{
     const storage:Preferences={getItem:key=>preference('get',key) as string|null,setItem:(key,value)=>{preference('set',key,value);},compareAndSet:(key,expected,value)=>preference('compareAndSet',key,value,expected)===true};
     // Thumbnail paint uses the same live style preferences as the main app.
     setPreferenceService(storage);
-    scope.postMessage({id,type:'result',result:runDiagramLibraryBackgroundSave(request,storage)});
+    scope.postMessage({id,type:'result',result:runDiagramLibraryBackgroundSave(request,storage,preparedImport)});
   }catch(error){scope.postMessage({id,type:'error',message:error instanceof Error?error.message:String(error),conflict:error instanceof DiagramLibraryConflictError});}
   finally{setPreferenceService(undefined);}
 }

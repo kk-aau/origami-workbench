@@ -18,6 +18,7 @@ const CLOSURE_CHECK_KEY='zhezhi.diagram-simulation-strict-closure.v1';
 
 export interface DiagramSimulationCaptureProps {
   before:Doc;after:Doc;title:string;onClose:()=>void;
+  patterns?:import('../app/paperPatterns').PaperPatterns;
   colors?:ModelColors;
   onApplyAngles?:(pose:SimulationPose,signal:AbortSignal,options:DiagramSimulationAngleOptions)=>Promise<void>;
   onApplySurface?:(pose:SimulationPose,signal:AbortSignal,colors:ModelColors)=>Promise<void>;
@@ -25,7 +26,7 @@ export interface DiagramSimulationCaptureProps {
 }
 
 /** This simulator owns its document and camera; it never changes the main CP. */
-export default function DiagramSimulationCapture({before,after,title,onClose,onCapture,onApplyAngles,onApplySurface,colors=defaultModelColors()}:DiagramSimulationCaptureProps){
+export default function DiagramSimulationCapture({patterns,before,after,title,onClose,onCapture,onApplyAngles,onApplySurface,colors=defaultModelColors()}:DiagramSimulationCaptureProps){
   const iframe=useRef<HTMLIFrameElement>(null),bridge=useRef<SimulatorBridge|null>(null),captureAbort=useRef<AbortController|null>(null);
   const mounted=useRef(false),revision=useRef(0),loadedRef=useRef(false),callbacks=useRef({onClose,onCapture,onApplyAngles,onApplySurface});callbacks.current={onClose,onCapture,onApplyAngles,onApplySurface};
   const capturedColors=useRef(colors);
@@ -55,6 +56,7 @@ export default function DiagramSimulationCapture({before,after,title,onClose,onC
       }else if(next.status==='ready'&&next.revision===undefined){loadedRef.current=false;setLoaded(false);}
     });
     bridge.current=connection;
+    connection.send({type:'zhezhi-sim-paper-print',patterns});
     const frameKeyDown=(event:KeyboardEvent)=>{
       if(event.key==='Escape'){
         event.preventDefault();event.stopPropagation();
@@ -148,7 +150,7 @@ export default function DiagramSimulationCapture({before,after,title,onClose,onC
     {onApplyAngles&&!strictClosure&&<p role="status">闭合校验已关闭：应用时将标记“闭合未确认”。</p>}
     {settingNotice&&<p role="status">{settingNotice}</p>}
     <div className="diagram-simulation-capture-controls" inert={busy||undefined}>
-      <SimulationControls allowMeshRefinement={false} diagramAppearance={colors} status={status} progress={progress} stale={!loaded} onProgress={seek} onReset={reset} send={command=>{if(command.type==='zhezhi-sim-colors')capturedColors.current={front:command.front,back:command.back,line:command.diagramLine??capturedColors.current.line};bridge.current?.send(command);}}/>
+      <SimulationControls paperPatterns={patterns} allowMeshRefinement={false} diagramAppearance={colors} status={status} progress={progress} stale={!loaded} onProgress={seek} onReset={reset} send={command=>{if(command.type==='zhezhi-sim-colors')capturedColors.current={front:command.front,back:command.back,line:command.diagramLine??capturedColors.current.line};bridge.current?.send(command);}}/>
     </div>
   </AppDialog>;
 }

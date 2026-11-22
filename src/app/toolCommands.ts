@@ -72,6 +72,7 @@ const aliases={
   regionalswap:['RS'],
   makemountain:['MM'],
   makevalley:['MV'],
+  makecrease:['MFL'],
   makeedge:['MB'],
   makeaux:['MA'],
   eraseedge:['EB'],

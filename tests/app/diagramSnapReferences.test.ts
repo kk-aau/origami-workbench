@@ -61,6 +61,16 @@ test('coincident paper boundaries use only the upper material occurrence despite
   assert.equal(references.length,4);assert.ok(references.every(reference=>reference.foldFaces?.[0]===1));
 });
 
+test('an explicitly selected lower layer supplies its own edges and creases through the foreground',()=>{
+  const pose=fixture(),graph=buildDiagramFold(pose.sourceDoc).graph;
+  graph.vertices_coords.forEach(([x],i)=>{if(x===100)pose.result.geometry.vertices[i][0]=.1;});
+  const refs=buildDiagramSnapReferences({pose,view,annotations:[],materialFaces:[0],foldLinkEnabled:true,
+    foldLinkPreview:[{id:'under',face:0,a:[2,3],b:[20,3],style:'crease',visibility:'hidden'}]});
+  assert.ok(refs.some(r=>same(r,[0,0],[50,0])));
+  assert.ok(refs.some(r=>same(r,[2,3],[20,3])));
+  assert.ok(refs.every(r=>r.foldFaces?.[0]===0));
+});
+
 test('unpainted internal graph marks are not manufactured into paper-boundary references',()=>{
   const sourceDoc=blankDoc('独立已有折痕',100,100);sourceDoc.segments.push({id:'finite-mark',a:[20,50],b:[80,50],assignment:'F',angle:0});
   const result=computeFlatFold(sourceDoc,undefined,{flatCreases:'marks'});assert.equal(result.geometry.status,'ready');assert.equal(result.geometry.faces.length,1);
@@ -183,4 +193,16 @@ test('mirrored, rotated and scaled window references use the same exact world ou
   for(let x=center[0]-28.63;x<center[0]+29;x+=.7){const point:Point=[x,center[1]];assert.equal(references.some(reference=>contains(reference,point)),!diagramTearWindowContainsPoint(window,point));}
   for(const reference of references)for(const endpoint of [reference.a,reference.b])if(endpoint[0]!==source.a[0]&&endpoint[0]!==source.b[0])assert.ok(outline.some((a,i)=>contains(line('edge',a,outline[(i+1)%outline.length]),endpoint)),'every new display endpoint lies on the rendered irregular tear edge');
   assert.deepEqual({pose,window,source},saved);
+});
+
+test('existing crease angle references follow the crease visibility switch and preserve active unfolds',()=>{
+  const pose=fixture(),foldLinkPreview:DiagramSnapPreviewSegment[]=[
+    {id:'flat',a:[5,20],b:[45,20],face:1,style:'crease',existing:true,visibility:'visible'},
+    {id:'opening',a:[5,30],b:[45,30],face:1,style:'valley',existing:true,unfolding:true,visibility:'visible'},
+  ];
+  for(const showExistingCreases of [true,false]){
+    const refs=buildDiagramSnapReferences({pose,view:{...view,showExistingCreases},annotations:[],foldLinkEnabled:true,foldLinkPreview});
+    assert.equal(refs.some(reference=>same(reference,[5,20],[45,20])),showExistingCreases);
+    assert.ok(refs.some(reference=>same(reference,[5,30],[45,30])));
+  }
 });

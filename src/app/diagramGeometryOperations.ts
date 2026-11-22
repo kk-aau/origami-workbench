@@ -4,7 +4,7 @@ import {hasDiagramActiveFoldChanges,chooseDiagramPrecreaseAnchor} from './diagra
 import {diagramStepLayerPreferences,inheritDiagramFixedAnchor} from './diagramStepInheritance';
 import {alignDiagramFoldResult,projectDiagramFoldCP} from './diagramFoldLink';
 import {prepareDiagramFoldDrawing,prepareDiagramFoldCPAdoption} from './diagramFoldTransactions';
-import type {DiagramProject,DiagramStep,DiagramCPState} from './diagramProject';
+import type {DiagramProject,DiagramStep,DiagramCPState,DiagramPose} from './diagramProject';
 function singleStep(step:DiagramStep,before:DiagramCPState,after:DiagramCPState):DiagramProject {
   return {format:'zhezhi-diagram',version:1,name:'',steps:[step],states:[before,after],activeStepId:step.id};
 }
@@ -13,8 +13,8 @@ export const diagramGeometryOperations={
   prepare:(before:Doc,after:Doc)=>({cleaned:normalizeDiagramCP(after),activeFold:hasDiagramActiveFoldChanges(before,after)}),
   anchor:chooseDiagramPrecreaseAnchor,preferences:diagramStepLayerPreferences,
   fixed:inheritDiagramFixedAnchor,align:alignDiagramFoldResult,project:projectDiagramFoldCP,
-  refresh:(step:DiagramStep,before:DiagramCPState,after:DiagramCPState,preserve:boolean)=>prepareDiagramFoldDrawing(singleStep(step,before,after),step.id,undefined,preserve),
-  adoptCP:(step:DiagramStep,before:DiagramCPState,after:DiagramCPState)=>prepareDiagramFoldCPAdoption(singleStep(step,before,after),step.id,after.doc),
+  refresh:(step:DiagramStep,before:DiagramCPState,after:DiagramCPState,preserve:boolean,drawingPose?:DiagramPose)=>prepareDiagramFoldDrawing(singleStep(step,before,after),step.id,undefined,preserve,drawingPose),
+  adoptCP:(step:DiagramStep,before:DiagramCPState,after:DiagramCPState,drawingPose?:DiagramPose)=>prepareDiagramFoldCPAdoption(singleStep(step,before,after),step.id,after.doc,drawingPose),
 };
 export type DiagramGeometryKind=keyof typeof diagramGeometryOperations;
 export type DiagramGeometryArgs<K extends DiagramGeometryKind>=Parameters<typeof diagramGeometryOperations[K]>;

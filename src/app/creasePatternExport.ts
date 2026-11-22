@@ -1,15 +1,16 @@
 import {creasePatternSVG} from './creasePatternSVG';
 import {DISPLAY_PIXEL_MM} from './creaseDisplay';
-import {getDrawingBounds} from './paper';
+import {getDrawingBounds,type Bounds} from './paper';
 
 /** A complete CP includes the outside half of boundary strokes and endpoint
  * markers. An explicitly requested operation-frame crop remains an exact crop. */
+export function completeCPBounds(bounds:Bounds,display:Parameters<typeof creasePatternSVG>[1],units=DISPLAY_PIXEL_MM):Bounds {
+  const padding=Math.max(display.lineWidth*units/2,display.auxLineWidth*units/2,(display.pointSize??0)*DISPLAY_PIXEL_MM,(display.markLineWidth??1.3)*DISPLAY_PIXEL_MM/2,.15)+.1;
+  return {x:bounds.x-padding,y:bounds.y-padding,width:bounds.width+padding*2,height:bounds.height+padding*2};
+}
 export function completeCreasePatternSVG(...args:Parameters<typeof creasePatternSVG>):string {
   const [doc,display,crop,layers,stroke,grid]=args;
-  if(crop)return creasePatternSVG(...args);
-  const bounds=getDrawingBounds(doc),units=stroke?.units??DISPLAY_PIXEL_MM;
-  const padding=Math.max(display.lineWidth*units/2,display.auxLineWidth*units/2,(display.pointSize??0)*DISPLAY_PIXEL_MM,(display.markLineWidth??1.3)*DISPLAY_PIXEL_MM/2,.15)+.1;
-  return creasePatternSVG(doc,display,{x:bounds.x-padding,y:bounds.y-padding,width:bounds.width+padding*2,height:bounds.height+padding*2},layers,stroke,grid);
+  return creasePatternSVG(doc,display,crop??completeCPBounds(getDrawingBounds(doc),display,stroke?.units),layers,stroke,grid);
 }
 
 export interface CPPrintOptions {paper:'A4'|'A3';orientation:'portrait'|'landscape'}

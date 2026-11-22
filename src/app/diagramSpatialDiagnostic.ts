@@ -1,3 +1,4 @@
+import {graphJunctions,type JunctionWarning} from '../core/editedJunctions';
 import type {FoldGraph,Point} from '../core/types';
 import type {RigidFoldPoint3} from '../core/rigidFoldGeometry';
 import type {DiagramSpatialPose} from './diagramSpatialPose';
@@ -13,6 +14,7 @@ export interface DiagramSpatialDiagnostic {
   cycle?:number[];
   vertices3D:RigidFoldPoint3[];
   verticesCP:Point[];
+  junctions?:JunctionWarning[];
   faces:number[][];
   facesHoles?:number[][][];
   /** The same overlap cell lifted onto each involved material face. */
@@ -28,7 +30,7 @@ export class DiagramSpatialDiagnosticError extends Error {
 
 export function spatialDiagnosticError(source:FoldGraph,spatial:DiagramSpatialPose,issue:Pick<DiagramSpatialDiagnostic,'kind'|'message'|'faceIds'|'cycle'|'region'>):DiagramSpatialDiagnosticError {
   return new DiagramSpatialDiagnosticError(structuredClone({version:1,...issue,
-    faceIds:[...new Set(issue.faceIds)],vertices3D:spatial.vertices,verticesCP:source.vertices_coords,
+    faceIds:[...new Set(issue.faceIds)],vertices3D:spatial.vertices,verticesCP:source.vertices_coords,junctions:graphJunctions(source,true),
     faces:source.faces_vertices??[],...(source.faces_holes?{facesHoles:source.faces_holes}:{})}));
 }
 
@@ -57,6 +59,7 @@ function isDiagnostic(value:unknown):value is DiagramSpatialDiagnostic {
   if(d.version!==1||!['intersection','layer-cycle','missing-layer-order','layer-conflict'].includes(d.kind)||typeof d.message!=='string'||!points(d.vertices3D,3)||!points(d.verticesCP,2)||d.vertices3D.length!==d.verticesCP.length||!Array.isArray(d.faces))return false;
   const face=(f:unknown):f is number=>Number.isSafeInteger(f)&&Number(f)>=0&&Number(f)<d.faces.length;
   const ring=(row:unknown):row is number[]=>Array.isArray(row)&&row.length>=3&&row.every(v=>Number.isSafeInteger(v)&&v>=0&&v<d.verticesCP.length);
+  if(d.junctions&&(!Array.isArray(d.junctions)||!d.junctions.every(w=>w&&['t','loose','angle'].includes(w.kind)&&points([w.point],2))))return false;
   if(!d.faces.every(ring)||!Array.isArray(d.faceIds)||!d.faceIds.length||!d.faceIds.every(face))return false;
   if(d.cycle&&(!Array.isArray(d.cycle)||d.cycle.length<3||!d.cycle.every(face)||d.cycle[0]!==d.cycle.at(-1)))return false;
   if(d.facesHoles&&(!Array.isArray(d.facesHoles)||d.facesHoles.length!==d.faces.length||!d.facesHoles.every(rows=>Array.isArray(rows)&&rows.every(ring))))return false;

@@ -1,6 +1,7 @@
 import type {FlatFoldResult,Point} from '../core/types';
 import type {DiagramPose} from './diagramProject';
 import {isDiagramPaperPoseIsometric} from './diagramPaperPose';
+import {modelOverlapRegions} from './modelOverlapRegions';
 
 /** Illustration parameters, independent of physical crease angles. */
 export interface DiagramDepth {amount:number;direction:number}
@@ -25,6 +26,45 @@ interface DepthResult {vertices:Point[];effectiveAmount:number}
 const cache=new WeakMap<FlatFoldResult['geometry'],{triangles:readonly (readonly number[])[][];variants:Map<string,DepthResult>}>();
 const cross=(a:Point,b:Point,c:Point)=>(b[0]-a[0])*(c[1]-a[1])-(b[1]-a[1])*(c[0]-a[0]);
 
+/** Only faces that cover the same patch of paper constrain its display height.
+ * Keep an entire face at one level even when it spans multiple patches. */
+const reliefCache=new WeakMap<FlatFoldResult['geometry'],{covers:number[][]|null;orderKey:string;heights:Float64Array}>();
+function reliefFaceHeights(result:FlatFoldResult,order:number[],orderKey:string):Float64Array {
+ let entry=reliefCache.get(result.geometry);
+ if(entry?.orderKey===orderKey)return entry.heights;
+ if(!entry){
+  const regions=modelOverlapRegions(result);
+  entry={covers:regions.omittedThinRegions||!regions.cells.length?null:regions.cells.map(cell=>cell.faces),orderKey:'',heights:new Float64Array(order.length)};
+  reliefCache.set(result.geometry,entry);
+ }
+ const rank=new Uint32Array(order.length);
+ order.forEach((face,i)=>{rank[face]=i;});
+ const heights=new Float64Array(order.length);
+ if(entry.covers){
+  const above=order.map(()=>new Set<number>());
+  for(const cover of entry.covers){
+   const stack=[...cover].sort((a,b)=>rank[a]-rank[b]);
+   for(let i=1;i<stack.length;i++)above[stack[i-1]].add(stack[i]);
+  }
+  const belowCount=new Uint32Array(order.length),aboveCount=new Uint32Array(order.length);
+  let span=0;
+  for(const face of order)for(const next of above[face]){
+   belowCount[next]=Math.max(belowCount[next],belowCount[face]+1);
+   span=Math.max(span,belowCount[next]);
+  }
+  for(let i=order.length-1;i>=0;i--){
+   const face=order[i];
+   for(const next of above[face])aboveCount[face]=Math.max(aboveCount[face],aboveCount[next]+1);
+   if(span)heights[face]=(belowCount[face]-aboveCount[face])/(2*span);
+  }
+ }else{
+  // An unresolved thin patch could contain a real overlap. Retain the
+  // certified paint order for this illustration instead of merging its faces.
+  for(const face of order)heights[face]=rank[face]/(order.length-1)-.5;
+ }
+ entry.orderKey=orderKey;entry.heights=heights;return heights;
+}
+
 /** Project a material point through the same continuous display cells. */
 export function diagramDepthMaterialPoint(mesh:{graph:{vertices_coords:Point[]};triangles:number[][][];vertices:Point[]},point:Point):Point|null {
  for(const row of mesh.triangles)for(const ids of row){
@@ -41,11 +81,12 @@ export function diagramDepthMaterialPoint(mesh:{graph:{vertices_coords:Point[]};
  * scaling retains each triangle's winding; this is not a folding simulation. */
 export function diagramDepthVertices(pose:Pick<DiagramPose,'result'|'sourceDoc'|'spatial'|'paperDeformation'|'view'>,vertices:Point[],triangles:readonly (readonly number[])[][]):DepthResult {
  if(!diagramDepthActive(pose))return {vertices,effectiveAmount:0};
- const {amount,direction}=pose.view!.depth!,order=pose.result.layers.faceOrder!,key=`${amount}:${direction}:${order.join(',')}`;
+ const {amount,direction}=pose.view!.depth!,order=pose.result.layers.faceOrder!,orderKey=order.join(','),key=`${amount}:${direction}:${orderKey}`;
  let entry=cache.get(pose.result.geometry);if(entry?.triangles!==triangles){entry={triangles,variants:new Map()};cache.set(pose.result.geometry,entry);}
  const saved=entry.variants.get(key);if(saved)return saved;
  const heights=new Float64Array(vertices.length),weights=new Uint32Array(vertices.length);
- order.forEach((face,rank)=>{for(const v of new Set(triangles[face].flat())){heights[v]+=rank/(order.length-1)-.5;weights[v]++;}});
+ const faceHeights=reliefFaceHeights(pose.result,order,orderKey);
+ order.forEach(face=>{for(const v of new Set(triangles[face].flat())){heights[v]+=faceHeights[face];weights[v]++;}});
  let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
  vertices.forEach(([x,y],i)=>{minX=Math.min(minX,x);minY=Math.min(minY,y);maxX=Math.max(maxX,x);maxY=Math.max(maxY,y);if(weights[i])heights[i]/=weights[i];});
  // Exactly edge-on material has no invertible screen interior. Keep its whole

@@ -25,6 +25,19 @@ function checkDistances(graph:FoldGraph,vertices:V[]){
   }
 }
 
+test('a retraced active hinge identifies its actual tip and material face',()=>{
+  const graph=strip();
+  graph.vertices_coords.push([.4,.6]);
+  graph.edges_vertices.push([0,8]);graph.edges_assignment.push('V');graph.edges_foldAngle.push(90);
+  graph.faces_vertices![0]=[0,8,0,1,5,4];
+  const result=solveRigidFoldGeometry(graph);
+  assert.equal(result.status,'unsupported');
+  if(result.status==='unsupported'){
+    assert.equal(result.face,0);assert.equal(result.edge,10);
+    assert.match(result.message,/F1.*谷折.*0\.4, 0\.6/);
+  }
+});
+
 test('signed absolute angles produce a real 3D accordion with unchanged stationary face',()=>{
   const graph=strip(),before=structuredClone(graph),result=ready(solveRigidFoldGeometry(graph));
   nearPoint(result.vertices[2],[1,0,1]);nearPoint(result.vertices[3],[1+Math.SQRT1_2,0,1+Math.SQRT1_2]);
@@ -117,6 +130,24 @@ test('a non-tree hinge conflict is detected even when every shared vertex closes
   const result=solveRigidFoldGeometry(graph);assert.equal(result.status,'inconsistent');
   assert.equal('code' in result?result.code:'','DIHEDRAL');
   assert.equal(result.diagnostics?.maximumClosureErrorMm,0);
+  assert.equal(solveRigidFoldGeometry(graph,{preferStableHinges:true}).status,'inconsistent');
+});
+
+test('hinge refinement distributes small loop residuals with any face held stationary',()=>{
+  const graph:FoldGraph={
+    vertices_coords:[[0,0],[1,0],[1+1e-10,1],[0,1],[.5,.5]],
+    edges_vertices:[[0,1],[1,2],[2,3],[3,0],[0,4],[1,4],[2,4],[3,4]],
+    edges_assignment:['B','B','B','B','V','V','V','M'],edges_foldAngle:[0,0,0,0,180,180,180,-180],
+    faces_vertices:[[0,1,4],[1,2,4],[2,3,4],[3,0,4]]
+  };
+  for(const startingFace of [0,1,2,3]){
+    const original=ready(solveRigidFoldGeometry(graph,{startingFace}));
+    const refined=ready(solveRigidFoldGeometry(graph,{startingFace,preferStableHinges:true}));
+    assert.ok(refined.diagnostics.maximumClosureErrorMm<original.diagnostics.maximumClosureErrorMm/2);
+    assert.deepEqual(refined.faceTransforms[startingFace],original.faceTransforms[startingFace]);
+    checkDistances(graph,refined.vertices);
+    assert.deepEqual(refined.measuredAngles,original.measuredAngles);
+  }
 });
 
 test('holes retain indexed rings, and inactive internal F marks move with their material face',()=>{

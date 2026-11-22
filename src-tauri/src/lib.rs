@@ -26,6 +26,18 @@ fn resources_root() -> Option<PathBuf> {
     std::env::current_exe().ok().and_then(|exe| packaged_resources(&exe, &project_root()))
 }
 
+pub(crate) fn current_version() -> Result<String,String> {
+    #[derive(serde::Deserialize)]
+    struct Release { candidate: String, version: Option<String> }
+    let release: Release = if let Some(dir) = crate::resources_root() {
+        let bytes = std::fs::read(dir.join("runtime-layout.json")).map_err(|_| "无法读取当前安装版本。")?;
+        serde_json::from_slice(&bytes).map_err(|_| "安装版本信息损坏。")?
+    } else {
+        serde_json::from_str(include_str!("../../desktop-tauri/release.json")).map_err(|_| "发行版本号无法识别。")?
+    };
+    Ok(format!("{}-{}",release.version.as_deref().unwrap_or(env!("CARGO_PKG_VERSION")),release.candidate))
+}
+
 pub fn runtime_root() -> PathBuf {
     std::env::var_os("ZHEZHI_TAURI_HOME")
         .map(PathBuf::from)
@@ -40,7 +52,7 @@ pub fn server_config(native_dialogs: bool) -> backend::ServerConfig {
         dist_dir: std::env::var_os("ZHEZHI_DIST_DIR").map(PathBuf::from).unwrap_or_else(|| resources.as_ref().map(|p|p.join("dist")).unwrap_or_else(|| root.join("dist"))),
         engine_executable: std::env::var_os("ZHEZHI_TESS_EXECUTABLE").map(PathBuf::from).unwrap_or_else(|| resources.as_ref().map(|p|p.join("engine/zhezhi-tess.exe")).unwrap_or_else(|| root.join("build/tessellation/zhezhi-tess/zhezhi-tess.exe"))),
         engine_args: vec!["--worker".into()],
-        version: env!("CARGO_PKG_VERSION").into(),
+        version: current_version().unwrap_or_else(|_|env!("CARGO_PKG_VERSION").into()),
         native_dialogs,
         port: std::env::var("ZHEZHI_PORT").ok().and_then(|s| s.parse().ok()).unwrap_or(0),
     }

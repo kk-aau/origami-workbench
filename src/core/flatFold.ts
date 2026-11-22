@@ -1,9 +1,10 @@
-import {constrainLayerSolutionTree,certifyRelativeLayerConstraints} from './relativeLayerConstraints';
+import {constrainLayerSolutionTree,certifyRelativeLayerConstraints,MissingLayerOverlapError} from './relativeLayerConstraints';
 import ear from 'rabbit-ear';
 import { diagnose } from './diagnostics';
+import {flatRoundoffRecovery} from './flatRoundoffRecovery';
 import {pointBounds} from './pointBounds';
-import { buildFold, cross, distance, epsilonFor, polygonArea, sub } from './geometry';
-import { type Doc, type FlatFoldOptions, type FlatFoldResult, type FlatFoldConflict, type FoldGraph, type Point, type FoldingConstraint,type FlatLayerAdjustment,type FlatLayerPreference } from './types';
+import { buildFold, cross, distance, epsilonFor, polygonArea, sub, type BuildFoldResult } from './geometry';
+import { type Doc, type FlatFoldOptions, type FlatFoldResult, type FlatFoldConflict, type FoldGraph, type Point, type FoldingConstraint,type FlatLayerAdjustment,type FlatLayerPreference,type FlatWorkerRequest } from './types';
 import {createLayerSolutionSelector,selectMatchingLayerSolution,validateLayerOrders,type LayerNode} from './layerSolutions';
 import {convexLayerGeometry} from './convexLayerGeometry';
 import {flatLayerOrder} from './flatLayerOrder';
@@ -23,6 +24,7 @@ import {buildExactModelTopology,walkExactCoverage} from '../app/modelExactTopolo
 import {flatExactProof,rememberFlatExactProof} from '../app/flatExactProof';
 import {makeLayerConflict,conflictsFromLayerError,maekawaConflicts} from './flatConflictDiagnostics';
 import {diagnoseFlatLayerCoverage} from './flatLayerSelfDiagnosis';
+import {coveragePairMembership} from './regionTournament';
 import {traceFlatLayerError} from './flatLayerConflictTrace';
 
 export function emptyFoldResult(status: FlatFoldResult['geometry']['status'], message: string): FlatFoldResult {
@@ -70,6 +72,10 @@ function recoverDiagramLayerCandidate(result:FlatFoldResult,eps:number,requested
   const orders=(relations:FlatLayerPreference[]):FaceOrder[]=>relations.map(({above,below})=>[above,below,normals[below]] as FaceOrder);
   validateLayerPreferences(required,normals.length);validateLayerPreferences(preferences,normals.length);
   const options={coverage:{faceCount:topology.faceCount,cellCount:topology.cellCount,walk:(visitor:Parameters<typeof walkExactCoverage>[1])=>walkExactCoverage(topology,visitor)},onProgress:reportLayerRegionProgress};
+  // Fixed orders can also encode auxiliary non-contact comparisons. A user
+  // overlap requirement must instead have real positive-area coverage before
+  // the exact solver is allowed to recover a pair omitted by the coarse tree.
+  if(required.length){const touches=coveragePairMembership(options.coverage);if(required.some(({above,below})=>!touches(above,below)))return null;}
   let candidate=solveConcaveLayerCandidate(result.geometry.graph!,eps,{...options,fixedOrders:orders([...required,...preferences])});
   if(!candidate&&preferences.length)candidate=solveConcaveLayerCandidate(result.geometry.graph!,eps,{...options,fixedOrders:orders(required)});
   if(!candidate)return null;
@@ -82,16 +88,16 @@ function recoverDiagramLayerCandidate(result:FlatFoldResult,eps:number,requested
   }
   result.layers={status:'solved',message:'已复核全部原纸面的接触约束与区域遮挡，确认存在合法层序；尚未枚举候选总数。',faceOrders:candidate.orders,constraints,...(candidate.faceOrder?{faceOrder:candidate.faceOrder}:{})};
   if(publicGeometry)result.geometry=publicGeometry;
-  rememberFlatExactProof(result,{topology,certificate:candidate.coverageCertificate});
+  rememberFlatExactProof(result,{topology,certificate:candidate.coverageCertificate,nonContactRows:candidate.nonContactRows});
   return result;
 }
 
-function solveLayerGeometry(result: FlatFoldResult, eps: number, requestedIndex:number|undefined=undefined, constraints: FoldingConstraint[]=[],layerAdjustment?:FlatLayerAdjustment,layerPreferences:FlatLayerPreference[]=[],referenceOrders?:FaceOrder[],publicGeometry?:FlatFoldResult['geometry'],relativeConstraints:FlatLayerPreference[]=[]): FlatFoldResult {
+function solveLayerGeometry(result: FlatFoldResult, eps: number, requestedIndex:number|undefined=undefined, constraints: FoldingConstraint[]=[],layerAdjustment?:FlatLayerAdjustment,layerPreferences:FlatLayerPreference[]=[],referenceOrders?:FaceOrder[],publicGeometry?:FlatFoldResult['geometry'],relativeConstraints:FlatLayerPreference[]=[],firstOnly=false): FlatFoldResult {
   const {vertices,faces}=result.geometry;
   const foldedGraph=result.geometry.graph!;
   const privateGeometry=convexLayerGeometry(foldedGraph,eps);
   const solutionIndex=requestedIndex??0;
-  if(faces.length>=256&&requestedIndex===undefined&&!constraints.length&&!layerAdjustment&&!layerPreferences.length&&!relativeConstraints.length){
+  if((firstOnly||faces.length>=256)&&requestedIndex===undefined&&!constraints.length&&!layerAdjustment&&!layerPreferences.length&&!relativeConstraints.length){
     // The contact solver retains its established tolerance, while every actual
     // overlap is certified against the original displayed coordinates. Keep
     // this subdivision worker-local and reuse it for the final visible surface.
@@ -109,7 +115,7 @@ function solveLayerGeometry(result: FlatFoldResult, eps: number, requestedIndex:
     // Finite F routing uses private area contours for contacts, but its exact
     // coverage and published geometry both belong to the original material.
     if(publicGeometry)result.geometry=publicGeometry;
-    rememberFlatExactProof(result,{topology,certificate:candidate.coverageCertificate});
+    rememberFlatExactProof(result,{topology,certificate:candidate.coverageCertificate,nonContactRows:candidate.nonContactRows});
     if(!candidate.faceOrder)result.warnings.push('层序关系不能转换为单一全局绘制顺序，显示使用已验证的局部遮挡关系。');
     return result;
   }
@@ -127,7 +133,15 @@ function solveLayerGeometry(result: FlatFoldResult, eps: number, requestedIndex:
     }
     throw error;
   }
-  const tree = constrainLayerSolutionTree(originalTree,vertices,faces,relativeConstraints);
+  let tree:LayerNode;
+  try{tree=constrainLayerSolutionTree(originalTree,vertices,faces,relativeConstraints);}
+  catch(error){
+    if(error instanceof MissingLayerOverlapError){
+      const recovered=recoverDiagramLayerCandidate(result,eps,requestedIndex,constraints,layerAdjustment,layerPreferences,publicGeometry,relativeConstraints);
+      if(recovered)return recovered;
+    }
+    throw error;
+  }
   let preferenceWarning='';
   if(layerPreferences.length&&!layerAdjustment){
     const answer=selectPreferredLayerSolution(tree,vertices,faces,layerPreferences);
@@ -177,10 +191,10 @@ function solveLayerGeometry(result: FlatFoldResult, eps: number, requestedIndex:
   return result;
 }
 
-function solveConcaveLayerGeometry(result:FlatFoldResult,eps:number,solutionIndex:number|undefined=undefined,constraints:FoldingConstraint[]=[],layerAdjustment?:FlatLayerAdjustment,layerPreferences:FlatLayerPreference[]=[],relativeConstraints:FlatLayerPreference[]=[],publicGeometry?:FlatFoldResult['geometry']):FlatFoldResult{
+function solveConcaveLayerGeometry(result:FlatFoldResult,eps:number,solutionIndex:number|undefined=undefined,constraints:FoldingConstraint[]=[],layerAdjustment?:FlatLayerAdjustment,layerPreferences:FlatLayerPreference[]=[],relativeConstraints:FlatLayerPreference[]=[],publicGeometry?:FlatFoldResult['geometry'],firstOnly=false):FlatFoldResult{
   if(layerAdjustment){result.layers={status:'unsupported',message:'当前凹面或带孔纸面暂不支持升降纸层；原有合法层序保留。',constraints};return result;}
   if(constraints.length){result.layers={status:'unsupported',message:'凹面层序暂不支持正反色可见面约束；请取消该约束后求解。',constraints};return result;}
-  if(result.geometry.faces.length>=256&&solutionIndex===undefined&&!layerPreferences.length&&!relativeConstraints.length){
+  if((firstOnly||result.geometry.faces.length>=256)&&solutionIndex===undefined&&!layerPreferences.length&&!relativeConstraints.length){
     const topology=buildExactModelTopology(publicGeometry?{...result,geometry:publicGeometry}:result,reportExactTopologyProgress);
     const conflicts:FlatFoldConflict[]=[];
     const candidate=solveConcaveLayerCandidate(result.geometry.graph!,eps,{coverage:{faceCount:topology.faceCount,cellCount:topology.cellCount,walk:visitor=>walkExactCoverage(topology,visitor)},onProgress:reportLayerRegionProgress,onConflict:conflict=>{if(conflicts.length<4)conflicts.push(conflict);}});
@@ -189,7 +203,7 @@ function solveConcaveLayerGeometry(result:FlatFoldResult,eps:number,solutionInde
     validateLayerOrders(candidate.orders,result.geometry.faces.length);
     result.layers={status:'solved',message:'已确认全部原面区域的层序及接触约束；内部计算分片未独立排序，尚未枚举候选总数或分配解编号。',faceOrders:candidate.orders,constraints,...(candidate.faceOrder?{faceOrder:candidate.faceOrder}:{})};
     if(publicGeometry)result.geometry=publicGeometry;
-    rememberFlatExactProof(result,{topology,certificate:candidate.coverageCertificate});
+    rememberFlatExactProof(result,{topology,certificate:candidate.coverageCertificate,nonContactRows:candidate.nonContactRows});
     if(!candidate.faceOrder)result.warnings.push('层序关系不能转换为单一全局绘制顺序，显示使用已验证的局部遮挡关系。');
     return result;
   }
@@ -274,8 +288,17 @@ export function computeFlatGeometry(graph:FoldGraph,eps:number,options:Pick<Flat
   } catch(e) {return emptyFoldResult('error',`平折几何计算失败：${e instanceof Error?e.message:String(e)}`);}
 }
 
+export function solveIndependentFlatGroup(result:FlatFoldResult,eps:number):FlatFoldResult {
+  const {vertices,faces}=result.geometry;
+  return faces.some(face=>!isConvex(face.map(v=>vertices[v]),eps))
+    ?solveConcaveLayerGeometry(result,eps,undefined,[],undefined,[],[],undefined,true)
+    :solveLayerGeometry(result,eps,undefined,[],undefined,[],undefined,undefined,[],true);
+}
+
+type DeferFlatGroups=(result:FlatFoldResult,eps:number)=>boolean;
+
 /** Synchronous engine. Call in a Worker in the app; worker termination enforces cancellation/timeouts. */
-function computeFlatFoldInternal(doc: Doc, onGeometry?: (result: FlatFoldResult) => void, options: FlatFoldOptions = {}, onSource?: (graph: FoldGraph) => void): FlatFoldResult {
+function computeFlatFoldInternal(doc: Doc, onGeometry?: (result: FlatFoldResult) => void, options: FlatFoldOptions = {}, onSource?: (graph: FoldGraph) => void,defer?:DeferFlatGroups): FlatFoldResult {
   let result = emptyFoldResult('invalid', '尚未生成平折几何。');
   try {
     if(hasMaterialTopology(doc)){
@@ -283,12 +306,15 @@ function computeFlatFoldInternal(doc: Doc, onGeometry?: (result: FlatFoldResult)
       if(material.ok&&hasWeakMaterialRings(material.graph)&&hasUnresolvedMaterialHinge(material.graph))return emptyFoldResult('unsupported',hasWeakMaterialBanks(material.graph)?'材料切口中仍有同面悬空山谷线，当前仅CP；先补齐分面或删除，再计算平折。':'材料含自由端点或单桥，当前仅CP；先连接或删除这些折痕，再计算平折。');
     }
     reportFlatComputationProgress({stage:'diagnostics',label:'检查折痕与纸张边界'});
-    const report = diagnose(doc);
+    // Diagnosis uses ordinary F boundaries. Diagram mark mode intentionally
+    // builds different faces, so only reuse the graph for the ordinary fold.
+    let prepared: BuildFoldResult | undefined;
+    const report = diagnose(doc, options.flatCreases === undefined ? fold => { prepared = fold; } : undefined);
     const errors = report.issues.filter(i => i.severity === 'error');
     const geometryErrors = errors.filter(i => i.code !== 'maekawa');
     if (geometryErrors.length) return emptyFoldResult('invalid', `无法生成平折几何：${geometryErrors[0].message}`);
     reportFlatComputationProgress({stage:'topology',label:'建立折痕与纸面关联'});
-    const { graph, warnings } = buildFold(doc,{flatCreases:options.flatCreases}), faces = graph.faces_vertices ?? [], eps = epsilonFor(doc);
+    const { graph, warnings } = prepared ?? buildFold(doc,{flatCreases:options.flatCreases}), faces = graph.faces_vertices ?? [], eps = epsilonFor(doc);
     onSource?.(graph);
     reportFlatComputationProgress({stage:'geometry',label:'计算折后位置'});
     result=hasMaterialTopology(doc)?computeMaterialFlatGeometry(doc,options.startingFace):computeFlatGeometry(graph,eps,options);
@@ -300,6 +326,7 @@ function computeFlatFoldInternal(doc: Doc, onGeometry?: (result: FlatFoldResult)
     if (graph.edges_assignment.includes('U')) { result.layers = { status: 'unknown', message: '存在未指派山谷线。当前仅展示其完全折叠的几何候选，尚未求解山谷分配与层序。' }; return result; }
     const finiteRegions=flatCreaseLayerRegions(result.geometry.graph!,eps);
     if(finiteRegions)return solveFiniteFlatCreaseLayers(result,finiteRegions,eps,options.solutionIndex,options.constraints??[],options.layerAdjustment,options.layerPreferences,undefined,options.relativeConstraints);
+    if(defer?.(result,eps))return result;
     if (hasWeakMaterialRings(graph)||graph.faces_holes?.some(rs=>rs.length)||faces.some(face => !isConvex(face.map(v => graph.vertices_coords[v]), eps))) return solveConcaveLayerGeometry(result,eps,options.solutionIndex,options.constraints??[],options.layerAdjustment,options.layerPreferences,options.relativeConstraints);
     return solveLayerGeometry(result, eps, options.solutionIndex, options.constraints ?? [],options.layerAdjustment,options.layerPreferences,undefined,undefined,options.relativeConstraints);
   } catch (e) {
@@ -311,7 +338,7 @@ function computeFlatFoldInternal(doc: Doc, onGeometry?: (result: FlatFoldResult)
 }
 
 /** Reanalyse existing model coordinates; never reconstruct from the source crease document. */
-function recomputeFlatLayersInternal(input: FlatFoldResult, options:Pick<FlatFoldOptions,'solutionIndex'|'constraints'|'layerAdjustment'|'layerPreferences'|'relativeConstraints'>={}): FlatFoldResult {
+function recomputeFlatLayersInternal(input: FlatFoldResult, options:Pick<FlatFoldOptions,'solutionIndex'|'constraints'|'layerAdjustment'|'layerPreferences'|'relativeConstraints'>={},defer?:DeferFlatGroups): FlatFoldResult {
   const referenceOrders=options.layerAdjustment&&input.layers.solutionIndex===undefined?input.layers.faceOrders:undefined;
   const result=structuredClone(input);
   result.layers={status:'unknown',message:'正在重新分析当前模型几何的层序。'};
@@ -355,6 +382,7 @@ function recomputeFlatLayersInternal(input: FlatFoldResult, options:Pick<FlatFol
     }
     if(graph.edges_assignment.includes('U')){result.layers={status:'unknown',message:'模型含未指派山谷边，尚未完成层序求解。'};return result;}
     delete graph.faceOrders;delete graph.faces_normal;delete graph.faces_matrix;delete graph.faces_matrix2;
+    if(defer?.(result,eps))return result;
     const solved=concave?solveConcaveLayerGeometry(result,eps,options.solutionIndex,options.constraints??input.layers.constraints??[],options.layerAdjustment,options.layerPreferences,options.relativeConstraints):solveLayerGeometry(result,eps,options.solutionIndex,options.constraints??input.layers.constraints??[],options.layerAdjustment,options.layerPreferences,referenceOrders,undefined,options.relativeConstraints);
     if(solved.layers.status==='solved'&&result.geometry.modified&&!options.layerAdjustment)solved.layers.message='已找到修改后模型的层序解；这不证明原折痕能等距折成该形状，也不证明连续路径可行。';
     return solved;
@@ -369,15 +397,71 @@ function recomputeFlatLayersInternal(input: FlatFoldResult, options:Pick<FlatFol
  * before a result can be published. No fallback may silently discard them. */
 export function computeFlatFold(doc:Doc,onGeometry?: (result:FlatFoldResult)=>void,options:FlatFoldOptions={},onSource?:(graph:FoldGraph)=>void):FlatFoldResult {
   const required=options.relativeConstraints??[];
-  const result=certifyRelativeLayerConstraints(computeFlatFoldInternal(doc,onGeometry?result=>onGeometry(certifyRelativeLayerConstraints(result,required)):undefined,options,onSource),required);
-  return withConflictExplanation(certifyRelativeLayerConstraints(selfDiagnoseLayers(result,epsilonFor(doc)),required));
+  const result=computeFlatFoldInternal(doc,onGeometry?g=>onGeometry(certifyRelativeLayerConstraints(g,required)):undefined,options,onSource);
+  return finishFlatLayers(result,required,epsilonFor(doc),options);
 }
 export function recomputeFlatLayers(input:FlatFoldResult,options:Pick<FlatFoldOptions,'solutionIndex'|'constraints'|'layerAdjustment'|'layerPreferences'|'relativeConstraints'>={}):FlatFoldResult {
   const required=options.relativeConstraints??input.layers.relativeConstraints??[];
-  const result=certifyRelativeLayerConstraints(recomputeFlatLayersInternal(input,{...options,relativeConstraints:required}),required);
-  const bounds=pointBounds(result.geometry.vertices),span=Math.max(bounds.maxX-bounds.minX,bounds.maxY-bounds.minY);
-  return withConflictExplanation(certifyRelativeLayerConstraints(selfDiagnoseLayers(result,Math.max(1e-6,span*1e-8)),required));
+  const result=recomputeFlatLayersInternal(input,{...options,relativeConstraints:required});
+  return finishFlatLayers(result,required,undefined,options);
 }
+
+function finishFlatLayers(result:FlatFoldResult,required:FlatLayerPreference[],epsilon?:number,options:FlatFoldOptions={},recoverRoundoff=true):FlatFoldResult{
+  if(epsilon===undefined){
+    const {minX,minY,maxX,maxY}=pointBounds(result.geometry.vertices);
+    epsilon=Math.max(1e-6,Math.max(maxX-minX,maxY-minY)*1e-8);
+  }
+  const checked=certifyRelativeLayerConstraints(result,required);
+  const final=withConflictExplanation(certifyRelativeLayerConstraints(selfDiagnoseLayers(checked,epsilon),required));
+  if(recoverRoundoff&&final.layers.status==='no-solution'&&final.layers.conflicts?.some(c=>c.scope==='root')){
+    const stable=flatRoundoffRecovery(final,epsilon);
+    if(stable){
+      reportFlatComputationProgress({stage:'geometry',label:'复核折后坐标的数值精度'});
+      const retried=recomputeFlatLayersInternal(stable,{...options,relativeConstraints:required});
+      const verified=finishFlatLayers(retried,required,epsilon,options,false);
+      if(verified.layers.status==='solved')return verified;
+    }
+  }
+  return final;
+}
+// The editor and the diagram scheduler share a worker pool for independent
+// material stacks. Explicit candidate numbers and whole-model edits retain
+// their original enumeration and validation semantics.
+export async function solveEditorFlatRequest(request:FlatWorkerRequest,
+  plan:(result:FlatFoldResult,eps:number)=>Promise<FlatFoldResult['layers']>|undefined,
+  onGeometry?:(result:FlatFoldResult)=>void,onSource?:(graph:FoldGraph)=>void):Promise<FlatFoldResult>{
+  const options=request.options??{},input='kind' in request?request.result:undefined;
+  const required=options.relativeConstraints??input?.layers.relativeConstraints??[];
+  const constraints=options.constraints??input?.layers.constraints??[];
+  const indexed=options.solutionIndex!==undefined||constraints.length||options.layerAdjustment||options.layerPreferences?.length||required.length;
+  let pending:Promise<FlatFoldResult['layers']>|undefined;
+  let tolerance:number|undefined;
+  const defer:DeferFlatGroups=(result,eps)=>{
+    if(indexed||result.geometry.faces.length<256)return false;
+    tolerance=eps;
+    pending=plan(result,eps);
+    return !!pending;
+  };
+  const solve=(hook?:DeferFlatGroups)=>'kind' in request
+    ?recomputeFlatLayersInternal(request.result,{...options,relativeConstraints:required},hook)
+    :computeFlatFoldInternal(request.doc,onGeometry?g=>onGeometry(certifyRelativeLayerConstraints(g,required)):undefined,options,onSource,hook);
+  let result=solve(defer);
+  if(pending){
+    let layers:FlatFoldResult['layers'];
+    try{layers=await pending;}
+    catch(error){
+      result.layers={status:'error',message:`独立纸叠求解未完成：${error instanceof Error?error.message:String(error)}`};
+      return result;
+    }
+    if(layers.status==='solved')result.layers=layers;
+    else {
+      // Recompute with the original face IDs to retain conflict witnesses.
+      result='kind' in request?solve():computeFlatFoldInternal(request.doc,undefined,options);
+    }
+  }
+  return finishFlatLayers(result,required,tolerance??('doc' in request?epsilonFor(request.doc):undefined),options);
+}
+
 function selfDiagnoseLayers(result:FlatFoldResult,eps:number):FlatFoldResult{
   return diagnoseFlatLayerCoverage(result,options=>{
     const sourceGraph=result.geometry.graph;

@@ -1,6 +1,8 @@
 export type Preferences = Pick<Storage, 'getItem' | 'setItem'>&{
   compareAndSet?:(key:string,expectedValue:string|null,value:string)=>boolean;
   getItemAsync?:(key:string)=>Promise<string|null>;
+  /** Read current persisted text only when resolving a compare-and-set conflict. */
+  getItemFresh?:(key:string)=>string|null;
   setItemAsync?:(key:string,value:string)=>Promise<void>;
   compareAndSetAsync?:(key:string,expectedValue:string|null,value:string)=>Promise<boolean>;
   refresh?:(clearRecords?:boolean)=>Promise<void>;
@@ -37,6 +39,10 @@ export const preferenceStorage: Preferences & Required<Pick<Preferences,'getItem
   async getItemAsync(key){
     const service=typeof window!=='undefined'?window.desktop?.preferences??preferenceService:preferenceService;
     return service?.getItemAsync?service.getItemAsync(key):preferenceStorage.getItem(key);
+  },
+  getItemFresh(key){
+    const service=typeof window!=='undefined'?window.desktop?.preferences??preferenceService:preferenceService;
+    return service?.getItemFresh?service.getItemFresh(key):preferenceStorage.getItem(key);
   },
   async setItemAsync(key,value){
     const service=typeof window!=='undefined'?window.desktop?.preferences??preferenceService:preferenceService;

@@ -1,7 +1,7 @@
 import {test} from 'node:test';import assert from 'node:assert/strict';
-import {solveConvexLayerCandidate} from '../../src/core/convexLayerCandidate';
+import {solveConvexLayerCandidate,solveLayerContactCandidate} from '../../src/core/convexLayerCandidate';
 import {buildExactModelTopology,walkExactCoverage} from '../../src/app/modelExactTopology';
-import type {RegionCoverage} from '../../src/core/regionTournament';
+import {checkCoverageTournaments,type RegionCoverage} from '../../src/core/regionTournament';
 import type {FlatFoldResult,FoldGraph,Point} from '../../src/core/types';
 
 const rect=(x:number,y:number,w:number,h:number):Point[]=>[[x,y],[x+w,y],[x+w,y+h],[x,y+h]];
@@ -53,4 +53,33 @@ test('original Dragon micro-overlap receives a complete exact-cell paper certifi
   assert.ok(answer?.coverageCertificate);assert.equal(answer.coverageCertificate.verifiedCells,topology.cellCount);
   let sharedArea=0;coverage.walk({onCell:(cell,faces)=>{assert.equal(answer.coverageCertificate!.depth[cell],faces.size);if(faces.size===2)sharedArea+=topology.cellArea[cell];}});
   assert.ok(Math.abs(sharedArea-1.5304956478906452e-7)<1e-20);assert.ok(answer.orders.some(([a,b])=>a===0&&b===1));
+});
+
+test('the certified row mask retains positive micro-overlaps and excludes auxiliary comparisons appended after registration',()=>{
+  const graph=graphFrom([rect(0,0,1,1),rect(1,0,1,1),rect(1-1e-10,.2,.1,.3)]),{coverage}=exact(graph);
+  const candidate=solveConvexLayerCandidate(graph,1e-6,{coverage,fixedOrders:[[1,0,1]]});
+  assert.ok(candidate?.coverageCertificate&&candidate.nonContactRows);
+  assert.deepEqual([...candidate.nonContactRows].map(i=>candidate.orders[i].slice(0,2)),[[0,1]]);
+  assert.ok(candidate.orders.some(([a,b])=>a===0&&b===2));
+  assert.ok(candidate.orders.some(([a,b])=>a===1&&b===2));
+});
+
+test('edge-only contacts enforce crease rules but are absent from all coverage comparisons',()=>{
+  // A and C share only an edge. B has positive area on both sides.
+  const polygons=[rect(0,0,1,1),rect(.5,0,1,1),rect(1,0,1,1)],{coverage}=exact(graphFrom(polygons));
+  const problem={count:3,winding:[true,true,true],polygons,overlap:[[1,2],[0,2],[0,1]],adjacent:{},
+    constraints:{taco_taco:[],taco_tortilla:[[0,2,1]],tortilla_tortilla:[],transitivity:[]}};
+  let checked=0;
+  const answer=solveLayerContactCandidate(problem,1e-6,{coverage,fixedOrders:[[0,1,-1],[0,2,1]],coverageChecker:(source,pairs,values)=>{
+    checked++;
+    assert.deepEqual(pairs,[[0,1],[1,2]]);
+    assert.deepEqual(Array.from(values),[2,1]);
+    return checkCoverageTournaments(source,pairs,values);
+  }});
+  assert.ok(checked>0&&answer?.coverageCertificate);
+  assert.equal(answer.coverageCertificate.verifiedCells,coverage.cellCount);
+  assert.deepEqual(answer.orders,[[0,1,-1],[0,2,1],[1,2,1]]);
+  // Locking B below C now violates the fold rule even though the edge-only
+  // A/C comparison was excluded from the rendering certificate.
+  assert.equal(solveLayerContactCandidate(problem,1e-6,{coverage,fixedOrders:[[0,1,-1],[0,2,1],[1,2,-1]]}),null);
 });

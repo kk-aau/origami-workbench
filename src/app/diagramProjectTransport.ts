@@ -3,6 +3,7 @@ import type {DiagramProject} from './diagramProject';
 // The import Worker creates these immutable JSON blobs. Only the exact received
 // project object is associated on the UI; a property read from disk grants no
 // readiness and a later immutable edit cannot accidentally reuse stale bytes.
+export const originalDiagramFileNames=new WeakMap<DiagramProject,string>();
 const preparedSaveBlobs=new WeakMap<DiagramProject,Blob>();
 
 /** Run only in a Worker, after the ordinary complete artwork preparation. */

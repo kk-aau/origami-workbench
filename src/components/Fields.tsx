@@ -37,7 +37,7 @@ export function Icon({name}:{name:string}) {
  paths.alternatecross='M3 20 21 2M3 7h14M9 4v15M15 13h8M18 16v7';
  paths.eraseoverlap='M2 8h20M5 5v6M19 5v6M9 16l6 6m0-6-6 6';paths.erasecross='M2 20 20 2M3 8h17M9 3v17M16 16l6 6m0-6-6 6';
  paths.replacetype='M3 7h17m-4-4 4 4-4 4M21 17H4m4-4-4 4 4 4';paths.deletetype='M3 5h18L14 13v6l-4 2v-8ZM17 15l5 5m0-5-5 5';
- paths.makemountain='M2 18l10-12 10 12M3 22h18';paths.makevalley='M2 6l10 12L22 6M3 22h18';paths.makeedge='M3 4h18v16H3ZM7 12h10';paths.makeaux='M2 12h3m4 0h3m4 0h3M12 3v4m0 10v4';
+ paths.makemountain='M2 18l10-12 10 12M3 22h18';paths.makevalley='M2 6l10 12L22 6M3 22h18';paths.makecrease='M2 12h20M6 7v2m12 6v2';paths.makeedge='M3 4h18v16H3ZM7 12h10';paths.makeaux='M2 12h3m4 0h3m4 0h3M12 3v4m0 10v4';
  paths.mergecrossvertex='M2 15h20M9 10l3 5-3 5M15 10l-3 5 3 5M3 4h6m6 0h6';paths.regionalswap=paths.replacetype;
  paths.selectpolygon='M3 5L15 2L22 12L14 21L2 17ZM7 11h8M11 7v8';paths.unselectpolygon='M3 5L15 2L22 12L14 21L2 17ZM7 11h8';
  paths.selectlasso='M9 19C-2 19 0 3 11 3S26 17 15 19C8 21 2 15 6 12M10 8h8M14 4v8';paths.unselectlasso='M9 19C-2 19 0 3 11 3S26 17 15 19C8 21 2 15 6 12M10 8h8';

@@ -54,7 +54,7 @@ test('single and batched inherited crops track the saved curve view rather than 
     assert.ok(crop?.region.kind==='circle');
     assert.ok(Math.abs(crop.region.center[0]-(bounds.x+bounds.width*.25))<1e-9);
     assert.ok(Math.abs(crop.region.center[1]-(bounds.y+bounds.height*.5))<1e-9);
-    assert.ok(Math.abs(crop.region.radius-Math.min(bounds.width,bounds.height)*.1)<1e-9);
+    assert.ok(Math.abs(crop.region.radius-Math.max(bounds.width,bounds.height)*.1)<1e-9);
     assert.deepEqual(batch.get(step.id),crop,'rail/export batch crop agrees with the main drawing');
   }
   assert.notDeepEqual(batch.get(project.steps[1].id)?.region,batch.get(project.steps[2].id)?.region,'a different saved orbit changes the visual selection basis');
@@ -118,10 +118,10 @@ test('selection survives save/load and responds deterministically to duplicate/r
   assert.throws(()=>diagramStepZoom(p,'missing'),/步骤/);
 });
 
-test('circle positions follow each target paper bounds and radii remain circular',()=>{
+test('an inherited circle contains the selected extent on both axes when the aspect ratio changes',()=>{
   const f=fixture(2);let p=updateDiagramAnnotations(f.project,f.project.steps[0].id,[symbol('in')]);
   p.states[1].doc=blankDoc('目标纸幅',200,400);
-  assert.deepEqual(diagramStepZoom(p,p.steps[1].id)?.region,{kind:'circle',center:[50,200],radius:20});
+  assert.deepEqual(diagramStepZoom(p,p.steps[1].id)?.region,{kind:'circle',center:[50,200],radius:40});
   const result=computeFlatFold(p.states[1].doc);
   p=adoptDiagramPose(p,p.steps[1].id,p.steps[1].beforeId,result);
   p=updateDiagramPoseView(p,p.steps[1].id,{...defaultModelView(),rotation:90});
@@ -184,4 +184,23 @@ test('a project with an unrepresentable inherited zoom opens with an actionable 
   assert.match(diagramStepZoomIssue(loaded,loaded.steps[1].id)!,/重新选择区域/);
   assert.equal(diagramStepZoomIssue(loaded,loaded.steps[2].id),undefined,'zoom-out ends even an unrepresentable instruction');
   assert.deepEqual(loaded,snapshot,'fallback display leaves the stored area and CPs intact');
+});
+
+test('a selected material corner remains inside the inherited circle after rotating the next step',()=>{
+  const f=fixture(2);let project=f.project;
+  for(const step of project.steps){
+    const cp=project.states.find(state=>state.id===step.beforeId)!;
+    project=adoptDiagramPose(project,step.id,cp.id,computeFlatFold(cp.doc));
+  }
+  const [first,next]=project.steps,box=diagramZoomPaperBounds(first.pose);
+  const vertex=first.pose!.result.geometry.vertices[0];
+  const region={kind:'circle' as const,center:vertex,radius:8};
+  project=updateDiagramAnnotations(project,first.id,[symbol('material-corner','zoom',{basis:box,region})]);
+  project=updateDiagramPoseView(project,next.id,{...defaultModelView(),rotation:180});
+  const zoom=diagramStepZoom(project,next.id)?.region;
+  assert.ok(zoom?.kind==='circle');
+  assert.ok(Math.abs(zoom.radius-region.radius)<1e-8,'a moving corner stays magnified');
+  const target:[number,number]=[box.x*2+box.width-vertex[0],box.y*2+box.height-vertex[1]];
+  assert.ok(Math.hypot(target[0]-zoom.center[0],target[1]-zoom.center[1])<=zoom.radius+1e-8);
+  assert.deepEqual(diagramStepZooms(project).get(next.id)?.region,zoom);
 });

@@ -128,7 +128,7 @@ test('worker module dispatches actual edited-geometry reanalysis without recreat
     scope.postMessage = data => messages.push(data);
     await import('../../src/workers/flatFold.worker');
     const input = editedModel(), before = structuredClone(input);
-    scope.onmessage!({ data: { kind: 'layers', result: input } });
+    await scope.onmessage!({ data: { kind: 'layers', result: input } });
     const terminal=messages.filter(m=>m.type==='result');
     assert.ok(messages.some(m=>m.type==='computation-progress'));
     assert.equal(terminal.length, 1);
@@ -136,14 +136,14 @@ test('worker module dispatches actual edited-geometry reanalysis without recreat
     assert.deepEqual(terminal[0].result.geometry.vertices, before.geometry.vertices);
     assert.equal(terminal[0].result.geometry.modified, true); assert.deepEqual(input, before);
     messages.length = 0;
-    scope.onmessage!({ data: { doc: blankDoc('原路径', 100, 100) } });
-    const originalMessages=messages.filter(m=>m.type!=='computation-progress');
+    await scope.onmessage!({ data: { doc: blankDoc('原路径', 100, 100) } });
+    const originalMessages=messages.filter(m=>m.type!=='computation-progress'&&m.type!=='progress');
     assert.deepEqual(originalMessages.map(m => m.type), ['geometry', 'result']);
     assert.equal(originalMessages[1].result.layers.status, 'solved');
     const source=blankDoc('后台准备',100,100);source.segments.push({id:'crease',a:[50,0],b:[50,100],assignment:'M',angle:-180});
     const sourceMessages:unknown[]=[];scope.postMessage=data=>sourceMessages.push(structuredClone(data));
-    scope.onmessage!({data:{doc:source,includeSource:true}});
-    const [prepared,folded,complete]=sourceMessages.filter(m=>(m as {type:string}).type!=='computation-progress') as [{type:string;graph:FoldGraph},{type:string;result:FlatFoldResult},{type:string;result:FlatFoldResult}];
+    await scope.onmessage!({data:{doc:source,includeSource:true}});
+    const [prepared,folded,complete]=sourceMessages.filter(m=>!['computation-progress','progress'].includes((m as {type:string}).type)) as [{type:string;graph:FoldGraph},{type:string;result:FlatFoldResult},{type:string;result:FlatFoldResult}];
     assert.deepEqual([prepared.type,folded.type,complete.type],['source','geometry','result']);
     assert.equal(prepared.graph.faces_vertices!.length,2);
     assert.notDeepEqual(prepared.graph.vertices_coords,folded.result.geometry.vertices);

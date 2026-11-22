@@ -1,5 +1,6 @@
 import type {DiagramAnnotation,DiagramSymbolAnnotation} from './diagramAnnotations';
 import {cadAttributeDefinitions} from './diagramCadSymbols';
+import {diagramBranchNumbering} from './diagramBranches';
 import type {DiagramProject,DiagramStep} from './diagramProject';
 
 const isReturn=(annotation:DiagramAnnotation):annotation is DiagramSymbolAnnotation=>annotation.kind==='symbol'&&annotation.symbol==='return';
@@ -38,24 +39,42 @@ export function validateDiagramReturnReferences(project:DiagramProject):void {
  * text feeds the drawing, cached thumbnails, PDF panels and exported images. */
 export function syncDiagramReturnLabels(project:DiagramProject):DiagramProject {
   validateDiagramReturnReferences(project);
-  const indexes=new Map(project.steps.map((step,index)=>[step.id,index])),attribute=cadAttributeDefinitions('return').find(item=>item.editable)?.key;
+  const attribute=cadAttributeDefinitions('return').find(item=>item.editable)?.key;
+  const displayLabels=new Map<string,string>();
+  function targetLabel(id:string):string {
+    const cached=displayLabels.get(id);
+    if(cached!==undefined)return cached;
+    const label=diagramBranchNumbering(project).stepLabels.get(id);
+    if(label===undefined)throw new Error('返回目标已不存在，请重新选择返回步骤。');
+    // The drawing's CAD field accepts up to 200 Unicode characters. Keep
+    // both the step number and the innermost branch tag on very long paths.
+    const chars=Array.from(label.replace(/[\u0000-\u001f\u007f-\u009f]/gu,' '));
+    const text=chars.length<=200?chars.join(''):chars.slice(0,100).join('')+'…'+chars.slice(-99).join('');
+    displayLabels.set(id,text);return text;
+  }
   function labels(annotations:DiagramAnnotation[]|undefined):DiagramAnnotation[]|undefined {
     if(!annotations)return annotations;let changed=false;
     const next=annotations.map(annotation=>{
       if(!isReturn(annotation)||annotation.returnStepId===undefined)return annotation;
-      const text=String(indexes.get(annotation.returnStepId)!+1);
+      const text=targetLabel(annotation.returnStepId);
       if(annotation.text===text&&(!attribute||annotation.cadAttributes?.[attribute]===text))return annotation;
       changed=true;return {...annotation,text,...(attribute?{cadAttributes:{...annotation.cadAttributes,[attribute]:text}}:{})};
     });
     return changed?next:annotations;
   }
-  let changed=false;
-  const steps=project.steps.map(step=>{
+  function refreshStep(step:DiagramStep):DiagramStep {
     const annotations=labels(step.annotations),flatAnnotations=labels(step.paperStates?.flatAnnotations),spatialAnnotations=labels(step.paperStates?.spatialAnnotations);
     if(annotations===step.annotations&&flatAnnotations===step.paperStates?.flatAnnotations&&spatialAnnotations===step.paperStates?.spatialAnnotations)return step;
-    changed=true;return {...step,...(annotations?{annotations}:{}),...(step.paperStates?{paperStates:{...step.paperStates,...(flatAnnotations?{flatAnnotations}:{}),...(spatialAnnotations?{spatialAnnotations}:{})}}:{})};
+    return {...step,...(annotations?{annotations}:{}),...(step.paperStates?{paperStates:{...step.paperStates,...(flatAnnotations?{flatAnnotations}:{}),...(spatialAnnotations?{spatialAnnotations}:{})}}:{})};
+  }
+  const steps=project.steps.map(refreshStep);
+  const branchSteps=project.branchSteps?.map(entry=>{
+    const step=refreshStep(entry.step);
+    return step===entry.step?entry:{...entry,step};
   });
-  return changed?{...project,steps}:project;
+  const activeChanged=steps.some((step,i)=>step!==project.steps[i]);
+  const parkedChanged=branchSteps?.some((entry,i)=>entry!==project.branchSteps![i]);
+  return activeChanged||parkedChanged?{...project,...(activeChanged?{steps}:{}),...(parkedChanged?{branchSteps}:{})}:project;
 }
 
 /** Return references belong to the current symbols across paper modes. Copy

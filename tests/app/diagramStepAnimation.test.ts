@@ -16,8 +16,12 @@ import {defaultModelColors} from '../../src/app/modelColors';
 import {normalizeDiagramProjectCP} from '../../src/app/diagramCP';
 import {simulationStepDisplayAssignments} from '../../src/engine/simStepEdges';
 import {createSimulationStepRigidDriver} from '../../src/engine/simStepRigid';
-import {planVerifiedSimulationStepAnimation} from '../../src/engine/simStepPlanning';
+import {planDiagramStepPlayback,planVerifiedSimulationStepAnimation} from '../../src/engine/simStepPlanning';
 import {createSimulationStepPathEvaluator} from '../../src/engine/simStepPath';
+import {planSimulationStepDynamic} from '../../src/engine/simStepDynamic';
+import {SimulationRasterizer} from '../../src/engine/simRaster';
+import {cameraUniforms} from '../../vendor/simulator/oristudio/packages/origami-simulator/src/webgl/camera';
+import type {RenderSettings} from '../../vendor/simulator/oristudio/packages/origami-simulator/src/webgl/meshRenderer';
 
 const segment=(id:string,a:Point,b:Point,assignment:Segment['assignment']):Segment=>({id,a,b,assignment,angle:assignment==='M'?-180:assignment==='V'?180:assignment==='U'?null:0});
 function fixture(before=blankDoc('步骤动画',100,100)){
@@ -28,6 +32,56 @@ function fixture(before=blankDoc('步骤动画',100,100)){
 }
 function withAfter(project:DiagramProject,doc:Doc){return updateDiagramCP(project,project.steps[0].afterId,doc);}
 const bounds=(positions:number[],axis:number)=>{const p=positions.filter((_,i)=>i%3===axis);return Math.max(...p)-Math.min(...p);};
+
+for(const mirror of [false,true])test(`two mountain midlines and a valley diagonal collapse together (mirrored=${mirror})`,()=>{
+  const {project,before,stepId}=fixture();
+  const after=applyDiagramFoldSegments(before,[
+    segment('horizontal',[0,50],[100,50],'M'),segment('vertical',[50,0],[50,100],'M'),
+    segment('diagonal',mirror?[0,0]:[0,100],mirror?[100,100]:[100,0],'V')
+  ]);
+  const clip=buildDiagramStepAnimation(withAfter(project,after),stepId);
+  const {animation}=planDiagramStepPlayback(clip.fold,clip.animation,undefined,{initialGeometry:clip.initialGeometry});
+  const {prepared}=prepareSimulationDocument(clip.fold);
+  assert.equal(animation.motion?.batches?.length,1);
+  const path=createSimulationStepPathEvaluator(prepared,animation,animation.motion!);
+  const moving=prepared.creaseParams.flatMap((c,i)=>c.targetAngle?[i]:[]);
+  assert.equal(moving.length,6);
+  for(const t of [.01,.25,.5,.75,.99]){
+    const angles=path.angles(t);
+    for(const i of moving)assert.ok(angles[i]/prepared.creaseParams[i].targetAngle>0&&angles[i]/prepared.creaseParams[i].targetAngle<1);
+    path.evaluate(t);
+  }
+  assert.deepEqual(path.angles(1),prepared.creaseParams.map(c=>c.targetAngle));
+});
+
+test('the folded square conceals its inner diagonal on both exterior sheets',()=>{
+  const {project,before,stepId}=fixture();
+  const after=applyDiagramFoldSegments(before,[
+    segment('horizontal',[0,50],[100,50],'V'),segment('vertical',[50,0],[50,100],'V'),
+    segment('diagonal',[0,100],[100,0],'M'),
+  ]);
+  const clip=buildDiagramStepAnimation(withAfter(project,after),stepId);
+  const {animation}=planDiagramStepPlayback(clip.fold,clip.animation,undefined,{initialGeometry:clip.initialGeometry});
+  const {prepared}=prepareSimulationDocument(clip.fold);
+  const positions=createSimulationStepPathEvaluator(prepared,animation,animation.motion!).evaluate(1);
+  const order={triangleSourceFaces:prepared.triangleSourceFaces!,faceOrders:animation.layerTimeline!.at(-1)!.faceOrders};
+  const raster=new SimulationRasterizer();
+  for(const pitch of [0,Math.PI,.4])for(const diagramStyle of [false,true]){
+    const camera=cameraUniforms({yaw:0,pitch,zoom:1},[0,0,0],2,360,360);
+    const settings={frontColor:[1,.9,.8],backColor:[1,.9,.8],background:[1,1,1],borderColor:[0,0,0],
+      diagramInkColor:[0,0,0],lightDir:[0,1,0],creaseWidthPx:2,faceAlpha:1,showFaces:true,showEdges:false,diagramStyle} as RenderSettings;
+    const assignments=simulationStepDisplayAssignments(prepared,animation,positions,camera,1);
+    const paper=raster.render(positions,prepared,camera,settings,undefined,order).slice();
+    const ink=raster.render(positions,prepared,camera,{...settings,showEdges:true},undefined,order,2,assignments);
+    let interior=0,outline=0;
+    for(let p=0;p<paper.length;p+=4){
+      const inside=[0,-12,12,-12*camera.width,12*camera.width].every(offset=>paper[p+offset+1]<255);
+      if(inside){interior++;assert.equal(ink[p+1],paper[p+1],'outer paper covers the underlying hinge');}
+      else if(ink[p+1]!==paper[p+1])outline++;
+    }
+    assert.ok(interior>1000&&outline>100,'the comparison covers the paper interior and preserves its outline');
+  }
+});
 
 for(const precrease of [true,false])test(`an old expanded mark remains visible before ${precrease?'repressing':'folding'} it on the rigid path`,()=>{
   const before=blankDoc('重用已有折痕',100,100),mark=segment('old-mark',[50,0],[50,100],'F');before.segments.push(mark);
@@ -150,11 +204,54 @@ test('pulled illustrations use the archived flat pose without altering either sa
   assert.ok(buildDiagramStepAnimation(input,stepId).animation.initialPositions.length);assert.deepEqual(input,saved);
 });
 
-test('unsupported unknown assignments, direct fold reversal and material cuts report specific reasons',()=>{
+for(const initial of ['M','V'] as const)test(`a full ${initial} reversal unfolds through flat paper in one step`,()=>{
+  const before=blankDoc('反折',100,100),old=segment('fold',[50,0],[50,100],initial);
+  before.segments.push(old);
+  const {project,stepId}=fixture(before),target=segment('reverse',old.a,old.b,initial==='M'?'V':'M');
+  const clip=buildDiagramStepAnimation(withAfter(project,applyDiagramFoldSegments(before,[target])),stepId);
+  const {prepared}=prepareSimulationDocument(clip.fold);
+  const {animation}=planDiagramStepPlayback(clip.fold,clip.animation,undefined,{initialGeometry:clip.initialGeometry});
+  const path=createSimulationStepPathEvaluator(prepared,animation,animation.motion!);
+  const opened=Array.from(path.evaluate(.5));
+  assert.ok(animation.ranges.some(r=>r.fromAngle===old.angle&&r.viaAngle===0&&r.toAngle===target.angle));
+  assert.ok(bounds(opened,0)>1.9*bounds(Array.from(path.evaluate(0)),0));
+  assert.ok(bounds(opened,1)<1e-5);
+  const height=(p:number)=>Array.from(path.evaluate(p)).filter((_,i)=>i%3===1).reduce((a,b)=>Math.abs(a)>Math.abs(b)?a:b,0);
+  assert.ok(height(.25)*height(.75)<-.1);
+});
+
+test('an inside reverse fold opens the adjoining spine and turns the tip over in one step',()=>{
+  const before=blankDoc('内翻折',100,100);
+  before.segments.push(segment('spine',[50,0],[50,100],'M'));
+  const {project,stepId}=fixture(before);
+  const after=applyDiagramFoldSegments(before,[
+    segment('reverse-tip',[50,0],[50,20],'V'),
+    segment('left-hinge',[50,20],[0,0],'M'),segment('right-hinge',[50,20],[100,0],'M'),
+  ]);
+  const clip=buildDiagramStepAnimation(withAfter(project,after),stepId);
+  const {prepared}=prepareSimulationDocument(clip.fold);
+  const {animation,method}=planDiagramStepPlayback(clip.fold,clip.animation,undefined,clip);
+  assert.equal(method,'coupled');
+  const path=createSimulationStepPathEvaluator(prepared,animation,animation.motion!);
+  const spine=animation.ranges.findIndex(r=>r.fromAngle===-180&&r.toAngle===-180);
+  assert.ok(spine>=0);
+  assert.equal(path.angles(.5)[spine],0);
+  assert.deepEqual(path.angles(1),clip.animation.ranges.map(r=>r.toAngle));
+  for(const progress of [0,.25,.5,.75,1]){
+    const pose=path.evaluate(progress);
+    for(const v of clip.animation.fixedVertices)for(let k=0;k<3;k++)assert.ok(Math.abs(pose[3*v+k]-clip.animation.initialPositions[3*v+k])<1e-6);
+  }
+  let retries=0;
+  const motion=planSimulationStepDynamic(prepared,{...clip.animation,motionPolicy:'allow-dynamic',collisionPolicy:'allow'},{
+    steps:48,iterationsPerStep:640,finalIterations:12800,onProgress:s=>{if(s.includes('重新求解'))retries++;},
+  });
+  assert.ok(retries>0);
+  assert.ok(motion.maxEdgeStrain<.12&&motion.maxAreaStrain<.25&&motion.endAngleError<.001);
+});
+
+test('unsupported unknown assignments and material cuts report specific reasons',()=>{
   const {project,stepId,before}=fixture();
   assert.throws(()=>buildDiagramStepAnimation(withAfter(project,applyDiagramFoldSegments(before,[segment('u',[50,0],[50,100],'U')])),stepId),/未赋型|未知折角/);
-  const folded=blankDoc('反转',100,100);folded.segments.push(segment('fold',[50,0],[50,100],'M'));
-  const f=fixture(folded);assert.throws(()=>buildDiagramStepAnimation(withAfter(f.project,applyDiagramFoldSegments(folded,[segment('v',[50,0],[50,100],'V')])),f.stepId),/反转/);
   const material=materialSlitFixture(),m=createDiagramProject(material.source);assert.throws(()=>buildDiagramStepAnimation(m,m.activeStepId),/切口/);
 });
 

@@ -2,6 +2,7 @@ import {createMaterialTopology,inspectMaterialTopology} from './materialTopology
 import {defaultAngle,validateDoc,type Assignment,type Doc,type FoldGraph,type ImportResult,type Point} from './types';
 import {resolveStartingFace} from '../app/flatFoldSettings';
 import {validateFlatFoldSettings} from './flatFoldSettings.mjs';
+import {foldDescriptions,mergeFoldSourceExtras} from './foldInterchange';
 
 const fields=['vertices_coords','edges_vertices','edges_assignment','edges_foldAngle','faces_vertices','faces_edges','edges_faces','faces_faces','faces_holes','faces_holeEdges','faces_holeFaces'] as const;
 const same=(a:unknown,b:unknown)=>JSON.stringify(a)===JSON.stringify(b);
@@ -53,10 +54,10 @@ export function importMaterialFold(raw:Record<string,unknown>,name:string):Impor
   const excluded=new Set<string>([...fields,'file_frames','zhezhi_material_topology','zhezhi_metadata','zhezhi_auxiliary','zhezhi_paper','zhezhi_flat_fold']);
   const extras=Object.fromEntries(Object.entries(raw).filter(([key])=>!excluded.has(key)));
   metadata.sourceFormat='fold';
-  metadata.sourceFoldExtras={...(record(metadata.sourceFoldExtras)?metadata.sourceFoldExtras:{}),...structuredClone(extras)};
+  metadata.sourceFoldExtras=mergeFoldSourceExtras(metadata.sourceFoldExtras,structuredClone(extras));
   if(frame){
     const frameExtras=Object.fromEntries(Object.entries(frame).filter(([key])=>!(fields as readonly string[]).includes(key)));
-    metadata.sourceFoldFrameExtras=structuredClone(frameExtras);
+    metadata.sourceFoldFrameExtras=mergeFoldSourceExtras(metadata.sourceFoldFrameExtras,structuredClone(frameExtras));
   }
   const doc:Doc={name:typeof raw.file_title==='string'?raw.file_title:name,paper,metadata,segments:scaled.edges_vertices.map(([a,b],i)=>({id:ids[i],a:[...scaled.vertices_coords[a]],b:[...scaled.vertices_coords[b]],assignment:scaled.edges_assignment[i] as Assignment,angle:scaled.edges_foldAngle[i]}))};
   if(raw.zhezhi_auxiliary!==undefined){
@@ -86,7 +87,7 @@ export function exportMaterialFold(doc:Doc):Record<string,unknown>{
   const graph=material.graph,metadata={...doc.metadata};delete metadata.materialTopology;
   const topology=structuredClone(doc.metadata!.materialTopology) as Record<string,unknown>;
   if(doc.flatFold){const root=resolveStartingFace(doc,graph);if(root.stale)throw new Error('材料 FOLD 起始面已失效，请重新选择后导出。');}
-  return {...structuredClone(graph),file_spec:1.2,file_creator:'折纸工坊',file_title:doc.name,frame_classes:['creasePattern'],frame_attributes:['2D'],frame_unit:'mm',
+  return {...foldDescriptions(metadata.sourceFoldExtras),...structuredClone(graph),file_spec:1.2,file_creator:'折纸工坊',file_title:doc.name,frame_classes:['creasePattern'],frame_attributes:['2D'],frame_unit:'mm',
     zhezhi_material_topology:topology,zhezhi_paper:structuredClone(doc.paper),zhezhi_metadata:metadata,zhezhi_auxiliary:structuredClone(doc.segments.filter(s=>s.assignment==='A')),...(doc.flatFold?{zhezhi_flat_fold:structuredClone(doc.flatFold)}:{}),
-    ...(material.foldedVertices?{file_frames:[{...structuredClone(graph),vertices_coords:structuredClone(material.foldedVertices),frame_classes:['foldedForm'],frame_attributes:['2D'],frame_unit:'mm',frame_inherit:false}]}:{})};
+    ...(material.foldedVertices?{file_frames:[{...foldDescriptions(metadata.sourceFoldFrameExtras),...structuredClone(graph),vertices_coords:structuredClone(material.foldedVertices),frame_classes:['foldedForm'],frame_attributes:['2D'],frame_unit:'mm',frame_inherit:false}]}:{})};
 }

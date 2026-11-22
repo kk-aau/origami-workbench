@@ -1,0 +1,13 @@
+.diagram-seam-controls{margin:6px 0;padding:4px 0;border:0;min-width:0}
+.diagram-seam-controls legend{padding:0;color:#394d42;font-size:12px;font-weight:600}
+.diagram-seam-control,.diagram-seam-control label{display:flex;align-items:center;gap:8px;min-width:0}
+.diagram-seam-control{margin-top:4px}.diagram-seam-control label{flex:1}
+.diagram-seam-control label span{min-width:7em;font-size:11px}
+.diagram-seam-control input[type=range]{flex:1;width:0;min-width:25px;accent-color:#42705b}
+.diagram-seam-control output{width:3.2em;text-align:right;font-variant-numeric:tabular-nums;font-size:11px}
+.diagram-seam-setting{margin:6px 0}
+.diagram-pdf-options .diagram-seam-setting .diagram-seam-link{display:inline-flex;flex-direction:row;align-items:center;gap:5px;font-size:11px}
+.diagram-seam-link input{margin:0;accent-color:#42705b}
+.diagram-seam-handle{cursor:ns-resize;touch-action:none;color:#35684e;outline:none}
+.diagram-seam-grip{fill:white;stroke:#42705b;stroke-width:1}
+.diagram-seam-handle:is(:hover,:focus-visible,:active) .diagram-seam-grip{fill:#ddf0df;stroke-width:2}

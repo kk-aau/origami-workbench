@@ -2,7 +2,7 @@ import type { Doc, Segment, Assignment, Point } from '../core/types';
 import { defaultAngle } from '../core/types';
 import {DEFAULT_PAPER_SIZE} from './paperDefaults';
 export const VERSION = '0.13.53';
-export const NAMES: Record<Assignment,string> = {M:'山折',V:'谷折',B:'边界',A:'辅助',U:'未指派',F:'平面边'};
+export const NAMES: Record<Assignment,string> = {M:'山折',V:'谷折',B:'边界',A:'辅助',U:'未指派',F:'已有折痕'};
 export const COLORS: Record<Assignment,string> = {M:'#b23d42',V:'#315ebe',B:'#2a3c34',A:'#60938d',U:'#997327',F:'#869085'};
 export function uid() { return crypto.randomUUID(); }
 export function line(a:Point,b:Point,assignment:Assignment,angle:number|null=defaultAngle(assignment)):Segment {return {id:uid(),a,b,assignment,angle};}

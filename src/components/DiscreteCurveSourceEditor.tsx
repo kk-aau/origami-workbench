@@ -1,3 +1,5 @@
+import {svgLineStroke} from '../app/adaptiveLineStyle';
+import {useAdaptiveLineStyle} from '../app/useAdaptiveLineStyle';
 import {useEffect,useRef,useState} from 'react';
 import {TessDialog} from './TessellationEditor';
 import {NumberField} from './Fields';
@@ -12,6 +14,7 @@ type Drag={pointer:number;kind:'pan'|DiscreteSourceHandle;index:number;start:XY;
 const names={foldPoints:'折线点',leftRulings:'左原向量',rightRulings:'右原向量'};
 const sourcePoints=(p:DiscreteCurveCPParams)=>p.source.foldPoints.flatMap((_,i)=>(['foldPoints','leftRulings','rightRulings'] as const).map(k=>discreteSourceHandlePoint(p,k,i)));
 export default function DiscreteCurveSourceEditor({initial,onApply,onClose}:Props){
+ const [adaptive]=useAdaptiveLineStyle();
  const [draft,setDraft]=useState(()=>structuredClone(initial)),[selected,setSelected]=useState(0),[pan,setPan]=useState(false),[grid,setGrid]=useState(true),[showOriginal,setShowOriginal]=useState(true),[error,setError]=useState('');
  const [aspect,setAspect]=useState(1.45),[height,setHeight]=useState(400),[view,setView]=useState<GeometryView>(()=>fitGeometryView(sourcePoints(initial),geometryFrame(sourcePoints(initial)),1.45,true));
  const frame=useRef(geometryFrame(sourcePoints(initial))).current,svg=useRef<SVGSVGElement>(null),viewport=useRef<HTMLDivElement>(null),coordinates=useRef<HTMLDivElement>(null),drag=useRef<Drag|null>(null),current=useRef(draft);current.current=draft;
@@ -24,7 +27,7 @@ export default function DiscreteCurveSourceEditor({initial,onApply,onClose}:Prop
  const pointer=(x:number,y:number):XY=>{const m=svg.current?.getScreenCTM();if(!m)return [0,0];const p=new DOMPoint(x,y).matrixTransform(m.inverse());return [p.x,p.y];};
  const wheel=useRef<(event:WheelEvent)=>void>(()=>{});wheel.current=e=>{e.preventDefault();const anchor=pointer(e.clientX,e.clientY);setView(v=>zoomGeometryView(v,Math.exp(Math.max(-.5,Math.min(.5,e.deltaY*.001))),anchor));};
  useEffect(()=>{const node=svg.current;if(!node)return;const listener=(event:WheelEvent)=>wheel.current(event);node.addEventListener('wheel',listener,{passive:false});return()=>node.removeEventListener('wheel',listener);},[]);
- const line=(a:XY,b:XY,key:string,color:string,dash?:string)=>{const p=display(a),q=display(b);return <line key={key} x1={p[0]} y1={p[1]} x2={q[0]} y2={q[1]} stroke={color} strokeWidth={1.5} strokeDasharray={dash} vectorEffect="non-scaling-stroke"/>;};
+ const line=(a:XY,b:XY,key:string,color:string,dash?:string)=>{const p=display(a),q=display(b);return <line key={key} x1={p[0]} y1={p[1]} x2={q[0]} y2={q[1]} stroke={color} {...svgLineStroke(p,q,1.5,dash,{enabled:adaptive,units:view.span/Math.max(1,height),pen:'pixels'})}/>;};
  const draw=(params:DiscreteCurveCPParams,original=false)=><g data-source-layer={original?'original':'draft'} opacity={original?.48:1}>{params.source.foldPoints.slice(1).map((p,i)=>line(params.source.foldPoints[i] as XY,p as XY,'f'+i,original?'#202124':'#8b4bc0'))}{params.source.foldPoints.flatMap((p,i)=>(['leftRulings','rightRulings'] as const).map(k=>line(p as XY,discreteSourceHandlePoint(params,k,i),k+i,original?'#202124':'#8b4bc0',original?'3 4':k==='rightRulings'?'4 3':undefined)))}</g>;
  const edit=(key:DiscreteSourceHandle,axis:number,value:number)=>{const next=structuredClone(draft);next.source[key][vertex][axis]=value;change(next);};
  const insert=()=>{try{change(insertDiscreteSourcePoint(draft,vertex),vertex+1);}catch(e){setError((e as Error).message);}};

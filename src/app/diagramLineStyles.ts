@@ -15,6 +15,13 @@ export function defaultDiagramStrokePattern(style:DiagramLineStyle):DiagramStrok
 export function defaultDiagramLineDefaults():DiagramLineDefaults {
   return Object.fromEntries(DIAGRAM_LINE_STYLES.map(style=>[style,{color:'#293d35',width:style==='crease'?.35:.7,strokePattern:defaultDiagramStrokePattern(style)}])) as DiagramLineDefaults;
 }
+/** Paper silhouettes historically use fixed screen pens. Preserve their
+ * default appearance, but apply the authored boundary-width ratio everywhere
+ * (including folded/internal contours), without a minimum-width clamp. */
+export function diagramBoundaryStrokeWidth(palette:DiagramLineDefaults|undefined,legacyWidth:number):number {
+  const boundary=palette?.boundary;
+  return boundary?.globalFields?.includes('width')?legacyWidth*(boundary.width/.7):legacyWidth;
+}
 export function diagramLineAppearance(line:Pick<DiagramLineAnnotation,'style'|'color'|'width'|'strokePattern'>):DiagramLineAppearance {
   return {color:line.color,width:line.width,strokePattern:line.strokePattern??defaultDiagramStrokePattern(line.style)};
 }

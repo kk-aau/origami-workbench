@@ -2,11 +2,12 @@
 use super::*;
 use std::collections::{BTreeMap,HashSet};
 use serde::{Serialize,Deserialize};
-use tauri::{Webview,WindowBuilder,webview::WebviewBuilder,LogicalPosition,LogicalSize};
+use tauri::{Webview,WindowBuilder,webview::WebviewBuilder,PhysicalPosition,PhysicalSize};
 
 #[derive(Clone,Serialize)]
 #[serde(rename_all="camelCase")]
 pub(super) struct Document {
+    #[serde(rename="hasEditorCP")]pub has_editor_cp:bool,
     pub home:bool,pub id:String,pub title:String,pub window_id:String,pub active:bool,pub dirty:bool,pub busy:bool,pub saving:bool,pub ready:bool,pub workspace:String,pub visible:bool,pub bounds:Option<Bounds>,
     #[serde(skip)]pub library_key:Option<String>,
     #[serde(skip)]pub return_to:Option<String>,
@@ -26,13 +27,13 @@ pub(super) fn acknowledge_close(replies:&Mutex<HashMap<String,CloseReply>>,owner
 }
 struct CloseReservation {app:AppHandle,ids:Vec<String>,windows:Vec<String>,all:bool}
 impl Drop for CloseReservation{fn drop(&mut self){let host=self.app.state::<Host>();let mut r=host.documents.lock().unwrap();for id in &self.ids{r.closing_documents.remove(id);}for id in &self.windows{r.closing_windows.remove(id);}if self.all{r.closing_application=false;}}}
-#[derive(Deserialize)]#[serde(deny_unknown_fields)]struct Metadata {title:Option<String>,workspace:Option<String>,dirty:Option<bool>,busy:Option<bool>,saving:Option<bool>,ready:Option<bool>}
+#[derive(Deserialize)]#[serde(deny_unknown_fields)]struct Metadata {#[serde(rename="hasEditorCP")]has_editor_cp:Option<bool>,title:Option<String>,workspace:Option<String>,dirty:Option<bool>,busy:Option<bool>,saving:Option<bool>,ready:Option<bool>}
 fn apply_metadata(document:&mut Document,input:Value)->Result<bool,String>{
     let data:Metadata=serde_json::from_value(input).map_err(|_|"作品状态字段或类型无效。")?;
     if data.title.as_ref().is_some_and(|v|v.is_empty()||v.len()>1000||v.chars().any(char::is_control)){return Err("作品名称无效。".into());}
     if data.workspace.as_ref().is_some_and(|v|v!=&document.workspace){return Err("工作区无效。".into());}
     let previous=serde_json::to_value(&*document).unwrap();if let Some(v)=data.title{document.title=v;}
-    for (v,target) in [(data.dirty,&mut document.dirty),(data.busy,&mut document.busy),(data.saving,&mut document.saving),(data.ready,&mut document.ready)]{if let Some(value)=v{*target=value;}}
+    for (v,target) in [(data.has_editor_cp,&mut document.has_editor_cp),(data.dirty,&mut document.dirty),(data.busy,&mut document.busy),(data.saving,&mut document.saving),(data.ready,&mut document.ready)]{if let Some(value)=v{*target=value;}}
     Ok(serde_json::to_value(&*document).unwrap()!=previous)
 }
 #[derive(Clone,Copy,PartialEq)]pub(super) enum Role {Startup,Shell,Document}
@@ -101,12 +102,16 @@ pub(super) fn create_host(app:&AppHandle,id:&str,workspace:&str)->Result<(),Stri
                 // synchronously emits native events. Query/eval must run after
                 // this UI callback returns, otherwise reparent cannot complete.
                 native_phase(&window_id,"host.ui.state.schedule.begin");let app=handle.clone();let id=window_id.clone();
-                tauri::async_runtime::spawn_blocking(move||{native_phase(&id,"host.state.publish.begin");if let Some(window)=app.get_window(&id){publish_window_state(&window);}native_phase(&id,"host.state.publish.end");});native_phase(&window_id,"host.ui.state.schedule.end");
+                tauri::async_runtime::spawn_blocking(move||{native_phase(&id,"host.state.publish.begin");if let Some(window)=app.get_window(&id){
+                    if let (Ok(size),Some(shell))=(window.inner_size(),app.get_webview(&shell_label(&id))){
+                        if size.width>0&&size.height>0{let _=shell.set_size(size);}
+                    }
+                    publish_window_state(&window);
+                }native_phase(&id,"host.state.publish.end");});native_phase(&window_id,"host.ui.state.schedule.end");
             },
             _=>{}
         });
-        native_phase(id,"host.shell.add_child.begin");let shell=window.add_child(builder(&host,&shell_label(id),&format!("{}/",host.origin),"shell",None)?,LogicalPosition::new(0.,0.),LogicalSize::new(1440.,1000.)).map_err(|e|e.to_string())?;native_phase(id,"host.shell.add_child.end");
-        shell.set_auto_resize(true).map_err(|e|e.to_string())?;native_phase(id,"host.shell.auto_resize.end");
+        native_phase(id,"host.shell.add_child.begin");window.add_child(builder(&host,&shell_label(id),&format!("{}/",host.origin),"shell",None)?,PhysicalPosition::new(0,0),window.inner_size().map_err(|e|e.to_string())?).map_err(|e|e.to_string())?;native_phase(id,"host.shell.add_child.end");
         Ok::<(),String>(())
     })();
     if result.is_err(){host.documents.lock().unwrap().windows.remove(id);if let Some(w)=app.get_window(id){let _=w.destroy();}}
@@ -124,25 +129,34 @@ pub(super) fn create_document(app:&AppHandle,window_id:&str,workspace:&str,home:
             w.active_id=Some(id.clone());
         }
         let title=if home{"文档区"}else{"未命名作品"};
-        r.documents.insert(id.clone(),Document{home,id:id.clone(),title:title.into(),window_id:window_id.into(),active:!home,dirty:false,busy:false,saving:false,ready:false,workspace:workspace.into(),visible:false,bounds:None,library_key:library_key.map(str::to_owned),return_to:return_to.map(str::to_owned),handler_ready:false,pending_command:initial_command});
+        r.documents.insert(id.clone(),Document{has_editor_cp:false,home,id:id.clone(),title:title.into(),window_id:window_id.into(),active:!home,dirty:false,busy:false,saving:false,ready:false,workspace:workspace.into(),visible:false,bounds:None,library_key:library_key.map(str::to_owned),return_to:return_to.map(str::to_owned),handler_ready:false,pending_command:initial_command});
         r.revision+=1;
         previous
     };
     let home_query=if home{"&home=1"}else{""};
     let transfer_query=transfer.map(|token|format!("&transfer={token}")).unwrap_or_default();
-    let result=(||{let view=window.add_child(builder(&host,&label(&id),&format!("{}/?workspace={id}&mode={workspace}{home_query}{transfer_query}",host.origin),"document",Some(&id))?,LogicalPosition::new(0.,96.),LogicalSize::new(1440.,904.)).map_err(|e|e.to_string())?;view.hide().map_err(|e|e.to_string())?;Ok::<(),String>(())})();
+    let result=(||{let view=window.add_child(builder(&host,&label(&id),&format!("{}/?workspace={id}&mode={workspace}{home_query}{transfer_query}",host.origin),"document",Some(&id))?,PhysicalPosition::new(0,0),window.inner_size().map_err(|e|e.to_string())?).map_err(|e|e.to_string())?;view.hide().map_err(|e|e.to_string())?;Ok::<(),String>(())})();
     if let Err(error)=result{let mut r=host.documents.lock().unwrap();r.documents.remove(&id);if let Some(w)=r.windows.get_mut(window_id){w.document_ids.retain(|v|v!=&id);w.active_id=previous_active;if let Some(active)=w.active_id.clone(){if let Some(d)=r.documents.get_mut(&active){d.active=true;}}}return Err(error);}
     publish(app);Ok(id)
 }
-pub(super) fn ready(app:&AppHandle,view:&Webview)->Result<(),String>{
+pub(super) fn ready(app:&AppHandle,view:&Webview,error_page:bool)->Result<(),String>{
     let host=app.state::<Host>();let caller=role(view,&host)?;let parent=view.window();
+    if error_page {
+        // Reveal the retry UI without publishing command-handler readiness.
+        if !test_hidden()&&!parent.is_visible().map_err(|e|e.to_string())? {
+            parent.show().map_err(|e|e.to_string())?;
+            parent.set_focus().map_err(|e|e.to_string())?;
+        }
+        if parent.label()=="main" {if let Some(startup)=app.get_webview_window("startup"){let _=startup.destroy();}}
+        return Ok(());
+    }
     // Handler readiness shows onboarding/errors. Public command readiness is only
     // the App's report.ready and may remain false while onboarding is visible.
     let changed={let mut r=host.documents.lock().unwrap();let changed=if caller==Role::Shell{if let Some(w)=r.windows.get_mut(parent.label()){let changed=!w.ready;w.ready=true;changed}else{false}}else if let Some(id)=document_id(view){if let Some(d)=r.documents.get_mut(id){let changed=!d.handler_ready;d.handler_ready=true;changed}else{false}}else{false};if changed{r.revision+=1;}changed};
     if changed{
         let visible={let r=host.documents.lock().unwrap();r.windows.get(parent.label()).is_some_and(|w|w.ready&&r.documents.values().any(|d|d.window_id==w.id&&d.handler_ready))};
         if visible&&!test_hidden(){parent.show().map_err(|e|e.to_string())?;parent.set_focus().map_err(|e|e.to_string())?;}
-        if visible&&!host.ready.swap(true,Ordering::SeqCst){if let Some(startup)=app.get_webview_window("startup"){let _=startup.destroy();}activity(&host,"desktop.startup.ready",json!({"runtime":"tauri-webview2","version":env!("CARGO_PKG_VERSION")}));}
+        if visible&&!host.ready.swap(true,Ordering::SeqCst){if let Some(startup)=app.get_webview_window("startup"){let _=startup.destroy();}activity(&host,"desktop.startup.ready",json!({"runtime":"tauri-webview2","version":host.backend.version}));}
         publish(app);
     }
     deliver_ready_commands(app);Ok(())
@@ -176,22 +190,47 @@ fn deliver_ready_commands(app:&AppHandle){
     let pending={let host=app.state::<Host>();let mut r=host.documents.lock().unwrap();take_ready_commands(&mut r)};
     for (label,command) in pending{if let Some(view)=app.get_webview(&label){let _=view.eval(format!("window.__zhezhiDocumentCommand?.({});",json!(command)));}}
 }
-fn command_valid(command:&str)->bool{matches!(command,"open"|"new"|"save"|"save-artwork"|"save-crease"|"undo"|"redo"|"library"|"artwork-overview"|"export"|"settings"|"print"|"workspace:edit"|"workspace:design"|"workspace:tess"|"workspace:sim"|"workspace:diagram")}
+fn command_valid(command:&str)->bool{matches!(command,"open"|"new"|"save"|"save-file"|"save-file-as"|"save-artwork"|"save-crease"|"undo"|"redo"|"library"|"artwork-overview"|"export"|"settings"|"print"|"workspace:edit"|"workspace:design"|"workspace:tess"|"workspace:sim"|"workspace:diagram")}
+#[derive(Clone,Copy,Deserialize)]
+struct CssViewport {width:f64,height:f64}
+
+impl CssViewport {
+    fn read(input:&Value)->Result<Self,String>{
+        let viewport:Self=serde_json::from_value(input["viewport"].clone()).map_err(|_|"缺少窗口视口尺寸。")?;
+        if ![viewport.width,viewport.height].into_iter().all(|n|n.is_finite()&&n>=1.){return Err("窗口视口尺寸无效。".into());}
+        Ok(viewport)
+    }
+
+    // DOM edges are measured in the shell WebView's CSS pixels. Map each edge
+    // onto the parent client rectangle once, including fractional display zoom.
+    fn point(self,x:f64,y:f64,client:PhysicalSize<u32>)->PhysicalPosition<i32>{
+        let edge=|value:f64,extent:f64,pixels:u32| ((value/extent).clamp(0.,1.)*pixels as f64).round() as i32;
+        PhysicalPosition::new(edge(x,self.width,client.width),edge(y,self.height,client.height))
+    }
+
+    fn rect(self,b:&Bounds,client:PhysicalSize<u32>)->tauri::Rect{
+        let start=self.point(b.x,b.y,client);
+        let end=self.point(b.x+b.width,b.y+b.height,client);
+        tauri::Rect{position:start.into(),size:PhysicalSize::new((end.x-start.x) as u32,(end.y-start.y) as u32).into()}
+    }
+}
+
 #[derive(Deserialize)]#[serde(deny_unknown_fields)]struct RectInput{id:String,x:f64,y:f64,width:f64,height:f64,visible:bool}
 #[derive(Deserialize)]#[serde(deny_unknown_fields)]struct MenuInput{id:String,label:String,enabled:Option<bool>,checked:Option<bool>,separator:Option<bool>}
 fn validate_menu(items:&[MenuInput])->Result<(),String>{let mut ids=HashSet::new();if items.is_empty()||items.len()>128{return Err("菜单项目数量无效。".into());}for item in items{if item.separator==Some(true){continue;}if item.id.is_empty()||item.id.len()>160||!item.id.bytes().all(|b|b.is_ascii_alphanumeric()||b"-_:./".contains(&b))||!ids.insert(&item.id)||item.label.is_empty()||item.label.chars().count()>160||item.label.chars().any(|c|c.is_control()&&c!='\t'){return Err("菜单项目无效。".into());}}Ok(())}
 async fn popup(view:&Webview,input:Value)->Result<Value,String>{
     let items:Vec<MenuInput>=serde_json::from_value(input["items"].clone()).map_err(|_|"菜单项目无效。")?;validate_menu(&items)?;
     let x=input["x"].as_f64().ok_or("菜单位置无效。")?;let y=input["y"].as_f64().ok_or("菜单位置无效。")?;if !x.is_finite()||!y.is_finite()||x<0.||y<0.{return Err("菜单位置无效。".into());}
+    let viewport=CssViewport::read(&input)?;
     let window=view.window();let (tx,rx)=oneshot::channel();let native=window.clone();
     window.run_on_main_thread(move||{
         #[cfg(windows)]let result=(||{use windows_sys::Win32::UI::WindowsAndMessaging::*;
-            let point=native.inner_position().map_err(|e|e.to_string())?;let scale=native.scale_factor().map_err(|e|e.to_string())?;let size=native.inner_size().map_err(|e|e.to_string())?;if x*scale>size.width as f64+1.||y*scale>size.height as f64+1.{return Err("菜单位置超出窗口。".into());}
+            let point=native.inner_position().map_err(|e|e.to_string())?;let size=native.inner_size().map_err(|e|e.to_string())?;let anchor=viewport.point(x,y,size);if x>viewport.width+1.||y>viewport.height+1.{return Err("菜单位置超出窗口。".into());}
             let hwnd=native.hwnd().map_err(|e|e.to_string())?.0 as _;
             unsafe{let menu=CreatePopupMenu();if menu.is_null(){return Err("无法创建系统菜单。".into());}
                 for (i,item) in items.iter().enumerate(){let text:Vec<u16>=item.label.replace('&',"&&").encode_utf16().chain(Some(0)).collect();let flags=if item.separator==Some(true){MF_SEPARATOR}else{MF_STRING|if item.enabled==Some(false){MF_GRAYED}else{0}|if item.checked==Some(true){MF_CHECKED}else{0}};
                     if AppendMenuW(menu,flags,1000+i,text.as_ptr())==0{DestroyMenu(menu);return Err("无法创建系统菜单项目。".into());}}
-                let selected=TrackPopupMenu(menu,TPM_RETURNCMD|TPM_NONOTIFY,point.x+(x*scale).round() as i32,point.y+(y*scale).round() as i32,0,hwnd,std::ptr::null());DestroyMenu(menu);
+                let selected=TrackPopupMenu(menu,TPM_RETURNCMD|TPM_NONOTIFY,point.x+anchor.x,point.y+anchor.y,0,hwnd,std::ptr::null());DestroyMenu(menu);
                 Ok(items.get((selected as usize).wrapping_sub(1000)).filter(|v|v.enabled!=Some(false)&&v.separator!=Some(true)).map(|v|v.id.clone()))}
         })();
         #[cfg(not(windows))]let result:Result<Option<String>,String>=Err("此构建暂不支持原生菜单。".into());
@@ -203,6 +242,15 @@ async fn popup(view:&Webview,input:Value)->Result<Value,String>{
 pub(super) async fn desktop_documents(app:AppHandle,view:Webview,host:State<'_,Host>,action:String,input:Value)->Result<Value,String>{
     let caller=role(&view,&host)?;if caller==Role::Startup{return Err("启动窗口不能操作作品。".into());}
     if action=="context"{return context(&view,&host);}
+    if action=="check-update" {
+        shell_only(&view,&host)?;
+        return tauri::async_runtime::spawn_blocking(update::check).await.map_err(|e| e.to_string())?;
+    }
+    if action=="open-release-page" {
+        shell_only(&view,&host)?;
+        update::open_page()?;
+        return Ok(Value::Null);
+    }
     if action=="list"{return Ok(snapshot(&host,view.window().label()));}
     if action=="report"{
         if caller!=Role::Document{return Err("只有作品可以上报自身状态。".into());}let id=document_id(&view).unwrap();let changed={let mut r=host.documents.lock().unwrap();let d=r.documents.get_mut(id).ok_or("作品已关闭。")?;let changed=apply_metadata(d,input)?;if changed{r.revision+=1;}changed};
@@ -212,6 +260,38 @@ pub(super) async fn desktop_documents(app:AppHandle,view:Webview,host:State<'_,H
     if action=="close"{let id=input["id"].as_str().ok_or("缺少作品标识。")?;if caller==Role::Document&&document_id(&view)!=Some(id){return Err("不能关闭其它作品。".into());}let target=mutable_document(&host,id)?;if caller==Role::Shell&&target.window_id!=view.window().label(){return Err("只能关闭当前窗口的作品。".into());}if !target.home{close_documents(app.clone(),vec![id.into()],vec![],false).await?;}return Ok(Value::Null);}
     let _operation=host.document_gate.lock().await;
     if host.closing.load(Ordering::SeqCst){return Err("应用正在关闭。".into());}
+    if action=="cp-preview"{
+        if caller!=Role::Document{return Err("只能从作品打开 CP 预览。".into());}
+        let id=document_id(&view).ok_or("作品已关闭。")?;
+        mutable_document(&host,id)?;
+        let phase=match input["phase"].as_str(){Some("before")=>"before",Some("after")=>"after",_=>return Err("CP 类型无效。".into())};
+        let token=input["token"].as_str().filter(|s|valid_id(s)).ok_or("预览标识无效。")?;
+        let name=format!("cp-{id}-{phase}");
+        let url:tauri::Url=format!("{}/?cpPreview={token}",host.origin).parse().map_err(|_|"预览地址无效。")?;
+        if let Some(existing)=app.get_webview_window(&name){
+            if existing.url().map_err(|e|e.to_string())?==url{
+                existing.unminimize().map_err(|e|e.to_string())?;
+                existing.set_focus().map_err(|e|e.to_string())?;
+                return Ok(Value::Null);
+            }
+            existing.destroy().map_err(|e|e.to_string())?;
+        }
+        let allowed=url.clone();
+        let mut builder=WebviewWindowBuilder::new(&app,&name,WebviewUrl::External(url))
+            .title(if phase=="before"{"操作前 CP"}else{"操作后 CP"}).inner_size(620.,640.).min_inner_size(260.,240.)
+            .data_directory(runtime_root().join("profile")).disable_drag_drop_handler()
+            .on_navigation(move|u|*u==allowed)
+            .on_new_window(|_,_|tauri::webview::NewWindowResponse::Deny)
+            .on_permission_request(|_,_|tauri::webview::PermissionResponse::Deny).on_download(|_,_|false);
+        if let Some(args)=browser_args(){builder=builder.additional_browser_args(&args);}
+        let preview=builder.decorations(false).shadow(true).always_on_top(true)
+            .initialization_script("window.cpWindowAction=(action)=>window.__TAURI_INTERNALS__.invoke('desktop_cp_window',{action});")
+            .build().map_err(|e|e.to_string())?;
+        let owner=view.clone();
+        let notification=format!("window.dispatchEvent(new CustomEvent('cp-preview-closed',{{detail:{}}}))",json!(token));
+        preview.on_window_event(move |event|if matches!(event,WindowEvent::Destroyed){let _=owner.eval(&notification);});
+        return Ok(Value::Null);
+    }
     if action=="activate"{let id=input["id"].as_str().ok_or("缺少作品标识。")?;if caller==Role::Document&&document_id(&view)!=Some(id){return Err("不能激活其它作品。".into());}let d=mutable_document(&host,id)?;
         if caller==Role::Document&&!d.active{return Ok(Value::Null);}
         let changed={let mut r=host.documents.lock().unwrap();mark_active(&mut r,id)?};
@@ -274,16 +354,16 @@ pub(super) async fn desktop_documents(app:AppHandle,view:Webview,host:State<'_,H
     }
     shell_only(&view,&host)?;
     match action.as_str(){
-        "bounds"=>{let rects:Vec<RectInput>=serde_json::from_value(input["rects"].clone()).map_err(|_|"作品视口无效。")?;let parent=view.window();let physical=parent.inner_size().map_err(|e|e.to_string())?;let logical=physical.to_logical::<f64>(parent.scale_factor().map_err(|e|e.to_string())?);let mut seen=HashSet::new();
-            for rect in &rects{let d=mutable_document(&host,&rect.id)?;if d.window_id!=window_id||!seen.insert(rect.id.clone()){return Err("作品不属于当前窗口或重复出现。".into());}validate_bounds(&Bounds{x:rect.x,y:rect.y,width:rect.width,height:rect.height},rect.visible,(logical.width,logical.height))?;}
+        "bounds"=>{let rects:Vec<RectInput>=serde_json::from_value(input["rects"].clone()).map_err(|_|"作品视口无效。")?;let parent=view.window();let physical=parent.inner_size().map_err(|e|e.to_string())?;if physical.width==0||physical.height==0{return Ok(Value::Null);}let viewport=CssViewport::read(&input)?;let mut seen=HashSet::new();
+            for rect in &rects{let d=mutable_document(&host,&rect.id)?;if d.window_id!=window_id||!seen.insert(rect.id.clone()){return Err("作品不属于当前窗口或重复出现。".into());}validate_bounds(&Bounds{x:rect.x,y:rect.y,width:rect.width,height:rect.height},rect.visible,(viewport.width,viewport.height))?;}
             let mut changed=false;
-            for rect in rects{let b=Bounds{x:rect.x,y:rect.y,width:rect.width,height:rect.height};let existing={host.documents.lock().unwrap().documents.get(&rect.id).cloned().unwrap()};if existing.bounds.as_ref()==Some(&b)&&existing.visible==rect.visible{continue;}
+            for rect in rects{let b=Bounds{x:rect.x,y:rect.y,width:rect.width,height:rect.height};let existing={host.documents.lock().unwrap().documents.get(&rect.id).cloned().unwrap()};let metadata_changed=existing.bounds.as_ref()!=Some(&b)||existing.visible!=rect.visible;
                 let child=app.get_webview(&label(&rect.id)).ok_or("作品视图已关闭。")?;
-                if !rect.visible{child.hide().map_err(|e|e.to_string())?;}if rect.width>=1.&&rect.height>=1.{child.set_bounds(tauri::Rect{position:LogicalPosition::new(rect.x,rect.y).into(),size:LogicalSize::new(rect.width,rect.height).into()}).map_err(|e|e.to_string())?;}if rect.visible{
+                if !rect.visible{child.hide().map_err(|e|e.to_string())?;}if rect.width>=1.&&rect.height>=1.{child.set_bounds(viewport.rect(&b,physical)).map_err(|e|e.to_string())?;}if rect.visible{
                     child.show().map_err(|e|e.to_string())?;
                     if !existing.visible&&(existing.active||existing.home)&&parent.is_focused().unwrap_or(false){let _=child.set_focus();}
                 }
-                let mut r=host.documents.lock().unwrap();let d=r.documents.get_mut(&rect.id).unwrap();d.visible=rect.visible;d.bounds=Some(b);changed=true;}
+                if metadata_changed{let mut r=host.documents.lock().unwrap();if let Some(d)=r.documents.get_mut(&rect.id){d.visible=rect.visible;d.bounds=Some(b);changed=true;}}}
             if changed{host.documents.lock().unwrap().revision+=1;publish(&app);}Ok(Value::Null)},
         "command"=>{let id=input["id"].as_str().ok_or("缺少作品标识。")?;let command=input["command"].as_str().filter(|v|command_valid(v)).ok_or("不支持此作品操作。")?;let d=mutable_document(&host,id)?;if d.window_id!=window_id{return Err("只能操作当前窗口的作品。".into());}if !d.ready||!d.handler_ready{return Err("作品仍在准备，请稍后操作。".into());}let child=app.get_webview(&label(id)).ok_or("作品已关闭。")?;child.eval(format!("window.__zhezhiDocumentCommand?.({});",json!(command))).map_err(|e|e.to_string())?;Ok(Value::Null)},
         _=>Err("不支持此作品窗口操作。".into())
@@ -314,7 +394,9 @@ async fn close_documents(app:AppHandle,mut ids:Vec<String>,mut windows:Vec<Strin
     }else{true};
     let _gate=host.document_gate.lock().await;
     if accepted{
-        for id in &ids{let owner=label(id);let exports=host.exports.clone();let _=tauri::async_runtime::spawn_blocking(move||exports.cancel_owner(&owner)).await;if let Some(view)=app.get_webview(&label(id)){view.close().map_err(|e|e.to_string())?;}host.backend.release_document_workers(id);
+        for id in &ids{
+            for phase in ["before","after"]{if let Some(preview)=app.get_webview_window(&format!("cp-{id}-{phase}")){preview.destroy().map_err(|e|e.to_string())?;}}
+            let owner=label(id);let exports=host.exports.clone();let _=tauri::async_runtime::spawn_blocking(move||exports.cancel_owner(&owner)).await;if let Some(view)=app.get_webview(&label(id)){view.close().map_err(|e|e.to_string())?;}host.backend.release_document_workers(id);
             let mut r=host.documents.lock().unwrap();if let Some(d)=r.documents.remove(id){if let Some(w)=r.windows.get_mut(&d.window_id){w.document_ids.retain(|v|v!=id);if w.active_id.as_ref()==Some(id){w.active_id=w.document_ids.last().cloned();}}}}
         // Decide after removing the tabs under the operation lock. A second tab
         // may have opened or finished closing while the confirmation was pending.
@@ -335,12 +417,39 @@ pub(super) fn request_app_close(app:AppHandle){tauri::async_runtime::spawn(async
 #[cfg(test)]mod tests{
     use super::*;
     #[test]fn bounds_reject_nonfinite_outside_and_visible_empty_without_limiting_documents(){for b in [Bounds{x:f64::NAN,y:0.,width:1.,height:1.},Bounds{x:0.,y:0.,width:2000.,height:1.},Bounds{x:0.,y:0.,width:0.,height:0.}]{assert!(validate_bounds(&b,true,(1440.,1000.)).is_err());}assert!(validate_bounds(&Bounds{x:0.,y:96.,width:1440.,height:904.},true,(1440.,1000.)).is_ok());}
+    #[test]
+    fn css_panes_cover_client_pixels_across_zoom_and_dpi_changes(){
+        for (width,height,client_width,client_height) in [(1920.,1080.,3840,2160),(1280.,720.,1920,1080),(1920.,1080.,1920,1080),(901.,601.,1577,1052)]{
+            let viewport=CssViewport{width,height};
+            let client=PhysicalSize::new(client_width,client_height);
+            let r=viewport.rect(&Bounds{x:0.,y:46.,width,height:height-66.},client);
+            let p=r.position.to_physical::<i32>(1.);
+            let s=r.size.to_physical::<u32>(1.);
+            assert_eq!(s.width,client.width);
+            assert_eq!(p.y,(46./height*client_height as f64).round() as i32);
+            assert_eq!(p.y+s.height as i32,((height-20.)/height*client.height as f64).round() as i32);
+            let edge=width/3.;
+            let left=viewport.rect(&Bounds{x:0.,y:0.,width:edge,height},client);
+            let right=viewport.rect(&Bounds{x:edge,y:0.,width:width-edge,height},client);
+            assert_eq!(left.size.to_physical::<u32>(1.).width,right.position.to_physical::<i32>(1.).x as u32);
+        }
+        assert!(CssViewport::read(&json!({"viewport":{"width":0,"height":720}})).is_err());
+    }
     #[test]fn document_commands_are_a_closed_vocabulary(){assert!(command_valid("workspace:diagram"));assert!(command_valid("save-artwork"));for c in ["eval","destroy","exit","workspace:other",""]{assert!(!command_valid(c));}}
     #[test]fn menu_rejects_duplicate_or_executable_payloads(){let item=|id:&str|MenuInput{id:id.into(),label:"项目".into(),enabled:None,checked:None,separator:None};assert!(validate_menu(&[item("save"),item("save")]).is_err());assert!(validate_menu(&[item("javascript:alert(1)")]).is_err());assert!(validate_menu(&[item("merge:11111111-1111-4111-8111-111111111111")]).is_ok());let mut shortcut=item("save");shortcut.label="保存\tCtrl+S".into();assert!(validate_menu(&[shortcut]).is_ok());let mut unsafe_label=item("save");unsafe_label.label="保存\n其它".into();assert!(validate_menu(&[unsafe_label]).is_err());}
     #[test]fn stable_document_id_and_label_are_not_native_parent_names(){let id=Uuid::new_v4().to_string();assert!(valid_id(&id));assert_eq!(label(&id),format!("doc-{id}"));assert!(!valid_id("main"));}
     #[tokio::test]async fn close_ack_cannot_consume_another_document_request(){let (tx,mut rx)=oneshot::channel();let replies=Mutex::new(HashMap::from([("request".into(),CloseReply{owner:"doc-owner".into(),sender:tx})]));assert!(!acknowledge_close(&replies,"doc-foreign","request",false));assert!(matches!(rx.try_recv(),Err(oneshot::error::TryRecvError::Empty)));assert!(acknowledge_close(&replies,"doc-owner","request",true));assert!(rx.await.unwrap());}
-    #[test]fn invalid_metadata_is_atomic_and_cannot_change_document_identity(){let mut d=Document{home:false,id:"id".into(),title:"before".into(),window_id:"main".into(),active:true,dirty:false,busy:false,saving:false,ready:true,workspace:"edit".into(),visible:true,bounds:None,library_key:None,return_to:None,handler_ready:true,pending_command:None};assert!(apply_metadata(&mut d,json!({"title":"after","workspace":"invalid"})).is_err());assert_eq!(d.title,"before");assert!(apply_metadata(&mut d,json!({"workspace":"diagram","dirty":true})).is_err());assert_eq!(d.workspace,"edit");assert!(!d.dirty);assert!(apply_metadata(&mut d,json!({"id":"other"})).is_err());assert_eq!(d.id,"id");assert!(!apply_metadata(&mut d,json!({"title":"before","workspace":"edit"})).unwrap());}
-    fn fixture_document(id:&str,active:bool)->Document{Document{home:false,id:id.into(),title:"作品".into(),window_id:"main".into(),active,dirty:false,busy:false,saving:false,ready:false,workspace:"edit".into(),visible:false,bounds:None,library_key:None,return_to:None,handler_ready:false,pending_command:None}}
+    #[test]fn invalid_metadata_is_atomic_and_cannot_change_document_identity(){let mut d=Document{has_editor_cp:false,home:false,id:"id".into(),title:"before".into(),window_id:"main".into(),active:true,dirty:false,busy:false,saving:false,ready:true,workspace:"edit".into(),visible:true,bounds:None,library_key:None,return_to:None,handler_ready:true,pending_command:None};assert!(apply_metadata(&mut d,json!({"title":"after","workspace":"invalid"})).is_err());assert_eq!(d.title,"before");assert!(apply_metadata(&mut d,json!({"workspace":"diagram","dirty":true})).is_err());assert_eq!(d.workspace,"edit");assert!(!d.dirty);assert!(apply_metadata(&mut d,json!({"id":"other"})).is_err());assert_eq!(d.id,"id");assert!(!apply_metadata(&mut d,json!({"title":"before","workspace":"edit"})).unwrap());}
+    fn fixture_document(id:&str,active:bool)->Document{Document{has_editor_cp:false,home:false,id:id.into(),title:"作品".into(),window_id:"main".into(),active,dirty:false,busy:false,saving:false,ready:false,workspace:"edit".into(),visible:false,bounds:None,library_key:None,return_to:None,handler_ready:false,pending_command:None}}
+    #[test]
+    fn editor_cp_presence_is_published_and_cleared_independently_of_the_tab_title(){
+        let mut doc=fixture_document("test",false);
+        assert_eq!(serde_json::to_value(&doc).unwrap()["hasEditorCP"],false);
+        assert!(apply_metadata(&mut doc,json!({"hasEditorCP":true})).unwrap());
+        assert_eq!(serde_json::to_value(&doc).unwrap()["hasEditorCP"],true);
+        assert!(apply_metadata(&mut doc,json!({"hasEditorCP":false})).unwrap());
+        assert!(!doc.has_editor_cp);
+    }
     fn fixture_registry()->Registry{let mut r=Registry::default();r.windows.insert("main".into(),HostWindow{workspace:"edit".into(),id:"main".into(),title:"主窗口".into(),document_ids:vec!["one".into(),"two".into()],active_id:Some("one".into()),layout:"tabs".into(),ready:false});r.documents.insert("one".into(),fixture_document("one",true));r.documents.insert("two".into(),fixture_document("two",false));r}
     #[test]fn library_focus_does_not_create_or_select_a_file_tab(){
         let mut r=fixture_registry();

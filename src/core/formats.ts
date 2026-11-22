@@ -5,7 +5,7 @@ import {cpPaperCoordinates,segmentPaperSize} from './exchangeCoordinates';
 import { buildFold } from './geometry';
 import {hasMaterialTopology,inspectMaterialTopology} from './materialTopology';
 import {importMaterialFold,exportMaterialFold} from './materialFormat';
-import {importFoldInterchange,exportFoldInterchange} from './foldInterchange';
+import {importFoldInterchange,exportFoldInterchange,foldDescriptions,mergeFoldSourceExtras} from './foldInterchange';
 import { PROJECT_VERSION, upgradeProject } from './project';
 import {serializeProject} from './projectData.mjs';
 import { defaultAngle, validateDoc, type Assignment, type Doc, type DocumentFormat, type ExportResult, type ImportResult, type Point, type Segment } from './types';
@@ -116,7 +116,7 @@ export function importFold(value: unknown, name = '导入 FOLD'): ImportResult {
   if (extraKeys.length) warnings.push(`未解释扩展字段 ${extraKeys.join('、')}，已保存在来源元数据中，不会用于折叠计算。`);
   const title = typeof raw.file_title === 'string' ? raw.file_title : typeof raw.frame_title === 'string' ? raw.frame_title : name;
   const ownMetadata = raw.zhezhi_metadata && typeof raw.zhezhi_metadata === 'object' && !Array.isArray(raw.zhezhi_metadata) ? structuredClone(raw.zhezhi_metadata as Record<string, unknown>) : {};
-  const doc = makeDoc(title, segments, { ...ownMetadata, sourceFormat: 'fold', sourceFoldExtras: extras });
+  const doc = makeDoc(title, segments, { ...ownMetadata, sourceFormat: 'fold', sourceFoldExtras: mergeFoldSourceExtras(ownMetadata.sourceFoldExtras,extras) });
   if (Array.isArray(raw.zhezhi_auxiliary)) {
     const aux = raw.zhezhi_auxiliary as Segment[];
     if (aux.some(s => !s || s.assignment !== 'A')) throw new Error('FOLD 辅助线扩展无效。');
@@ -205,7 +205,7 @@ export function exportDocument(doc: Doc, format: DocumentFormat, options:{cpCoor
       return {text:JSON.stringify(exportFoldInterchange(output),null,2),warnings:[...warnings,'材料边与折后位置已独立保存；层序不会作为已验证结果导出。']};
     }
     const { graph, warnings: buildWarnings } = buildFold(doc);
-    const output = { ...graph, zhezhi_paper: doc.paper, zhezhi_auxiliary: doc.segments.filter(s => s.assignment === 'A'), ...(doc.metadata ? { zhezhi_metadata: doc.metadata } : {}) };
+    const output = { ...foldDescriptions(doc.metadata?.sourceFoldExtras), ...graph, zhezhi_paper: doc.paper, zhezhi_auxiliary: doc.segments.filter(s => s.assignment === 'A'), ...(doc.metadata ? { zhezhi_metadata: doc.metadata } : {}) };
     warnings.push(...buildWarnings);
     if (doc.segments.some(s => s.assignment === 'A')) warnings.push('辅助线写入 zhezhi:workbench 扩展；不识别此扩展的软件会忽略它们。');
     if (doc.metadata) warnings.push('来源扩展数据写入 zhezhi:workbench，不会作为有效拓扑或层序字段回写。');

@@ -10,29 +10,43 @@ import {CALLOUT_MIME,DIAGRAM_CALLOUT_SYMBOLS,isDiagramCalloutSymbolType} from '.
 const cssHook=registerHooks({load(url,context,nextLoad){return url.endsWith('.css')?{format:'module',source:'export default {};',shortCircuit:true}:nextLoad(url,context);}});
 const {default:DiagramSymbolDock}=await import('../../src/components/DiagramSymbolDock');
 cssHook.deregister();
-const render=(selectedSymbol:DiagramSymbolKind='zoom',disabled=false)=>renderToStaticMarkup(createElement(DiagramSymbolDock,{selectedSymbol,disabled,placing:false,onChoose(){},onChooseCallout(){}}));
+const render=(selectedSymbol:DiagramSymbolKind='zoom',disabled=false)=>renderToStaticMarkup(createElement(DiagramSymbolDock,{selectedSymbol,disabled,placing:false,symbolSelected:false,onChoose(){},onChooseCallout(){}}));
 
 test('view and direction contains both real callout entries and the unchanged zoom arrows, with 38 available symbols',()=>{
   const markup=render();
-  assert.match(markup,/<small>38 种<\/small>/);
+  assert.match(markup,/role="group" aria-label="折纸符号分类"/);
+  assert.match(markup,/<button[^>]*aria-pressed="true"[^>]*>视图与方向<\/button>/);
+  for(const group of new Set(SYMBOL_CATALOG.map(item=>item.group)))assert.ok(markup.includes('>'+group+'</button>'));
+  assert.match(markup,/role="group" aria-label="视图与方向符号"/);
   assert.match(markup,/data-callout-symbol="paper"/);assert.match(markup,/data-callout-symbol="cp"/);
-  assert.match(markup,/>局部放大框<\/span>/);assert.match(markup,/>CP结构放大框<\/span>/);
+  assert.match(markup,/aria-label="创建局部放大框符号"/);assert.match(markup,/aria-label="创建CP结构放大框符号"/);
   assert.match(markup,/aria-label="放置局部放大符号"/);assert.match(markup,/aria-label="放置缩小视图符号"/);
   assert.equal((markup.match(/data-diagram-callout-symbol-preview=/g)??[]).length,2);
   assert.equal(SYMBOL_CATALOG.length,36);assert.equal(DIAGRAM_SYMBOL_KINDS.length,36);
   assert.ok(SYMBOL_CATALOG.every(entry=>DIAGRAM_SYMBOL_KINDS.includes(entry.kind)));
 });
 
-test('callouts belong to the existing view category and do not appear among folding actions',()=>{
-  const markup=render('fold');assert.doesNotMatch(markup,/data-callout-symbol=/);assert.match(markup,/<small>38 种<\/small>/);
-  assert.ok(DIAGRAM_CALLOUT_SYMBOLS.every(entry=>entry.group==='视图与方向'));
+test('each category offers exactly its own symbol and callout buttons, totaling 38',()=>{
+  const groups=new Set(SYMBOL_CATALOG.map(item=>item.group));
+  let total=0;
+  for(const group of groups){
+    const symbols=SYMBOL_CATALOG.filter(item=>item.group===group),callouts=DIAGRAM_CALLOUT_SYMBOLS.filter(item=>item.group===group);
+    const markup=render(symbols[0].kind);
+    const buttons=Array.from(markup.matchAll(/aria-label="((?:放置|创建)[^"]+符号)"/g),match=>match[1]);
+    const expected=[...symbols.map(item=>'放置'+item.label+'符号'),...callouts.map(item=>'创建'+item.label+'符号')];
+    assert.deepEqual(buttons.sort(),expected.sort(),group);total+=buttons.length;
+    if(group!=='视图与方向')assert.doesNotMatch(markup,/data-callout-symbol=/);
+  }
+  assert.equal(total,38);
 });
 
 test('paper keeps its two-circle preview while CP shows one locator and two before-after detail circles',()=>{
   for(const item of DIAGRAM_CALLOUT_SYMBOLS){
     assert.doesNotMatch(item.preview,/\bid=|<image|<text/);
     const connectorMarkup=item.preview.slice(0,item.preview.indexOf('<circle'));
-    assert.equal((connectorMarkup.match(/<path d="M [^\"]+ L [^\"]+"\/>/g)??[]).length,item.type==='paper'?2:0,'paper keeps two tangent connectors while CP circles are independent');
+    const connectors=Array.from(connectorMarkup.matchAll(/<path\b[^>]*data-inset-connector="true"[^>]*>/g),match=>match[0]);
+    assert.equal(connectors.length,item.type==='paper'?2:0,'paper keeps two tangent connectors while CP circles are independent');
+    for(const path of connectors)assert.match(path,/d="M [^"]+ L [^"]+"/);
   }
   const [paper,cp]=DIAGRAM_CALLOUT_SYMBOLS;
   assert.match(paper.preview,/cx="-29" cy="23" r="11"/);assert.match(paper.preview,/cx="17" cy="-8" r="27"/);assert.doesNotMatch(paper.preview,/data-callout-preview-role/);

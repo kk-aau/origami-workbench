@@ -2,13 +2,14 @@ import {preferenceStorage} from './preferenceStorage';
 import {DIAGRAM_LINE_DEFAULTS_KEY} from './diagramLineStyles';
 import {ADAPTIVE_LINE_STYLE_KEY} from './adaptiveLineStyle';
 
-export interface DiagramThumbnailRequest {storedText:string;preferences?:[string,string|null][]}
+export interface DiagramThumbnailRecovery {baseKey:string;patchText:string}
+export interface DiagramThumbnailRequest {storedText:string;preferences?:[string,string|null][];recovery?:DiagramThumbnailRecovery}
 export type DiagramThumbnailReply={type:'result';thumbnail:string|null}|{type:'error';message:string};
 
 /** Only a visible card with no cached thumbnail needs the full legacy drawing.
  * Parsing, model validation and image-rich SVG generation stay off the UI. */
 export function startDiagramThumbnailImport(storedText:string,
-  factory:()=>Worker=()=>new Worker(new URL('../workers/diagramThumbnail.worker.ts',import.meta.url),{type:'module'})){
+  factory:()=>Worker=()=>new Worker(new URL('../workers/diagramThumbnail.worker.ts',import.meta.url),{type:'module'}),recovery?:DiagramThumbnailRecovery){
   let worker:Worker|undefined,settled=false,resolveTask!:(thumbnail:string|null)=>void,rejectTask!:(error:Error)=>void;
   const promise=new Promise<string|null>((resolve,reject)=>{resolveTask=resolve;rejectTask=reject;});
   const finish=(thumbnail:string|null,error?:Error)=>{if(settled)return;settled=true;worker?.terminate();if(error)rejectTask(error);else resolveTask(thumbnail);};
@@ -24,7 +25,7 @@ export function startDiagramThumbnailImport(storedText:string,
     const preferences:[string,string|null][]=[DIAGRAM_LINE_DEFAULTS_KEY,ADAPTIVE_LINE_STYLE_KEY].map(key=>{
       try{return [key,preferenceStorage.getItem(key)];}catch{return [key,null];}
     });
-    worker.postMessage({storedText,preferences} satisfies DiagramThumbnailRequest);
+    worker.postMessage({storedText,preferences,recovery} satisfies DiagramThumbnailRequest);
   }catch(error){finish(null,error instanceof Error?error:new Error(String(error)));}
   return {promise,cancel(){finish(null,new DOMException('已取消读取缩略图。','AbortError'));}};
 }

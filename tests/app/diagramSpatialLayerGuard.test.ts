@@ -12,11 +12,13 @@ function fixture(){
   return adoptDiagramPose(project,step.id,step.beforeId,computed.result,undefined,computed.spatial);
 }
 
-test('a spatial pose cannot be enqueued or merged through flat-layer analysis',()=>{
+test('spatial reanalysis has an identity but refuses replacement by flat-layer results',()=>{
   const project=fixture(),step=project.steps[0],pose=step.pose!,changed=structuredClone(pose.result);
-  assert.match(diagramPaperLayerAnalysisReason(pose)!,/立体状态.*实际深度/);assert.equal(diagramLayerAnalysisKey(project,step.id),null);
+  assert.equal(diagramPaperLayerAnalysisReason(pose),undefined);
+  const key=diagramLayerAnalysisKey(project,step.id);assert.ok(key);
   changed.layers={status:'solved',message:'平折结果',faceOrder:[...pose.result.layers.faceOrder!].reverse()};
-  assert.equal(validDiagramLayerCertificate(changed,pose),false);assert.equal(applyDiagramStepLayerAnalysis(project,step.id,'stale-flat-key',changed),project);
+  assert.equal(validDiagramLayerCertificate(changed,pose),false);
+  assert.equal(applyDiagramStepLayerAnalysis(project,step.id,key,changed),project);assert.equal(applyDiagramStepLayerAnalysis(project,step.id,'stale-flat-key',changed),project);
 });
 
 test('spatial export preparation preserves certified depth without launching a flat-layer worker',async()=>{

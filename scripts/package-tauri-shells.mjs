@@ -1,3 +1,4 @@
+import {writeFileIcon} from './installer-file-icons.mjs';
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
@@ -44,6 +45,11 @@ function walk(directory,relative=''){
     return [{path:rel.split(path.sep).join('/'),bytes:fs.statSync(absolute).size,sha256:sha(absolute)}];
   });
 }
+const signing=Boolean(env.ZHEZHI_SIGN_THUMBPRINT || env.ZHEZHI_REQUIRE_SIGNING==='1' || env.ZHEZHI_TIMESTAMP_URL);
+function sign(file,verifyOnly=false){
+  if(signing)run('powershell.exe',['-NoProfile','-NonInteractive','-ExecutionPolicy','Bypass','-File',path.join(root,'scripts/sign-windows.ps1'),'-File',file,...(verifyOnly?['-VerifyOnly']:[])]);
+}
+sign(path.join(payload,'zhezhi-workbench-tauri.exe'),true);
 const files=walk(payload);
 if(files.some(row=>row.path.endsWith('.map')||/(^|\/)(node_modules|\.runtime|profile|target|\.venv)(\/|$)/.test(row.path)))throw Error('Runtime payload contains developer or user data');
 const manifest=path.join(output,'payload-manifest.json');
@@ -72,10 +78,15 @@ for(const row of files){let dir=path.posix.dirname(row.path);while(dir!=='.'){di
 const uninstall=files.map(row=>`Delete "$INSTDIR\\${escape(row.path.replaceAll('/','\\'))}"`)
   .concat([...directories].sort((a,b)=>b.split('/').length-a.split('/').length||b.localeCompare(a)).map(dir=>`RMDir "$INSTDIR\\${escape(dir.replaceAll('/','\\'))}"`));
 const uninstallManifest=path.join(output,'uninstall-payload-files.nsh');fs.writeFileSync(uninstallManifest,'\ufeff; Generated only from this payload; no recursive uninstall deletion.\n'+uninstall.join('\n')+'\n');
+const installFiles=path.join(output,'install-files.json'),creaseIcon=path.join(output,'crease-file.ico'),diagramIcon=path.join(output,'diagram-file.ico');
+fs.writeFileSync(installFiles,JSON.stringify(files));
+writeFileIcon(creaseIcon,false);
+writeFileIcon(diagramIcon,true);
 for(const [index,kind] of ['setup','portable'].entries()){
-  const defines={OUTPUT_EXE:installers[index],PAYLOAD_ARCHIVE:archive,PLUGIN_DIR:plugins,APP_ICON:path.join(root,'build/icons/workbench.ico'),SPLASH_IMAGE:path.join(root,'build/icons/startup.bmp'),SPLASH_WIDTH:String(splashWidth),SPLASH_HEIGHT:String(splashHeight),APP_LICENSE:path.join(root,'LICENSE'),UNINSTALL_MANIFEST:uninstallManifest,APP_VERSION:label,FILE_VERSION:version+'.0'};
+  const defines={INSTALL_KIB:String(Math.ceil(files.reduce((sum,file)=>sum+file.bytes,0)/1024)),ARCHIVE_BYTES:String(fs.statSync(archive).size),INSTALL_FILES:installFiles,INSTALL_SCRIPT:path.join(root,'desktop-tauri/install-files.ps1'),CREASE_ICON:creaseIcon,DIAGRAM_ICON:diagramIcon,OUTPUT_EXE:installers[index],PAYLOAD_ARCHIVE:archive,PLUGIN_DIR:plugins,APP_ICON:path.join(root,'build/icons/workbench.ico'),SPLASH_IMAGE:path.join(root,'build/icons/startup.bmp'),SPLASH_WIDTH:String(splashWidth),SPLASH_HEIGHT:String(splashHeight),APP_LICENSE:path.join(root,'LICENSE'),UNINSTALL_MANIFEST:uninstallManifest,APP_VERSION:label,FILE_VERSION:version+'.0'};
   run(nsis,['/V3','/INPUTCHARSET','UTF8',...Object.entries(defines).map(([k,v])=>`/D${k}=${v}`),path.join(root,`desktop-tauri/${kind}.nsi`)],output,`${kind}-nsis-build.log`);
+  sign(installers[index]);
 }
-const report={version,label,createdAt:new Date().toISOString(),files,totalBytes:files.reduce((n,row)=>n+row.bytes,0),compression:'LZMA2:26; Solid=+; BCJ filters disabled',archive:{path:path.basename(archive),bytes:fs.statSync(archive).size,sha256:sha(archive)},artifacts:installers.map(file=>({path:path.basename(file),bytes:fs.statSync(file).size,sha256:sha(file)})),tools:{nsis:run(nsis,['/VERSION']).trim(),nsisSha256:sha(nsis),nsis7zSha256:sha(path.join(plugins,'nsis7z.dll')),systemPluginSha256:sha(path.join(root,'.toolchain/nsis/compiler/Plugins/x86-unicode/System.dll'))},portableUI:'silent launcher; independent Win32 bitmap splash only; no NSIS install page'};
+const report={signed:signing,version,label,createdAt:new Date().toISOString(),files,totalBytes:files.reduce((n,row)=>n+row.bytes,0),compression:'LZMA2:26; Solid=+; BCJ filters disabled',archive:{path:path.basename(archive),bytes:fs.statSync(archive).size,sha256:sha(archive)},artifacts:installers.map(file=>({path:path.basename(file),bytes:fs.statSync(file).size,sha256:sha(file)})),tools:{nsis:run(nsis,['/VERSION']).trim(),nsisSha256:sha(nsis),nsis7zSha256:sha(path.join(plugins,'nsis7z.dll')),systemPluginSha256:sha(path.join(root,'.toolchain/nsis/compiler/Plugins/x86-unicode/System.dll'))},portableUI:'silent launcher; independent Win32 bitmap splash only; no NSIS install page'};
 fs.writeFileSync(manifest,JSON.stringify(report,null,2));
 console.log(JSON.stringify({output,label,payloadBytes:report.totalBytes,archive:report.archive,artifacts:report.artifacts},null,2));

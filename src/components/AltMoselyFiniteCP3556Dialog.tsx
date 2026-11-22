@@ -1,3 +1,4 @@
+import {DocumentJunctionMarks} from './JunctionWarnings';
 import {useEffect,useMemo,useRef,useState,type PointerEvent} from 'react';
 import {ALT_MOSELY_FINITE_PRESET,ALT_MOSELY_CLOSED_AXIS_PRESET,ALT_MOSELY_ORIGINAL_PRESETS,altMoselyFiniteCPDocument,
  altMoselyFiniteCPSourceMatches,validateAltMoselyFiniteRecipe,type AltMoselyFiniteRecipe} from '../app/altMoselyFiniteCP3556';
@@ -57,7 +58,7 @@ function CoordinatesPlot({points,doc,selected=0,onSelect,onMove,onGesture,resetK
      onPointerDown={e=>{e.preventDefault();e.stopPropagation();onSelect?.(i);onGesture?.();drag.current={id:e.pointerId,i};svg.current?.setPointerCapture(e.pointerId);}}/>
      {i===selected&&<text x={p[0]+font*.6} y={-p[1]-font*.4} fontSize={font}>{i+1}</text>}</g>)}</>}
    <path data-testid={doc?'alt3556-mm-scale':'alt3556-source-mm-scale'} data-mm="1" className="alt3556-scale" d={'M'+(vx+font*.5)+','+(vy+font*2.3)+' h1'}/>
-  </svg>
+  {doc&&<DocumentJunctionMarks doc={doc} flipY spatial/>}</svg>
  </div>;
 }
 export default function AltMoselyFiniteCP3556Dialog({initial,onAdoptCP,onClose}:{initial?:AltMoselyFiniteRecipe;onAdoptCP:(doc:Doc)=>boolean;onClose:()=>void}){

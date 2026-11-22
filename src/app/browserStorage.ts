@@ -60,7 +60,10 @@ async function writePreferences(updates:[string,string][]):Promise<void>{
   });
 }
 export async function flushBrowserPreferences(){await queue;if(writeFailure)throw writeFailure;}
-export function browserPreferenceSnapshot(){return [...preferences.entries()];}
+export function browserPreferenceSnapshot(keys?:readonly string[]):[string,string][]{
+  if(!keys)return [...preferences.entries()];
+  return keys.flatMap(key=>{const value=preferences.get(key);return value===undefined?[]:[[key,value] as [string,string]];});
+}
 export const browserPreferences:Preferences={
   getItem:key=>preferences.get(key)??null,
   setItem(key,value){if(writeFailure)throw writeFailure;preferences.set(key,value);void enqueue(()=>writePreferences([[key,value]]));},

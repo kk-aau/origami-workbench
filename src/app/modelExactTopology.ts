@@ -45,8 +45,27 @@ export function buildExactModelTopology(result:FlatFoldResult,onProgress?:ExactT
  if(status!=='ready'||!vertices.length||!faces.length)throw Error('精确分区需要有效的平折几何。');
  const binary=vertices.map(point=>{if(!Array.isArray(point)||point.length!==2)throw Error('精确分区坐标无效。');return point.map(binaryCoordinate);});
  let exponent=0,first=true;for(const point of binary)for(const [m,e]of point)if(m&&first){exponent=e;first=false;}else if(m)exponent=Math.min(exponent,e);
- const points:ExactPoint[]=[],pointIds=new Map<string,number>();
- const intern=(x:bigint,y:bigint,w=1n):number=>{if(w<0n){x=-x;y=-y;w=-w;}const g=exactGcd(exactGcd(x,y),w);x/=g;y/=g;w/=g;const key=`${x},${y},${w}`,prior=pointIds.get(key);if(prior!==undefined)return prior;const id=points.length;points.push({x,y,w,point:[fractionNumber(x,w,exponent),fractionNumber(y,w,exponent)]});pointIds.set(key,id);return id;};
+ const points:ExactPoint[]=[],pointIds=new Map<number,number|Map<string,number>>();
+ const coordinate=new Float64Array(2),bits=new Uint32Array(coordinate.buffer);
+ // Bucket by display coordinates, identify by reduced homogeneous integers.
+ // A bucket with distinct exact points switches to exact keys, including
+ // the case where many very close intersections all round to the same pixel.
+ const intern=(x:bigint,y:bigint,w=1n):number=>{
+  const px=fractionNumber(x,w,exponent),py=fractionNumber(y,w,exponent);
+  coordinate[0]=px;coordinate[1]=py;
+  const hx=bits[1]^Math.imul(bits[0],0x9e3779b1),hy=bits[3]^Math.imul(bits[2],0x9e3779b1);
+  const key=(hx>>>5)*0x4000000+(hy>>>6),prior=pointIds.get(key),id=points.length;
+  if(prior===undefined)pointIds.set(key,id);
+  else if(typeof prior==='number'){
+   const old=points[prior];
+   if(old.x===x&&old.y===y&&old.w===w)return prior;
+   pointIds.set(key,new Map([[`${old.x},${old.y},${old.w}`,prior],[`${x},${y},${w}`,id]]));
+  }else{
+   const exact=`${x},${y},${w}`,existing=prior.get(exact);if(existing!==undefined)return existing;
+   prior.set(exact,id);
+  }
+  points.push({x,y,w,point:[px,py]});return id;
+ };
  const sourceIds=binary.map(point=>intern(...point.map(([m,e])=>m?m<<BigInt(e-exponent):0n) as [bigint,bigint]));
  const rings:{face:number;hole:boolean}[]=[],sources:SourceEdge[]=[],sourceMap=new Map<string,number>();
  for(let face=0;face<faces.length;face++)for(const [hole,ring]of modelFaceRings(result,face).entries()){
@@ -62,7 +81,15 @@ export function buildExactModelTopology(result:FlatFoldResult,onProgress?:ExactT
    if(!hole||!balance.size||[...balance.values()].some(value=>value!==0))throw Error('精确分区遇到零面积纸面环，不能默默删除。');
   }
   const owner=rings.length;rings.push({face,hole:hole>0});
-  for(let i=0;i<ids.length;i++){const a=ids[i],b=ids[(i+1)%ids.length];if(a===b)continue;const key=a<b?`${a},${b}`:`${b},${a}`;let id=sourceMap.get(key);if(id===undefined){id=sources.length;sourceMap.set(key,id);sources.push({a,b,dx:points[b].x-points[a].x,dy:points[b].y-points[a].y,owners:new Set(),cuts:new Set([a,b])});}toggle(sources[id].owners,owner);}
+  for(let i=0;i<ids.length;i++){
+   const a=ids[i],b=ids[(i+1)%ids.length];if(a===b)continue;
+   const key=a<b?`${a},${b}`:`${b},${a}`;let id=sourceMap.get(key);
+   if(id===undefined){
+    const dx=points[b].x-points[a].x,dy=points[b].y-points[a].y,g=exactGcd(dx,dy);
+    id=sources.length;sourceMap.set(key,id);sources.push({a,b,dx:dx/g,dy:dy/g,owners:new Set(),cuts:new Set([a,b])});
+   }
+   toggle(sources[id].owners,owner);
+  }
  }
  let neutralSegments=sources.filter(s=>!s.owners.size).length;const segments=sources.filter(s=>s.owners.size),sourceSegments=segments.length;
  const boxes:Bounds2[]=segments.map(s=>{const a=points[s.a].point,b=points[s.b].point;return [Math.min(a[0],b[0]),Math.min(a[1],b[1]),Math.max(a[0],b[0]),Math.max(a[1],b[1])];}),bounds=new BoundsIndex(boxes);
@@ -71,8 +98,17 @@ export function buildExactModelTopology(result:FlatFoldResult,onProgress?:ExactT
  for(let i=0;i<segments.length;i++){
   const a=segments[i],A=points[a.a],B=points[a.b];
   for(const j of bounds.query(boxes[i],0,i)){
-   candidatePairs++;const b=segments[j],C=points[b.a],D=points[b.b],ac=inputOrientation(A,B,C),ad=inputOrientation(A,B,D),ca=inputOrientation(C,D,A),cb=inputOrientation(C,D,B);
-   if(ac*ad<0&&ca*cb<0){const ox=C.x-A.x,oy=C.y-A.y,det=a.dx*b.dy-a.dy*b.dx,t=ox*b.dy-oy*b.dx,id=intern(A.x*det+a.dx*t,A.y*det+a.dy*t,det);a.cuts.add(id);b.cuts.add(id);intersections++;}
+   candidatePairs++;const b=segments[j],C=points[b.a],D=points[b.b],ac=inputOrientation(A,B,C),ad=inputOrientation(A,B,D);
+   if(ac*ad>0)continue;
+   const ca=inputOrientation(C,D,A),cb=inputOrientation(C,D,B);
+   if(ac*ad<0&&ca*cb<0){
+    const ox=C.x-A.x,oy=C.y-A.y,det=a.dx*b.dy-a.dy*b.dx,t=ox*b.dy-oy*b.dx;
+    // P=A+(dx,dy)*t/det. Because (dx,dy) is primitive, reducing t/det
+    // already normalizes the two homogeneous coordinates and denominator.
+    const gcd=exactGcd(t,det),divisor=det<0n?-gcd:gcd,w=det/divisor,n=t/divisor;
+    const id=intern(A.x*w+a.dx*n,A.y*w+a.dy*n,w);
+    a.cuts.add(id);b.cuts.add(id);intersections++;
+   }
    else{if(!ac&&on(b.a,a)){a.cuts.add(b.a);b.cuts.add(b.a);}if(!ad&&on(b.b,a)){a.cuts.add(b.b);b.cuts.add(b.b);}if(!ca&&on(a.a,b)){a.cuts.add(a.a);b.cuts.add(a.a);}if(!cb&&on(a.b,b)){a.cuts.add(a.b);b.cuts.add(a.b);}}
   }
   if(i%1024===0)onProgress?.('intersections',{processed:i,total:segments.length,candidatePairs,intersections,vertices:points.length});
@@ -144,8 +180,21 @@ export function buildExactModelTopology(result:FlatFoldResult,onProgress?:ExactT
 export function walkExactCoverage(topology:ExactModelTopology,visitor:ExactCoverageVisitor):void{
  const {cellCount,faceCount,ringFaces,ringIsHole,edgeOwnerOffsets,edgeOwners,edgeCells,cellEdgeOffsets,cellEdges}=topology;
  const ringInside=new Uint8Array(ringFaces.length),outerInside=new Uint8Array(faceCount),holeCount=new Uint32Array(faceCount),insideFaces=new Set<number>(),changed=new Map<number,boolean>();
+ const toggleOwner=(owner:number,face:number)=>{
+  if(ringIsHole[owner])holeCount[face]+=ringInside[owner]?-1:1;else outerInside[face]=ringInside[owner]?0:1;
+  ringInside[owner]^=1;
+ };
  const cross=(edge:number,fromCell:number,toCell:number,backtrack:boolean)=>{
-  changed.clear();for(let i=edgeOwnerOffsets[edge];i<edgeOwnerOffsets[edge+1];i++){const owner=edgeOwners[i],face=ringFaces[owner];if(!changed.has(face))changed.set(face,insideFaces.has(face));if(ringIsHole[owner])holeCount[face]+=ringInside[owner]?-1:1;else outerInside[face]=ringInside[owner]?0:1;ringInside[owner]^=1;}
+  const first=edgeOwnerOffsets[edge],end=edgeOwnerOffsets[edge+1];
+  if(end===first+1){
+   const owner=edgeOwners[first],face=ringFaces[owner],before=insideFaces.has(face);
+   toggleOwner(owner,face);
+   const after=Boolean(outerInside[face]&&!holeCount[face]);
+   if(before!==after){if(after)insideFaces.add(face);else insideFaces.delete(face);}
+   visitor.onTransition?.({fromCell,toCell,removed:before&&!after?[face]:[],added:!before&&after?[face]:[],backtrack});
+   return;
+  }
+  changed.clear();for(let i=first;i<end;i++){const owner=edgeOwners[i],face=ringFaces[owner];if(!changed.has(face))changed.set(face,insideFaces.has(face));toggleOwner(owner,face);}
   const removed:number[]=[],added:number[]=[];for(const [face,before]of changed){const after=Boolean(outerInside[face]&&!holeCount[face]);if(after)insideFaces.add(face);else insideFaces.delete(face);if(before&&!after)removed.push(face);else if(!before&&after)added.push(face);}visitor.onTransition?.({fromCell,toCell,removed,added,backtrack});
  };
  const visited=new Uint8Array(cellCount+1),parentEdge=new Int32Array(cellCount+1).fill(-1),cursor=cellEdgeOffsets.slice(0,cellCount+1),stack=new Int32Array(cellCount+1);let depth=1,visitedCount=1;visited[0]=1;

@@ -4,8 +4,8 @@ fn main() {
         tauri_build::AppManifest::new().commands(&[
             "desktop_ready", "desktop_close_ack", "desktop_cancel_startup",
             "desktop_open_logs", "desktop_open_project", "desktop_pick_directory", "desktop_print",
-            "desktop_prepare_export", "desktop_write_export", "desktop_finish_export", "desktop_cancel_export",
-            "desktop_window_state", "desktop_window_action", "desktop_open_data_directory", "desktop_documents",
+            "desktop_blender_step_status", "desktop_prepare_export", "desktop_write_export", "desktop_finish_export", "desktop_cancel_export",
+            "desktop_cp_window", "desktop_window_state", "desktop_window_action", "desktop_open_data_directory", "desktop_documents",
         ]),
     )).expect("failed to generate the desktop permission manifest");
 }

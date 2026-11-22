@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import {DIAGRAM_PDF_LAYOUTS,defaultDiagramPDFOptions,planDiagramPDF,selectDiagramPDFSteps,wrapDiagramPDFText,diagramPDFStepLabel,diagramPDFIntroLayout,diagramPDFIntroText,diagramPDFCellContent,diagramPDFCaptionLines,diagramPDFFooterLayout} from '../../src/app/diagramPDFLayout';
+import {DIAGRAM_PDF_LAYOUTS,captionTextWidth,defaultDiagramPDFOptions,planDiagramPDF,selectDiagramPDFSteps,wrapDiagramPDFText,diagramPDFStepLabel,diagramPDFIntroLayout,diagramPDFIntroText,diagramPDFCellContent,diagramPDFCaptionLines,diagramPDFFooterLayout} from '../../src/app/diagramPDFLayout';
 import {normalizeDiagramPDFSVG,diagramPDFStepSVG} from '../../src/app/diagramPDF';
 import type {DiagramProject} from '../../src/app/diagramProject';
 import {blankDoc} from '../../src/app/state';
@@ -11,6 +11,15 @@ const project=(count=14):DiagramProject=>({format:'zhezhi-diagram',version:1,nam
   steps:Array.from({length:count},(_,i)=>({id:`s${i}`,beforeId:`c${i}`,afterId:`c${i+1}`,pose:null,title:`步骤 ${i+1}`,description:'将右侧纸角向上谷折。'}))});
 test('defaults preserve Chinese title, paper information and real active project step count',()=>{
   const options=defaultDiagramPDFOptions(project());assert.equal(options.title,'中文折序图解');assert.equal(options.paperInfo,'200 × 200 mm');assert.equal(options.rangeEnd,14);assert.equal(options.layout,'3x4');assert.equal(options.introLayout,'3x3');assert.equal(options.cover,'diagram');assert.equal(options.coverCP,true);
+});
+
+test('scale marker options accept old settings, zero and decimal percentages',()=>{
+  const p=project(2),options=defaultDiagramPDFOptions(p);
+  assert.equal(options.scaleChangePercent,10);
+  for(const value of [undefined,0,.125,250,Number.MAX_VALUE])
+    assert.doesNotThrow(()=>planDiagramPDF(p,{...options,scaleIndicators:true,scaleChangePercent:value}));
+  for(const value of [-1,NaN,Infinity])
+    assert.throws(()=>planDiagramPDF(p,{...options,scaleIndicators:true,scaleChangePercent:value}),/缩放标记阈值/);
 });
 
 test('PDF numbers are separate from automatic or manually written step titles',()=>{
@@ -58,6 +67,14 @@ test('disabling explanations produces no notes appendix',()=>{
 test('invalid format options and empty project are rejected',()=>{
   const p=project(),options=defaultDiagramPDFOptions(p);assert.throws(()=>planDiagramPDF(project(0),options),/没有可导出/);assert.throws(()=>planDiagramPDF(p,{...options,layout:'5x5' as any}),/排版/);assert.throws(()=>planDiagramPDF(p,{...options,paper:'A0' as any}),/纸张/);assert.throws(()=>planDiagramPDF(p,{...options,coverCP:1 as any}),/显示选项/);
 });
+test('scale indicators are opt-in and do not change the arrangement or selected panels',()=>{
+  const p=project(),options=defaultDiagramPDFOptions(p);
+  assert.equal(options.scaleIndicators,false);
+  const baseline=planDiagramPDF(p,options);
+  assert.deepEqual(planDiagramPDF(p,{...options,scaleIndicators:true}),baseline);
+  assert.deepEqual(planDiagramPDF(p,{...options,scaleIndicators:undefined}),baseline);
+  assert.throws(()=>planDiagramPDF(p,{...options,scaleIndicators:'yes' as any}),/缩放标记/);
+});
 test('planning does not change source poses, CPs or steps',()=>{
   const p=project(),saved=JSON.stringify(p);planDiagramPDF(p,defaultDiagramPDFOptions(p));assert.equal(JSON.stringify(p),saved);
 });
@@ -89,14 +106,13 @@ test('old options without new optional metadata or introLayout remain valid',()=
   const p=project(),options=defaultDiagramPDFOptions(p);delete options.introLayout;delete options.designer;delete options.designDate;delete options.diagramDate;delete options.headerNote;
   assert.equal(planDiagramPDF(p,options).pages[0].cells.length,9);
 });
-test('three header columns and the optional note remain above the first-page grid on all papers',()=>{
+test('the cover artwork and the optional note remain above the first-page grid on all papers',()=>{
   const p=project(25);
   for(const paper of ['A4','A3'] as const)for(const orientation of ['portrait','landscape'] as const){
     const options={...defaultDiagramPDFOptions(p),paper,orientation,headerNote:'请先预折并完全展开，之后按步骤折叠。'.repeat(4)},plan=planDiagramPDF(p,options),header=diagramPDFIntroLayout(plan,options);
-    assert.ok(header.info.x+header.info.width<header.image.x);assert.ok(header.image.x+header.image.width<header.cp!.x);
+    assert.equal(header.info.x,plan.margin);assert.ok(header.image.x+header.image.width<header.cp!.x);
     assert.ok(header.image.y+header.image.height<header.dividerY);assert.ok(header.cp!.y+header.cp!.height<header.dividerY);assert.equal(header.cp!.width,header.cp!.height);
     assert.ok(header.noteRect);assert.ok(header.noteRect.y+header.noteRect.height<header.dividerY);assert.ok(plan.pages[0].cells[0].y>header.dividerY);
-    if(paper==='A4'&&orientation==='portrait')assert.ok((header.dividerY-plan.margin)/plan.height>=.22&&(header.dividerY-plan.margin)/plan.height<=.25);
     assert.equal(diagramPDFIntroLayout(plan,{...options,coverCP:false}).cp,null);
   }
 });
@@ -119,18 +135,24 @@ test('short introductory notes follow the paper information instead of leaving a
   assert.equal(plan.pages[0].cells[0].y,geometry.stepsY);assert.equal(plan.pages[0].cells.length,9);
 });
 
-test('hidden completion and CP graphics reclaim their columns and header height',()=>{
-  const p=project(24),options={...defaultDiagramPDFOptions(p),designer:'甲',author:'乙'},plan=planDiagramPDF(p,options),full=diagramPDFIntroLayout(plan,options,p.name);
-  for(const hidden of [{...options,coverCP:false},{...options,coverImage:'none' as const}]){
-    const reduced=planDiagramPDF(p,hidden),header=diagramPDFIntroLayout(reduced,hidden,p.name);
-    assert.ok(header.info.width>full.info.width);assert.ok(header.dividerY<=full.dividerY);
+test('hiding cover graphics preserves text placement and can reclaim header height',()=>{
+  const p=project(24),options={...defaultDiagramPDFOptions(p),designer:'甲',author:'乙'};
+  for(const titleAlignment of ['left','center','right'] as const){
+    const visible={...options,titleAlignment},plan=planDiagramPDF(p,visible),full=diagramPDFIntroLayout(plan,visible,p.name);
+    const text=diagramPDFIntroText(p,visible,full);
+    for(const hidden of [{...visible,coverCP:false},{...visible,coverImage:'none' as const},{...visible,coverCP:false,coverImage:'none' as const}]){
+      const reduced=planDiagramPDF(p,hidden),header=diagramPDFIntroLayout(reduced,hidden,p.name);
+      assert.deepEqual(diagramPDFIntroText(p,hidden,header),text);
+      assert.ok(header.dividerY<=full.dividerY);
+    }
   }
   const compact={...options,coverCP:false,coverImage:'none' as const,designer:'',author:'',paperInfo:''},small=planDiagramPDF(p,compact),header=diagramPDFIntroLayout(small,compact,p.name);
-  assert.equal(header.info.width,small.width-small.margin*2);assert.equal(header.cp,null);assert.equal(header.image.width,0);assert.equal(header.image.height,0);
-  assert.ok(header.dividerY-small.margin<45);assert.ok(header.dividerY<full.dividerY-100);
+  assert.equal(header.cp,null);assert.equal(header.image.width,0);assert.equal(header.image.height,0);
+  const withGraphics=diagramPDFIntroLayout(planDiagramPDF(p,options),options,p.name);
+  assert.ok(header.dividerY-small.margin<45);assert.ok(header.dividerY<withGraphics.dividerY-100);
 });
 
-test('wrapped titles and long metadata grow the compact header without overlapping notes or first-page grids',()=>{
+test('long metadata and the fallback project title fit above notes and first-page grids',()=>{
   const p=project(24);p.name='没有填写导出标题时使用的长工程名称';
   for(const paper of ['A4','A3'] as const)for(const orientation of ['portrait','landscape'] as const){
     const options={...defaultDiagramPDFOptions(p),paper,orientation,title:'',introLayout:'3x3' as const,designer:'甲'.repeat(120),author:'乙'.repeat(120),paperInfo:'纸'.repeat(160),headerNote:'注'.repeat(160)};
@@ -143,7 +165,7 @@ test('wrapped titles and long metadata grow the compact header without overlappi
 
 test('a dense landscape first page with maximal metadata and two-line step titles asks for more drawing space instead of exporting a few-millimeter image',()=>{
   const p=project(24);p.steps.forEach(step=>{step.title='需要保留纸层关系并继续向上折叠的完整步骤标题'.repeat(4);step.description='此处有很长的说明，需要继续到文末。'.repeat(5);});
-  const options={...defaultDiagramPDFOptions(p),orientation:'landscape' as const,introLayout:'4x4' as const,title:'长标题'.repeat(40),designer:'甲'.repeat(120),author:'乙'.repeat(120),designDate:'1'.repeat(40),diagramDate:'2'.repeat(40),paperInfo:'纸'.repeat(160),headerNote:'注'.repeat(160)};
+  const options={...defaultDiagramPDFOptions(p),orientation:'landscape' as const,introLayout:'4x4' as const,title:Array.from({length:6},(_,i)=>'手动换行标题 '+(i+1)).join('\n'),designer:'甲'.repeat(120),author:'乙'.repeat(120),designDate:'1'.repeat(40),diagramDate:'2'.repeat(40),paperInfo:'纸'.repeat(160),headerNote:'注'.repeat(160)};
   assert.throws(()=>planDiagramPDF(p,options),/首页文字较多.*减少首页行数/);
   const adjusted=planDiagramPDF(p,{...options,introLayout:'3x2'});assert.equal(adjusted.pages[0].cells.length,6);
   assert.ok(adjusted.pages[0].cells.every(cell=>diagramPDFCellContent(p.steps[cell.stepIndex],cell,{...options,introLayout:'3x2'},adjusted).imageRect.height>=24));
@@ -168,7 +190,8 @@ test('diagram SVG normalization keeps real proportions and all path content',()=
   const svg='<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="900" viewBox="-10 -20 70 140"><path d="M0 0L20 20"/></svg>',normalized=normalizeDiagramPDFSVG(svg);assert.match(normalized,/width="70" height="140"/);assert.match(normalized,/viewBox="-10 -20 70 140"/);assert.match(normalized,/<path d="M0 0L20 20"\/>/);
 });
 test('uncalculated steps export an honest source CP placeholder, preserving project data',()=>{
-  const p=project(2),saved=JSON.stringify(p),svg=diagramPDFStepSVG(p,p.steps[0]);assert.match(svg,/<svg/);assert.match(svg,/viewBox="0 0 200 200"/);assert.equal(JSON.stringify(p),saved);
+  const p=project(2),saved=JSON.stringify(p),svg=diagramPDFStepSVG(p,p.steps[0]);assert.match(svg,/<svg/);const box=svg.match(/viewBox="([^"]+)"/)![1].split(' ').map(Number);
+  assert.ok(box[0]<0&&box[1]<0&&box[0]+box[2]>200&&box[1]+box[3]>200,'the exported bounds include the outside half of the paper border');assert.equal(JSON.stringify(p),saved);
 });
 function posedProject() {
   const p=project(2),doc=blankDoc('已计算折图',100,100);doc.segments.push({id:'valley',a:[50,0],b:[50,100],assignment:'V',angle:180});
@@ -199,4 +222,141 @@ test('a changed CP snapshot at the same revision also keeps the independent canv
 test('a mapping failure for a manually changed pose falls back to its drawing instead of rejecting the PDF',()=>{
   const p=posedProject(),step=p.steps[0],vertices=step.pose!.result.geometry.vertices;vertices[0]=[...vertices[1]];const saved=JSON.stringify(p);
   assertPreservedDrawing(diagramPDFStepSVG(p,step),step);assert.equal(JSON.stringify(p),saved);
+});
+
+test('manual bilingual title breaks and caption alignments reach the exported page',async()=>{
+  const {diagramPDFPageSVG}=await import('../../src/app/diagramPDFPage');
+  const {defaultDiagramLineDefaults}=await import('../../src/app/diagramLineStyles');
+  const p=project(1);p.steps[0].title='中文步骤\nEnglish step';p.steps[0].description='说明\nDescription';
+  for(const align of ['left','center','right'] as const){
+    const options={...defaultDiagramPDFOptions(p),title:'方块人\nBlock Person',titleAlignment:align,stepAlignment:align};
+    const plan=planDiagramPDF(p,options),geometry=diagramPDFIntroLayout(plan,options,p.name);
+    assert.deepEqual(diagramPDFIntroText(p,options,geometry).filter(l=>l.kind==='title').map(l=>l.text),['方块人','Block Person']);
+    const cell=plan.pages[0].cells[0],content=diagramPDFCellContent(p.steps[0],cell,options,plan);
+    for(const line of content.captionLines.filter(l=>l.kind!=='number')){assert.equal(line.align,align);assert.equal(line.x,cell.x+(align==='left'?0:align==='center'?cell.width/2:cell.width));}
+    const svg=diagramPDFPageSVG(p,options,plan,0,defaultDiagramLineDefaults(),true);
+    assert.match(svg,/>Block Person<\/text>/);assert.match(svg,/>English step<\/text>/);
+    if(align!=='left')assert.match(svg,new RegExp('text-anchor="'+(align==='center'?'middle':'end')+'">Block Person'));
+  }
+});
+
+test('cover gap and overlap controls keep both graphics inside their available box',async()=>{
+  const {diagramPDFCoverArtworkRects,PDF_PT_PER_MM}=await import('../../src/app/diagramPDFLayout');
+  const p=project(1),base=defaultDiagramPDFOptions(p),box={x:100,y:50,width:300,height:160};
+  const parallel=diagramPDFCoverArtworkRects(box,{...base,coverGapMm:8},true);
+  assert.ok(Math.abs(parallel.cp!.x-parallel.image.x-parallel.image.width-8*PDF_PT_PER_MM)<1e-8);
+  for(const fraction of [0,20,60,100]){
+    const {image,cp}=diagramPDFCoverArtworkRects(box,{...base,coverArrangement:'overlap',coverOverlapPercent:fraction},true);
+    assert.ok(Math.abs(cp!.x-image.x-image.width*(1-fraction/100))<1e-8);
+    assert.ok(image.x>=box.x&&cp!.x+cp!.width<=box.x+box.width+1e-8);
+  }
+});
+
+
+test('step numbers leave title alignment independent and may sit above the first line',()=>{
+  const p=project(1),step=p.steps[0];step.title='首行标题\nEnglish title';step.description='说明';
+  for(const align of ['left','center','right'] as const){
+    const options={...defaultDiagramPDFOptions(p),stepAlignment:align},plan=planDiagramPDF(p,options),cell=plan.pages[0].cells[0];
+    const inline=diagramPDFCellContent(step,cell,options,plan),heading=inline.captionLines.filter(line=>line.kind==='title'),number=inline.captionLines.find(line=>line.kind==='number')!;
+    assert.deepEqual(heading.map(line=>line.text),['首行标题','English title']);
+    assert.equal(heading[0].x,cell.x+(align==='left'?0:align==='center'?cell.width/2:cell.width));
+    assert.equal(number.y,heading[0].y);assert.equal(number.align,'right');assert.equal(number.text,'1.');
+    const above=diagramPDFCellContent(step,cell,{...options,stepNumberPosition:'above'},plan),upper=above.captionLines.find(line=>line.kind==='number')!;
+    assert.equal(upper.text,'1');assert.equal(upper.align,'center');assert.ok(upper.y<above.captionLines.find(line=>line.kind==='title')!.y);
+    assert.ok(above.imageRect.height<inline.imageRect.height);
+  }
+});
+
+test('cover graphics move independently in millimetres and stacking applies to both cover formats',async()=>{
+  const {diagramPDFCoverArtworkRects,PDF_PT_PER_MM}=await import('../../src/app/diagramPDFLayout');
+  const {diagramPDFPageSVG}=await import('../../src/app/diagramPDFPage');
+  const {defaultDiagramLineDefaults}=await import('../../src/app/diagramLineStyles');
+  const p=project(1),base=defaultDiagramPDFOptions(p),box={x:100,y:50,width:300,height:160};
+  const original=diagramPDFCoverArtworkRects(box,base,true);
+  const moved=diagramPDFCoverArtworkRects(box,{...base,coverCPOffset:{x:-20,y:5}},true);
+  assert.deepEqual(moved.image,original.image);
+  assert.ok(Math.abs(moved.cp!.x-original.cp!.x+20*PDF_PT_PER_MM)<1e-8);
+  assert.ok(Math.abs(moved.cp!.y-original.cp!.y-5*PDF_PT_PER_MM)<1e-8);
+  const model=diagramPDFCoverArtworkRects(box,{...base,coverImageOffset:{x:2,y:-3}},true);
+  assert.deepEqual(model.cp,original.cp);
+  assert.ok(Math.abs(model.image.x-original.image.x-2*PDF_PT_PER_MM)<1e-8);
+  for(const cover of ['diagram','standard'] as const)for(const foreground of ['image','cp'] as const){
+    const options={...base,cover,coverForeground:foreground,coverCPOffset:{x:-20,y:5}},plan=planDiagramPDF(p,options);
+    const svg=diagramPDFPageSVG(p,options,plan,0,defaultDiagramLineDefaults(),true);
+    const imageIndex=svg.indexOf('data-diagram-cover-artwork="image"'),cpIndex=svg.indexOf('data-diagram-cover-artwork="cp"');
+    assert.ok(imageIndex>=0&&cpIndex>=0);
+    assert.equal(imageIndex>cpIndex,foreground==='image');
+    assert.doesNotMatch(svg,/data-cover-selection/);
+  }
+  for(const invalid of [{coverForeground:'bad'},{coverImageOffset:{x:NaN,y:0}},{coverCPOffset:{x:0,y:1001}}]){
+    assert.throws(()=>planDiagramPDF(p,{...base,...invalid} as typeof base));
+  }
+});
+
+test('a bilingual intro title keeps its entered lines at normal size with independent artwork and aligned step captions',async()=>{
+  const {diagramPDFPageSVG}=await import('../../src/app/diagramPDFPage');
+  const {defaultDiagramLineDefaults}=await import('../../src/app/diagramLineStyles');
+  const p=project(15),options={...defaultDiagramPDFOptions(p),title:'方块系列\n绅士（墨镜款）\nGentleman (sunglasses)'};
+  p.steps[0].title='对折';p.steps[1].title='向上拉开\n沿折痕压平';p.steps[2].description='用手指轻轻压平。'.repeat(12);
+  const plan=planDiagramPDF(p,options),intro=diagramPDFIntroLayout(plan,options,p.name);
+  const title=diagramPDFIntroText(p,options,intro).filter(l=>l.kind==='title');
+  assert.deepEqual(title.map(l=>l.text),options.title.split('\n'));
+  const short={...options,title:'折序工程',author:'',paperInfo:''};
+  const shortIntro=diagramPDFIntroLayout(plan,short,p.name);
+  assert.deepEqual(intro.image,shortIntro.image);assert.deepEqual(intro.cp,shortIntro.cp);
+  assert.equal(title[2].fontSize,diagramPDFIntroText(p,short,shortIntro)[0].fontSize);
+  const tops=plan.pages[0].cells.slice(0,3).map(cell=>diagramPDFCellContent(p.steps[cell.stepIndex],cell,options,plan).captionRect.y);
+  assert.equal(new Set(tops).size,1);
+  assert.match(diagramPDFPageSVG(p,options,plan,1,defaultDiagramLineDefaults(),true),/方块系列 绅士（墨镜款） Gentleman \(sunglasses\)/);
+});
+
+test('moving both cover graphics across the text preserves every author-entered title, credit and paper line',async()=>{
+  const {diagramPDFPageSVG}=await import('../../src/app/diagramPDFPage');
+  const {defaultDiagramLineDefaults}=await import('../../src/app/diagramLineStyles');
+  const p=project(5),options={...defaultDiagramPDFOptions(p),title:'方块系列\r\nGentleman wearing sunglasses (summer edition)',designer:'设计师\nPaper Folding Design Workshop',paperInfo:'双色纸\n200 × 200 mm · Two-sided origami paper',headerNote:'折叠前\nKeep the coloured side facing up.'};
+  const plan=planDiagramPDF(p,options),geometry=diagramPDFIntroLayout(plan,options,p.name);
+  const text=diagramPDFIntroText(p,options,geometry),heading=text.filter(l=>l.kind==='title');
+  assert.deepEqual(heading.map(l=>l.text),options.title.split('\r\n'));
+  for(const field of [options.designer,options.paperInfo,options.headerNote]){
+    for(const entered of field.split('\n'))assert.ok(text.some(l=>l.text===entered),entered);
+  }
+  const moved={...options,coverImageOffset:{x:-65,y:0},coverCPOffset:{x:-85,y:0}};
+  const movedPlan=planDiagramPDF(p,moved),movedGeometry=diagramPDFIntroLayout(movedPlan,moved,p.name);
+  assert.ok(movedGeometry.image.x<geometry.image.x&&movedGeometry.cp!.x<geometry.cp!.x);
+  assert.deepEqual(diagramPDFIntroText(p,moved,movedGeometry),text);
+  const svg=diagramPDFPageSVG(p,moved,movedPlan,0,defaultDiagramLineDefaults(),true);
+  assert.ok(svg.indexOf('>'+heading[1].text+'</text>')>svg.lastIndexOf('data-diagram-cover-artwork='),'text remains visible above overlapping artwork');
+});
+
+test('an overlong single English cover line fits between the page margins for every cover style and alignment',async()=>{
+  const {diagramPDFPageSVG}=await import('../../src/app/diagramPDFPage');
+  const {defaultDiagramLineDefaults}=await import('../../src/app/diagramLineStyles');
+  const p=project(6),english='A Gentleman Wearing Sunglasses with a Hand-Folded Hat and a Very Long Printed English Subtitle';
+  for(const cover of ['diagram','standard','minimal'] as const)for(const titleAlignment of ['left','center','right'] as const){
+    const options={...defaultDiagramPDFOptions(p),title:'绅士\n'+english,cover,titleAlignment};
+    const plan=planDiagramPDF(p,options),svg=diagramPDFPageSVG(p,options,plan,0,defaultDiagramLineDefaults(),true);
+    const line=svg.match(new RegExp('<text\\b([^>]+)>'+english+'</text>'));
+    assert.ok(line,cover+' / '+titleAlignment+' preserves the entire English line');
+    const width=captionTextWidth(english,Number(/font-size="([^"]+)"/.exec(line[1])![1]));
+    const anchor=Number(/x="([^"]+)"/.exec(line[1])![1]);
+    const start=anchor-(titleAlignment==='right'?width:titleAlignment==='center'?width/2:0);
+    assert.ok(start>=plan.margin-1e-6&&start+width<=plan.width-plan.margin+1e-6,cover+' / '+titleAlignment+' stays on the page');
+  }
+});
+
+test('all cover styles export the same entered metadata and a title-length rule, without a CP caption',async()=>{
+  const {diagramPDFPageSVG}=await import('../../src/app/diagramPDFPage');
+  const {defaultDiagramLineDefaults}=await import('../../src/app/diagramLineStyles');
+  const p=project(3);
+  for(const cover of ['diagram','standard','minimal'] as const)for(const titleAlignment of ['left','center','right'] as const){
+    const options={...defaultDiagramPDFOptions(p),cover,titleAlignment,title:'绅士',designer:'设计甲',author:'制图乙',designDate:'07/2026',diagramDate:'11/2026',paperInfo:'双色纸',headerNote:'有色面朝上'};
+    const plan=planDiagramPDF(p,options),svg=diagramPDFPageSVG(p,options,plan,0,defaultDiagramLineDefaults(),true);
+    for(const value of ['设计甲','制图乙','07/2026','11/2026','双色纸','有色面朝上'])assert.ok(svg.includes(value));
+    assert.doesNotMatch(svg,/CP · 最后状态|完成姿态未保存/);
+    const title=svg.match(/<text x="([^"]+)"[^>]*font-size="([^"]+)"[^>]*>绅士<\/text>/)!;
+    const line=svg.match(/<path d="M ([\d.]+) [\d.]+ h ([\d.]+)"/)!;
+    const width=Number(line[2]),start=Number(line[1]);
+    assert.equal(width,2*Number(title[2])+6);
+    assert.ok(Math.abs(start+(titleAlignment==='right'?width:titleAlignment==='center'?width/2:0)-Number(title[1]))<1e-6);
+  }
 });

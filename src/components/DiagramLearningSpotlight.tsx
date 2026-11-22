@@ -3,7 +3,6 @@ import {createPortal} from 'react-dom';
 import {learningMaskRegions} from '../app/learningMaskRegions';
 import type {DiagramProject} from '../app/diagramProject';
 import {learningBottomFace,learningFixedCPFace,learningDrawPoints,type LearningObservation,type LearningTask} from '../app/diagramLearning';
-import {modelProjection} from '../app/modelProjection';
 import {findLearningControl} from '../app/learningDesignDom';
 import './DiagramLearningSpotlight.css';
 
@@ -28,13 +27,26 @@ export default function DiagramLearningSpotlight({host,project,observation,lesso
    const find=(selector:string)=>Array.from(editor.querySelectorAll<HTMLElement>(selector)).find(visible);
    const elementGuide=(key:string,label:string,el:Element|undefined):Guide|null=>{
     if(!el)return null;
-    const r=el.getBoundingClientRect();if((r.bottom>innerHeight-15||r.top<55)&&revealed!==key){revealed=key;el.scrollIntoView({block:'nearest',inline:'nearest'});}
+    const r=el.getBoundingClientRect(),shelf=el.closest('.diagram-context-shelf')?.getBoundingClientRect();
+    if((r.bottom>innerHeight-15||r.top<55||shelf&&(r.top<shelf.top||r.bottom>shelf.bottom))&&revealed!==key){revealed=key;el.scrollIntoView({block:'nearest',inline:'nearest'});}
     return {key,label,box:box(el),input:box(el,0)};
    };
    const panel=(name:string)=>find('.tablet-panel-bar')?Array.from(editor.querySelectorAll(' .tablet-panel-bar button')).find(n=>n.textContent?.trim()===name&&visible(n)):undefined;
    const anchor=(target:string,label:string)=>{
     const el=find(LEARNING_TARGETS[target]??'[data-no-learning-target]');if(el)return elementGuide(target,label,el);
-    const name=target==='layers'?'纸层':target==='symbols'?'符号':target.startsWith('cp-')?'CP':'';
+    if(target==='symbols'){
+     const toggle=find('.diagram-symbol-dock button[aria-label="折纸符号"][aria-expanded="false"]');
+     if(toggle)return elementGuide('expand-symbols','展开“折纸符号”',toggle);
+     const category=find('select[aria-label="折纸符号分类"]') as HTMLSelectElement|undefined;
+     if(category&&category.value!=='折叠动作')return elementGuide('fold-symbol-category','选择“折叠动作”分类',category);
+     const search=find('.diagram-symbol-dock input[type="search"]') as HTMLInputElement|undefined;
+     if(search?.value)return elementGuide('clear-symbol-search','清空符号搜索，显示谷折箭头',search);
+    }
+    const name=target==='symbols'?'符号':['layers','fixed','line'].includes(target)?'绘图工具':target.startsWith('cp-')?'CP':'';
+    if(['绘图工具','符号'].includes(name)&&!panel(name)){
+     const tools=find('[data-teach="drawing-tools"][aria-pressed="false"]');
+     if(tools)return elementGuide('open-comparison-tools','展开“绘图与纸层”',tools);
+    }
     return elementGuide('panel-'+name,'先展开“'+name+'”面板',panel(name));
    };
    let next:Guide|null=null;
@@ -63,7 +75,7 @@ export default function DiagramLearningSpotlight({host,project,observation,lesso
      }
     }
    }else if((l==='fold'&&t.id==='line')||(l==='layers'&&t.id==='scoped-line')){
-    if(o.tool!=='line')next=anchor('line','先选择“画折线”');
+    if(o.tool!=='line')next=anchor('line','先选择“线段”');
     else{
      const svg=find('svg[data-diagram-model]') as unknown as SVGSVGElement|undefined,scene=svg?.querySelector<SVGGElement>('[data-diagram-viewport-scene]');
      if(svg&&scene){
@@ -72,19 +84,14 @@ export default function DiagramLearningSpotlight({host,project,observation,lesso
       if(a&&b){next=pointGuide(t.id+(validStart?'-end':'-start'),validStart?'② 点击终点，完成折痕':pending?'起点不对：按 Esc，再点击 ① 起点':'① 点击折痕起点',validStart?b:a,svg);next.future=validStart?undefined:b;}
      }
     }
-   }else if(l==='fold'&&t.id==='fixed'){
-    if(o.tool!=='fixed')next=anchor('fixed',s.foldLink?.fixed?'固定位置不符，重新选择“固定侧”':'先选择“固定侧”');
-    else{const svg=find('svg[data-diagram-model]'),scene=svg?.querySelector<SVGGElement>('[data-diagram-viewport-scene]'),pose=s.pose;
-     if(svg&&scene&&pose){const q=modelProjection(pose.result.geometry.vertices,o.side==='back',pose.view?.rotation??0,pose.view?.projectionCenter).project([150,50]),point=screen(scene,q);if(point)next=pointGuide('fixed-main-point','点击这里，固定右上侧纸面',point,svg);}
-    }
-   }else if(l==='fixed'&&t.id==='anchor'){
+   }else if(l==='fold'&&t.id==='fixed'||l==='fixed'&&t.id==='anchor'){
     if(!o.comparison)next=anchor('compare','先打开“左右对照”，在 CP 中选纸面');
     else{
      const afterTab=find('.diagram-comparison-cp [data-teach="cp-after"]');
      if(afterTab?.getAttribute('aria-pressed')==='false')next=elementGuide('cp-after-tab','纸张还未折叠，切换到“操作后 CP”选择待折的固定侧',afterTab);
      else{
       const face=learningFixedCPFace(p),chosen=o.cpSelection?.stateId===s.afterId&&o.cpSelection.kind==='face'&&o.cpSelection.index===face;
-      if(chosen){const buttons=Array.from(editor.querySelectorAll('.diagram-cp-pin-actions button')),button=buttons.find(b=>visible(b)&&b.textContent?.includes('固定纸面')),panelButton=Array.from(editor.querySelectorAll('.diagram-comparison-heading button')).find(b=>b.textContent?.trim()==='纸层面板'&&visible(b));next=elementGuide('cp-fix-confirm',`点击“固定纸面”，确认右上侧 F${face+1}`,button)??elementGuide('cp-open-actions','展开纸层面板，查看固定操作',panelButton)??anchor('cp-after','展开 CP 面板，查看“固定纸面”操作');}
+      if(chosen){const buttons=Array.from(editor.querySelectorAll('.diagram-cp-pin-actions button')),button=buttons.find(b=>visible(b)&&b.textContent?.includes('固定纸面')),panelButton=Array.from(editor.querySelectorAll('.diagram-comparison-heading button')).find(b=>b.textContent?.trim()==='绘图与纸层'&&visible(b));next=elementGuide('cp-fix-confirm',`点击“固定纸面”，确认右上侧 F${face+1}`,button)??elementGuide('cp-open-actions','展开“绘图与纸层”，查看固定操作',panelButton)??anchor('cp-after','展开 CP 面板，查看“固定纸面”操作');}
       else{
        const region=find('.diagram-comparison-cp')??find('[data-teach="cp-after"]'),faceNode=region?.querySelector<SVGGElement>(`[data-cp-face="${face}"]`);
        if(faceNode&&visible(faceNode)){const x=Number(faceNode.dataset.teachCpX),y=Number(faceNode.dataset.teachCpY),point=screen(faceNode,[x,y]);if(point)next=pointGuide('cp-face-'+face,`在 CP 点击 F${face+1} 的圆点`,point,faceNode.closest('svg')!);}

@@ -13,7 +13,7 @@ import {exactModelSurfaceSVG} from './modelExactSurfaceSVG';
 export interface ModelRegionSurfaceData {regions:ModelLayerRegion[];omittedThinRegions:number;boundaries?:ModelRegionBoundaries;shadows?:ModelRegionShadows}
 export type ModelSurfaceData=ModelRegionSurfaceData|ExactSurfaceData;
 /** Regions are calculated for this exact result and side by the export task. */
-export function modelRegionSVG(result:FlatFoldResult,data:ModelSurfaceData,side:FlatSide,rotation:number,colors:ModelColors,paint?:{faceColors?:readonly string[];boundaryWidth?:number}):string{
+export function modelRegionSVG(result:FlatFoldResult,data:ModelSurfaceData,side:FlatSide,rotation:number,colors:ModelColors,paint?:{overlay?:string;faceColors?:readonly string[];boundaryWidth?:number}):string{
  if('exact' in data)return exactModelSurfaceSVG(result,data,side,rotation,colors);
  if(!Number.isInteger(data.omittedThinRegions)||data.omittedThinRegions<0||!Array.isArray(data.regions))throw new Error('局部区域导出数据无效。');
  const display=flatPresentation(result,side,rotation),projection=modelProjection(result.geometry.vertices,side==='back',rotation);
@@ -34,5 +34,5 @@ export function modelRegionSVG(result:FlatFoldResult,data:ModelSurfaceData,side:
   const a=projection.project(edge.a),b=projection.project(edge.b);
   return `<line data-region-boundary="true" x1="${a[0]}" y1="${a[1]}" x2="${b[0]}" y2="${b[1]}" stroke="${colors.line}" stroke-width="${paint?.boundaryWidth??.8}" vector-effect="non-scaling-stroke" pointer-events="none"/>`;
  }).join('')??'';
- return `<g data-model-region-surface="true"><defs><pattern id="model-region-unknown" patternUnits="userSpaceOnUse" width="6" height="6"><rect width="6" height="6" fill="#eeeeea"/><path d="M-1 1L1-1M0 6L6 0M5 7L7 5" stroke="#92998e" stroke-width=".5"/></pattern><pattern id="model-region-conflict" patternUnits="userSpaceOnUse" width="6" height="6"><rect width="6" height="6" fill="#f5dddd"/><path d="M0 0L6 6M6 0L0 6" stroke="#aa4242" stroke-width=".5"/></pattern></defs>${polygons}${data.shadows?modelRegionShadowSVG(result,data.regions,data.shadows,side,rotation):''}${lines}</g>`;
+ return `<g data-model-region-surface="true"><defs><pattern id="model-region-unknown" patternUnits="userSpaceOnUse" width="6" height="6"><rect width="6" height="6" fill="#eeeeea"/><path d="M-1 1L1-1M0 6L6 0M5 7L7 5" stroke="#92998e" stroke-width=".5"/></pattern><pattern id="model-region-conflict" patternUnits="userSpaceOnUse" width="6" height="6"><rect width="6" height="6" fill="#f5dddd"/><path d="M0 0L6 6M6 0L0 6" stroke="#aa4242" stroke-width=".5"/></pattern></defs>${polygons}${paint?.overlay??''}${data.shadows?modelRegionShadowSVG(result,data.regions,data.shadows,side,rotation):''}${lines}</g>`;
 }

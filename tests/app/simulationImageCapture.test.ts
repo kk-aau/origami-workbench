@@ -63,6 +63,18 @@ test('complete artwork pose requests validate replies and ignore stale or foreig
   }finally{f.cleanup();}
 });
 
+test('a trimmed animation screenshot carries its paper bounds across the simulator bridge',async()=>{
+  const f=fixture();
+  try{
+    f.load();
+    const pending=f.bridge.captureImage({trimTransparent:true}),command=f.request();
+    assert.equal(command.trimTransparent,true);
+    const cropped={...image,croppedToContent:true};
+    f.reply(command,{image:cropped});
+    assert.deepEqual(await pending,cropped);
+  }finally{f.cleanup();}
+});
+
 test('switching models or closing a view cancels pending complete artwork captures',async()=>{
   for(const action of ['switch','close','reload']as const){
     const f=fixture();try{

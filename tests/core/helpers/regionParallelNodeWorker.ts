@@ -6,7 +6,20 @@ if(workerData.kind==='checker'){
  else{
   const scope=globalThis as any;scope.postMessage=(data:unknown)=>parentPort!.postMessage(data);
   await import('../../../src/workers/regionTournament.worker');
-  parentPort!.on('message',data=>scope.onmessage({data}));
+  parentPort!.on('message',data=>{
+   if(workerData.failure==='invalid-matrix'&&data.workerId===0){
+    const last=data.pool.schedule.faceCount-1,words=Math.ceil((last+1)/16);
+    data.pool.matrix[last*words+(last>>>4)]|=3<<((last&15)*2);
+   }
+   if(workerData.failure==='stale-slot'&&data.workerId===0){
+    const control=data.pool.control,add=Atomics.add;
+    Atomics.add=((array:Int32Array,index:number,value:number)=>{
+     if(array===control&&index===5&&Atomics.load(control,0)===2)data.pool.writtenAt[0]=0;
+     return add(array,index,value);
+    }) as typeof Atomics.add;
+   }
+   scope.onmessage({data});
+  });
  }
 }else{
  const {createWorkerRegionCoverageChecker}=await import('../../../src/core/regionParallelChecker');

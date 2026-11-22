@@ -10,7 +10,8 @@ const sha=async file=>createHash('sha256').update(await readFile(path.join(root,
 const files=[];
 async function walk(folder){for(const entry of await readdir(path.join(root,folder),{withFileTypes:true})){const file=path.join(folder,entry.name);if(entry.isDirectory())await walk(file);else if(file.endsWith('.map'))files.push({file,sha256:await sha(file),generated:file.slice(0,-4),generatedSha256:await sha(file.slice(0,-4))});}}
 await walk('dist');if(!files.length)throw Error('No sourcemaps found');
-const exe='src-tauri/target/release/zhezhi-workbench-tauri.exe',pdb='src-tauri/target/release/zhezhi_workbench_tauri.pdb';await stat(path.join(root,pdb));
+const nativeDir=path.relative(root,path.resolve(root,process.env.CARGO_TARGET_DIR || 'src-tauri/target','release'));
+const exe=path.join(nativeDir,'zhezhi-workbench-tauri.exe'),pdb=path.join(nativeDir,'zhezhi_workbench_tauri.pdb');await stat(path.join(root,pdb));
 const manifest=path.join('build/debug/tauri',id,'BUILD-INFO.json');
 await writeFile(path.join(root,manifest),JSON.stringify({id,assets:files,native:{executable:exe,sha256:await sha(exe),symbols:pdb,symbolsSha256:await sha(pdb)}},null,2));
 const archive=path.join(output,`Zhezhi-Workbench-Tauri-${id}-Debug.zip`);

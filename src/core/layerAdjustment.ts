@@ -57,7 +57,12 @@ export function selectAdjustedLayerSolution(tree:LayerNode,{vertices,faces,epsil
   if(!base||currentRank===null)return {status:'unsupported',message:'选中纸面与相交纸层的上下关系尚未完整确认，无法调整。'};
   if(currentOrders){
     try{validateLayerOrders(currentOrders,faces.length);}catch{return {status:'error',message:'当前未编号候选的纸层关系无效。'};}
-    const compatible=(node:LayerNode):boolean=>node.orders.every(([a,b,sign])=>base.get(pairKey(a,b))===(sign*normals[b]>0?a:b))&&(node.branches??[]).every(group=>group.some(compatible));
+    const compatible=(node:LayerNode):boolean=>node.orders.every(([a,b,sign])=>{
+      const saved=base.get(pairKey(a,b));
+      // Unnumbered published candidates omit auxiliary edge-only rows. The
+      // tree still has to admit a completion with every actual overlap fixed.
+      return saved===undefined?!overlaps[a]?.includes(b):saved===(sign*normals[b]>0?a:b);
+    })&&(node.branches??[]).every(group=>group.some(compatible));
     if(!compatible(tree)||matches&&!matches(currentOrders))return {status:'unsupported',message:'当前未编号候选不属于本次合法层序解集，已保留原顺序。'};
   }
   const end=up?peers.size:0;
@@ -70,7 +75,7 @@ export function selectAdjustedLayerSolution(tree:LayerNode,{vertices,faces,epsil
     if(!map||candidateRank===null){unreadable=true;continue;}
     if(up?candidateRank<=currentRank:candidateRank>=currentRank)continue;
     let others=0,target=0;
-    for(const [key,upper] of map)if(base.get(key)!==upper){const [a,b]=key.split(':').map(Number);if(a===request.face||b===request.face)target++;else others++;}
+    for(const [key,upper] of map)if(base.has(key)&&base.get(key)!==upper){const [a,b]=key.split(':').map(Number);if(a===request.face||b===request.face)target++;else others++;}
     const nearest=request.direction==='up'||request.direction==='down';
     if(!best)best={index,orders,rank:candidateRank,others,target};
     else {

@@ -2,7 +2,7 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {blankDoc} from '../../src/app/state';
 import {createDiagramProject} from '../../src/app/diagramProject';
-import {createDiagramLibrary,DiagramLibraryConflictError,DIAGRAM_LEGACY_DRAFT_KEY,type DiagramLibraryBackgroundRequest} from '../../src/app/diagramLibrary';
+import {createDiagramLibrary,DiagramLibraryConflictError,DIAGRAM_LIBRARY_KEY,DIAGRAM_LEGACY_DRAFT_KEY,type DiagramLibraryBackgroundRequest} from '../../src/app/diagramLibrary';
 import {runDiagramLibraryBackgroundSave} from '../../src/app/diagramLibraryBackgroundSave';
 
 function backing(){
@@ -10,6 +10,48 @@ function backing(){
   return {entries,getItem:(key:string)=>entries.get(key)??null,setItem:(key:string,value:string)=>{entries.set(key,value);},compareAndSet(key:string,expected:string|null,value:string){if((entries.get(key)??null)!==expected)return false;entries.set(key,value);return true;}};
 }
 const project=()=>createDiagramProject(blankDoc('后台绘图',100,100));
+test('an idle recovery record restores pending captions and CP edits after restart and keeps the manual version',async()=>{
+  const store=backing(),requests:DiagramLibraryBackgroundRequest[]=[];
+  const ui=createDiagramLibrary(store,{backgroundSave:async request=>{requests.push(request);return runDiagramLibraryBackgroundSave(request,store);}});
+  const original=project(),entry=ui.save(original,{kind:'saved'}),base=ui.load(entry.id),body=store.getItem(entry.savedKey!);
+  const caption={...base,steps:base.steps.map(s=>({...s,title:'尚未切步'}))};
+  const autosave=(p:typeof base)=>ui.saveAsync(p,{kind:'draft',id:entry.id},{incremental:true,coalesce:true});
+  const first=await autosave(caption);
+  assert.ok(first.recoveryKey);assert.equal(first.draftKey,entry.draftKey);
+  assert.deepEqual(JSON.parse(store.getItem(first.recoveryKey)!).steps.changes[base.steps[0].id].set,{title:'尚未切步'});
+  assert.equal(JSON.stringify(requests[0]).includes('"states":['),false);
+  const changed={...caption,states:caption.states.map((s,i)=>i?s:{...s,doc:{...s.doc,segments:[...s.doc.segments,{id:'new-line',a:[0,0] as [number,number],b:[50,50] as [number,number],assignment:'V' as const,angle:null}]}})};
+  const latest=await autosave(changed);
+  const restarted=createDiagramLibrary(store,{backgroundSave:async req=>runDiagramLibraryBackgroundSave(req,store)});
+  const restored=await restarted.loadAsync(entry.id,async raw=>JSON.parse(raw).project);
+  assert.equal(restored.steps[0].title,'尚未切步');assert.deepEqual(restored.states[0].doc.segments,changed.states[0].doc.segments);
+  assert.deepEqual(createDiagramLibrary(store).load(entry.id,'saved').states,base.states);
+  assert.equal(store.getItem(entry.savedKey!),body);assert.equal(store.getItem(first.recoveryKey!), '');
+  const saved=await restarted.saveAsync(restored,{id:entry.id,kind:'saved'});
+  assert.equal(saved.recoveryKey,undefined);assert.equal(store.getItem(latest.recoveryKey!), '');
+  assert.deepEqual(createDiagramLibrary(store).load(entry.id).states,restored.states);
+});
+test('idle recovery updates reject a stale window and preserve the latest unsaved edit',async()=>{
+  const store=backing(),open=()=>createDiagramLibrary(store,{backgroundSave:async r=>runDiagramLibraryBackgroundSave(r,store)});
+  const a=open(),b=open(),entry=a.save(project(),{kind:'saved'}),pa=a.load(entry.id),pb=b.load(entry.id);
+  await a.saveAsync({...pa,name:'窗口 A'},{id:entry.id,kind:'draft'},{incremental:true});
+  await assert.rejects(b.saveAsync({...pb,name:'窗口 B'},{id:entry.id,kind:'draft'},{incremental:true}),DiagramLibraryConflictError);
+  assert.equal(open().load(entry.id).name,'窗口 A');
+});
+test('a concurrent write to a different drawing preserves both recovery heads',async()=>{
+  const store=backing(),originalCAS=store.compareAndSet.bind(store);
+  let onDirectoryWrite:(()=>void)|undefined;
+  store.compareAndSet=(key,expected,value)=>{
+    if(key===DIAGRAM_LIBRARY_KEY&&onDirectoryWrite){const update=onDirectoryWrite;onDirectoryWrite=undefined;update();}
+    return originalCAS(key,expected,value);
+  };
+  const a=createDiagramLibrary(store,{backgroundSave:async request=>runDiagramLibraryBackgroundSave(request,store)}),b=createDiagramLibrary(store);
+  const first=project(),second=project(),ea=a.save(first,{kind:'saved'}),eb=b.save(second,{kind:'saved'});
+  onDirectoryWrite=()=>{b.save({...second,name:'另一个文档'},{kind:'draft',id:eb.id});};
+  await a.saveAsync({...first,name:'当前文档'},{kind:'draft',id:ea.id},{incremental:true});
+  const reopened=createDiagramLibrary(store);
+  assert.equal(reopened.load(ea.id).name,'当前文档');assert.equal(reopened.load(eb.id).name,'另一个文档');
+});
 function gate(){let release!:()=>void;const ready=new Promise<void>(resolve=>{release=resolve;});return {ready,release};}
 
 test('background saves retain the original opened head and reject a later external revision',async()=>{

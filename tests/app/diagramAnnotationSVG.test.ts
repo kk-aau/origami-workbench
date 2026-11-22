@@ -4,6 +4,7 @@ import {DIAGRAM_SYMBOL_KINDS,type DiagramAnnotation,type DiagramLineAnnotation,t
 import {diagramAnnotationMarkup,diagramSymbolPreview,annotationBounds,symbolComponentHandles,moveSymbolComponent,symbolNativeGrips,symbolNativeBaseline,moveSymbolNativeGrip,diagramRepeatVisualAngle,setDiagramRepeatVisualAngle,orientDiagramRepeatSymbol,pointHitsDiagramSymbol,symbolIntersectsSegment,symbolIntersectsBox,SYMBOL_LABELS,LINE_LABELS} from '../../src/app/diagramAnnotationSVG';
 import {SYMBOL_CATALOG,getSymbolParameters} from '../../src/app/diagramSymbolCatalog';
 import type {Point} from '../../src/core/types';
+import {svgElements} from '../helpers/svgElements';
 
 const line:DiagramLineAnnotation={id:'l',kind:'line',a:[-10,5],b:[30,20],style:'valley',color:'#333333',width:2};
 const symbol:DiagramSymbolAnnotation={id:'s',kind:'symbol',symbol:'fold',position:[20,30],size:100,rotation:0,color:'#123',width:2};
@@ -31,13 +32,22 @@ test('new repeat symbols preserve their native shape after a turned drawing and 
 
 test('line types retain their width and have distinct fold-diagram dash patterns',()=>{
   assert.deepEqual(Object.keys(LINE_LABELS),['valley','mountain','crease','auxiliary','boundary']);
-  const markup=Object.keys(LINE_LABELS).map(style=>diagramAnnotationMarkup({...line,style:style as DiagramLineAnnotation['style']}));
-  assert.match(markup[0],/stroke-dasharray="14 8"/);
-  assert.match(markup[1],/stroke-dasharray="18 6 2 6"/);
-  assert.doesNotMatch(markup[2],/stroke-dasharray/);
-  assert.match(markup[3],/stroke-dasharray="2 8"/);
-  assert.doesNotMatch(markup[4],/stroke-dasharray/);
-  for(const output of markup){assert.match(output,/stroke-width="2"/);assert.doesNotMatch(output,/<circle|<text|marker-/);}
+  const patterns={valley:[7,4],mountain:[9,3,1,3],crease:[],auxiliary:[1,4],boundary:[]};
+  for(const style of Object.keys(patterns) as DiagramLineAnnotation['style'][]){
+    const output=diagramAnnotationMarkup({...line,style}),[{attrs}]=svgElements(output);
+    assert.equal(Number(attrs['stroke-width']),line.width);
+    assert.doesNotMatch(output,/<circle|<text|marker-/);
+    const authored=patterns[style];
+    if(!authored.length){assert.equal(attrs['stroke-dasharray'],undefined);continue;}
+    const dashes=attrs['stroke-dasharray'].split(/\s+/).map(Number);
+    assert.equal(dashes.length,authored.length);
+    assert.ok(dashes.every(n=>n>0));
+    dashes.forEach((n,i)=>near(n/dashes[0],authored[i]/authored[0]));
+    // Endpoint fitting preserves the authored ink/gap ratios and centres both tips in ink.
+    const period=dashes.reduce((sum,n)=>sum+n,0),cycles=Number(attrs.pathLength)/period;
+    assert.ok(cycles>=1-1e-8);near(cycles,Math.round(cycles));
+    near(Number(attrs['stroke-dashoffset']),dashes[0]/2);
+  }
 });
 
 test('all source vector symbols and the double step-fold variant share paths between fitted palettes and diagram export',()=>{

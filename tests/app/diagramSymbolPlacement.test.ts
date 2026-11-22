@@ -3,12 +3,76 @@ import assert from 'node:assert/strict';
 import {blankDoc} from '../../src/app/state';
 import {DIAGRAM_SYMBOL_KINDS,type DiagramSymbolAnnotation} from '../../src/app/diagramAnnotations';
 import {diagramSymbolInitialSize,getSymbolParameters} from '../../src/app/diagramSymbolCatalog';
+import {diagramCanvasSymbols,diagramSymbolAnchor} from '../../src/app/diagramSymbolGeometryEdit';
+import {diagramViewportUnits} from '../../src/app/diagramDrawingTools';
+import {drawingSVG} from '../../src/app/diagramDrawing';
 import {buildCadSymbolGeometry} from '../../src/app/diagramCadSymbolGeometry';
-import {annotationBounds,diagramAnnotationMarkup,moveSymbolNativeGrip,symbolNativeBaseline,symbolNativeGrips} from '../../src/app/diagramAnnotationSVG';
+import {annotationBounds,diagramAnnotationMarkup,moveSymbolNativeGrip,resolveDiagramSymbolInk,symbolNativeGrips} from '../../src/app/diagramAnnotationSVG';
 import {createDiagramProject,exportDiagramProject,importDiagramProject,updateDiagramAnnotations} from '../../src/app/diagramProject';
 
 const symbol=(size:number):DiagramSymbolAnnotation=>({id:'angle-marker',kind:'symbol',symbol:'equalAngle',position:[50,60],size,rotation:0,color:'#293d35',width:.7,cadProperties:{}});
 const close=(actual:number,expected:number)=>assert.ok(Math.abs(actual-expected)<1e-7,`${actual} != ${expected}`);
+
+test('saved arrow geometry matches exported geometry independently of viewport and paper size',()=>{
+ const saved:DiagramSymbolAnnotation={...symbol(20),symbol:'unfold',position:[76.95,100],cadProperties:{'距离1':68.98854554948822}};
+ const before=JSON.stringify(saved);
+ for(const units of [.2,.7,1.6]){
+  const canvas=diagramCanvasSymbols({width:100,height:200},{width:200,height:400},units);
+  assert.deepEqual(symbolNativeGrips(canvas.display(saved)),symbolNativeGrips(saved));
+  assert.equal(diagramAnnotationMarkup(canvas.display(saved),{units:.4}),diagramAnnotationMarkup(saved,{units:.4}));
+  const target:[number,number]=[50,200];
+  assert.deepEqual(canvas.paperPoint(saved,target),target);
+ }
+ assert.equal(JSON.stringify(saved),before);
+});
+
+test('manual camera zoom scales both symbol dimensions and ink around the same paper contact point',()=>{
+  const fitFrame={x:0,y:0,width:200,height:200};
+  const viewport={width:800,height:500};
+  const fitUnits=diagramViewportUnits(fitFrame,viewport);
+  close(fitUnits,.4);
+  const canvas=diagramCanvasSymbols(fitFrame,fitFrame,fitUnits);
+  for(const kind of DIAGRAM_SYMBOL_KINDS)for(const cad of [true,false]){
+    const model={...symbol(32),symbol:kind,rotation:31,mirrored:true};
+    if(!cad||kind==='tearWindow')delete model.cadProperties;
+    const original=structuredClone(model),anchor=diagramSymbolAnchor(model),shown=canvas.display(model);
+    const measure=(zoom:number)=>{
+      const camera={...fitFrame,width:fitFrame.width/zoom,height:fitFrame.height/zoom};
+      const units=diagramViewportUnits(camera,viewport);
+      diagramSymbolAnchor(shown).forEach((n,i)=>close(n,anchor[i]));
+      const pen={units,symbolUnits:fitUnits,symbolScale:canvas.scale};
+      const box=annotationBounds([shown],pen)!;
+      return [box.width/units,box.height/units,resolveDiagramSymbolInk(shown,pen).width/units];
+    };
+    const atFit=measure(1);
+    for(const zoom of [.5,2,1]){
+      measure(zoom).forEach((length,index)=>close(length,atFit[index]*zoom));
+    }
+    assert.deepEqual(model,original);
+  }
+});
+
+test('new placements have the same size at each artwork’s fit scale and manual grip edits update the authored symbol',()=>{
+  const sheet={width:200,height:200},art={width:70,height:120};
+  const first=diagramCanvasSymbols(art,sheet,.2),second=diagramCanvasSymbols({width:400,height:100},sheet,1.6);
+  for(const kind of ['fold','rightAngle','referencePoint'] as const){
+    const a=first.display({...symbol(first.initialSize(kind)),symbol:kind});
+    const b=second.display({...symbol(second.initialSize(kind)),symbol:kind});
+    close(a.size/.2,b.size/1.6);
+  }
+  const model={...symbol(first.initialSize('rightAngle')),symbol:'rightAngle' as const};
+  const fixed=diagramSymbolAnchor(model),shown=first.display(model);
+  const scaleGrip=symbolNativeGrips(shown).find(grip=>grip.semantic==='scale')!;
+  const target:[number,number]=[fixed[0]+2*(scaleGrip.point[0]-fixed[0]),fixed[1]+2*(scaleGrip.point[1]-fixed[1])];
+  const resized=moveSymbolNativeGrip(model,scaleGrip.id,first.paperPoint(model,target));
+  close(resized.size,model.size*2);
+  const after=symbolNativeGrips(first.display(resized)).find(grip=>grip.id===scaleGrip.id)!;
+  after.point.forEach((n,i)=>close(n,target[i]));
+  const unchanged=drawingSVG(null,[model],'','');
+  second.display(model);
+  assert.equal(drawingSVG(null,[model],'',''),unchanged);
+  assert.notEqual(drawingSVG(null,[resized],'',''),unchanged);
+});
 
 test('new angle bisector markers occupy about 16 mm on a 200 mm sheet with two small original CAD dots',()=>{
   const size=diagramSymbolInitialSize('equalAngle',{width:200,height:200},{width:200,height:200}),annotation=symbol(size);

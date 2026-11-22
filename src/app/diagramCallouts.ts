@@ -1,4 +1,5 @@
 import type {Point} from '../core/types';
+import type {DiagramSymbolStyles} from './diagramSymbolStyles';
 
 /** Illustration-only circular insets. Source positions use the paper drawing's
  * world coordinates or the referenced CP's original millimetre coordinates. */
@@ -83,10 +84,10 @@ export function diagramCalloutDrawingBounds(callouts:readonly DiagramCallout[]):
   const bounds=diagramCalloutsBounds(callouts);
   return bounds?{x:bounds.minX,y:bounds.minY,width:bounds.maxX-bounds.minX,height:bounds.maxY-bounds.minY}:null;
 }
-/** Paper magnifiers use exterior tangents. CP locators and comparison circles
- * stand independently. A contained paper pair has no exterior connector. */
-export function diagramCalloutConnectors(callout:DiagramCallout,target:DiagramCalloutCircle=callout.target):[Point,Point][] {
-  if(callout.source.kind==='cp')return [];
+/** Optional exterior tangents connect the locator in drawing coordinates to each inset. */
+export function diagramCalloutConnectors(callout:DiagramCallout,target:DiagramCalloutCircle=callout.target,styles?:DiagramSymbolStyles):[Point,Point][] {
+  const paper=callout.source.kind==='paper';
+  if(!(styles?.[paper?'paperCallout':'cpCallout']?.calloutConnectors??paper))return [];
   const a=diagramCalloutLocator(callout),b=target,dx=b.center[0]-a.center[0],dy=b.center[1]-a.center[1],distance=Math.hypot(dx,dy);
   if(distance<=Math.abs(a.radius-b.radius))return [];
   const x=dx/distance,y=dy/distance,c=(a.radius-b.radius)/distance,s=Math.sqrt(Math.max(0,1-c*c));

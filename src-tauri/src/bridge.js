@@ -20,7 +20,7 @@
 
   const hostContext=window.__zhezhiHostContext??{role:'document',documentId:null};
   const documentListeners=new Set(),documentCommands=new Set();
-  const documentCommandNames=new Set(['open','new','save','save-artwork','save-crease','undo','redo','library','artwork-overview','export','settings','print','workspace:edit','workspace:design','workspace:tess','workspace:sim','workspace:diagram']);
+  const documentCommandNames=new Set(['open','new','save','save-file','save-file-as','save-artwork','save-crease','undo','redo','library','artwork-overview','export','settings','print','workspace:edit','workspace:design','workspace:tess','workspace:sim','workspace:diagram']);
   const documentRequest=(action,input={})=>invoke('desktop_documents',{action,input});
   const scopePreferenceKey=key=>{
     if(key!=='zhezhi.diagram-project.v1'||hostContext.role!=='document'||!hostContext.documentId)return key;
@@ -111,16 +111,22 @@
   const commands = new Set();
   const windowListeners = new Set();
   const windowAction = action => invoke('desktop_window_action', {action});
-  async function saveExport(blob, name, options = {}) {
+  async function saveExport(blob, name, options = {}, blender = false) {
     if (!(blob instanceof Blob) || typeof name !== 'string' || !name.trim()) throw new Error('导出文件无效。');
     const cancelled = () => options.signal?.aborted === true;
     if (cancelled()) return {status:'cancelled'};
-    const selected = await invoke('desktop_prepare_export', {name, bytes:blob.size});
+    const step = blender && name === 'folded-paper.zzanim' ? options.step : undefined;
+    const selected = await invoke('desktop_prepare_export', {name, bytes:blob.size,...(options.projectFile?{projectFile:true,binding:options.binding}:{}),...(blender?{blender:true,blenderStep:step}:{})});
     if (selected.cancelled) return {status:'cancelled'};
     const ticket = selected.ticket;
     if (typeof ticket !== 'string' || !ticket) throw new Error('桌面导出请求标识无效。');
     let committed = false;
     try {
+      if (options.encodeDiagram) {
+        if (!selected.fileName) throw new Error('未收到所选工程文件名。');
+        blob=await options.encodeDiagram(selected.fileName);
+        await invoke('desktop_prepare_export',{name,bytes:blob.size,projectFile:true,sizeTicket:ticket});
+      }
       const chunkBytes = selected.chunkBytes;
       if (!Number.isSafeInteger(chunkBytes) || chunkBytes < 1 || chunkBytes > 1024*1024) throw new Error('桌面导出数据块配置无效。');
       if (cancelled()) return {status:'cancelled'};
@@ -137,7 +143,14 @@
       }
       if (cancelled()) return {status:'cancelled'};
       // Once commit starts, report its real outcome even if cancellation arrives.
+      options.onCommit?.();
       const result=await invoke('desktop_finish_export',{ticket});
+      if(blender){
+        if(step!==undefined){
+          if(result?.status!=='linked'&&result?.status!=='updated')throw new Error('Blender 尚未确认步骤动画已载入。');
+        }else if(result?.status!=='launched')throw new Error('桌面未确认 Blender 已启动。');
+        committed=true;return result;
+      }
       if (result?.status!=='saved' || typeof result.path!=='string' || !result.path) throw new Error('桌面未确认文件保存完成。');
       committed=true;return result;
     } finally {
@@ -150,27 +163,36 @@
     documentId:hostContext.documentId,
     documents:Object.freeze({
       getContext:()=>documentRequest('context'),list:()=>documentRequest('list'),
-      activate:id=>documentRequest('activate',{id}),setBounds:rects=>documentRequest('bounds',{rects}),
+      checkUpdate:()=>documentRequest('check-update'),openReleasePage:()=>documentRequest('open-release-page'),
+      activate:id=>documentRequest('activate',{id}),setBounds:(rects,viewport={width:window.innerWidth,height:window.innerHeight})=>documentRequest('bounds',{rects,viewport}),
       openWorkspace:(workspace,initialCommand,transfer,libraryKey,returnToOrigin)=>documentRequest('open-workspace',{workspace,initialCommand,transfer,libraryKey,returnToOrigin}),
+      openCPPreview:(phase,token)=>documentRequest('cp-preview',{phase,token}),
       setLibraryIdentity:key=>documentRequest('library-identity',{key}),focusOrigin:()=>documentRequest('focus-origin'),close:id=>documentRequest('close',{id}),
       sendCommand:(id,command)=>{if(!documentCommandNames.has(command))return Promise.reject(new Error('不支持此作品操作。'));return documentRequest('command',{id,command});},
       report:metadata=>documentRequest('report',metadata),
       subscribe:callback=>{documentListeners.add(callback);return()=>documentListeners.delete(callback);},
       onCommand:callback=>{documentCommands.add(callback);return()=>documentCommands.delete(callback);},
-      popupMenu:(items,position)=>documentRequest('popup',{items,x:position.x,y:position.y}),
+      popupMenu:(items,position)=>documentRequest('popup',{items,x:position.x,y:position.y,viewport:{width:window.innerWidth,height:window.innerHeight}}),
     }),
-    ready: () => { invoke('desktop_ready').catch(console.error); },
+    ready: (errorPage=false) => { invoke('desktop_ready',{errorPage}).catch(console.error); },
     openProject: kind => invoke('desktop_open_project', {kind}).then(value => {
       const bytes = new Uint8Array(value);
       if (bytes.byteLength === 0) return null;
       if (bytes.byteLength < 4) throw new Error('工程文件读取结果不完整。');
       const nameLength = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength).getUint32(0, true);
       if (nameLength > bytes.byteLength - 4) throw new Error('工程文件读取结果不完整。');
-      return {name: new TextDecoder().decode(bytes.subarray(4, 4 + nameLength)), bytes: bytes.subarray(4 + nameLength)};
+      const header=JSON.parse(new TextDecoder().decode(bytes.subarray(4, 4 + nameLength)));
+      return {name:header.name,binding:header.binding,bytes: bytes.subarray(4 + nameLength)};
     }),
     preferences: Object.freeze({
       cacheOnly: true,
       getItem: key => preferences('get', scopePreferenceKey(key)),
+      getItemFresh: key => {
+        key=scopePreferenceKey(key);
+        const {value}=request('/api/storage/preferences?key='+encodeURIComponent(key));
+        if(value!==null&&typeof value!=='string')throw new Error('存储服务返回的记录无效。');
+        rememberPreference(key,value);return value;
+      },
       setItem: (key, value) => preferences('set', scopePreferenceKey(key), value),
       compareAndSet: (key, expectedValue, value) => preferences('compareAndSet', scopePreferenceKey(key), value, expectedValue),
       getItemAsync: key=>readPreference(scopePreferenceKey(key)),
@@ -182,7 +204,12 @@
     storage: Object.freeze({pickDirectory: kind => invoke('desktop_pick_directory', {kind})}),
     print: () => invoke('desktop_print'),
     openDataDirectory: () => invoke('desktop_open_data_directory'),
-    saveExport,
+    verifyProjectFile:binding=>invoke('desktop_prepare_export',{name:'project.zds',bytes:0,projectFile:true,binding,verifyOnly:true}).then(result=>result.path),
+    saveNamedDiagram:(name,encodeDiagram)=>saveExport(new Blob([]),name,{projectFile:true,encodeDiagram}),
+    saveExport:(blob,name,options)=>saveExport(blob,name,options),
+    sendToBlender:blob=>saveExport(blob,'folded-paper.obj',{},true),
+    sendAnimationToBlender:(blob,options)=>saveExport(blob,'folded-paper.zzanim',options,true),
+    blenderStepIsOpen:step=>invoke('desktop_blender_step_status',{step}),
     window: Object.freeze({
       getState: () => invoke('desktop_window_state'),
       minimize: () => windowAction('minimize'),

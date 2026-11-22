@@ -6,6 +6,7 @@ export type LayerPairBackend='cpu'|'auto'|'gpu';
 // Enabled in a calculation Worker only. Core/UI callers retain a CPU path.
 let backend:LayerPairBackend='cpu';
 export function installLayerPairScreening(value:LayerPairBackend='auto'){backend=value;}
+export function layerPairScreeningBackend(){return backend;}
 export interface LayerPairOptions {padding?:number;positiveArea?:boolean}
 const accepts=(a:Bounds2,b:Bounds2,{padding=0,positiveArea=false}:LayerPairOptions)=>positiveArea
  ?Math.min(a[2],b[2])-Math.max(a[0],b[0])>0&&Math.min(a[3],b[3])-Math.max(a[1],b[1])>0

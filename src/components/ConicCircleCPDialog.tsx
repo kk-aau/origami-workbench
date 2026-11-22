@@ -1,3 +1,4 @@
+import {PlotCreasePath,PlotStrokeGroup} from './PlotStrokeGroup';
 import {useEffect,useMemo,useRef,useState,type PointerEvent as ReactPointerEvent} from 'react';
 import {TessDialog} from './TessellationEditor';
 import {fetchGenericConicSectionWhenIdle,type GenericConicSectionResult} from '../app/curvedNativeConicSection';
@@ -49,7 +50,7 @@ function PaperPlot({recipe,onChange}:{recipe:ConicCircleCPRecipe;onChange:(r:Con
   {[left,right].map((edge,i)=><path key={i} d={path(edge)} className="cccp-boundary"/>)}
   {[0,recipe.segments].flatMap(i=>[<path key={'l'+i} d={path([crease[i],left[i]])} className="cccp-boundary"/>,
    <path key={'r'+i} d={path([crease[i],right[i]])} className="cccp-boundary"/>])}
-  <path d={path(crease)} className="cccp-crease"/>
+  <PlotStrokeGroup><PlotCreasePath points={crease} widthPixels={2.5} dash="5 3" d={path(crease)} className="cccp-crease"/></PlotStrokeGroup>
   {rows.filter((_,i)=>i%Math.max(1,Math.ceil(recipe.segments/8))===0).map((row,i)=><path key={i} d={path([row.left,row.crease,row.right])} className="cccp-guide"/>)}
   {handles.map(h=><g key={h.kind} className={'cccp-handle '+h.kind} data-testid={'conic-circle-handle-'+h.kind}
     onPointerDown={event=>{event.preventDefault();const matrix=svg.current?.getScreenCTM();if(!matrix)return;

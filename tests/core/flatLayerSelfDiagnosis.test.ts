@@ -8,6 +8,8 @@ import {flatFoldPublication} from '../../src/app/flatFoldPublication';
 import {computeFlatFold,recomputeFlatLayers} from '../../src/core/flatFold';
 import {singleMountainFold} from '../fixtures/layerBoundaryCases';
 import {buildExactModelTopology} from '../../src/app/modelExactTopology';
+import {installWorkerRegionCoverageChecker} from '../../src/core/regionCoverageChecker';
+import {checkCoverageTournaments,type RegionPair} from '../../src/core/regionTournament';
 
 function model(rings:Point[][],orders:[number,number,number][]=[]):FlatFoldResult{
  const vertices:Point[]=[],faces=rings.map(ring=>ring.map(p=>vertices.push(p)-1));
@@ -16,6 +18,29 @@ function model(rings:Point[][],orders:[number,number,number][]=[]):FlatFoldResul
   layers:{status:'solved',message:'原约束提示',faceOrders:orders,solutionCount:8,solutionCountExact:'8',solutionIndex:2},warnings:[]};
 }
 const square:Point[]=[[0,0],[1,0],[1,1],[0,1]];
+
+test('self-diagnosis certifies only positive-area overlaps, including after completion',()=>{
+ const touching=square.map(([x,y]):Point=>[x+1,y]);
+ const seen:(readonly RegionPair[])[]=[];
+ installWorkerRegionCoverageChecker((coverage,pairs,...rest)=>{seen.push(pairs);return checkCoverageTournaments(coverage,pairs,...rest);});
+ try{
+  const initial=model([square,square,touching],[[0,1,1],[1,2,1],[2,0,1]]);
+  diagnoseFlatLayerCoverage(initial,()=>{throw Error('already complete');});
+  assert.equal(initial.layers.status,'solved',initial.layers.message);
+  assert.deepEqual(seen,[[[0,1]]]);
+  const partial=model([square,square,square,touching],[[0,1,1],[0,3,1]]);
+  diagnoseFlatLayerCoverage(partial,options=>{
+   assert.deepEqual(options.fixedOrders,[[0,1,1],[0,3,1]]);
+   return {orders:[[0,1,1],[0,3,1],[1,2,1],[0,2,1]]};
+  });
+  assert.equal(partial.layers.selfDiagnosis?.status,'completed',partial.layers.message);
+  assert.deepEqual(seen[1],[[0,1],[1,2],[0,2]]);
+  const invalid=model([square,square,touching],[[0,1,1],[0,2,1],[2,0,-1]]);
+  diagnoseFlatLayerCoverage(invalid,()=>null);
+  assert.equal(invalid.layers.status,'error');assert.match(invalid.layers.message,/重复/);
+  assert.equal(seen.length,2);
+ }finally{installWorkerRegionCoverageChecker();}
+});
 
 test('coverage completion uses material contours while preserving zero-angle drawing marks',()=>{
  const thin:Point[]=[[1-1e-11,0],[2,0],[2,1],[1-1e-11,1]],input=model([square,square,thin]);

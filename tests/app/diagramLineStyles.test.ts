@@ -99,7 +99,7 @@ test('custom patterns survive linked crease projection, refresh and SVG/PDF expo
   assert.ok(lines.length);assert.ok(lines.every(item=>item.color===mark.color&&item.width===mark.width&&item.strokePattern==='dotted'));
   const preview=projectDiagramFoldCP(step.pose!,before.doc,after.doc,before).preview;
   assert.ok(preview.length);assert.equal(diagramFoldPreviewAttributes(preview[0],step.annotations!,'#333333').strokePattern,'dotted');
-  for(const markup of [drawingSVG(step.pose!,step.annotations!,'','',preview),diagramPDFStepSVG(refreshed,step)])assert.match(markup,/<line[^>]+stroke="#972b53" stroke-width="2"[^>]+stroke-dasharray="2 8"/);
+  for(const markup of [drawingSVG(step.pose!,step.annotations!,'','',preview,[],true,undefined,[],undefined,{enabled:false}),diagramPDFStepSVG(refreshed,step,undefined,undefined,false)])assert.match(markup,/<line[^>]+stroke="#972b53" stroke-width="2"[^>]+stroke-dasharray="2 8"/);
   const saved=importDiagramProject(exportDiagramProject(updateDiagramAnnotations(refreshed,stepId,step.annotations!)));
   assert.deepEqual(saved.steps[0].annotations,step.annotations);
 });
@@ -115,7 +115,7 @@ test('CP-authored existing crease styles survive refresh while retaining their p
   const refreshed=refreshDiagramFoldDrawing(painted,stepId),step=refreshed.steps[0];
   assert.deepEqual(refreshed.states,projected.states);
   assert.ok(step.annotations!.every(item=>item.kind==='line'&&item.id.startsWith('cp-existing:')&&item.style==='crease'&&item.strokePattern==='dashed'));
-  assert.match(diagramPDFStepSVG(refreshed,step),/<g opacity="0\.55"><line[^>]+stroke="#1b6792" stroke-width="1\.5"[^>]+stroke-dasharray="10\.5 6"/);
+  assert.match(diagramPDFStepSVG(refreshed,step,undefined,undefined,false),/<g opacity="0\.55"><line[^>]+stroke="#1b6792" stroke-width="1\.5"[^>]+stroke-dasharray="10\.5 6"/);
 });
 
 test('converting generated F marks to fold instructions replaces their automatic faded paint',()=>{
@@ -180,7 +180,7 @@ test('partially redrawn linked creases retain old paint outside the newer stroke
   assert.equal(refreshedLines.length,3);
   assert.equal(refreshedLines.find(a=>Math.abs(a.a[0]-20)<1e-7&&Math.abs(a.b[0]-80)<1e-7)?.color,fresh.color);
   assert.deepEqual(refreshed.states,project.states);
-  const svg=drawingSVG(step.pose!,step.annotations!,'','',physicalPreview);
+  const svg=drawingSVG(step.pose!,step.annotations!,'','',physicalPreview,[],true,undefined,[],undefined,{enabled:false});
   assert.equal(svg.match(/<line[^>]+stroke="#293d35" stroke-width="0\.7"/g)?.length,1);
   assert.equal(svg.match(/<line[^>]+stroke="#8d9b92" stroke-width="0\.45"/g)?.length,2);
 });

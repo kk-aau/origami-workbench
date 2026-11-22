@@ -1,0 +1,93 @@
+.diagram-workspace.diagram-compact-workspace:has(>.diagram-branch-rail) {
+  grid-template-columns:auto minmax(0,1fr);
+}
+@media (min-width:1601px) {
+  .diagram-workspace.diagram-compact-workspace.has-properties:has(>.diagram-branch-rail) {
+    grid-template-columns:auto minmax(0,1fr) 266px;
+  }
+}
+.diagram-step-rail.diagram-branch-rail {
+  position:relative;
+  width:min(var(--step-rail-width),45vw);
+  min-width:0;
+  container:step-rail / inline-size;
+}
+.diagram-step-rail.diagram-branch-rail.is-closed {width:27px}
+.diagram-branch-rail>.panel-divider {
+  position:absolute;inset:0 0 0 auto;width:5px;
+  background:transparent;border:0;
+}
+.diagram-branch-rail>.panel-divider>span {left:2px;width:1px;height:24px}
+.diagram-step-rail.diagram-branch-rail>header {gap:4px;padding:6px 8px}
+.diagram-branch-rail>header>small {margin-inline-start:auto}
+.diagram-workspace .diagram-collapse-steps {
+  padding:0 3px;min-height:23px;min-width:23px;line-height:1;font-size:15px;
+}
+.diagram-workspace .diagram-restore-steps {
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;
+  flex:1;padding:0;border:0;border-radius:0;color:var(--diagram-accent);background:var(--diagram-soft);
+}
+.diagram-restore-steps span {writing-mode:vertical-rl;letter-spacing:.12em}
+.diagram-branch-rail .diagram-step-actions {padding:0 8px 6px;gap:3px}
+.diagram-branch-rail .diagram-step-actions .diagram-add-branch {grid-column:1/-1}
+.diagram-branch-rail.has-branches .diagram-step-actions .diagram-add-branch {grid-column:auto}
+@container step-rail (min-width:244px) {
+  .diagram-step-rail.diagram-branch-rail .diagram-insert-actions {grid-template-columns:repeat(4,minmax(0,1fr)) minmax(54px,1.45fr)}
+  .diagram-step-rail.diagram-branch-rail.has-branches .diagram-insert-actions {grid-template-columns:repeat(4,minmax(0,1fr))}
+  .diagram-branch-rail.has-branches .diagram-step-actions :is(.diagram-add-branch,.diagram-edit-branch) {grid-column:span 2}
+  .diagram-branch-rail .diagram-step-actions .diagram-add-branch {grid-column:auto}
+}
+.diagram-branch-label-editor {display:grid;gap:6px}
+.diagram-branch-label-modes {display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:3px;margin-bottom:5px}
+.diagram-branch-label-modes [aria-pressed=true] {color:var(--accent,#245b46);background:#e6eee6;border-color:#88a993}
+.diagram-branch-label-row {display:grid;grid-template-columns:minmax(0,1fr) minmax(0,.75fr);gap:8px;align-items:center}
+.diagram-branch-label-row span {overflow-wrap:anywhere}
+.diagram-branch-label-row output,.diagram-branch-label-row input {width:100%;min-width:0}
+.diagram-branch-label-row output {overflow-wrap:anywhere;text-align:end}
+.diagram-branch-label-editor [role=alert] {color:#a3322a;margin:0}
+.diagram-branch-insert {display:grid;gap:12px}
+.diagram-branch-insert fieldset {border:0;margin:0;padding:0;min-width:0}
+.diagram-branch-insert legend {padding:0;margin-bottom:5px}
+.diagram-branch-choices {display:flex;flex-wrap:wrap;gap:4px}
+.diagram-branch-choices button[aria-pressed=true] {color:var(--accent,#245b46);background:#e6eee6;border-color:#88a993}
+.diagram-branch-insert label {display:grid;gap:5px}
+.diagram-branch-insert select {width:100%;min-width:0}
+.diagram-branch-insert p {margin:0;color:var(--ui-dialog-muted)}
+.diagram-branch-insert [role=alert] {color:#a3322a}
+.diagram-branch-rail.has-branches>nav {
+  padding:3px 6px 8px;overflow:auto;overscroll-behavior:contain;
+}
+.diagram-branch-grid {
+  display:grid;width:max-content;margin-inline:auto;align-items:start;
+  grid-auto-columns:43px;gap:4px;
+}
+.diagram-branch-cell {min-width:0}
+.diagram-branch-card {
+  display:flex;align-items:stretch;width:100%;overflow:hidden;
+  background:var(--diagram-sheet);border:1px solid var(--diagram-line);border-radius:4px;
+}
+.diagram-branch-card.is-active {border-color:var(--diagram-accent);background:#e5eee3;box-shadow:inset 0 0 0 1px var(--diagram-accent)}
+.diagram-branch-card:focus-within {outline:2px solid var(--diagram-accent);outline-offset:1px}
+.diagram-workspace .diagram-branch-select {
+  display:flex;align-items:center;flex:1;min-width:0;min-height:36px;gap:3px;
+  border:0;padding:2px 3px;background:transparent;text-align:start;
+}
+.diagram-branch-select .diagram-step-thumb {
+  display:block;flex:0 0 23px;width:23px;height:29px;margin:0;border:0;background:transparent;
+}
+.diagram-branch-caption {display:block;min-width:0}
+.diagram-branch-caption>small,.diagram-branch-caption>strong {display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.diagram-branch-caption>small {font-size:10px;line-height:14px;white-space:normal;overflow-wrap:anywhere}
+.diagram-branch-grid.has-custom-labels {grid-auto-columns:60px}
+.diagram-branch-caption>strong {font-size:11px;line-height:15px;font-weight:600}
+.diagram-workspace .diagram-branch-fold {
+  flex:0 0 16px;min-width:0;min-height:0;padding:0;border:0;background:transparent;color:var(--diagram-accent);
+}
+.diagram-branch-fold[aria-expanded=false] {background:#e0ece1}
+.diagram-branch-rail .diagram-branch-cell .diagram-figure-entry {
+  width:100%;max-width:100%;margin:2px 0 0;padding:1px 3px;min-height:20px;
+}
+.app.web-tablet .diagram-workspace .diagram-branch-rail.has-branches>nav {display:block}
+.app.web-tablet .diagram-branch-grid {grid-auto-columns:50px}
+.app.web-tablet .diagram-workspace .diagram-branch-fold {flex-basis:36px}
+.app.web-tablet .diagram-branch-card:has(.diagram-branch-fold) .diagram-step-thumb {display:none}

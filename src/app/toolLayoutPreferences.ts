@@ -46,7 +46,7 @@ function legacyGroups():ToolLayoutGroup[] {
   return groups;
 }
 function legacyToolLayoutTemplates():ToolLayoutTemplate[] {
-  const groups=legacyGroups();
+  const groups=legacyGroups().map(group=>({...group,items:group.items.filter(id=>id!=='makecrease')}));
   return [
     {id:'default',name:'默认',columns:{left:0,right:4},groups,unassigned:[]},
     {id:'swapped',name:'左右对调',columns:{left:4,right:0},groups:groups.map(group=>({...group,side:group.side==='left'?'right':'left',items:[...group.items]})),unassigned:[]},
@@ -239,6 +239,12 @@ function template(value:unknown,repairItems:boolean):ToolLayoutTemplate {
   for(const item of input.unassigned as string[]|undefined??[]){
     if(!isToolLayoutItemId(item)||seen.has(item)){if(!repairItems)throw new Error('工具布局包含未知或重复工具，请检查布局后重试。');continue;}
     seen.add(item);unassigned.push(item);
+  }
+  if(!seen.has('makecrease')&&(!repairItems||input.unassigned!==undefined)){
+    const transform=groups.find(group=>group.id==='transform'&&group.items.includes('makevalley'));
+    if(transform)transform.items.splice(transform.items.indexOf('makevalley')+1,0,'makecrease');
+    else unassigned.push('makecrease');
+    seen.add('makecrease');
   }
   if(!repairItems&&seen.size!==TOOL_LAYOUT_ITEM_IDS.length)throw new Error('工具布局缺少工具，请检查布局后重试。');
   if(repairItems&&input.unassigned!==undefined){

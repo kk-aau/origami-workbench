@@ -1,3 +1,4 @@
+import {DocumentJunctionMarks} from './JunctionWarnings';
 import {useEffect,useMemo,useRef,useState} from 'react';
 import {openAppDialog} from './AppDialog';
 import {generateYoshimuraSixDocument,validateYoshimuraSixRecipe,yoshimuraSixPreset,yoshimuraSixSourceMatches,type YoshimuraSixRecipe} from '../app/yoshimuraSixCP2507';
@@ -15,7 +16,7 @@ function Plot({doc}:{doc:Doc}){const svg=useRef<SVGSVGElement>(null),[label,setL
   <g className="yscp-grid">{xTicks.map(x=><line key={'x'+x} x1={x} x2={x} y1={-minY} y2={-maxY}/>)}{yTicks.map(y=><line key={'y'+y} x1={minX} x2={maxX} y1={-y} y2={-y}/>)}</g>
   {doc.segments.map(s=><line key={s.id} data-segment-id={s.id} data-assignment={s.assignment} x1={s.a[0]} y1={-s.a[1]} x2={s.b[0]} y2={-s.b[1]} className={s.assignment==='B'?'yscp-boundary':'yscp-result'}/>)}
   <g className="yscp-ruler" fontSize={size}><path d={`M ${minX} ${axisY} H ${maxX} M ${axisX} ${-maxY} V ${-minY}`}/>{xTicks.map(x=><text key={x} x={x} y={axisY+size*1.2} textAnchor="middle">{fmt(x)}</text>)}{yTicks.map(y=><text key={y} x={axisX-size*.25} y={-y+size*.3} textAnchor="end">{fmt(y)}</text>)}<text x={maxX} y={-maxY-size*.7} textAnchor="end">x / mm · y / mm</text><path data-testid="yoshimura-six-mm-scale" data-mm={tick} d={`M ${minX} ${-maxY-size*.6} h ${tick}`}/><text x={minX+tick/2} y={-maxY-size*1.2} textAnchor="middle">{fmt(tick)} mm</text></g>
- </svg>;
+ {doc&&<DocumentJunctionMarks doc={doc} flipY spatial/>}</svg>;
 }
 export default function YoshimuraSixCP2507Dialog({initial,onClose,onAdoptCP}:{initial?:YoshimuraSixRecipe;onClose:()=>void;onAdoptCP?:(doc:Doc)=>boolean}){
  const dialog=useRef<HTMLDialogElement>(null),last=useRef<Doc|null>(null),[draft,setDraft]=useState(()=>draftFor(initial??yoshimuraSixPreset())),[current,setCurrent]=useState<Doc|null>(null),[state,setState]=useState<'checking'|'ready'|'error'>('checking'),[buildError,setBuildError]=useState(''),[adoptError,setAdoptError]=useState(''),[view,setView]=useState<'cp'|'static-3d'>('cp'),[camera,setCamera]=useState<OriginalArrayCamera>(()=>({...INITIAL_ORIGINAL_ARRAY_CAMERA}));

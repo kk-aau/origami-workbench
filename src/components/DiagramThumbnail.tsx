@@ -1,3 +1,5 @@
+import {fitDiagramArtwork,prepareDiagramFigureFrame} from '../app/diagramProcessFigureFrame';
+import {usePaperPixels} from './usePaperPixels';
 import {memo,useCallback,useEffect,useId,useMemo,useRef,useState,useSyncExternalStore} from 'react';
 import type {DiagramCPState,DiagramStep} from '../app/diagramProject';
 import type {DiagramLineDefaults} from '../app/diagramLineStyles';
@@ -11,9 +13,12 @@ import {Icon} from './Fields';
 export interface DiagramThumbnailProps {
   step:DiagramStep;
   states:readonly DiagramCPState[];
+  paperPatterns?:import('../app/paperPatterns').PaperPatterns;
   lineDefaults:DiagramLineDefaults;
+  symbolStyles?:import('../app/diagramSymbolStyles').DiagramSymbolStyles;
   adaptiveLines:boolean;
   zoom?:DiagramZoomRegion|null;
+  processFigure?:boolean;
   preparation?:{pending:boolean;message?:string};
   deferred?:'rail'|'overview';
   onVisibility?:(id:string,visible:boolean,surface:'rail'|'overview')=>void;
@@ -40,12 +45,12 @@ export default memo(function DiagramThumbnail(props:DiagramThumbnailProps){
   return <div ref={host} className="diagram-thumbnail-viewport" data-thumbnail-visible={visible}>{visible?props.imageCache&&props.imageSize?<ThumbnailImage {...props} imageCache={props.imageCache} imageSize={props.imageSize}/>:<ThumbnailDrawing {...props}/>:null}</div>;
 });
 
-function ThumbnailImage({step,states,lineDefaults,adaptiveLines,zoom,preparation,imageCache,imageSize,editingSession}:DiagramThumbnailProps&{imageCache:DiagramThumbnailCache;imageSize:DiagramThumbnailSource['size']}){
+function ThumbnailImage({step,states,paperPatterns,symbolStyles,lineDefaults,adaptiveLines,zoom,preparation,imageCache,imageSize,editingSession}:DiagramThumbnailProps&{imageCache:DiagramThumbnailCache;imageSize:DiagramThumbnailSource['size']}){
   const subscribe=useCallback((listener:()=>void)=>imageCache.subscribe(step.id,listener),[imageCache,step.id]);
   const getSnapshot=useCallback(()=>imageCache.getSnapshot(step.id),[imageCache,step.id]);
   const snapshot=useSyncExternalStore(subscribe,getSnapshot,getSnapshot),zoomKey=JSON.stringify(zoom??null);
-  useEffect(()=>{imageCache.request(step.id,{step,states,lineDefaults,adaptiveLines,zoom,preparation,size:imageSize},editingSession);},
-    [imageCache,step,states,lineDefaults,adaptiveLines,zoomKey,preparation?.pending,preparation?.message,imageSize.width,imageSize.height,editingSession]);
+  useEffect(()=>{imageCache.request(step.id,{step,states,paperPatterns,symbolStyles,lineDefaults,adaptiveLines,zoom,preparation,size:imageSize},editingSession);},
+    [imageCache,step,states,paperPatterns,symbolStyles,lineDefaults,adaptiveLines,zoomKey,preparation?.pending,preparation?.message,imageSize.width,imageSize.height,editingSession]);
   const message=snapshot.message??'正在生成缩略图';
   if(!snapshot.src)return <div className="diagram-thumbnail-empty" role="status" title={message}><Icon name="grid"/><span>{snapshot.status==='error'?'缩略图生成失败':snapshot.status==='preparation'?'层序待确认':'正在生成缩略图'}</span></div>;
   return <div className="diagram-thumbnail-image" aria-busy={snapshot.status==='loading'} data-thumbnail-status={snapshot.status}>
@@ -54,16 +59,30 @@ function ThumbnailImage({step,states,lineDefaults,adaptiveLines,zoom,preparation
   </div>;
 }
 
-const ThumbnailDrawing=memo(function ThumbnailDrawing({step,states,lineDefaults,adaptiveLines,zoom,preparation}:DiagramThumbnailProps){
+const ThumbnailDrawing=memo(function ThumbnailDrawing({step,states,paperPatterns,symbolStyles,lineDefaults,adaptiveLines,zoom,preparation,processFigure}:DiagramThumbnailProps){
+  const surfacePixels=usePaperPixels(step.simulationSurface?paperPatterns:undefined);
+  const [ink,setInk]=useState<{images:DiagramStep['images'];error?:string}|null>(null);
+  const measure=!!(!zoom&&step.images?.length&&fitDiagramArtwork(step,processFigure));
+  useEffect(()=>{
+    if(!measure)return;
+    const controller=new AbortController(),images=step.images!;
+    void prepareDiagramFigureFrame(images,controller.signal).then(()=>{if(!controller.signal.aborted)setInk({images});}).catch(cause=>{
+      if(!controller.signal.aborted)setInk({images,error:cause instanceof Error?cause.message:String(cause)});
+    });
+    return()=>controller.abort();
+  },[measure,step.images]);
+  const measured=!measure||ink?.images===step.images;
   const instanceId=useId();
   const paperVisible=step.paperVisible!==false,annotations=step.annotations??[],shown=paperVisible?annotations:annotations.filter(isDiagramImageAnnotationVisible);
-  const empty=!(paperVisible&&(step.pose?.result.geometry.vertices.length||step.simulationSurface))&&!shown.length&&!step.images?.length&&!step.callouts?.length,ready=!preparation&&!empty,zoomKey=JSON.stringify(zoom??null);
+  const empty=!(paperVisible&&(step.pose?.result.geometry.vertices.length||step.simulationSurface))&&!shown.length&&!step.images?.length&&!step.callouts?.length,ready=!preparation&&!empty&&measured,zoomKey=JSON.stringify(zoom??null);
   const drawing=useMemo(()=>{
     if(!ready)return null;
-    const svg=diagramThumbnailSVG(step,states,{lineDefaults,adaptiveLines,zoom});
+    const svg=diagramThumbnailSVG(step,states,{paperPatterns,symbolStyles,lineDefaults,adaptiveLines,zoom,processFigure});
     return {viewBox:svg.match(/\bviewBox="([^"]+)"/)![1],artwork:diagramCalloutNamespaceMarkup(diagramCalloutSVGBody(svg),`thumbnail-${instanceId}`)};
-  },[ready,step,states,lineDefaults,adaptiveLines,zoomKey,instanceId]);
+  },[ready,step,states,paperPatterns,surfacePixels,symbolStyles,lineDefaults,adaptiveLines,zoomKey,instanceId,processFigure]);
   if(preparation)return <div className="diagram-thumbnail-empty diagram-thumbnail-preparation" role="status" title={preparation.message}><Icon name="grid"/><span>{preparation.pending?'正在准备折图':'层序待确认'}</span></div>;
+  if(measure&&ink?.images===step.images&&ink?.error)return <div className="diagram-thumbnail-empty" role="status">{ink.error}</div>;
+  if(measure&&!measured)return <div className="diagram-thumbnail-empty" aria-busy="true"/>;
   if(!drawing)return <div className="diagram-thumbnail-empty"><Icon name="grid"/><span>等待折图</span></div>;
   return <svg aria-label="本步骤折图缩略图" viewBox={drawing.viewBox}><g dangerouslySetInnerHTML={{__html:drawing.artwork}}/></svg>;
 });

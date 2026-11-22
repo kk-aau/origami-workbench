@@ -1,5 +1,7 @@
 import {DIAGRAM_SYMBOL_PARAM_LIMITS,validateDiagramSymbolParams,type DiagramSymbolAnnotation,type DiagramSymbolKind,type DiagramSymbolParams} from './diagramAnnotations';
 
+export const DIAGRAM_SYMBOL_GROUPS=['折叠动作','开层与塑形','视图与方向','指示与标记','步骤与保持','纸层与其他'] as const;
+
 export interface DiagramSymbolParameter {key:keyof DiagramSymbolParams;label:string;min:number;max:number;step:number;defaultValue:number}
 export interface DiagramSymbolCatalogEntry {kind:DiagramSymbolKind;label:string;group:string;cadName:string;parameters:DiagramSymbolParameter[];textLabel?:string;sourceOnly?:boolean;variantOf?:DiagramSymbolKind;
   /** New placement only, relative to the source paper's short edge. Saved size/legacy rendering never use this. */

@@ -22,12 +22,12 @@ function fixture(){
   return {project,stepId:step.id};
 }
 
-test('a closed rigid loop becomes a refined bendable-paper clip without changing either CP',()=>{
+test('a closed rigid loop can bend on its original material mesh without changing either CP',()=>{
   const {project,stepId}=fixture(),saved=JSON.stringify(project),clip=buildDiagramStepAnimation(project,stepId);
   assert.equal(clip.animation.materialMode,'bendable');
   assert.equal(clip.animation.motionPolicy,'allow-dynamic');
   const {prepared}=prepareSimulationDocument(clip.fold);
-  assert.ok(prepared.vertexCount>9,'extra shared material vertices allow curvature');
+  assert.equal(prepared.vertexCount,9,'keep the four corners, four crease ends and shared center of this CP');
   assert.ok(clip.animation.fixedVertices.length<prepared.vertexCount,'a closed loop does not pin the entire paper');
   assert.ok(clip.animation.ranges.some(r=>r.fromAngle===0&&r.toAngle===90));
   assert.ok(clip.animation.ranges.filter(r=>r.toAngle!==0).every(r=>prepared.edgesAssignment[r.edge]==='V'));

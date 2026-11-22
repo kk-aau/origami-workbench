@@ -14,6 +14,14 @@ const horizontal=line('horizontal',[0,0],[100,0]),vertical=line('vertical',[0,0]
 const options={enabled:true,radius:5,targets:[] as Point[],lines:[horizontal,vertical],anchor:[0,0] as Point};
 const close=(a:Point,b:Point)=>assert.ok(Math.hypot(a[0]-b[0],a[1]-b[1])<1e-7,`${a} != ${b}`);
 
+test('two strokes at opposite grid crossings snap to the same projected crease junction',()=>{
+ const junction:Point=[-.017,10],lines=[line('up',[-1.017,9],[.983,11]),line('down',[-1.017,11],[.983,9])];
+ for(const pointer of [[0,9.983],[0,10.017]] as Point[])for(const anchor of [undefined,[3,8] as Point]){
+   const hit=snapDiagramDrawingLine(pointer,{enabled:true,gridSpacing:5,radius:.1,targets:[],lines,anchor});
+   close(hit.point,junction);assert.equal(hit.target?.kind,'intersection');
+ }
+});
+
 test('a real endpoint overrides a nearby geometric direction without a false marker',()=>{
  const p:Point=[31,32],result=snapDiagramDrawingLine([32,32],{...options,targets:[p]});
  close(result.point,p);assert.equal(result.relation,null);
@@ -139,4 +147,22 @@ test('real folded paper boundaries retain exact grid crossings when drawing and 
    close(resolved.point,[25,25]);assert.equal(resolved.target?.kind,'grid-intersection');
  }
  assert.deepEqual({pose,moving},before);
+});
+
+test('polyline continues at the committed endpoint and bisects the incoming crease and the grid',()=>{
+  const grid={origin:[0,0] as Point,stepX:50,stepY:50};
+  const first=snapDiagramDrawingLine([.1,.1],{enabled:true,radius:1,grid,lines:[],targets:[]});
+  close(first.point,[0,0]);
+  const incoming=line('last-leg',[-20,-20],first.point);
+  const pointer:Point=[18.5,7.9];
+  const next=snapDiagramDrawingLine(pointer,{enabled:true,anchor:first.point,grid,lines:[],targets:[],radius:1,incoming});
+  assert.equal(next.relation?.kind,'bisector');
+  assert.ok(next.relation.references.some(ref=>ref.id===incoming.id));
+  assert.ok(Math.abs(next.point[1]/next.point[0]-Math.tan(Math.PI/8))<1e-9);
+  const visible=line('existing-mark',[-10,-10],[10,10]);
+  const scoped=snapDiagramDrawingLine(pointer,{enabled:true,anchor:first.point,grid,lines:[],targets:[],radius:1,angleReferences:[visible]});
+  close(scoped.point,next.point);
+  assert.ok(scoped.relation?.references.some(ref=>ref.id===visible.id));
+  const free=snapDiagramDrawingLine(pointer,{enabled:true,anchor:first.point,grid,lines:[],targets:[],radius:1,incoming,altKey:true});
+  assert.equal(free.relation,null);close(free.point,pointer);
 });

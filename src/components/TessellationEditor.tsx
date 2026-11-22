@@ -1,3 +1,5 @@
+import {svgLineStroke} from '../app/adaptiveLineStyle';
+import {useAdaptiveLineStyle} from '../app/useAdaptiveLineStyle';
 import {useEffect,useMemo,useRef,useState,type ReactNode} from 'react';
 import {tessGeometryError,type TessGraph,type XY} from '../app/tessellation';
 import {simpleTile} from '../app/tileAssembly';
@@ -16,6 +18,7 @@ type Snapshot={points:XY[];selected:number};
 type Drag={pointer:number;kind:'point'|'pan';index:number;start:XY;original:XY;view:GeometryView;inverse:DOMMatrix;snapshot:Snapshot;changed:boolean};
 
 export default function TessellationEditor({title,initial,edges=[],mother,seed=false,min=seed?0:-100,max=seed?1:100,faces=[],strictConvex=false,allowConcave=false,pointDomain,seedBoundary,minPoints=4,maxPoints=36,validateGeometry,onApply,onClose,xLabel='点 X',yLabel='点 Y',invertY=false,editablePoints=false,orderedPath,onPreview,extraControls,onReset,applyLabel='保存几何修改',pointsCommand,previewGraph,solvedPoints,backgroundFaces=[],previewSummary,className,minimumLabelPixels}:Props){
+ const [adaptive]=useAdaptiveLineStyle();
  const [points,setPoints]=useState<XY[]>(()=>structuredClone(initial)),[selected,setSelected]=useState(0),[error,setError]=useState('');
  const [grid,setGrid]=useState(true),[snap,setSnap]=useState(false),[panMode,setPanMode]=useState(false),[aspect,setAspect]=useState(1.5),[gridStep,setGridStep]=useState<number|null>(null),[plotHeight,setPlotHeight]=useState(400);
  const [past,setPast]=useState<Snapshot[]>([]),[future,setFuture]=useState<Snapshot[]>([]);
@@ -60,7 +63,10 @@ export default function TessellationEditor({title,initial,edges=[],mother,seed=f
   if(seedBoundary){const area=seedBoundary.reduce((sum,a,i)=>{const b=seedBoundary[(i+1)%seedBoundary.length];return sum+a[0]*b[1]-a[1]*b[0];},0);if(seedBoundary.some((a,i)=>{const b=seedBoundary[(i+1)%seedBoundary.length];return points.some(p=>Math.sign(area)*((b[0]-a[0])*(p[1]-a[1])-(b[1]-a[1])*(p[0]-a[0]))< -1e-8);})){setError('种子必须在黑色边界内。');return;}}
   onApply(structuredClone(points));onClose();
  };
- const line=(a:XY,b:XY,key:string,color:string,dash?:string)=><line key={key} x1={display(a)[0]} y1={display(a)[1]} x2={display(b)[0]} y2={display(b)[1]} stroke={color} strokeWidth={1.3} strokeDasharray={dash} vectorEffect="non-scaling-stroke"/>;
+ const line=(a:XY,b:XY,key:string,color:string,dash?:string)=>{
+  const start=display(a),end=display(b);
+  return <line key={key} x1={start[0]} y1={start[1]} x2={end[0]} y2={end[1]} stroke={color} {...svgLineStroke(start,end,1.3,dash,{enabled:adaptive,units:view.span/Math.max(1,plotHeight),pen:'pixels'})}/>;
+ };
  return <TessDialog title={title} onClose={onClose} className={className}><div className="geometry-editor" onKeyDown={e=>{if((e.target as HTMLElement).closest('input,textarea,select'))return;if((e.ctrlKey||e.metaKey)&&['z','y'].includes(e.key.toLowerCase())){e.preventDefault();history(e.key.toLowerCase()==='y'||e.shiftKey);}else if(e.key==='Delete'||e.key==='Backspace'){e.preventDefault();removePoint();}}}>
   <div className="geometry-editor-toolbar"><button type="button" aria-pressed={!panMode} onClick={()=>setPanMode(false)}>移点</button><button type="button" aria-pressed={panMode} onClick={()=>setPanMode(true)}>平移视图</button><button type="button" aria-label="编辑器缩小" onClick={()=>zoom(1.25)}>−</button><button type="button" aria-label="编辑器放大" onClick={()=>zoom(.8)}>＋</button><button type="button" onClick={fit}>适合全部</button><button type="button" disabled={!past.length} onClick={()=>history()}>撤销</button><button type="button" disabled={!future.length} onClick={()=>history(true)}>重做</button><label><input type="checkbox" checked={grid} onChange={e=>setGrid(e.target.checked)}/>网格</label><label><input type="checkbox" checked={snap} onChange={e=>setSnap(e.target.checked)}/>吸附</label><label className="geometry-grid-step">间距<input aria-label="编辑网格间距" type="number" step="any" min="0" value={step} onChange={e=>{const n=Number(e.target.value);if(Number.isFinite(n)&&n>0)setGridStep(n);}}/></label><button type="button" title="恢复随缩放变化的刻度" onClick={()=>setGridStep(null)}>自动刻度</button></div>
   <div className="geometry-editor-extra">{extraControls}</div>

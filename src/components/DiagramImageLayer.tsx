@@ -1,47 +1,58 @@
-import {useEffect,useRef,useState,type PointerEvent as ReactPointerEvent} from 'react';
+import {memo,useEffect,useRef,useState,type PointerEvent as ReactPointerEvent} from 'react';
 import type {Point} from '../core/types';
+import {frameInkSVG,type DiagramFrameArtwork} from '../app/diagramFrameArtwork';
 import {diagramImageCorners,type DiagramImage} from '../app/diagramImages';
 import {resizeDiagramImage,translateDiagramImage,type DiagramImageCorner} from './diagramImageGesture';
 import './DiagramImageLayer.css';
 
-type ImageDrag={pointer:number;element:SVGGElement;image:DiagramImage;source:DiagramImage[];start:Point;client:Point;corner?:DiagramImageCorner;moved:boolean;draft:DiagramImage};
+type ImageDrag={pointer:number;element:SVGGElement;image:DiagramImage;source:DiagramImage[];inverse:DOMMatrix;start:Point;client:Point;corner?:DiagramImageCorner;moved:boolean;draft:DiagramImage};
 
-export default function DiagramImageLayer({images,selectedId,interactive,units,commandToken,point,onSelect,onStart,onChange,onGestureChange}:{
+const VectorInk=memo(function VectorInk({frame}:{frame:DiagramFrameArtwork}){
+  return <g dangerouslySetInnerHTML={{__html:frameInkSVG(frame)}}/>;
+});
+
+export default function DiagramImageLayer({images,selectedId,interactive,units,commandToken,inBounds,onSelect,onStart,onChange,onGestureChange}:{
   images:DiagramImage[];selectedId?:string;interactive:boolean;units:number;commandToken:number;
-  point:(x:number,y:number)=>Point|null;onSelect:(id:string|null)=>void;onStart:()=>void;
+  inBounds:(point:Point)=>boolean;onSelect:(id:string|null)=>void;onStart:()=>void;
   onChange?:(images:DiagramImage[])=>void;onGestureChange:(moving:boolean)=>void;
 }){
-  const drag=useRef<ImageDrag|null>(null),[draft,setDraft]=useState<DiagramImage|null>(null);
+  const drag=useRef<ImageDrag|null>(null),frame=useRef(0),[draft,setDraft]=useState<DiagramImage|null>(null);
   const callbacks=useRef({onSelect,onStart,onChange,onGestureChange});callbacks.current={onSelect,onStart,onChange,onGestureChange};
   function finish(commit=false){
-    const current=drag.current;drag.current=null;setDraft(null);callbacks.current.onGestureChange(false);
+    const current=drag.current;drag.current=null;cancelAnimationFrame(frame.current);frame.current=0;setDraft(null);callbacks.current.onGestureChange(false);
     if(current){
       if(current.element.hasPointerCapture(current.pointer))current.element.releasePointerCapture(current.pointer);
-      if(commit&&current.moved&&JSON.stringify(current.image)!==JSON.stringify(current.draft))callbacks.current.onChange?.(current.source.map(image=>image.id===current.image.id?current.draft:image));
+      const before=current.image,after=current.draft;
+      if(commit&&current.moved&&current.source===images&&(before.position[0]!==after.position[0]||before.position[1]!==after.position[1]||before.width!==after.width||before.height!==after.height)){
+        callbacks.current.onChange?.(images.map(image=>image.id===before.id?after:image));
+      }
     }
   }
   useEffect(()=>{finish();},[interactive,commandToken]);
-  useEffect(()=>{if(drag.current&&drag.current.image.id!==selectedId)finish();},[selectedId]);
+  useEffect(()=>{if(drag.current&&(drag.current.image.id!==selectedId||drag.current.source!==images))finish();},[selectedId,images]);
   useEffect(()=>{const blur=()=>finish();window.addEventListener('blur',blur);return()=>window.removeEventListener('blur',blur);},[]);
-  useEffect(()=>()=>{const current=drag.current;if(current?.element.hasPointerCapture(current.pointer))current.element.releasePointerCapture(current.pointer);},[]);
+  useEffect(()=>()=>{cancelAnimationFrame(frame.current);const current=drag.current;if(current){callbacks.current.onGestureChange(false);if(current.element.hasPointerCapture(current.pointer))current.element.releasePointerCapture(current.pointer);}},[]);
   function begin(event:ReactPointerEvent<SVGGElement>,image:DiagramImage,corner?:DiagramImageCorner){
     if(!interactive)return;
     if(event.button===2){event.preventDefault();event.stopPropagation();finish();callbacks.current.onSelect(null);return;}
-    if(event.button!==0)return;
-    const start=point(event.clientX,event.clientY);if(!start)return;
+    if(event.button!==0||drag.current)return;
+    const matrix=event.currentTarget.getScreenCTM();if(!matrix)return;
+    const inverse=matrix.inverse(),local=new DOMPoint(event.clientX,event.clientY).matrixTransform(inverse),start:Point=[local.x,local.y];
+    if(!inBounds(start))return;
     event.preventDefault();event.stopPropagation();
     callbacks.current.onStart();callbacks.current.onSelect(image.id);
     event.currentTarget.ownerSVGElement?.focus({preventScroll:true});
     if(!callbacks.current.onChange)return;
-    drag.current={pointer:event.pointerId,element:event.currentTarget,image:structuredClone(image),source:structuredClone(images),start,client:[event.clientX,event.clientY],corner,moved:false,draft:image};
+    drag.current={pointer:event.pointerId,element:event.currentTarget,image,source:images,inverse,start,client:[event.clientX,event.clientY],corner,moved:false,draft:image};
     callbacks.current.onGestureChange(true);event.currentTarget.setPointerCapture(event.pointerId);
   }
   function update(current:ImageDrag,clientX:number,clientY:number){
-    const pointer=point(clientX,clientY);if(!pointer)return;
+    const local=new DOMPoint(clientX,clientY).matrixTransform(current.inverse),pointer:Point=[local.x,local.y];
+    if(!inBounds(pointer))return;
     if(!current.moved&&Math.hypot(clientX-current.client[0],clientY-current.client[1])<=2)return;
     current.moved=true;
     current.draft=current.corner===undefined?translateDiagramImage(current.image,current.start,pointer):resizeDiagramImage(current.image,current.corner,pointer,units*12);
-    setDraft(current.draft);
+    if(!frame.current)frame.current=requestAnimationFrame(()=>{frame.current=0;if(drag.current===current)setDraft(current.draft);});
   }
   function move(event:ReactPointerEvent<SVGGElement>){
     const current=drag.current;if(!current||current.pointer!==event.pointerId)return;
@@ -60,7 +71,9 @@ export default function DiagramImageLayer({images,selectedId,interactive,units,c
         onDoubleClick={event=>{event.preventDefault();event.stopPropagation();}}
         onContextMenu={event=>{event.preventDefault();event.stopPropagation();finish();callbacks.current.onSelect(null);}}>
         <title>{image.name} · 拖动移动，四角等比缩放</title>
-        <image href={image.dataUrl} x={image.position[0]} y={image.position[1]} width={image.width} height={image.height} preserveAspectRatio="none" transform={image.rotation?`rotate(${image.rotation} ${image.position[0]+image.width/2} ${image.position[1]+image.height/2})`:undefined}/>
+        {image.artwork?<g transform={`rotate(${image.rotation} ${image.position[0]+image.width/2} ${image.position[1]+image.height/2})`} ><svg x={image.position[0]} y={image.position[1]} width={image.width} height={image.height}
+          viewBox={`${image.artwork.box.x} ${image.artwork.box.y} ${image.artwork.box.width} ${image.artwork.box.height}`}
+          preserveAspectRatio="none" overflow="hidden" strokeLinejoin="round" strokeLinecap="round"><VectorInk frame={image.artwork}/></svg></g>:<image href={image.dataUrl} x={image.position[0]} y={image.position[1]} width={image.width} height={image.height} preserveAspectRatio="none" transform={image.rotation?`rotate(${image.rotation} ${image.position[0]+image.width/2} ${image.position[1]+image.height/2})`:undefined}/>}
         {selected&&<g data-diagram-image-selection={image.id}>
           <polygon points={corners.map(corner=>corner.join(',')).join(' ')} fill="none" stroke="#426f59" strokeWidth={units*1.25} strokeDasharray={`${units*5} ${units*3}`} pointerEvents="none"/>
           {corners.map((corner,index)=><g key={index} data-diagram-image-corner={index} className={index%2?'diagram-image-resize-ne':'diagram-image-resize-nw'} aria-label={`图片${['左上','右上','右下','左下'][index]}角等比缩放`} onPointerDown={event=>begin(event,image,index as DiagramImageCorner)}>

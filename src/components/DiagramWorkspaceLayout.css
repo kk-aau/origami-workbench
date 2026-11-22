@@ -41,6 +41,9 @@
 .diagram-drawing-tools .diagram-precision-toolbar{min-width:0;align-self:stretch}
 .diagram-drawing-tools .diagram-fold-action-toggle{grid-column:1/-1;margin:0;display:flex;min-width:0}
 .diagram-drawing-tools .diagram-fold-action-toggle button{flex:1;min-width:0;padding:4px 2px}
+.diagram-fold-action-toggle .checkbox,.diagram-cp-sink-tools .checkbox{display:inline-flex;align-items:center;gap:4px;white-space:nowrap;padding:0 5px}
+.diagram-cp-sink-tools{display:flex;align-items:center;gap:5px;padding:3px 8px;font-size:11px}
+.diagram-cp-sink-tools button{flex:1}
 .diagram-drawing-tools .diagram-precision-panel{position:relative;inset:auto;transform:none;width:100%;margin-top:7px;padding:10px 7px;box-shadow:none}
 .diagram-view-tools:empty{display:none}
 .app.web-tablet .diagram-workspace .diagram-drawing-tools .diagram-tool-group{flex-wrap:wrap}
@@ -107,10 +110,10 @@
 .diagram-context-shelf{display:flex;flex-direction:column;flex:0 0 252px;width:252px;min-width:0;min-height:0;border-right:1px solid var(--diagram-line);background:#fffefa;overflow:hidden}
 .diagram-context-shelf>nav{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:6px;border-bottom:1px solid var(--diagram-line);flex-shrink:0}
 .diagram-context-shelf>nav button{font-size:11px;padding:5px 3px;min-height:29px;white-space:nowrap}
-.diagram-context-shelf>.diagram-layer-stack{flex:1 1 0;width:100%;min-height:0;border:0}
+.diagram-layers-disclosure>.diagram-layer-stack{flex:1 1 0;width:100%;min-height:0;border:0}
 .diagram-context-shelf .diagram-layer-stack-header{min-height:32px;padding:7px 9px}
-.diagram-context-shelf{overflow:auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:#9bae9b #f3f6ef}
-.diagram-context-shelf>.diagram-layer-stack.has-layer-controls{flex:1 0 auto;min-height:0;overflow:visible}
+.diagram-shelf-scroll{flex:1 1 0;min-height:0;overflow:auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:#9bae9b #f3f6ef}
+.diagram-layers-disclosure>.diagram-layer-stack.has-layer-controls{flex:1 0 auto;min-height:0;overflow:visible}
 .diagram-layer-stack-controls .diagram-context-content{overflow:visible}
 .diagram-layer-stack-controls .diagram-context-content>section{padding:8px;border-bottom:1px solid var(--diagram-line)}
 .diagram-layer-stack-controls .diagram-context-content>section:last-child{border-bottom:0}
@@ -187,16 +190,7 @@
   .diagram-workspace.diagram-compact-workspace.has-properties{grid-template-columns:140px minmax(0,1fr)}
   .diagram-compact-workspace .diagram-properties:not([hidden]){position:absolute;right:0;top:0;bottom:0;width:266px;z-index:28;box-shadow:-8px 0 20px #293d3518}
 }
-@container diagram-main (max-width:1450px){
-  .diagram-compact-workspace .diagram-symbol-dock{width:144px}
-}
 @container diagram-main (max-width:1120px){
-  .diagram-compact-workspace .diagram-symbol-dock{width:132px}
-  .diagram-compact-workspace .diagram-symbol-dock-body{grid-template-columns:minmax(0,1fr) 34px;gap:4px;padding-left:5px}
-  .diagram-compact-workspace .diagram-symbol-dock-item{min-height:86px}
-  .diagram-compact-workspace .diagram-symbol-dock-item svg{width:64px;height:64px}
-  .diagram-compact-workspace .diagram-symbol-dock-item span{font-size:9px}
-  .diagram-compact-workspace .diagram-symbol-dock-categories button{font-size:9px;min-height:38px}
   .diagram-compact-workspace .diagram-step-caption{grid-template-columns:minmax(0,1fr) auto;row-gap:5px}
   .diagram-compact-workspace .diagram-step-description-field{grid-column:1/-1;grid-row:2}
   .diagram-compact-workspace .diagram-step-navigation{grid-column:2;grid-row:1}
@@ -216,3 +210,27 @@
 .diagram-layer-count{flex-shrink:0;padding:5px 8px 0;color:var(--diagram-muted);font-size:10px}
 .diagram-layer-stack .diagram-layer-solutions:has(.diagram-layer-command-row){border-top:0;padding:3px 8px 5px}
 .diagram-layer-solutions .diagram-layer-command-row{justify-content:start}
+
+.diagram-compact-workspace .diagram-body.has-cp-handle{--cp-rail-width:12px;grid-template-columns:minmax(0,1fr) var(--cp-rail-width) minmax(190px,min(var(--diagram-cp-width),30%))}
+.diagram-compact-workspace .diagram-body.cp-drawer-closed{grid-template-columns:minmax(0,1fr) var(--cp-rail-width)}
+.diagram-drawer-rail{position:relative;display:grid;place-items:stretch center;isolation:isolate}
+.diagram-workspace .diagram-drawer-rail>.panel-divider{height:100%;width:100%;border:0;background:transparent}
+.diagram-drawer-rail>.panel-divider>span{display:none}
+.diagram-workspace .diagram-drawer-rail>.panel-divider:is(:hover,:focus-visible,:active){background:linear-gradient(to right,transparent calc(50% - 1px),#b1c3b3 50%,transparent calc(50% + 1px))}
+.diagram-workspace .diagram-drawer-rail>button{position:absolute;z-index:5;top:50%;left:50%;transform:translate(-50%,-50%);display:grid;place-items:center;width:18px;height:34px;padding:0;border:0;border-radius:5px;background:transparent;color:#587361}
+.diagram-workspace .diagram-drawer-rail>button:is(:hover,:focus-visible){background:#e4ede4;color:#284f3b}
+.diagram-drawer-rail>button[aria-expanded=false] svg{transform:rotate(180deg)}
+
+.diagram-workspace .diagram-cp-card>header .diagram-cp-popout{flex:none;min-height:22px;padding:0 5px;cursor:grab;touch-action:none}
+
+.diagram-workspace.diagram-compact-workspace .diagram-body.cp-shelf-empty{grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,1fr)}
+.diagram-workspace.diagram-compact-workspace .diagram-cp-shelf:not(:has(.diagram-cp-card~.diagram-cp-card)){grid-template-rows:minmax(min-content,1fr)}
+
+.diagram-context-shelf[hidden]{display:none}
+.diagram-paper-work-area>.diagram-drawer-rail{flex:0 0 12px}
+
+.diagram-layers-disclosure>summary{cursor:pointer;padding:8px 10px;font-size:11px;font-weight:600;color:var(--diagram-ink)}
+.diagram-context-shelf>.diagram-step-caption{flex:0 0 auto;grid-template-columns:minmax(0,1fr);gap:4px;padding:6px 8px;border-top:1px solid var(--diagram-line)}
+.diagram-context-shelf>.diagram-step-caption>*{grid-area:auto;min-width:0}
+.diagram-context-shelf>.diagram-step-caption textarea{width:100%;min-width:0;resize:none}
+.diagram-context-shelf .diagram-step-navigation>button{flex:1;min-width:0}

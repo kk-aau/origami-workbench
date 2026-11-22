@@ -1,11 +1,12 @@
-import type {FoldGraph,FlatFoldResult} from '../core/types';
+import type {FoldGraph} from '../core/types';
+import type {DiagramStepPlaybackOptions} from './simStepPlanning';
 import type {SimulationStepAnimation} from './simStepAnimation';
 
 export interface SimulationStepPlanningResult {animation:SimulationStepAnimation;checkedIntervals:number;method:string;warnings?:string[];fold?:FoldGraph}
 export interface SimulationStepPlanningTask {promise:Promise<SimulationStepPlanningResult>;cancel():void}
 
 /** One worker per preview: closing the dialog also stops CPU-bound path search. */
-export function startSimulationStepPlanning(fold:FoldGraph,animation:SimulationStepAnimation,options:{timeoutMs?:number;onProgress?:(message:string)=>void;initialGeometry?:FlatFoldResult;initialContactOrder?:import('./simStepContactOrder').SimulationStepInitialOrder}={}):SimulationStepPlanningTask{
+export function startSimulationStepPlanning(fold:FoldGraph,animation:SimulationStepAnimation,options:DiagramStepPlaybackOptions&{timeoutMs?:number;onProgress?:(message:string)=>void}={}):SimulationStepPlanningTask{
   let worker:Worker|undefined,timer:ReturnType<typeof setTimeout>|undefined,settled=false;
   let resolve!:(value:SimulationStepPlanningResult)=>void,reject!:(reason:Error)=>void;
   const promise=new Promise<SimulationStepPlanningResult>((done,fail)=>{resolve=done;reject=fail;});
@@ -21,7 +22,7 @@ export function startSimulationStepPlanning(fold:FoldGraph,animation:SimulationS
     };
     worker.onerror=()=>fail(new Error('折叠路径计算遇到错误，请重新打开动画或简化本步动作。'));
     worker.onmessageerror=()=>fail(new Error('无法读取折叠路径计算结果，请重新打开动画。'));
-    worker.postMessage({fold,animation,initialGeometry:options.initialGeometry,initialContactOrder:options.initialContactOrder});
+    worker.postMessage({fold,animation,initialGeometry:options.initialGeometry,initialContactOrder:options.initialContactOrder,initialDisplayOrder:options.initialDisplayOrder});
     if(options.timeoutMs!==undefined&&Number.isFinite(options.timeoutMs)&&options.timeoutMs>0)timer=setTimeout(()=>fail(new Error('已达到指定的路径检查等待时限。')),Math.max(100,options.timeoutMs));
   }catch{fail(new Error('无法启动折叠路径计算，请重新打开动画。'));}
   return {promise,cancel:()=>fail(new DOMException('已关闭步骤动画，路径计算取消。','AbortError'))};

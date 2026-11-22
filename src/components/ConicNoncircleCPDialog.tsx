@@ -1,3 +1,5 @@
+import {PlotLine,PlotStrokeGroup} from './PlotStrokeGroup';
+import {DocumentJunctionMarks} from './JunctionWarnings';
 import {useEffect,useState} from 'react';
 import {TessDialog} from './TessellationEditor';
 import TessNumberField from './TessNumberField';
@@ -19,12 +21,12 @@ function NativeMillimetrePlot({doc,recipe}:{doc:Doc;recipe:ConicNoncircleRecipe}
   <g className="conic-mm-grid" strokeWidth={stroke*.5}>{xTicks.map(x=><line key={'x'+x} x1={x} y1={minY} x2={x} y2={maxY}/>)}{yTicks.map(y=><line key={'y'+y} x1={minX} y1={y} x2={maxX} y2={y}/>)}</g>
   <g stroke="#8996a7" strokeWidth={stroke}><line x1={minX} y1={0} x2={maxX} y2={0}/><line x1={0} y1={minY} x2={0} y2={maxY}/></g>
   <g fill="#526074" fontSize={size}>{xTicks.map(x=><text key={'x'+x} x={x} y={minY-margin*.32} textAnchor="middle">{label(x)}</text>)}{yTicks.map(y=><text key={'y'+y} x={minX-margin*.12} y={y+size*.3} textAnchor="end">{label(y)}</text>)}<text x={maxX} y={minY-margin*.75} textAnchor="end">X → / mm</text><text x={minX-margin*.65} y={maxY} textAnchor="middle" transform={`rotate(-90 ${minX-margin*.65} ${maxY})`}>Y ↓ / mm</text></g>
-  {doc.segments.map(s=><line key={s.id} x1={s.a[0]} y1={s.a[1]} x2={s.b[0]} y2={s.b[1]} stroke={s.assignment==='B'?'#172334':'#698491'} strokeWidth={stroke*1.5} strokeDasharray={s.assignment==='U'?`${span*.007} ${span*.004}`:undefined}/>)}
+  <PlotStrokeGroup>{doc.segments.map(s=><PlotLine key={s.id} x1={s.a[0]} y1={s.a[1]} x2={s.b[0]} y2={s.b[1]} stroke={s.assignment==='B'?'#172334':'#698491'} widthPixels={1.5} dash={s.assignment==='U'?'3.5 2':undefined}/>)}</PlotStrokeGroup>
   <polyline points={chain(0)} fill="none" stroke="#2469b2" strokeWidth={stroke*2}/><polyline points={chain(n)} fill="none" stroke="#d47736" strokeWidth={stroke*2}/><polyline points={chain(2*n)} fill="none" stroke="#287b69" strokeWidth={stroke*2}/>
   {focuses.map((p,i)=><g key={i} fill="#91539a"><circle cx={p[0]} cy={p[1]} r={size*.65}/><text x={p[0]} y={p[1]-size*1.3} fontSize={size} textAnchor="middle">{typeof recipe.leftFocus==='number'&&i===0?'左焦点':'右焦点'}</text></g>)}
   {[0,n-1].map((i)=><g key={i} fill="#2469b2"><circle cx={points[i][0]} cy={points[i][1]} r={size*.6}/><text x={points[i][0]+size} y={points[i][1]+size*1.4} fontSize={size}>{i===0?'起点':'终点'} t={label(i===0?recipe.parameterStart:recipe.parameterEnd)}</text></g>)}
   <g data-testid="conic-noncircle-mm-scale" stroke="#35475d" fill="#35475d" strokeWidth={stroke}><line x1={rulerX} y1={rulerY} x2={rulerX+step} y2={rulerY}/><line x1={rulerX} y1={rulerY-size*.4} x2={rulerX} y2={rulerY+size*.4}/><line x1={rulerX+step} y1={rulerY-size*.4} x2={rulerX+step} y2={rulerY+size*.4}/><text x={rulerX+step/2} y={rulerY-size*.65} stroke="none" fontSize={size} textAnchor="middle">{label(step)} mm</text></g>
- </svg><figcaption><span className="conic-native-crease">蓝：原折曲线与起终 t</span><span className="conic-native-left">橙：原左第二截线</span><span className="conic-native-right">绿：原右第二截线</span><span className="conic-native-focus">紫：原焦点{typeof recipe.leftFocus==='object'?'（左−∞为平行母线）':''}</span></figcaption><p className="note">网格间距 {label(step)} mm；X 向右、Y 向下显示。预览仅改变视窗，实际材料坐标保持原值。</p></figure>;
+ {doc&&<DocumentJunctionMarks doc={doc} spatial/>}</svg><figcaption><span className="conic-native-crease">蓝：原折曲线与起终 t</span><span className="conic-native-left">橙：原左第二截线</span><span className="conic-native-right">绿：原右第二截线</span><span className="conic-native-focus">紫：原焦点{typeof recipe.leftFocus==='object'?'（左−∞为平行母线）':''}</span></figcaption><p className="note">网格间距 {label(step)} mm；X 向右、Y 向下显示。预览仅改变视窗，实际材料坐标保持原值。</p></figure>;
 }
 
 export default function ConicNoncircleCPDialog({onClose,onAdopt,initialRecipe,projectName}:{onClose:()=>void;onAdopt:(doc:Doc)=>boolean;initialRecipe?:ConicNoncircleRecipe;projectName?:string}){

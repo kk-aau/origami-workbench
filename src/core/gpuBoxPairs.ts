@@ -89,7 +89,7 @@ export function createGpuBoxPairFilter(bounds:readonly GpuBounds[]):GpuBoxPairFi
  const encoded=encodeGpuBounds(bounds);if(!encoded)return null;
  const canvas=new OffscreenCanvas(1,1);
  let gl:WebGL2RenderingContext|null;
- try{gl=canvas.getContext('webgl2',{antialias:false,depth:false,stencil:false,alpha:false,premultipliedAlpha:false,preserveDrawingBuffer:false}) as WebGL2RenderingContext|null;}catch{return null;}
+ try{gl=canvas.getContext('webgl2',{powerPreference:'high-performance',antialias:false,depth:false,stencil:false,alpha:false,premultipliedAlpha:false,preserveDrawingBuffer:false}) as WebGL2RenderingContext|null;}catch{return null;}
  if(!gl)return null;
  const context=gl,shaders:WebGLShader[]=[];
  let program:WebGLProgram|null=null,input:WebGLTexture|null=null,output:WebGLTexture|null=null,framebuffer:WebGLFramebuffer|null=null,vao:WebGLVertexArrayObject|null=null,disposed=false;

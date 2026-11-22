@@ -1,5 +1,5 @@
 import {storageSessionToken} from './api';
-import {DiagramLibraryConflictError,type DiagramLibraryBackgroundRequest,type DiagramLibraryBackgroundResult} from './diagramLibrary';
+import {DiagramLibraryConflictError,DIAGRAM_LIBRARY_KEY,type DiagramLibraryIndex,type DiagramLibraryBackgroundRequest,type DiagramLibraryBackgroundResult} from './diagramLibrary';
 import {WEB_APP} from './webRuntime';
 import {getDiagramProjectSaveBlob} from './diagramProjectTransport';
 import {currentDocumentOwner} from './documentRequestScope';
@@ -23,7 +23,13 @@ export function createDiagramLibrarySaveClient(factory:()=>Worker=()=>new Worker
     const browser=WEB_APP?await import('./browserStorage'):undefined;
     if(browser)await browser.flushBrowserPreferences();
     if(closing||generation!==startedGeneration)throw new Error('绘图保存服务已关闭，当前内容尚未提交。');
-    const webPreferences=browser?.browserPreferenceSnapshot();
+    let keys:string[]|undefined;
+    if(browser&&'patch' in request){
+      const raw=browser.browserPreferences.getItem(DIAGRAM_LIBRARY_KEY);
+      const entry=raw?(JSON.parse(raw) as DiagramLibraryIndex).documents.find(doc=>doc.id===request.settings.id):undefined;
+      keys=[DIAGRAM_LIBRARY_KEY,...(entry?.recoveryKey?[entry.recoveryKey]:[]),...(entry?.spareKeys??[])];
+    }
+    const webPreferences=browser?.browserPreferenceSnapshot(keys);
     const id=++serial;
     return new Promise((resolve,reject)=>{
       pending.set(id,{resolve,reject});

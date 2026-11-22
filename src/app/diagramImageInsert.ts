@@ -1,7 +1,6 @@
 import {diagramDrawingFrame} from './diagramDrawing';
 import type {PreparedDiagramImage} from './diagramImageImport';
-import {updateDiagramImages,updateDiagramPoseView,type DiagramProject} from './diagramProject';
-import {defaultModelView} from './modelViewState';
+import {updateDiagramImages,updateDiagramPoseViewport,type DiagramProject} from './diagramProject';
 import type {DiagramImage} from './diagramImages';
 
 /** Place artwork in the paper's coordinate system, independently from CPs. */
@@ -17,6 +16,6 @@ export function insertDiagramImage(project:DiagramProject,stepId:string,input:Pr
   const cy=last?last.position[1]+last.height/2+8:frame.y+frame.height/2;
   const image:DiagramImage={...input,id,position:[cx-width/2,cy-height/2],width,height,rotation:0};
   // Also fit when insertion brings a previously unmounted overview canvas back.
-  const prepared=step.pose?updateDiagramPoseView(project,stepId,{...(step.pose.view??defaultModelView()),cameras:{}}):project;
+  const prepared=step.pose?updateDiagramPoseViewport(project,stepId,{}):project;
   return {project:updateDiagramImages(prepared,stepId,[...images,image],images.length?step.paperVisible!==false:false),image};
 }

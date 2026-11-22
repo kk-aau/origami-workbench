@@ -1,3 +1,4 @@
+import {fitDiagramArtwork} from './diagramProcessFigureFrame';
 import type {DiagramCPState,DiagramStep} from './diagramProject';
 import type {DiagramFoldPreviewSegment} from './diagramFoldLinkTypes';
 import type {DiagramLineDefaults} from './diagramLineStyles';
@@ -8,8 +9,11 @@ import {diagramCalloutCPMarkup} from './diagramCalloutSVG';
 import {defaultCreaseDisplay} from './creaseDisplay';
 
 export interface DiagramThumbnailOptions {
+  paperPatterns?:import('./paperPatterns').PaperPatterns;
   lineDefaults:DiagramLineDefaults;
   adaptiveLines:boolean;
+  symbolStyles?:import('./diagramSymbolStyles').DiagramSymbolStyles;
+  processFigure?:boolean;
   zoom?:DiagramZoomRegion|null;
 }
 
@@ -27,5 +31,5 @@ export function diagramThumbnailSVG(step:DiagramStep,states:readonly DiagramCPSt
     const state=states.find(state=>state.id===stateId);
     return state?diagramCalloutCPMarkup(state.doc,defaultCreaseDisplay(),{enabled:options.adaptiveLines,units:sourceUnits,hideExistingCreases}):'';
   };
-  return drawingSVG(pose,step.annotations??[],'','',preview,step.images,step.paperVisible!==false,options.lineDefaults,step.callouts,cpMarkup,{enabled:options.adaptiveLines,outputSize:{width:128,height:96}},options.zoom,step.canvas?.drawingRotation??0,step.simulationSurface);
+  return drawingSVG(pose,step.annotations??[],'','',preview,step.images,step.paperVisible!==false,options.lineDefaults,step.callouts,cpMarkup,{enabled:options.adaptiveLines,symbolStyles:options.symbolStyles,fitArtwork:fitDiagramArtwork(step,options.processFigure),outputSize:{width:128,height:96}},options.zoom,step.canvas?.drawingRotation??0,step.simulationSurface,options.paperPatterns);
 }

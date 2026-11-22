@@ -1,3 +1,6 @@
+import {diagramPaperPrint} from './diagramPaperPatternSVG';
+import {diagramIllustrationMesh} from './diagramIllustrationMesh';
+import type {PaperPatterns} from './paperPatterns';
 import type {FlatFoldResult} from '../core/types';
 import {polygonArea} from '../core/geometry';
 import type {DiagramPose} from './diagramProject';
@@ -95,20 +98,34 @@ export function diagramWithoutFlatJoints(pose:DiagramPose,data:ModelRegionSurfac
 
 /** No global rank is invented. Keep diagramPresentation.solid unchanged for
  * existing whole-face hit/snap ordering; only paper paint uses this surface. */
-export function diagramLocalSurfaceMarkup(pose:DiagramPose,view:ModelViewState,colors:ModelColors,omitFlatCreases=false):string|null {
+export function diagramLocalSurfaceMarkup(pose:DiagramPose,view:ModelViewState,colors:ModelColors,omitFlatCreases=false,patterns?:PaperPatterns,boundaryWidth?:number):string|null {
   if(view.xray)return null;
   const entry=entryFor(pose,view.side);if(!entry?.data||entry.error)return null;
-  const key=JSON.stringify([view.rotation,view.projectionCenter,colors,omitFlatCreases]),prior=entry.markup.get(key);if(prior!==undefined)return prior;
+  const key=JSON.stringify([view.rotation,view.projectionCenter,colors,omitFlatCreases,boundaryWidth]),prior=patterns?undefined:entry.markup.get(key);if(prior!==undefined)return prior;
   try{
     const data=omitFlatCreases?diagramWithoutFlatJoints(pose,entry.data):entry.data;
     const shade=diagramSpatialFaceColor(pose,view),front=flatPresentation(pose.result,view.side).frontMaterial;
-    let markup=modelRegionSVG(pose.result,data,view.side,view.rotation,colors,shade?{faceColors:front.map((isFront,face)=>shade(face,isFront?colors.front:colors.back)),boundaryWidth:1.35}:undefined);
+    let overlay='';
+    if(patterns){
+      const mesh=diagramIllustrationMesh({...pose,view});
+      const projection=modelProjection(pose.result.geometry.vertices,view.side==='back',view.rotation);
+      const print=diagramPaperPrint(patterns,mesh.graph.vertices_coords,mesh.vertices.map(projection.project));
+      const visible=modelRegionPaths(data.regions.filter(region=>region.layers.status==='ordered'),projection.project,
+        region=>String(region.layers.status==='ordered'?region.layers.topToBottom[0]:''));
+      const patches=visible.map(group=>{
+        const face=Number(group.fill),id='paper-region-'+(++clipSerial);
+        print.defs.push(`<clipPath id="${id}"><path d="${group.d}"/></clipPath>`);
+        return `<g clip-path="url(#${id})">${mesh.triangles[face].map(tri=>print.triangle(tri,front[face],1)).join('')}</g>`;
+      });
+      overlay=`<defs>${print.defs.join('')}</defs>${patches.join('')}`;
+    }
+    let markup=modelRegionSVG(pose.result,data,view.side,view.rotation,colors,{overlay,...(shade?{faceColors:front.map((isFront,face)=>shade(face,isFront?colors.front:colors.back))}:{}),boundaryWidth:boundaryWidth??(shade?1.35:.8)});
     if(view.projectionCenter){
       const raw=modelProjection(pose.result.geometry.vertices,view.side==='back',view.rotation).project([0,0]);
       const anchored=modelProjection(pose.result.geometry.vertices,view.side==='back',view.rotation,view.projectionCenter).project([0,0]);
       markup=`<g transform="translate(${anchored[0]-raw[0]} ${anchored[1]-raw[1]})">${markup}</g>`;
     }
-    entry.markup.set(key,markup);if(entry.markup.size>8)entry.markup.delete(entry.markup.keys().next().value!);return markup;
+    if(!patterns)entry.markup.set(key,markup);if(entry.markup.size>8)entry.markup.delete(entry.markup.keys().next().value!);return markup;
   }catch(error){entry.error=errorText(error);entry.data=undefined;entry.markup.clear();return null;}
 }
 

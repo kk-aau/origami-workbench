@@ -18,6 +18,7 @@
     "allow-desktop-window-state",
     "allow-desktop-window-action",
     "allow-desktop-open-data-directory",
+    "allow-desktop-blender-step-status",
     "allow-desktop-prepare-export",
     "allow-desktop-write-export",
     "allow-desktop-finish-export",

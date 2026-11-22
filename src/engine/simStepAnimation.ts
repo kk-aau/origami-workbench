@@ -2,7 +2,7 @@ import {OrigamiModel} from '../../vendor/simulator/oristudio/packages/origami-si
 import type {ReferenceSolver} from '../../vendor/simulator/oristudio/packages/origami-simulator/src/referenceSolver';
 import type {FoldProfile,PreparedOrigamiModel} from '../../vendor/simulator/oristudio/packages/origami-simulator/src/types';
 import {createSimulationStepRigidDriver} from './simStepRigid';
-import {createSimulationStepPathEvaluator,simulationStepMotionAngles,validateSimulationStepMotion,type SimulationStepMotion} from './simStepPath';
+import {createSimulationStepPathEvaluator,createSimulationStepPlannedPose,simulationStepMotionAngles,validateSimulationStepMotion,type SimulationStepMotion} from './simStepPath';
 import {createSimulationStepFlexEvaluator,inspectSimulationStepFlexCurvature,simulationStepFlexMotionAngles,validateSimulationStepFlexMotion,type SimulationStepFlexMotion,type SimulationStepFlexRequest} from './simStepFlex';
 import {certifySimulationStepFlexPath} from './simStepFlexCollision';
 import {createSimulationStepDynamicEvaluator,simulationStepDynamicAngles,validateSimulationStepDynamicMotion,type SimulationStepDynamicMotion} from './simStepDynamic';
@@ -34,6 +34,8 @@ export interface SimulationStepAnimation {
   flex?:SimulationStepFlexMotion;
   /** Real pre-existing expanded CP marks, including marks folded again now. */
   retainedCreases?:number[];
+  /** Operation-after CP assignment per prepared edge. Null denotes no authored crease. */
+  targetCreases?:('M'|'V'|'F'|null)[];
   /** Trusted contact orders on the common material faces, never palette swaps. */
   layerTimeline?:Array<{progress:number;faceOrders:[number,number,number][]}>;
 }
@@ -68,8 +70,10 @@ export function validateSimulationStepAnimationStructure(value:unknown,prepared:
     const r=item as Record<string,unknown>,edge=r.edge;
     if(typeof edge!=='number'||!Number.isSafeInteger(edge)||!creaseEdges.has(edge)||seen.has(edge)||
       !validAngle(r.fromAngle)||!validAngle(r.toAngle)||r.viaAngle!==undefined&&!validAngle(r.viaAngle))throw Error('步骤动画的折痕索引或角度无效。');
-    if(r.fromAngle*r.toAngle<0||r.viaAngle!==undefined&&(r.fromAngle*(r.viaAngle as number)<0||r.toAngle*(r.viaAngle as number)<0))throw Error('步骤动画折角不能越过山谷方向；谷折限 0～180°，峰折限 -180～0°，反向折叠请拆步。');
-    seen.add(edge);ranges.push({edge,fromAngle:r.fromAngle,toAngle:r.toAngle,...(r.viaAngle!==undefined?{viaAngle:r.viaAngle as number}:{})});
+    const via=r.viaAngle as number|undefined;
+    const crossesWithoutUnfolding=via===undefined?r.fromAngle*r.toAngle<0:r.fromAngle*via<0||via*r.toAngle<0;
+    if(crossesWithoutUnfolding)throw Error('折角改变山谷方向时，须经过 0° 展平姿态。');
+    seen.add(edge);ranges.push({edge,fromAngle:r.fromAngle,toAngle:r.toAngle,...(via!==undefined?{viaAngle:via}:{})});
   }
   const normals=prepared.facesVertices.map(face=>unit(cross(sub(point(initialPositions,face[1]),point(initialPositions,face[0])),sub(point(initialPositions,face[2]),point(initialPositions,face[0])))));
   const byEdge=new Map(ranges.map(r=>[r.edge,r]));
@@ -116,6 +120,11 @@ export function validateSimulationStepAnimationStructure(value:unknown,prepared:
       seenTimings.add(r.edge);timings.push({edge:r.edge,start:row.start,end:row.end});
     }
     animation.timings=timings;
+  }
+  if(raw.targetCreases!==undefined){
+    if(!Array.isArray(raw.targetCreases)||raw.targetCreases.length!==prepared.edgeCount||
+      !Array.from(raw.targetCreases).every(v=>v===null||v==='M'||v==='V'||v==='F'))throw Error('步骤动画的目标折痕与材料网格不匹配。');
+    animation.targetCreases=[...raw.targetCreases];
   }
   if(raw.retainedCreases!==undefined){
     if(!Array.isArray(raw.retainedCreases)||raw.retainedCreases.length>prepared.edgeCount||new Set(raw.retainedCreases).size!==raw.retainedCreases.length||
@@ -200,7 +209,7 @@ export function simulationStepFoldProfile(animation:SimulationStepAnimation,prog
 }
 
 /** Reload/replay the exact previous folded state, retaining flat rest lengths. */
-export function seedSimulationStepAnimation(solver:ReferenceSolver,animation:SimulationStepAnimation):((progress:number)=>void)|undefined {
+export function seedSimulationStepAnimation(solver:ReferenceSolver,animation:SimulationStepAnimation,dynamicEvaluator?:ReturnType<typeof createSimulationStepDynamicEvaluator>):((progress:number)=>void)|undefined {
   solver.reset();
   solver.setFoldProfile(simulationStepFoldProfile(animation,0));
   solver.setFoldPercent(0);
@@ -209,7 +218,7 @@ export function seedSimulationStepAnimation(solver:ReferenceSolver,animation:Sim
   solver.setInitialPositions(initial,solver.model.prepared.creaseParams.map(c=>angles.get(c.edge)!));
   for(const v of animation.fixedVertices)solver.setVertexConstraint(v,point(initial,v));
   if(animation.dynamic){
-    const evaluator=createSimulationStepDynamicEvaluator(solver.model.prepared,animation,animation.dynamic);let progress=0;
+    const evaluator=dynamicEvaluator??createSimulationStepDynamicEvaluator(solver.model.prepared,animation,animation.dynamic);let progress=0;
     // The numerical trajectory is indexed by progress, since equal target
     // angles on an outward/return leg need not have the same dynamic pose.
     solver.setRigidPoseDriver(()=>evaluator.evaluate(progress));
@@ -218,6 +227,11 @@ export function seedSimulationStepAnimation(solver:ReferenceSolver,animation:Sim
       progress=Math.max(0,Math.min(1,value));
       solver.setFoldProfile(simulationStepFoldProfile(animation,progress));solver.setFoldPercent(progress*100);
     };
+  }
+  if(animation.motion&&!animation.flex){
+    const evaluate=createSimulationStepPlannedPose(solver.model.prepared,animation,animation.motion);
+    solver.setRigidPoseDriver(()=>evaluate(solver.options.foldPercent/100));
+    return;
   }
   solver.setRigidPoseDriver((animation.flex?createSimulationStepFlexEvaluator(solver.model.prepared,animation,animation.flex).driver:createSimulationStepRigidDriver(solver.model.prepared,animation)));
 }

@@ -3,6 +3,8 @@ import assert from 'node:assert/strict';
 import { exportDocument, importDocument, importFold, importParsedDocument } from '../../src/core/formats';
 import {importFoldInterchange} from '../../src/core/foldInterchange';
 import { type Doc } from '../../src/core/types';
+import {readProjectFile} from '../../src/app/importFile';
+import {encodeCreaseFile} from '../../src/app/creaseFileSave';
 const sample: Doc = { name: '中文 & <折痕>', paper: { width: 200, height: 200 }, segments: [
   { id: 'b0', a: [-100, -100], b: [100, -100], assignment: 'B', angle: 0 },
   { id: 'b1', a: [100, -100], b: [100, 100], assignment: 'B', angle: 0 },
@@ -12,6 +14,24 @@ const sample: Doc = { name: '中文 & <折痕>', paper: { width: 200, height: 20
   { id: 'a', a: [-100, 20], b: [100, 20], assignment: 'A', angle: 0 },
 ] };
 const lineValues = (d: Doc) => d.segments.map(s => [s.a, s.b, s.assignment, s.angle]);
+test('repeated original-format FOLD saves preserve public attribution and archived source fields',async()=>{
+  const raw=JSON.parse(exportDocument(sample,'fold').text);
+  const metadata={file_author:'设计者',file_description:'作品说明',frame_title:'展开图',frame_author:'制图者',frame_description:'折痕说明'};
+  Object.assign(raw,metadata,{faceOrders:[[5,8,1]],vendor_label:'foreign'});
+  // Previously exported files may carry an author only in private metadata.
+  delete raw.file_author;raw['zhezhi:workbench'].fields.zhezhi_metadata={sourceFoldExtras:{file_author:metadata.file_author}};
+  let file=new File([JSON.stringify(raw)],'test.fold');
+  for(const assignment of ['M','V'] as const){
+    const {doc}=await readProjectFile(file),line=doc.segments.find(segment=>segment.assignment==='V'||segment.assignment==='M')!;
+    line.assignment=assignment;line.angle=assignment==='M'?-180:180;
+    const {bytes}=await encodeCreaseFile(doc,'fold',file),out=JSON.parse(await bytes.text());
+    for(const [key,value] of Object.entries(metadata))assert.equal(out[key],value,key);
+    assert.equal(out.faceOrders,undefined);assert.equal(out.vendor_label,undefined);
+    const archived=out['zhezhi:workbench'].fields.zhezhi_metadata.sourceFoldExtras;
+    assert.deepEqual(archived.faceOrders,[[5,8,1]]);assert.equal(archived.vendor_label,'foreign');
+    file=new File([bytes],'test.fold');
+  }
+});
 test('native JSON preserves full document with explicit v2 migration', () => assert.deepEqual(importDocument(exportDocument(sample, 'json').text, 'json').doc, {...sample,schemaVersion:2,objects:[]}));
 test('already parsed native JSON follows the same import path', () => {
   const text=exportDocument(sample,'json').text;

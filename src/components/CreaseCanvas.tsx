@@ -1,4 +1,8 @@
+import {JunctionMarks,useEditedJunctions} from './JunctionWarnings';
+import type {JunctionWarning} from '../core/editedJunctions';
 import CanvasGuidanceOverlay from './CanvasGuidanceOverlay';
+import {createPortal} from 'react-dom';
+import {useRightClickPair} from './useRightClickPair';
 import CanvasToolOptions from './CanvasToolOptions';
 import './canvasSelectionActions.css';
 import {creasePaintOrder} from '../app/creasePaintOrder';
@@ -15,6 +19,7 @@ import {pointBounds} from '../core/pointBounds';
 import { COLORS, NAMES, distance, distanceToSegment, line } from '../app/state';
 import {applyDrawingFoldAngle} from '../app/foldAngles';
 import type {CreaseSegmentPresentation} from '../app/diagramCPPresentation';
+import {readPaperPatterns} from '../app/paperPatterns';
 import { getDrawingBounds, getPaperBounds, getGridReferenceBounds, paperPath, paperFillRule } from '../app/paper';
 import { constructionEnd, directionCandidates, perpendicularFoot, referenceDirection } from '../app/construction';
 import { editorJunctionPoints, nearestSnapPoint, type SnapPoint } from '../app/snapPoints';
@@ -23,7 +28,6 @@ import {creaseJunctionPresentation,creaseJunctionPage} from '../app/creaseJuncti
 import {creaseGridRayIntersections,creaseRayHasPhysicalPoint,snapCreaseDrawingPoint,visibleCreaseSnapPoints,type CreaseDrawingSnapGrid,type CreaseDrawingSnapResult} from '../app/creaseDrawingSnap';
 import DiagramLineSnapOverlay from './DiagramLineSnapOverlay';
 import CanvasCursorHintToggle from './CanvasCursorHintToggle';
-import type {DiagramLineAnnotation} from '../app/diagramAnnotations';
 import { getAngleBisector, intersectBisectorTarget } from '../app/bisector';
 import { eraseBoxMode, pickEraseSegment, segmentsInEraseBox, segmentsInBox } from '../app/erase';
 import ToolGuide, { getToolStep } from './ToolGuide';
@@ -62,7 +66,7 @@ import {lineTarget} from '../app/segmentTools';
 import {mirrorCopies,reflectPoint,toggleMirrorSelection,mirrorEnvelope,inMirrorRegion} from '../app/mirror';
 import { reflectionRay, reflectionEnd, lineReflectionPoints } from '../app/reflection';
 import { transverseReflection } from '../app/transverseReflection';
-import { continuousReflection } from '../app/continuousReflection';
+import { continuousReflection, continuousReflectionEndpointOnSegment, type ContinuousReflectionOptions } from '../app/continuousReflection';
 import { rabbitEar } from '../app/rabbitEar';
 import { fishbone } from '../app/fishbone';
 import { cycleCrease } from '../app/cycleCrease';
@@ -111,16 +115,22 @@ interface Props {
   /** SVG remains available for deterministic export/compatibility comparisons. */
   renderBackend?:'auto'|'svg';
   commandToken?:number;
+  junctions?:JunctionWarning[];
   diagnosticHighlights?:DiagnosticHighlights;
   overlay?:ReactNode;
   targetPoint?:Point;
   navigationTargetLabel?:string;
   overlayNavigation?:{onZoom:(factor:number)=>void;onFit:()=>void};
-  svgOverlay?:(viewport:{view:{x:number;y:number;w:number;h:number};units:number})=>ReactNode;
+  svgOverlay?:(viewport:{view:{x:number;y:number;w:number;h:number};units:number},pointer:Point|null)=>ReactNode;
   /** A new request focuses source CP coordinates without changing the document. */
   focusRegion?:{points:Point[]};
   tileDecoration?:{tiles:DecoratedTile[];options:TileDecorations;mode?:'mother'|'cp'};
   workspaceLabel?:string;
+  hoverHighlight?:boolean;
+  onQuickSelect?:()=>void;
+  /** A dedicated toolbar already shows the active tool and hosts the layer controls. */
+  layerControlHost?:HTMLElement|null;
+  directAssignmentOverride?:DirectAssignment;
   pickingSettings?:CanvasPicking;
   zoomSettings?:CanvasZoomSettings;
   display?:CreaseDisplay;
@@ -147,6 +157,7 @@ interface Props {
   onPoint:(p:Point)=>void; onMessage:(s:string)=>void; fitToken:number; readOnly?:boolean;
 }
 export default function CreaseCanvas(input:Props) {
+  const ownWarnings=useEditedJunctions(input.junctions===undefined?input.doc:undefined,'canvas');
   const display=input.display??defaultCreaseDisplay();
   const topology=useCreaseTopology(input.doc,!!input.readOnly,display.pointSize>0);
   const topologyBlocked=!input.readOnly&&!topology.ready;
@@ -215,7 +226,7 @@ export default function CreaseCanvas(input:Props) {
   const restrictedReference=p.tool==='eraseoverlap'||p.tool==='alternatecollinear';
   const lineEraseTool=p.tool==='eraseoverlap'||p.tool==='erasecross';
   const lineEraseMode=p.tool==='eraseoverlap'?'overlap':'crossing';
-  const directTarget=({makemountain:'M',makevalley:'V',makeedge:'B',makeaux:'A'} as Partial<Record<Tool,DirectAssignment>>)[p.tool];
+  const directTarget=p.directAssignmentOverride??({makemountain:'M',makevalley:'V',makecrease:'F',makeedge:'B',makeaux:'A'} as Partial<Record<Tool,DirectAssignment>>)[p.tool];
   const regionalSwapTool=p.tool==='regionalswap';
   const typeFilterTool=regionalSwapTool||!!directTarget||p.tool==='replacetype'||p.tool==='deletetype'||p.tool==='eraseedge'||p.tool==='eraseaux';
   const typeFilterDelete=p.tool==='deletetype'||p.tool==='eraseedge'||p.tool==='eraseaux';
@@ -299,7 +310,8 @@ export default function CreaseCanvas(input:Props) {
   const fishboneTool=p.tool==='fishbone';
   const continuousTool=p.tool==='continuous';
   const [continuousAlternate,setContinuousAlternate]=useState(true);
-  const [continuousEndpoint,setContinuousEndpoint]=useState<{point:Point;segmentIndex:number}|undefined>();
+  type Cutoff=NonNullable<ContinuousReflectionOptions['endpoint']>&{target?:Segment};
+  const [continuousEndpoint,setContinuousEndpoint]=useState<Cutoff>();
   const [continuousPickingEnd,setContinuousPickingEnd]=useState(false);
   const [continuousChoices,setContinuousChoices]=useState<{segmentIndex:number;point:Point;direction:Point}[]>([]);
   const batchReflectionTool=p.tool==='transverse'||continuousTool||fishboneTool;
@@ -410,7 +422,6 @@ export default function CreaseCanvas(input:Props) {
   const visibleSnapPoints=useMemo(()=>visibleSegmentIds.size===p.doc.segments.length?snapPoints:visibleCreaseSnapPoints(snapPoints,visibleSegmentIds),[snapPoints,visibleSegmentIds,p.doc.segments.length]);
   const circleIntersections=useMemo(()=>p.readOnly||!layerState.auxiliary?[]:circleIntersectionPoints(interactionDoc),[p.readOnly,layerState.auxiliary,interactionDoc.segments,interactionDoc.objects]);
   const allSnapPoints=useMemo(()=>[...visibleSnapPoints,...circleSnapPoints(layerState.auxiliary?p.doc.objects??[]:[]),...circleIntersections],[visibleSnapPoints,layerState.auxiliary,p.doc.objects,circleIntersections]);
-  const drawingRelationLines=useMemo<DiagramLineAnnotation[]>(()=>p.readOnly||p.tool!=='line'?[]:interactionDoc.segments.map(s=>({id:s.id,kind:'line',a:s.a,b:s.b,style:'crease',color:'#426f59',width:1})),[p.readOnly,p.tool,interactionDoc.segments]);
   const intersections=useMemo(()=>editorJunctionPoints(snapPoints),[snapPoints]);
   // Shared junctions remain visible while any incident segment is displayed.
   const visibleIntersections=useMemo(()=>intersections.filter(v=>v.segmentIds.some(id=>visibleSegmentIds.has(id))),[intersections,visibleSegmentIds]);
@@ -425,6 +436,7 @@ export default function CreaseCanvas(input:Props) {
   const outline=useMemo(()=>paperPath(p.doc),[p.doc]);
   const gridReference=p.gridPattern?getGridReferenceBounds(p.doc):paper;
   const gridOutline=outline||(p.gridPattern?`M${gridReference.x} ${gridReference.y}h${gridReference.width}v${gridReference.height}h${-gridReference.width}Z`:'');
+  const paperPrint=useMemo(()=>readPaperPatterns(p.doc.metadata?.paperPatterns)?.front,[p.doc.metadata?.paperPatterns]);
   const gridId='paper-grid-'+useId().replace(/[^a-zA-Z0-9_-]/g,'');
   const gridScope=p.gridScope??'paper';
   const divisions=Number.isFinite(p.divisions)&&p.divisions>0?Math.min(1000,p.divisions):DEFAULT_GRID_DIVISIONS;
@@ -593,7 +605,7 @@ export default function CreaseCanvas(input:Props) {
   }
   function constructionSnap(point:Point,anchor?:Point,shift=false):CreaseDrawingSnapResult {
     return snapCreaseDrawingPoint(point,{enabled:p.snap,radius:pickRadius,points:allSnapPoints,grid:drawingSnapGrid(),
-      segments:interactionDoc.segments,projectToSegments:false,anchor,shift});
+      segments:interactionDoc.segments,relationLines:interactionDoc.segments,projectToSegments:false,anchor,shift});
   }
   function snapped(point:Point):Point {
     return constructionSnap(point).point;
@@ -640,7 +652,7 @@ export default function CreaseCanvas(input:Props) {
     if(p.tool==='voronoi'){const near=[...pending].reverse().find(s=>distance(s,q)<=pickRadius);return near??snapped(q);}
     if(p.tool==='operationframe')return nearestSnapPoint(snapPoints,q,pickRadius)?.point??q;
     if(backgroundTool)return pending.length<2?q:nearestSnapPoint(snapPoints,q,pickRadius)?.point??q;
-    if(finiteRayTool)return pending.length<2?constructionPoint(q):q;
+    if(finiteRayTool)return pending.length<2?constructionPoint(q,pending[0],e.shiftKey):q;
     if(restrictedDrawTool)return restrictedDrawPoint(q)??q;
     if(measurementSlot)return restrictedReferencePoint(q)??q;
     if(lineEraseTool||alternateTool){
@@ -653,7 +665,7 @@ export default function CreaseCanvas(input:Props) {
       const result=snapCreaseDrawingPoint(q,{enabled:p.snap,radius:pickRadius,points:allSnapPoints,grid:drawingSnapGrid(),anchor:start,shift:e.shiftKey,
         previous:previousDrawingSnap&&(!start&&!previousDrawingSnap.anchor||start&&previousDrawingSnap.anchor&&distance(start,previousDrawingSnap.anchor)<=1e-8)?previousDrawingSnap.result:undefined,
         segments:interactionDoc.segments,projectToSegments:p.tool==='line',
-        ...(p.tool==='line'?{relationLines:drawingRelationLines}:{})});
+        relationLines:interactionDoc.segments});
       drawingSnap.current={result,anchor:start};return result.point;
     }
     if(p.tool==='angleproject'&&pending.length===2){try{return projectedAngle(q).point;}catch{return q;}}
@@ -721,9 +733,10 @@ export default function CreaseCanvas(input:Props) {
     setContinuousChoices(previous=>[...previous.filter(choice=>choice.segmentIndex<continuousJunction.segmentIndex),{segmentIndex:continuousJunction.segmentIndex,point:[...continuousJunction.point],direction:[...candidate.direction]}]);
     setContinuousEndpoint(undefined);setContinuousPickingEnd(false);setToolError('');
   }
-  function pickContinuousEndpoint(point:Point):{point:Point;segmentIndex:number}|undefined {
-    const eps=epsilonFor(p.doc),snappedPoint=p.snap?nearestSnapPoint(visibleSnapPoints,point,pickRadius)?.point:undefined;
-    let best:{point:Point;segmentIndex:number}|undefined,bestDistance=Infinity;
+  function pickContinuousEndpoint(point:Point):Cutoff|undefined {
+    const eps=epsilonFor(p.doc);
+    let best:Cutoff|undefined,bestDistance=Infinity;
+    const snappedPoint=p.snap?nearestSnapPoint(visibleSnapPoints,point,pickRadius)?.point:undefined;
     continuousFullPath.path.forEach((segment,segmentIndex)=>{
       const d=distanceToSegment(point,segment);if(d>pickRadius||d>=bestDistance)return;
       const dx=segment.b[0]-segment.a[0],dy=segment.b[1]-segment.a[1],length2=dx*dx+dy*dy;
@@ -735,12 +748,23 @@ export default function CreaseCanvas(input:Props) {
       if(distance(segment.a,end)<=eps)return;
       best={point:end,segmentIndex};bestDistance=d;
     });
+    const targetId=pickEraseSegment(interactionDoc,point,pickRadius,false);
+    const target=targetId?interactionDoc.segments.find(s=>s.id===targetId):undefined;
+    // Screen-to-SVG conversion can offset visually coincident lines by a few
+    // floating-point units. This tolerance is only for picking the cutoff.
+    const hitEpsilon=Math.max(eps,Math.min(units*.0001,eps*16));
+    // A crease can lie directly underneath a path leg. A normal click selects
+    // that crease; explicit endpoint picking gives the position on the leg priority.
+    if(target&&(!best||!continuousPickingEnd&&distanceToSegment(point,target)<=bestDistance+hitEpsilon)){
+      const hit=continuousReflectionEndpointOnSegment(continuousFullPath.path,target,hitEpsilon);
+      if(hit)return {...hit,target};
+    }
     return best;
   }
   function finishBatchReflection(){
-    if(!batchReflectionReady||continuousTool&&(continuousPickingEnd||continuousJunction))return;
+    if(!batchReflectionReady||batchReflectionResult.error||continuousTool&&(continuousPickingEnd||continuousJunction))return;
     try{
-      const {copies,stopMessage}=buildBatchReflection(pending[0],pending[1]);
+      const {copies,stopMessage}=batchReflectionResult;
       if(p.onChange(overlayDrawnSegments(p.doc,copies,p.lockBoundary))===false)return;
       cancelGesture();p.onMessage(`已生成 ${copies.length} 段${batchReflectionName}线，${fishboneTool?stopMessage:continuousTool?stopMessage+(continuousAlternate?'；山谷逐段交替':'；全部使用'+NAMES[drawingAssignment]):drawingSwap?'副本山谷互换，保留折角幅值':'保留原山谷与折角'}${drawingSwap&&fishboneTool?'；生成线已山谷互换':''}，可整组撤销。`);
     }catch(error){constructionError((error as Error).message);}
@@ -1028,18 +1052,17 @@ export default function CreaseCanvas(input:Props) {
     if(batchReflectionTool){
       setToolError('');
       if(batchReflectionReady){
-        if(continuousTool&&continuousPickingEnd){
+        if(continuousTool){
+          if(continuousJunction&&!continuousPickingEnd&&distance(hitPosition,continuousJunction.point)>pickRadius){
+            try{
+              const index=pickFoldableDirection({origin:continuousJunction.point,suggestions:continuousJunction.candidates.map(candidate=>candidate.end)},hitPosition,pickRadius);
+              if(index!==null){chooseContinuousDirection(index);return;}
+            }catch(error){constructionError((error as Error).message);return;}
+          }
           const endpoint=pickContinuousEndpoint(hitPosition);
-          if(!endpoint){constructionError('请点击紫色路径上的终点；起点不能作为终点。');return;}
+          if(!endpoint){constructionError('请点预览路径上的位置，或点与路径相交的线段作为截止线。');return;}
           setContinuousEndpoint(endpoint);setContinuousPickingEnd(false);
-          p.onMessage('已选择折射终点，请核对紫色路径后确认。');return;
-        }
-        if(continuousTool&&continuousJunction){
-          try{
-            const index=pickFoldableDirection({origin:continuousJunction.point,suggestions:continuousJunction.candidates.map(candidate=>candidate.end)},hitPosition,pickRadius);
-            if(index===null)throw new Error('请点击一条紫色续接方向，或使用上方的方向按钮。');
-            chooseContinuousDirection(index);
-          }catch(error){constructionError((error as Error).message);}
+          p.onMessage('已选终点，点击「确认连续折射」生成当前预览。');
           return;
         }
         if(batchReflectionResult.copies.some(s=>distanceToSegment(hitPosition,s)<=pickRadius))finishBatchReflection();
@@ -1259,7 +1282,10 @@ export default function CreaseCanvas(input:Props) {
     if(p.tool==='measure'){const angle=Math.atan2(q[1]-a[1],q[0]-a[0])*180/Math.PI;p.onMessage(`长度 ${distance(a,q).toFixed(3)} mm · 方向角 ${angle.toFixed(2)}°`);}
     else {try{if(p.onChange(overlayDrawnSegments(p.doc,[drawingLine(a,q,p.preset)],p.lockBoundary))===false)return;}catch(error){constructionError((error as Error).message);return;}}setPending([]);
   }
+  const liveInput=useRef(input);liveInput.current=input;
+  const rightClicks=useRightClickPair(input.onQuickSelect,input.doc);
   function down(e:React.PointerEvent<SVGSVGElement>){
+    if(!p.readOnly&&rightClicks.begin(e)){e.preventDefault();cancelOperation();return;}
     if(e.button===2){
       e.preventDefault();
       drawingSnap.current=null;setDrawingSnapFeedback(null);
@@ -1267,7 +1293,7 @@ export default function CreaseCanvas(input:Props) {
       svg.current!.focus({preventScroll:true});trackCursor(e);
       // Cancellation takes priority so abandoning a construction never silently
       // deletes the reference line under the pointer. Idle right-click erases.
-      if(hasActiveOperation()||(p.tool==='mirrorselection'&&p.selected.size)){cancelOperation();p.onMessage('已取消当前操作。再次右击可删线，右键拖动可框删。');return;}
+      if(hasActiveOperation()||(p.tool==='mirrorselection'&&p.selected.size)){cancelOperation();rightClicks.end(e.clientX,e.clientY);p.onMessage('已取消当前操作。再次右击可删线，右键拖动可框删。');return;}
       const q=raw(e);updateHover(q,q);setHoverTarget(null);setSelectedVertex(null);setToolError('');
       gesture.current={kind:'erase',pointerId:e.pointerId,button:e.button,start:q,press:q,client:[e.clientX,e.clientY],view,ids:new Set()};
       e.currentTarget.setPointerCapture(e.pointerId);return;
@@ -1537,31 +1563,37 @@ export default function CreaseCanvas(input:Props) {
     }
     if(g.kind==='move'&&dragged){const offset:Point=[point[0]-g.start[0],point[1]-g.start[1]];if(distance(offset,[0,0])>1e-7)p.onChange({...p.doc,segments:p.doc.segments.map(s=>g.ids.has(s.id)?{...s,a:[s.a[0]+offset[0],s.a[1]+offset[1]],b:[s.b[0]+offset[0],s.b[1]+offset[1]]}:s),...(g.circleIds?.size?{objects:p.doc.objects?.map(o=>o.kind==='circle'&&g.circleIds!.has(o.id)?{...o,center:[o.center[0]+offset[0],o.center[1]+offset[1]] as Point}:o)}:{})},g.ids);}
     if(g.kind==='box'){const mode=eraseBoxMode(g.start,q),ids=new Set(g.ids),circleIds=new Set(g.circleIds);for(const id of segmentsInBox(interactionDoc,g.start,q,p.lockBoundary,mode))ids.add(id);for(const id of circleIdsInBox(p.doc.objects??[],g.start,q,mode,layerState.auxiliary))circleIds.add(id);p.onSelect(ids);p.onSelectCircles?.(circleIds);}
-    if(g.kind==='erase'&&p.tool==='text'){
-      const bounds=measuredTextBounds(),hit=dragged?undefined:pickText(p.doc.objects??[],g.press,bounds,2*units);
-      const textIds=dragged?textIdsInBox(p.doc.objects??[],bounds,g.start,q,eraseBoxMode(g.start,q)):new Set(hit?[hit.id]:[]);
-      const strokeHit=dragged||hit?undefined:pickCanvasObject(p.doc,g.press,pickRadius,p.lockBoundary,layerState);
-      const lineIds=dragged?segmentsInEraseBox(interactionDoc,g.start,q,p.lockBoundary):new Set(strokeHit?.kind==='segment'?[strokeHit.id]:[]);
-      const circleIds=dragged?circleIdsInBox(p.doc.objects??[],g.start,q,eraseBoxMode(g.start,q),layerState.auxiliary):new Set(strokeHit?.kind==='circle'?[strokeHit.id]:[]);
-      if(textIds.size||lineIds.size||circleIds.size){
-        const next=deleteTexts(p.doc,textIds);
-        if(p.onChange({...next,segments:next.segments.filter(s=>!lineIds.has(s.id)),...(circleIds.size?{objects:next.objects?.filter(o=>o.kind!=='circle'||!circleIds.has(o.id))}:{})})!==false){
-          p.onSelect(new Set([...p.selected].filter(id=>!lineIds.has(id))));p.onSelectCircles?.(new Set([...selectedCircles].filter(id=>!circleIds.has(id))));p.onMessage('已删除 '+textIds.size+' 个文字、'+lineIds.size+' 条线段、'+circleIds.size+' 个辅助圆，可撤销。');
-        }
-      }else p.onMessage('没有命中可删除的文字、线段或辅助圆。');
+    const erase=()=>{
+      if(liveInput.current.doc!==input.doc||liveInput.current.readOnly||liveInput.current.tool!==input.tool)return;
+      if(g.kind==='erase'&&p.tool==='text'){
+        const bounds=measuredTextBounds(),hit=dragged?undefined:pickText(p.doc.objects??[],g.press,bounds,2*units);
+        const textIds=dragged?textIdsInBox(p.doc.objects??[],bounds,g.start,q,eraseBoxMode(g.start,q)):new Set(hit?[hit.id]:[]);
+        const strokeHit=dragged||hit?undefined:pickCanvasObject(p.doc,g.press,pickRadius,p.lockBoundary,layerState);
+        const lineIds=dragged?segmentsInEraseBox(interactionDoc,g.start,q,p.lockBoundary):new Set(strokeHit?.kind==='segment'?[strokeHit.id]:[]);
+        const circleIds=dragged?circleIdsInBox(p.doc.objects??[],g.start,q,eraseBoxMode(g.start,q),layerState.auxiliary):new Set(strokeHit?.kind==='circle'?[strokeHit.id]:[]);
+        if(textIds.size||lineIds.size||circleIds.size){
+          const next=deleteTexts(p.doc,textIds);
+          if(p.onChange({...next,segments:next.segments.filter(s=>!lineIds.has(s.id)),...(circleIds.size?{objects:next.objects?.filter(o=>o.kind!=='circle'||!circleIds.has(o.id))}:{})})!==false){
+            p.onSelect(new Set([...p.selected].filter(id=>!lineIds.has(id))));p.onSelectCircles?.(new Set([...selectedCircles].filter(id=>!circleIds.has(id))));p.onMessage('已删除 '+textIds.size+' 个文字、'+lineIds.size+' 条线段、'+circleIds.size+' 个辅助圆，可撤销。');
+          }
+        }else p.onMessage('没有命中可删除的文字、线段或辅助圆。');
+      }
+      if(g.kind==='erase'&&p.tool==='erasemark'&&g.button===0){
+        const ids=markHits(p.doc,dragged?{kind:'box',a:g.start,b:q}:{kind:'point',point:g.press,radius:pickRadius});
+        if(ids.size){if(p.onChange(deleteMarks(p.doc,ids))!==false)p.onMessage(`已删除 ${ids.size} 条独立标记，可撤销；折痕未改变。`);}
+        else p.onMessage('未命中独立标记线；折痕、圆和文字不受此工具影响。');
+      }
+      if(g.kind==='erase'&&p.tool!=='text'&&!(p.tool==='erasemark'&&g.button===0)){
+        const hit=dragged?undefined:pickCanvasObject(p.doc,g.press,pickRadius,p.lockBoundary,layerState);
+        const ids=dragged?segmentsInEraseBox(interactionDoc,g.start,q,p.lockBoundary):new Set(hit?.kind==='segment'?[hit.id]:[]);
+        if(p.tool==='eraseaux'&&g.button===0)for(const id of ids)if(p.doc.segments.find(s=>s.id===id)?.assignment!=='A')ids.delete(id);
+        const circleIds=dragged?circleIdsInBox(p.doc.objects??[],g.start,q,eraseBoxMode(g.start,q),layerState.auxiliary):new Set(hit?.kind==='circle'?[hit.id]:[]);
+        if(ids.size||circleIds.size){if(p.onChange({...p.doc,segments:p.doc.segments.filter(s=>!ids.has(s.id)),...(circleIds.size?{objects:p.doc.objects?.filter(o=>o.kind!=='circle'||!circleIds.has(o.id))}:{})})!==false){p.onSelect(new Set([...p.selected].filter(id=>!ids.has(id))));p.onSelectCircles?.(new Set([...selectedCircles].filter(id=>!circleIds.has(id))));const summary=[ids.size?`${ids.size} 条线段`:'',circleIds.size?`${circleIds.size} 个辅助圆`:''].filter(Boolean).join('、');p.onMessage(`已删除 ${summary}，可按 Ctrl+Z 撤销。`);}}
+        else p.onMessage(`没有可删除的线段或辅助圆；${p.lockBoundary?'边界保护开启。':''}向右框删完整包含，向左框删圆周或线段相交、接触。`);
+      }
     }
-    if(g.kind==='erase'&&p.tool==='erasemark'&&g.button===0){
-      const ids=markHits(p.doc,dragged?{kind:'box',a:g.start,b:q}:{kind:'point',point:g.press,radius:pickRadius});
-      if(ids.size){if(p.onChange(deleteMarks(p.doc,ids))!==false)p.onMessage(`已删除 ${ids.size} 条独立标记，可撤销；折痕未改变。`);}
-      else p.onMessage('未命中独立标记线；折痕、圆和文字不受此工具影响。');
-    }
-    if(g.kind==='erase'&&p.tool!=='text'&&!(p.tool==='erasemark'&&g.button===0)){
-      const hit=dragged?undefined:pickCanvasObject(p.doc,g.press,pickRadius,p.lockBoundary,layerState);
-      const ids=dragged?segmentsInEraseBox(interactionDoc,g.start,q,p.lockBoundary):new Set(hit?.kind==='segment'?[hit.id]:[]);
-      if(p.tool==='eraseaux'&&g.button===0)for(const id of ids)if(p.doc.segments.find(s=>s.id===id)?.assignment!=='A')ids.delete(id);
-      const circleIds=dragged?circleIdsInBox(p.doc.objects??[],g.start,q,eraseBoxMode(g.start,q),layerState.auxiliary):new Set(hit?.kind==='circle'?[hit.id]:[]);
-      if(ids.size||circleIds.size){if(p.onChange({...p.doc,segments:p.doc.segments.filter(s=>!ids.has(s.id)),...(circleIds.size?{objects:p.doc.objects?.filter(o=>o.kind!=='circle'||!circleIds.has(o.id))}:{})})!==false){p.onSelect(new Set([...p.selected].filter(id=>!ids.has(id))));p.onSelectCircles?.(new Set([...selectedCircles].filter(id=>!circleIds.has(id))));const summary=[ids.size?`${ids.size} 条线段`:'',circleIds.size?`${circleIds.size} 个辅助圆`:''].filter(Boolean).join('、');p.onMessage(`已删除 ${summary}，可按 Ctrl+Z 撤销。`);}}
-      else p.onMessage(`没有可删除的线段或辅助圆；${p.lockBoundary?'边界保护开启。':''}向右框删完整包含，向左框删圆周或线段相交、接触。`);
+    if(g.kind==='erase'){
+      if(g.button===2&&!dragged)rightClicks.end(e.clientX,e.clientY,erase);else erase();
     }
     gesture.current=null;setDragOffset([0,0]);setBox(null);setPanning(false);restoreNavigationMarkers();if(e.currentTarget.hasPointerCapture(e.pointerId))e.currentTarget.releasePointerCapture(e.pointerId);
   }
@@ -1587,7 +1619,7 @@ export default function CreaseCanvas(input:Props) {
   function previewStroke(segment:Pick<Segment,'a'|'b'>&Partial<Segment>){
     const candidate:Segment={id:'drawing-preview',assignment:drawingAssignment,angle:0,...segment};
     const stroke=creaseLineStroke(candidate,display.lineStyle,candidate.assignment==='A'?display.auxLineWidth:display.lineWidth,units,adaptiveLineStyle,display.roundedEnds,display.auxLineStyle,p.solidCreases);
-    return {stroke:stroke.color,strokeWidth:stroke.width,strokeDasharray:stroke.dash,strokeDashoffset:stroke.dashOffset,strokeLinecap:display.roundedEnds?'round' as const:'butt' as const};
+    return {stroke:stroke.color,strokeWidth:stroke.width,strokeDasharray:stroke.dash,strokeDashoffset:stroke.dashOffset,pathLength:stroke.pathLength,strokeLinecap:display.roundedEnds?'round' as const:'butt' as const};
   }
   const preview=p.tool==='regioncheck'||p.tool==='voronoi'||p.tool==='operationframe'||backgroundTool||restrictedDrawTool||finiteRayTool||alternateTool||dividedDrawTool||lineEraseTool||regionTool||transformTool||foldableActive||localFlatTool||angleTool||offsetTool||lineBisectorTool||axiomTool||rabbitReady||batchReflectionTool||mirrorTool||segmentTool||directionalTool||circleTool||advancedCircleTool||extraCircleTool||p.tool==='polygon'||(p.tool==='mergevertex'||crossMergeTool)?[]:((rayTool&&pending.length===3)||(p.tool==='midperp'&&pending.length===2))?pending:pending.length&&hover?[...pending,hover]:[];
   const alternateEnd=alternateTool&&pending.length&&hover?(restrictedReference?restrictedReferencePoint(hover):hover):null;
@@ -1730,7 +1762,13 @@ export default function CreaseCanvas(input:Props) {
   })();
   const crossSources=crossMergeTool&&mergePreview?p.doc.segments.filter(s=>mergePreview!.ids.includes(s.id)):[];
   const crossAngleConflict=crossSources.length===2&&crossSources[0].assignment===crossSources[1].assignment&&(crossSources[0].assignment==='M'||crossSources[0].assignment==='V')&&crossSources[0].angle!==crossSources[1].angle;
-  const toolStep=continuousTool&&batchReflectionReady?{label:continuousPickingEnd?'选择折射终点':continuousJunction?'选择续接方向':continuousEndpoint?'终点已选':'确认折射路径',instruction:continuousPickingEnd?'点击紫色路径上的交点或位置设为终点；选定后再确认':continuousJunction?'交点有多个局部角度候选，点击紫色方向或上方编号继续；也可选终点在此停止':continuousEndpoint?'确认截断后的紫色路径，或重新选择终点／恢复自动截止':'可先点“选择终点”缩短路径，设置山谷交替后确认'}:selectMode?{label:selectMode==='contained'?'完整包含框选':'接触框选',instruction:selectMode==='contained'?'松开左键，只选完整在框内的线段或圆；Shift追加选择':'松开左键，选择框内及与框相交或接触的线段、圆周；Shift追加选择'}:p.tool==='erasemark'&&gesture.current?.kind==='erase'&&gesture.current.button===0?{label:box?(eraseMode==='touching'?'接触删除标记':'完整包含标记'):'删除标记线',instruction:'松开左键仅删除独立标记；右击／Esc取消本次删除'}:p.tool==='regioncheck'?{label:regionCheck?(regionCheck.status==='consistent'?'闭环几何一致':regionCheck.status==='inconsistent'?'闭环几何不一致':'无法判断'):'轮廓 '+pending.length+' 点',instruction:regionCheck?regionCheck.message:pending.length>=3?'继续加点，或点击首点／闭合按钮检查；右击／Esc取消':'自由添加轮廓点，不吸附折线；应横穿折线内部'}:p.tool==='customcolor'&&gesture.current?.kind==='customcolor'?{label:box?'接触框着色':'单击着色',instruction:'松开为紫色命中辅助线／圆着色；右击／Esc取消，不改变山谷'}:p.tool==='voronoi'?{label:voronoi.busy?'正在计算':pending.length?'已有 '+pending.length+' 个种子':'添加种子',instruction:voronoi.error||(pending.length?'点击加入／再次点种子移除；右击或Esc清空，临时图不保存':'点击添加种子点，至少两个点显示分区')}:p.tool==='text'?(textDraft?{label:'编辑文字草稿',instruction:'在上方输入文字后应用；Enter换行，右击／Esc取消'}:gesture.current?.kind==='text'?{label:'移动／选择文字',instruction:'拖动后松开移动；单击进入编辑；右击／Esc取消'}:gesture.current?.kind==='erase'?{label:'删除文字或线段',instruction:'右击优先删文字；向右框选完整包含，向左框选接触，松开删除'}:getToolStep('text',0)):p.tool==='erase'&&gesture.current?.kind==='erase'?{label:box?(eraseMode==='touching'?'接触删除':'完整包含'):'擦除线段',instruction:box?(eraseMode==='touching'?'松开左键，删除与框相交或接触的线段':'松开左键，仅删除完整包含在框内的线段'):'点击删除小段；拖框后松开删除，右击／Esc取消'}:gesture.current?.kind==='operationframe'?{label:'调整操作框',instruction:'松开完成；右击／Esc取消本次拖动，保留原框'}:hiddenTraceId?{label:'暂时隐藏线段',instruction:'查看下方底图；原位松开循环赋型，拖动恢复，右击／Esc取消'}:gesture.current?.kind==='typefilter'?{label:box?'接触框筛选':'类型筛选',instruction:`松开左键，${regionalSwapTool?'互换':directTarget?'将':p.tool==='replacetype'?'替换':'删除'}紫色命中线${regionalSwapTool?'的山谷':directTarget?'改为'+NAMES[directTarget]:''}；右击或 Esc 取消`}:gesture.current?.kind==='unselect'&&box?{label:'接触框撤选',instruction:'松开左键，撤选与矩形接触的线段，不删除线段'}:gesture.current?.kind==='mirrorselect'&&box?{label:'切换框选',instruction:'松开左键，切换与矩形接触的线段；已选取消，未选选中'}:gesture.current?.kind==='erase'?{label:box?(eraseMode==='touching'?'接触删除':'完整包含'):'删除线段',instruction:box?(eraseMode==='touching'?'松开右键，删除与框相交或接触的线段':'松开右键，仅删除完整包含在框内的线段'):'松开右键删线；向右拖框完整包含，向左拖框接触删除'}:inverseStep??getToolStep(p.tool,stepCount);
+  const continuousStep=continuousTool&&batchReflectionReady?{
+    label:continuousPickingEnd?'选择终点':continuousJunction?'选择续接方向':continuousEndpoint?'终点已选':'完整路径',
+    instruction:continuousPickingEnd?'点路径指定终点，或点与路径相交的截止线。':
+      continuousJunction?'点击候选方向继续，或选择终点结束本次折射。':
+      continuousEndpoint?'可重选终点，或确认生成当前路径。':'点已有线段截到首次交点，也可直接点预览路径上的终点。'
+  }:undefined;
+  const toolStep=continuousStep??(selectMode?{label:selectMode==='contained'?'完整包含框选':'接触框选',instruction:selectMode==='contained'?'松开左键，只选完整在框内的线段或圆；Shift追加选择':'松开左键，选择框内及与框相交或接触的线段、圆周；Shift追加选择'}:p.tool==='erasemark'&&gesture.current?.kind==='erase'&&gesture.current.button===0?{label:box?(eraseMode==='touching'?'接触删除标记':'完整包含标记'):'删除标记线',instruction:'松开左键仅删除独立标记；右击／Esc取消本次删除'}:p.tool==='regioncheck'?{label:regionCheck?(regionCheck.status==='consistent'?'闭环几何一致':regionCheck.status==='inconsistent'?'闭环几何不一致':'无法判断'):'轮廓 '+pending.length+' 点',instruction:regionCheck?regionCheck.message:pending.length>=3?'继续加点，或点击首点／闭合按钮检查；右击／Esc取消':'自由添加轮廓点，不吸附折线；应横穿折线内部'}:p.tool==='customcolor'&&gesture.current?.kind==='customcolor'?{label:box?'接触框着色':'单击着色',instruction:'松开为紫色命中辅助线／圆着色；右击／Esc取消，不改变山谷'}:p.tool==='voronoi'?{label:voronoi.busy?'正在计算':pending.length?'已有 '+pending.length+' 个种子':'添加种子',instruction:voronoi.error||(pending.length?'点击加入／再次点种子移除；右击或Esc清空，临时图不保存':'点击添加种子点，至少两个点显示分区')}:p.tool==='text'?(textDraft?{label:'编辑文字草稿',instruction:'在上方输入文字后应用；Enter换行，右击／Esc取消'}:gesture.current?.kind==='text'?{label:'移动／选择文字',instruction:'拖动后松开移动；单击进入编辑；右击／Esc取消'}:gesture.current?.kind==='erase'?{label:'删除文字或线段',instruction:'右击优先删文字；向右框选完整包含，向左框选接触，松开删除'}:getToolStep('text',0)):p.tool==='erase'&&gesture.current?.kind==='erase'?{label:box?(eraseMode==='touching'?'接触删除':'完整包含'):'擦除线段',instruction:box?(eraseMode==='touching'?'松开左键，删除与框相交或接触的线段':'松开左键，仅删除完整包含在框内的线段'):'点击删除小段；拖框后松开删除，右击／Esc取消'}:gesture.current?.kind==='operationframe'?{label:'调整操作框',instruction:'松开完成；右击／Esc取消本次拖动，保留原框'}:hiddenTraceId?{label:'暂时隐藏线段',instruction:'查看下方底图；原位松开循环赋型，拖动恢复，右击／Esc取消'}:gesture.current?.kind==='typefilter'?{label:box?'接触框筛选':'类型筛选',instruction:`松开左键，${regionalSwapTool?'互换':directTarget?'将':p.tool==='replacetype'?'替换':'删除'}紫色命中线${regionalSwapTool?'的山谷':directTarget?'改为'+NAMES[directTarget]:''}；右击或 Esc 取消`}:gesture.current?.kind==='unselect'&&box?{label:'接触框撤选',instruction:'松开左键，撤选与矩形接触的线段，不删除线段'}:gesture.current?.kind==='mirrorselect'&&box?{label:'切换框选',instruction:'松开左键，切换与矩形接触的线段；已选取消，未选选中'}:gesture.current?.kind==='erase'?{label:box?(eraseMode==='touching'?'接触删除':'完整包含'):'删除线段',instruction:box?(eraseMode==='touching'?'松开右键，删除与框相交或接触的线段':'松开右键，仅删除完整包含在框内的线段'):'松开右键删线；向右拖框完整包含，向左拖框接触删除'}:inverseStep??getToolStep(p.tool,stepCount));
   const circleEraseStep=gesture.current?.kind==='erase'&&p.tool!=='text'&&!(p.tool==='erasemark'&&gesture.current.button===0)?{
     label:box?(eraseMode==='touching'?'接触删除':'完整包含'):'删除线段或辅助圆',
     instruction:box?(eraseMode==='touching'?'松开删除与框接触的线段或圆周':'松开删除完整框住的线段或圆'):'松开删除命中的线段或圆；向右框住完整对象，向左接触圆周或线段',
@@ -1744,7 +1782,9 @@ export default function CreaseCanvas(input:Props) {
     if(target){try{end=rayEnd(bisector,target);bounded=true;}catch{/* Keep a preview ray; invalid targets never commit. */}}
     bisectorPreview={origin:bisector.origin,end,bounded};
   }
-  const continuousEndMarker=continuousPickingEnd&&hoverPosition?pickContinuousEndpoint(hoverPosition):continuousEndpoint;
+  const hoverCutoff=continuousTool&&batchReflectionReady&&hoverPosition&&(continuousPickingEnd||!continuousJunction)?pickContinuousEndpoint(hoverPosition):undefined;
+  const showHoverCutoff=hoverCutoff&&(!continuousEndpoint||distance(hoverCutoff.point,continuousEndpoint.point)>epsilonFor(p.doc));
+  const cutoffTarget=hoverCutoff?.target;
   const guideError=toolError||voronoi.error||localFlatResult.error||specialAngleResult.error||angleResult.error||offsetResult.error||lineBisectorResult.error||axiomResult.error||rabbitResult.error||batchReflectionResult.error||mirrorResult.error;
   // Camera movement is deliberately excluded from the GPU scene identity.
   const paintedSegments=useMemo(()=>creasePaintOrder(p.doc.segments),[p.doc.segments]);
@@ -1761,7 +1801,7 @@ export default function CreaseCanvas(input:Props) {
   const segmentLayer=useMemo(()=>{if(gpuEnabled)return null;const nodes=(p.tileDecoration&&p.tileDecoration.mode!=='cp'&&!p.tileDecoration.options.showEdges?[]:paintedSegments).map(s=>{const info=p.segmentPresentation?.get(s.id),stroke=creaseLineStroke(s,display.lineStyle,(s.assignment==='A'?display.auxLineWidth:display.lineWidth)*(info?.emphasis?1.3:1),units,adaptiveLineStyle,display.roundedEnds,display.auxLineStyle,p.solidCreases);const title=info?.title??creaseShortLineTitle(s,stroke.limited);const active=p.selected.has(s.id);const dx=active?dragOffset[0]:0,dy=active?dragOffset[1]:0;const coords={x1:s.a[0]+dx,y1:s.a[1]+dy,x2:s.b[0]+dx,y2:s.b[1]+dy};const layerVisible=s.assignment==='A'?layerState.auxiliary:layerState.main;return <g key={s.id} data-segment={s.id} data-assignment={s.assignment} data-cp-step-emphasis={info?.emphasis||undefined} visibility={hiddenTraceId===s.id||!layerVisible?'hidden':undefined}>
     {display.showCursorHint!==false&&title&&<title>{title}</title>}
     {active&&<line {...coords} stroke={p.diagnosticHighlights?.segmentIds.has(s.id)?DIAGNOSTIC_HIGHLIGHT_COLOR:'#238567'} strokeOpacity=".2" strokeWidth={10*units} />}
-    <line {...coords} data-crease-stroke="true" data-adaptive-line-limited={stroke.limited||undefined} stroke={stroke.color} strokeWidth={stroke.width} strokeLinecap={display.roundedEnds?'round':'butt'} strokeDasharray={stroke.dash} strokeDashoffset={stroke.dashOffset}/>
+    <line {...coords} data-crease-stroke="true" data-adaptive-line-limited={stroke.limited||undefined} stroke={stroke.color} strokeWidth={stroke.width} strokeLinecap={display.roundedEnds?'round':'butt'} strokeDasharray={stroke.dash} strokeDashoffset={stroke.dashOffset} pathLength={stroke.pathLength}/>
     {active&&[s.a,s.b].map((q,i)=><circle key={i} cx={q[0]+dx} cy={q[1]+dy} r={3.5*units} fill="white" stroke={p.diagnosticHighlights?.segmentIds.has(s.id)?DIAGNOSTIC_HIGHLIGHT_COLOR:'#1f6551'} strokeWidth={1.5*units}/>)}</g>;
   });
     // Keep every segment and its paint order, but bound sibling scans during
@@ -1789,6 +1829,7 @@ export default function CreaseCanvas(input:Props) {
   const selectionCommands=!p.readOnly&&!panning&&(p.tool==='select'||p.tool==='unselect'||regionTool||transformTool||p.tool==='mirrorselection');
   function selectVisibleObjects(){cancelGesture();const next=editableCanvasSelection(p.doc,layerState,p.lockBoundary);p.onSelect(next.segments);p.onSelectCircles?.(next.circles);}
   function clearSelectedObjects(){cancelGesture();p.onSelect(new Set());p.onSelectCircles?.(new Set());}
+  const continuousAlternateControl=<label className="check"><input type="checkbox" checked={continuousAlternate} onChange={event=>{setContinuousAlternate(event.target.checked);setToolError('');}}/>山谷交替</label>;
   const toolParameters=<div className="canvas-parameter-panel">
   {!p.readOnly&&drawingSwap&&<div className="construction-parameters" aria-label="生成线型"><strong>生成时山谷互换</strong><small>新线山 ⇄ 谷，保留折角幅值</small><button onClick={()=>p.onDrawingSwapChange?.(false)}>关闭互换</button></div>}
   {!p.readOnly&&topology.asynchronous&&p.tool==='select'&&selectableIntersections.length>0&&<details className="construction-parameters" aria-label="全部交点键盘选择"><summary>全部交点 · {selectableIntersections.length} 个</summary><div><button disabled={junctionPage.page===0} onClick={()=>setJunctionPage(junctionPage.page-1)}>上一页交点</button><span>第 {junctionPage.page+1} / {junctionPage.pages} 页</span><button disabled={junctionPage.page+1===junctionPage.pages} onClick={()=>setJunctionPage(junctionPage.page+1)}>下一页交点</button></div><div style={{maxHeight:160,overflowY:'auto'}}>{junctionPage.points.map(vertex=><button key={vertex.id} data-junction-list-id={vertex.id} aria-pressed={activeVertex?.id===vertex.id} onFocus={()=>{setJunctionFocus(vertex.id);const [x,y]=vertex.point;if(x<view.x||x>view.x+view.w||y<view.y||y>view.y+view.h)setView({...view,x:x-view.w/2,y:y-view.h/2});}} onBlur={()=>setJunctionFocus(null)} onClick={event=>pickVertex(vertex,event.shiftKey)}>{vertex.kind==='intersection'?'交点':'分段点'} {vertex.point.map(n=>Number(n.toFixed(3))).join(', ')}</button>)}</div><small>密集标记按屏幕空间显示；全部交点仍可吸附、点击或在此逐页选择。</small></details>}
@@ -1814,18 +1855,12 @@ export default function CreaseCanvas(input:Props) {
   {!p.readOnly&&lineBisectorTool&&<div className="construction-parameters" aria-label="两线角平分参数"><span>{lineBisectorResult.value?.kind==='parallel'?(bisectorCut?'平行中线 · 已选第一截止':'平行中线 · 请选择两端截止'):lineBisectorResult.value?'相交线 · 从交点到实际截止':'选择两条参考线'}</span>{lineBisectorResult.value?.kind==='parallel'&&!bisectorCut&&<button className="outline" onClick={finishFullMidline}>生成完整中线</button>}<small>参考线不改型 · 紫色仅为预览</small></div>}
   {!p.readOnly&&axiomTool&&<div className="construction-parameters" aria-label="公理候选">{axiomPreviews.some(s=>!s.bounded)&&<small>部分候选仅为方向预览：缺少双侧截止，请指定实际截止线。</small>}<span>{axiomReady?`${axiomResult.folds.length} 个候选 · ${axiomChoice===null?'尚未选择':'已选 '+(axiomChoice+1)}`:'目标按支撑直线 · 截止按实际线段'}</span>{axiomResult.folds.map((_,i)=><button key={i} className="outline" aria-pressed={axiomChoice===i} onClick={()=>{setAxiomChoice(i);setToolError('');}}>候选 {i+1}</button>)}{axiomChoice!==null&&<button className="outline" onClick={()=>finishAxiom()}>生成所选整段</button>}{axiomIds.length>0&&<button className="text-button" onClick={()=>{setPending(pending.slice(0,1));setAxiomIds([]);setAxiomChoice(null);setToolError('');}}>重选目标线</button>}</div>}
   {!p.readOnly&&rabbitTool&&<div className="construction-parameters" aria-label="兔耳构造参数"><span>{rabbitReady?`顶点 → 内心 · 新增 ${rabbitResult.copies.length} 段`:'三点确定三角形内心 · 外框仅作参考'}</span>{rabbitReady&&<button className="outline" disabled={!!rabbitResult.error} onClick={finishRabbitEar}>确认兔耳构造</button>}<small>三条构造线均采用{NAMES[drawingAssignment]} · 不自动分配不同山谷</small></div>}
-  {!p.readOnly&&batchReflectionTool&&<div className="construction-parameters" aria-label={batchReflectionName+'参数'}>
-    <span>{batchReflectionReady?`${fishboneTool?'鱼骨':continuousTool?'路径':'T 形原线'} ${continuousTool||fishboneTool?batchReflectionResult.copies.length:batchReflectionResult.sources.length} 段 · 新增 ${batchReflectionResult.copies.length} 段`:fishboneTool?'网格等分数控制间距 · 基线仅作参考':continuousTool?'先选起点和方向点，再指定终点':'只处理端点位于横截轴内部的原线'}</span>
-    {continuousTool&&<>
-      <label className="check"><input type="checkbox" checked={continuousAlternate} onChange={event=>{setContinuousAlternate(event.target.checked);setToolError('');}}/>山谷交替</label>
-      <button className="outline" disabled={!batchReflectionReady||!continuousFullPath.path.length} aria-pressed={continuousPickingEnd} onClick={()=>{setContinuousPickingEnd(true);setToolError('');}}>{continuousEndpoint?'重新选择终点':'选择终点'}</button>
-      <button className="outline" disabled={!continuousEndpoint&&!continuousPickingEnd} onClick={()=>{setContinuousEndpoint(undefined);setContinuousPickingEnd(false);setToolError('');}}>自动截止</button>
-      {!!continuousChoices.length&&<button className="outline" onClick={()=>{setContinuousChoices([]);setContinuousEndpoint(undefined);setContinuousPickingEnd(false);setToolError('');}}>重选续接方向</button>}
-      {continuousJunction&&!continuousPickingEnd&&<><span>交点续接：</span>{continuousJunction.candidates.map((candidate,index)=><button key={index} className="outline" aria-label={'折射续接方向 '+(index+1)} onClick={()=>chooseContinuousDirection(index)}>{index+1} · {Number(candidate.degrees.toFixed(1))}°</button>)}</>}
-    </>}
-    {batchReflectionReady&&<button className="outline" disabled={!!batchReflectionResult.error||continuousTool&&(continuousPickingEnd||!!continuousJunction)} onClick={finishBatchReflection}>确认{batchReflectionName}</button>}
-    <small>{fishboneTool?(batchReflectionResult.stopMessage||'山谷按取点交替 · 跳过横向原线上的点 · 无截止方向不绘制'):continuousTool?(continuousPickingEnd?'点击紫色路径上的交点或任意位置作为终点':(batchReflectionResult.stopMessage||'辅助线与平面线不参与路径转向')+(continuousAlternate?' · 山谷逐段交替':' · 全部使用'+NAMES[drawingAssignment])):(drawingSwap?'副本山谷互换，保留折角幅值':'保留原线型／折角')+' · 遇首条非辅助线截止 · 缺少截止则整组不生成'}</small>
+  {!p.readOnly&&batchReflectionTool&&!continuousTool&&<div className="construction-parameters" aria-label={batchReflectionName+'参数'}>
+    <span>{batchReflectionReady?`${fishboneTool?'鱼骨':'T 形原线'} ${fishboneTool?batchReflectionResult.copies.length:batchReflectionResult.sources.length} 段 · 新增 ${batchReflectionResult.copies.length} 段`:fishboneTool?'网格等分数控制间距 · 基线仅作参考':'只处理端点位于横截轴内部的原线'}</span>
+    {batchReflectionReady&&<button className="outline" disabled={!!batchReflectionResult.error} onClick={finishBatchReflection}>确认{batchReflectionName}</button>}
+    <small>{fishboneTool?(batchReflectionResult.stopMessage||'山谷按取点交替 · 跳过横向原线上的点 · 无截止方向不绘制'):(drawingSwap?'副本山谷互换，保留折角幅值':'保留原线型／折角')+' · 遇首条非辅助线截止 · 缺少截止则整组不生成'}</small>
   </div>}
+  {!p.readOnly&&continuousTool&&!batchReflectionReady&&<div className="construction-parameters" aria-label="连续折射参数">{continuousAlternateControl}</div>}
   {!p.readOnly&&dividedDrawTool&&<div className="construction-parameters" aria-label="分段绘制参数">{p.tool==='drawdivide'?<NumberField label="绘制等分数" value={drawCount} min={1} max={null} onChange={v=>{cancelGesture();setDrawCount(v);}}/>:<>{(['s','t'] as const).map((side,i)=><span className="ratio-draw-term" key={side}><span>{side.toUpperCase()} = </span>{(['a','b','c'] as const).map((key,j)=><span key={key}>{j===1?' + ':j===2?' √ ':''}<MeasurementField measurements={measurements} label={['a','b','c','d','e','f'][i*3+j]} value={drawRatio[side][key]} min={key==='c'?0:-1e6} max={1e6} step={.1} onChange={v=>{cancelGesture();setDrawRatio(r=>({...r,[side]:{...r[side],[key]:v}}));}}/></span>)}</span>)}<span>S:T = {ratioValues}</span></>}<small>{p.tool==='drawdivide'?'绘制新线并生成真实分点':'S 对应第一点到分点，T 对应分点到第二点；支持测量槽引用（L 为格），提交时取值'} · 紫色预览 · 松开提交</small></div>}
   {!p.readOnly&&finiteRayTool&&<div className="construction-parameters" aria-label="射线绘制说明"><strong>起点 → 经过点 → 截止线段</strong><small>三次点击 · 不回退 · 只取有限目标上的真实交点</small>{pending.length===2&&<span>{finiteRayPreview.geometry?'已命中有效目标，点击完成':finiteRayPreview.error||'请选择前方已有线段'}</span>}</div>}
   {!p.readOnly&&restrictedDrawTool&&<div className="construction-parameters" aria-label="受限绘制说明"><strong>{p.tool==='restrictedcircle'?'圆心与半径点受限':'起点与终点受限'}</strong><small>已有顶点／交点 · 圆心 · 可见纸内网格 · 两击或拖放 · 无效终点可重试</small>{pending.length>0&&<span>{restrictedEnd?'有效候选 · '+Number(restrictedLength.toPrecision(6))+' mm':'请移至有效受限点'}</span>}</div>}
@@ -1850,17 +1885,28 @@ export default function CreaseCanvas(input:Props) {
   {!p.readOnly&&p.tool==='operationframe'&&<div className="construction-parameters" aria-label="操作框参数"><strong>{p.operationFrame?Math.round(p.operationFrame.width)+' × '+Math.round(p.operationFrame.height)+' px':'拖动创建屏幕操作框'}</strong><button className="outline" disabled={!p.operationFrame||!!framePreview} onClick={p.onFrameExport}>导出框内图</button><button className="outline" disabled={!p.operationFrame&&!framePreview} onClick={()=>{cancelGesture();p.onOperationFrameChange?.(null);}}>清除操作框</button><button className="outline" disabled={!p.operationFrame||!!framePreview||!p.doc.background?.visible||p.doc.background.opacity<=0||p.cropBusy} onClick={p.onBackgroundCrop}>{p.cropBusy?'正在裁剪…':'裁剪框内底图'}</button>{p.cropBusy&&<button onClick={p.onCancelBackgroundCrop}>取消裁剪</button>}<small>不改折线 · 裁剪按屏幕像素生成PNG，可撤销</small></div>}
 
   </div>;
+  const layerControl=<details className="canvas-layers" aria-label="对象显示"><summary>图层</summary><div className="canvas-layer-options"><label><input type="checkbox" checked={layerState.main} onChange={e=>setLayer('main',e.target.checked)}/>主折痕</label><label><input type="checkbox" checked={layerState.auxiliary} onChange={e=>setLayer('auxiliary',e.target.checked)}/>辅助线</label><label><input type="checkbox" checked={layerState.marks} onChange={e=>setLayer('marks',e.target.checked)}/>独立标记</label><label><input type="checkbox" checked={layerState.comments} onChange={e=>setLayer('comments',e.target.checked)}/>文字注释</label><small>隐藏对象不参与画布选择和删除；显示后可继续编辑。</small></div></details>;
   return <div className="canvas-pane" data-crease-topology={topology.ready?'ready':topology.busy?'preparing':'unavailable'}>
   <div className="canvas-wrap">
   {(p.workspaceLabel||!p.readOnly&&(display.showToolGuide!==false||guideError))&&<CanvasGuidanceOverlay size={size} paper={{x:(helpBounds.x-view.x)*size.w/view.w,y:(helpBounds.y-view.y)*size.h/view.h,width:helpBounds.width*size.w/view.w,height:helpBounds.height*size.h/view.h}} label={p.workspaceLabel} tool={TOOL_NAMES[p.tool]} instruction={guideError||(circleEraseStep??toolStep).instruction} enabled={!p.readOnly&&display.showToolGuide!==false} error={!p.readOnly?guideError:undefined}><ToolGuide tool={p.tool} pendingCount={stepCount} error={guideError} stepOverride={circleEraseStep??(p.tool==='regioncheck'||p.tool==='customcolor'||p.tool==='text'||p.tool==='voronoi'||continuousTool?toolStep:inverseStep)}/></CanvasGuidanceOverlay>}
   <div className="canvas-controls-overlay">
+  {!p.readOnly&&continuousTool&&batchReflectionReady&&<div className="construction-parameters continuous-cutoff-controls" role="group" aria-label="连续折射范围">
+    <span role="status">{continuousEndpoint?`第 ${continuousEndpoint.segmentIndex+1} 段截止`:continuousJunction?'待选续接方向':`完整路径 · ${continuousFullPath.path.length} 段`}</span>
+    <button type="button" className="outline" disabled={!continuousFullPath.path.length} aria-pressed={continuousPickingEnd} onClick={()=>{setContinuousPickingEnd(true);setToolError('');}}>{continuousEndpoint?'重选终点':'选择终点'}</button>
+    <button type="button" className="outline" disabled={!continuousEndpoint&&!continuousPickingEnd} onClick={()=>{setContinuousEndpoint(undefined);setContinuousPickingEnd(false);setToolError('');}}>自动截止</button>
+    {continuousAlternateControl}
+    <button type="button" className="primary" disabled={!!batchReflectionResult.error||continuousPickingEnd||!!continuousJunction} onClick={finishBatchReflection}>确认连续折射</button>
+    {continuousJunction&&!continuousPickingEnd&&continuousJunction.candidates.map((candidate,index)=><button type="button" className="outline" key={index} aria-label={'折射续接方向 '+(index+1)} onClick={()=>chooseContinuousDirection(index)}>方向 {index+1} · {Number(candidate.degrees.toFixed(1))}°</button>)}
+    {!!continuousChoices.length&&<button type="button" className="outline" onClick={()=>{setContinuousChoices([]);setContinuousEndpoint(undefined);setContinuousPickingEnd(false);setToolError('');}}>重选续接方向</button>}
+  </div>}
   {!topology.ready&&<div className="construction-parameters" data-crease-topology-status="true"><span role="status">{topology.message} · 可缩放和平移</span>{topology.busy?<button onClick={topology.cancel}>取消交点准备</button>:<button onClick={topology.retry}>重试交点准备</button>}</div>}
   </div>
-  {!p.readOnly&&<details className="canvas-layers" aria-label="对象显示"><summary>图层</summary><div className="canvas-layer-options"><label><input type="checkbox" checked={layerState.main} onChange={e=>setLayer('main',e.target.checked)}/>主折痕</label><label><input type="checkbox" checked={layerState.auxiliary} onChange={e=>setLayer('auxiliary',e.target.checked)}/>辅助线</label><label><input type="checkbox" checked={layerState.marks} onChange={e=>setLayer('marks',e.target.checked)}/>独立标记</label><label><input type="checkbox" checked={layerState.comments} onChange={e=>setLayer('comments',e.target.checked)}/>文字注释</label><small>隐藏对象不参与画布选择和删除；显示后可继续编辑。</small></div></details>}
+  {!p.readOnly&&(p.layerControlHost===undefined?layerControl:p.layerControlHost&&createPortal(layerControl,p.layerControlHost))}
   <svg ref={svg} data-drawing-swap={drawingSwap||undefined} data-crease-renderer={gpuEnabled?'webgl':'svg'} data-crease-renderer-fallback={gpuFailed??undefined} className={'crease-canvas tool-'+p.tool} shapeRendering={display.antiAlias?'geometricPrecision':'crispEdges'} style={{cursor:panning?'grabbing':undefined,touchAction:'none'}} viewBox={`${view.x} ${view.y} ${view.w} ${view.h}`} preserveAspectRatio="none" tabIndex={0} role="application" aria-label="折痕画布，点击两点或拖放画线，按住滚轮拖动画布，滚动滚轮缩放" onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerLeave={()=>{setCursor(null);setHoverPosition(null);setDrawingSnapFeedback(null);}} onPointerCancel={cancelGesture} onLostPointerCapture={()=>{if(gesture.current)cancelGesture();}} onMouseDown={mouseDown} onAuxClick={e=>{if(e.button===1)e.preventDefault();}} onContextMenu={e=>e.preventDefault()}>
     {display.showCursorHint!==false&&gpuEnabled&&gpuHoverTitle&&<title data-crease-gpu-tooltip="true">{gpuHoverTitle}</title>}
     <defs><pattern id={gridId} data-grid-pattern={p.gridPattern??'square'} data-grid-rotation={gridGeometry.rotation??0} width={triangularTile?.width??step} height={triangularTile?.height??stepY} patternUnits="userSpaceOnUse" patternTransform={`translate(${gridGeometry.origin[0]} ${gridGeometry.origin[1]}) rotate(${gridGeometry.rotation??0})`}><path d={triangularTile?.path??`M 0 0 H ${step} V ${stepY} H 0 Z`} fill="none" stroke={gridAppearance.gridColor} strokeWidth={gridAppearance.lineWidth*units}/>{!triangularTile&&p.diagonalGrid&&p.diagonalAngle===undefined&&<path d={`M 0 0 L ${step} ${stepY} M ${step} 0 L 0 ${stepY}`} fill="none" stroke={gridAppearance.diagonalColor} strokeWidth={Math.max(.1,gridAppearance.lineWidth*.64)*units}/>}</pattern>{gridOutline&&<clipPath id={`${gridId}-angle-clip`}><path d={gridOutline} clipRule={paperFillRule(p.doc)}/></clipPath>}</defs>
     {outline&&<path d={outline} fill="#fffefb" fillRule={paperFillRule(p.doc)} data-paper-outline="true"/>}
+    {outline&&paperPrint&&<g pointerEvents="none"><defs><clipPath id={gridId+'-print'}><path d={outline} clipRule={paperFillRule(p.doc)}/></clipPath></defs><image href={paperPrint} x={paper.x} y={paper.y} width={paper.width} height={paper.height} preserveAspectRatio="none" clipPath={`url(#${gridId}-print)`}/></g>}
     {!outline&&p.gridPattern&&<rect data-grid-reference-outline="true" x={gridReference.x} y={gridReference.y} width={gridReference.width} height={gridReference.height} fill="#fffefb" fillOpacity={0} pointerEvents="none"/>}
     {p.doc.background?.visible&&<g transform={backgroundOuter?`translate(${backgroundOuter.x} ${backgroundOuter.y}) scale(${backgroundOuter.scale})`:undefined}><image data-background-image="true" href={p.doc.background.dataUrl} width={p.doc.background.width} height={p.doc.background.height} transform={`matrix(${backgroundMatrix(p.doc.background.placement).join(' ')})`} opacity={p.doc.background.opacity} preserveAspectRatio="xMidYMid meet" pointerEvents="none" onError={()=>p.onMessage('底图无法显示，图片可能已损坏；原始数据仍保留，请替换底图。')}/></g>}
     {backgroundPreview&&p.doc.background&&<g pointerEvents="none"><image data-background-preview="true" href={p.doc.background.dataUrl} width={p.doc.background.width} height={p.doc.background.height} transform={`matrix(${backgroundMatrix(backgroundPreview).join(' ')})`} opacity=".35" preserveAspectRatio="xMidYMid meet"/><polygon data-background-outline="true" points={backgroundCorners(backgroundPreview,p.doc.background).map(q=>q.join(',')).join(' ')} fill="none" stroke={REFERENCE_COLOR} strokeWidth={2*units} strokeDasharray={`${6*units} ${4*units}`}/></g>}
@@ -1915,7 +1961,9 @@ export default function CreaseCanvas(input:Props) {
     {batchReflectionTool&&<g pointerEvents="none">{pending.length>0&&(pending[1]||hover)&&<line data-fishbone-axis={fishboneTool?true:undefined} data-transverse-axis={!continuousTool&&!fishboneTool?true:undefined} data-continuous-direction={continuousTool?true:undefined} x1={pending[0][0]} y1={pending[0][1]} x2={(pending[1]||hover!)[0]} y2={(pending[1]||hover!)[1]} stroke={REFERENCE_COLOR} strokeWidth={2*units} strokeDasharray={`${7*units} ${4*units}`}/>} {batchReflectionResult.sources.map(s=><line key={s.id} data-transverse-source={!continuousTool?s.id:undefined} data-continuous-reference={continuousTool?s.id:undefined} x1={s.a[0]} y1={s.a[1]} x2={s.b[0]} y2={s.b[1]} stroke={REFERENCE_COLOR} strokeWidth={5*units} strokeOpacity=".45"/>)}{batchReflectionResult.copies.map(s=><line key={s.id} data-fishbone-preview={fishboneTool?s.id:undefined} data-transverse-preview={!continuousTool&&!fishboneTool?s.id:undefined} data-continuous-preview={continuousTool?s.id:undefined} x1={s.a[0]} y1={s.a[1]} x2={s.b[0]} y2={s.b[1]} {...previewStroke(s)}/>)}</g>}
     {continuousJunction&&!continuousPickingEnd&&<g pointerEvents="none">{continuousJunction.candidates.map((candidate,index)=><g key={index}><line data-continuous-junction-direction={index+1} x1={continuousJunction.point[0]} y1={continuousJunction.point[1]} x2={candidate.end[0]} y2={candidate.end[1]} stroke={REFERENCE_COLOR} strokeWidth={2*units} strokeDasharray={`${7*units} ${4*units}`}/><text x={continuousJunction.point[0]+(candidate.end[0]-continuousJunction.point[0])*.45+5*units} y={continuousJunction.point[1]+(candidate.end[1]-continuousJunction.point[1])*.45-5*units} fontSize={12*units} fill={REFERENCE_COLOR} stroke="#fffefb" strokeWidth={3*units} paintOrder="stroke">方向 {index+1}</text></g>)}</g>}
     {continuousTool&&continuousPickingEnd&&<g pointerEvents="none">{continuousFullPath.path.map((segment,index)=><line key={index} data-continuous-end-path={index} x1={segment.a[0]} y1={segment.a[1]} x2={segment.b[0]} y2={segment.b[1]} stroke={REFERENCE_COLOR} strokeWidth={2*units} strokeDasharray={`${4*units} ${4*units}`} strokeOpacity=".6"/>)}</g>}
-    {continuousTool&&continuousEndMarker&&<g pointerEvents="none"><circle data-continuous-end={continuousPickingEnd?'candidate':'selected'} cx={continuousEndMarker.point[0]} cy={continuousEndMarker.point[1]} r={5*units} fill="white" stroke={REFERENCE_COLOR} strokeWidth={2*units}/><text x={continuousEndMarker.point[0]+8*units} y={continuousEndMarker.point[1]-8*units} fontSize={12*units} fill={REFERENCE_COLOR} stroke="#fffefb" strokeWidth={3*units} paintOrder="stroke">终点</text></g>}
+    {continuousTool&&cutoffTarget&&<line data-continuous-cutoff-line={cutoffTarget.id} x1={cutoffTarget.a[0]} y1={cutoffTarget.a[1]} x2={cutoffTarget.b[0]} y2={cutoffTarget.b[1]} stroke={REFERENCE_COLOR} strokeWidth={4*units} opacity=".55" pointerEvents="none"/>}
+    {showHoverCutoff&&<circle data-continuous-end="candidate" cx={hoverCutoff.point[0]} cy={hoverCutoff.point[1]} r={5*units} fill="white" stroke={REFERENCE_COLOR} strokeWidth={1.5*units} pointerEvents="none"/>}
+    {continuousTool&&continuousEndpoint&&<g pointerEvents="none"><circle data-continuous-end="selected" cx={continuousEndpoint.point[0]} cy={continuousEndpoint.point[1]} r={5*units} fill={REFERENCE_COLOR} stroke="white" strokeWidth={1.5*units}/><text x={continuousEndpoint.point[0]+8*units} y={continuousEndpoint.point[1]-8*units} fontSize={12*units} fill={REFERENCE_COLOR} stroke="#fffefb" strokeWidth={3*units} paintOrder="stroke">终点</text></g>}
     {directionReference&&<line data-direction-reference={directionReference.id} x1={directionReference.a[0]} y1={directionReference.a[1]} x2={directionReference.b[0]} y2={directionReference.b[1]} stroke={REFERENCE_COLOR} strokeOpacity=".35" strokeWidth={7*units} pointerEvents="none"/>}
     {candidates.map((s,i)=><line key={i} data-direction-candidate={i} x1={s.a[0]} y1={s.a[1]} x2={s.b[0]} y2={s.b[1]} stroke={REFERENCE_COLOR} strokeOpacity=".55" strokeWidth={1.5*units} strokeDasharray={`${5*units} ${3*units}`} pointerEvents="none"/>)}
     {directionPreview&&<line data-direction-preview="true" x1={directionPreview.a[0]} y1={directionPreview.a[1]} x2={directionPreview.b[0]} y2={directionPreview.b[1]} {...previewStroke(directionPreview)} pointerEvents="none"/>}
@@ -1928,10 +1976,10 @@ export default function CreaseCanvas(input:Props) {
     {preview.length>1&&<polyline data-drawing-preview={referencePreview?'reference':'crease'} points={preview.map(q=>q.join(',')).join(' ')} {...(referencePreview?{stroke:REFERENCE_COLOR,strokeWidth:1.5*units,strokeDasharray:`${4*units} ${4*units}`} : previewStroke({a:preview[0],b:preview[preview.length-1]}))} fill="none" pointerEvents="none"/>}
     {bisectorPreview&&<g pointerEvents="none"><line data-bisector-preview={p.tool==='bisect'?(bisectorPreview.bounded?'bounded':'ray'):undefined} data-reflection-preview={(p.tool==='reflection'||twoLineReflection)?(bisectorPreview.bounded?'bounded':'ray'):undefined} x1={bisectorPreview.origin[0]} y1={bisectorPreview.origin[1]} x2={bisectorPreview.end[0]} y2={bisectorPreview.end[1]} stroke={REFERENCE_COLOR} strokeWidth={1.8*units} strokeDasharray={`${7*units} ${4*units}`}/>{bisectorPreview.bounded&&<circle data-construction-end="true" cx={bisectorPreview.end[0]} cy={bisectorPreview.end[1]} r={5*units} fill="white" stroke={REFERENCE_COLOR} strokeWidth={1.6*units}/>}</g>}
     {!segmentTool&&!regionLasso&&pending.map((q,i)=><g key={i} pointerEvents="none"><circle data-construction-point={i+1} cx={q[0]} cy={q[1]} r={4*units} fill={rayTool&&i===1?REFERENCE_COLOR:'white'} stroke={referencePreview?REFERENCE_COLOR:'#1f6551'} strokeWidth={1.8*units}/>{rayTool&&<text x={q[0]+8*units} y={q[1]-8*units} fontSize={12*units} fill={REFERENCE_COLOR} stroke="#fffefb" strokeWidth={3*units} paintOrder="stroke">{twoLineReflection?['原方向端','交点 · 起点','轴上点'][i]:i===1?(p.tool==='reflection'?'2 · 起点':'2 · 顶点'):p.tool==='reflection'&&i===2?'3 · 轴点':i+1}</text>}</g>)}
-    {hover&&p.tool!=='select'&&p.tool!=='pan'&&<g stroke="#1f6551" strokeWidth={units}><path d={`M${hover[0]-6*units} ${hover[1]}h${12*units}M${hover[0]} ${hover[1]-6*units}v${12*units}`}/><circle cx={hover[0]} cy={hover[1]} r={3*units} fill="#fffefb"/></g>}
-    {drawingSnapFeedback?.result.relation&&drawingSnapFeedback.anchor&&!p.readOnly&&!panning&&<DiagramLineSnapOverlay snap={drawingSnapFeedback.result.relation} anchor={drawingSnapFeedback.anchor} units={units} showLabel={display.showCursorHint!==false}/>}
-    {drawingSnapFeedback&&!hoverTarget&&!p.readOnly&&!panning&&['grid','grid-intersection','segment'].includes(drawingSnapFeedback.result.kind)&&<rect data-crease-snap-target={drawingSnapFeedback.result.kind} x={drawingSnapFeedback.result.point[0]-4*units} y={drawingSnapFeedback.result.point[1]-4*units} width={8*units} height={8*units} fill="none" stroke="#1f6551" strokeWidth={1.3*units} pointerEvents="none">{display.showCursorHint!==false&&<title>{drawingSnapFeedback.result.kind==='grid-intersection'?'纸边 / 折痕与网格交点':drawingSnapFeedback.result.kind==='grid'?'网格点':'在线段上'}</title>}</rect>}
-    {hoverTarget&&!p.readOnly&&!panning&&<circle data-snap-target={hoverTarget.kind} cx={hoverTarget.point[0]} cy={hoverTarget.point[1]} r={6*units} fill="none" stroke="#1f6551" strokeWidth={1.3*units} pointerEvents="none"/>}
+    {p.hoverHighlight!==false&&hover&&p.tool!=='select'&&p.tool!=='pan'&&<g stroke="#1f6551" strokeWidth={units}><path d={`M${hover[0]-6*units} ${hover[1]}h${12*units}M${hover[0]} ${hover[1]-6*units}v${12*units}`}/><circle cx={hover[0]} cy={hover[1]} r={3*units} fill="#fffefb"/></g>}
+    {p.hoverHighlight!==false&&drawingSnapFeedback?.result.relation&&drawingSnapFeedback.anchor&&!p.readOnly&&!panning&&<DiagramLineSnapOverlay snap={drawingSnapFeedback.result.relation} anchor={drawingSnapFeedback.anchor} units={units} showLabel={display.showCursorHint!==false}/>}
+    {p.hoverHighlight!==false&&drawingSnapFeedback&&!hoverTarget&&!p.readOnly&&!panning&&['grid','grid-intersection','segment'].includes(drawingSnapFeedback.result.kind)&&<rect data-crease-snap-target={drawingSnapFeedback.result.kind} x={drawingSnapFeedback.result.point[0]-4*units} y={drawingSnapFeedback.result.point[1]-4*units} width={8*units} height={8*units} fill="none" stroke="#1f6551" strokeWidth={1.3*units} pointerEvents="none">{display.showCursorHint!==false&&<title>{drawingSnapFeedback.result.kind==='grid-intersection'?'纸边 / 折痕与网格交点':drawingSnapFeedback.result.kind==='grid'?'网格点':'在线段上'}</title>}</rect>}
+    {p.hoverHighlight!==false&&hoverTarget&&!p.readOnly&&!panning&&<circle data-snap-target={hoverTarget.kind} cx={hoverTarget.point[0]} cy={hoverTarget.point[1]} r={6*units} fill="none" stroke="#1f6551" strokeWidth={1.3*units} pointerEvents="none"/>}
     {shownFrame&&<g data-operation-frame="true" data-preview={!!framePreview} pointerEvents="none"><rect x={view.x+shownFrame.x*units} y={view.y+shownFrame.y*units} width={shownFrame.width*units} height={shownFrame.height*units} fill={REFERENCE_COLOR} fillOpacity=".04" stroke={REFERENCE_COLOR} strokeWidth={1.5*units} strokeDasharray={`${6*units} ${4*units}`}/>{frameCorners(shownFrame).map((q,i)=><rect key={i} x={view.x+(q[0]-3)*units} y={view.y+(q[1]-3)*units} width={6*units} height={6*units} fill="white" stroke={REFERENCE_COLOR} strokeWidth={units}/>)}</g>}
     {box&&<rect data-gesture-box={gesture.current?.kind==='customcolor'?'customcolor':gesture.current?.kind==='typefilter'?'typefilter':gesture.current?.kind==='unselect'?'unselect':gesture.current?.kind==='erase'?'erase':'select'} data-erase-mode={eraseMode??undefined} data-selection-mode={selectMode??undefined} x={Math.min(box.a[0],box.b[0])} y={Math.min(box.a[1],box.b[1])} width={Math.abs(box.a[0]-box.b[0])} height={Math.abs(box.a[1]-box.b[1])} fill={(gesture.current?.kind==='customcolor'||gesture.current?.kind==='unselect'||gesture.current?.kind==='typefilter')?'#8052ad15':eraseMode?(eraseMode==='touching'?'#a53e3930':'#a53e3920'):'#1f655120'} stroke={(gesture.current?.kind==='customcolor'||gesture.current?.kind==='unselect'||gesture.current?.kind==='typefilter')?REFERENCE_COLOR:eraseMode?'#a53e39':'#1f6551'} strokeWidth={units} strokeDasharray={(eraseMode??selectMode)==='contained'?undefined:`${4*units} ${3*units}`}/>}
     {!p.readOnly&&cursor&&!panning&&(picking.displayPointSpotlight||picking.displayPointOffset)&&<g data-picking-indicator="true" pointerEvents="none" aria-hidden="true" transform={`translate(${view.x+cursor[0]*units} ${view.y+cursor[1]*units})`}>{picking.displayPointSpotlight&&<circle data-picking-radius="true" r={pickRadius} fill="none" stroke="#a17d00" strokeWidth={1.5*units}/>} {picking.displayPointOffset&&<line data-picking-offset="true" x1={0} y1={0} x2={pickRadius} y2={pickRadius} stroke="#424740" strokeWidth={units}/>}</g>}
@@ -1942,9 +1990,10 @@ export default function CreaseCanvas(input:Props) {
       </g>)}
       {p.diagnosticHighlights.points.map(([x,y],i)=><circle key={i} data-diagnostic-point="true" cx={x} cy={y} r={7*units} strokeWidth={2*units} fill={DIAGNOSTIC_HIGHLIGHT_COLOR} fillOpacity=".12"/>)}
     </g>}
-    {p.svgOverlay&&<g pointerEvents="none">{p.svgOverlay({view,units})}</g>}
+    <JunctionMarks issues={p.junctions??ownWarnings} units={units}/>
+    {p.svgOverlay&&<g pointerEvents="none">{p.svgOverlay({view,units},panning?null:hoverPosition)}</g>}
     {p.targetPoint&&<CanvasTargetMarker point={p.targetPoint} kind="crease" units={units}/>}
-  </svg>{p.overlay}{cursor&&!p.readOnly&&!panning&&display.showCursorHint!==false&&<div className="cursor-tool-hint" data-cursor-tool-hint="true" aria-hidden="true" style={{left:Math.max(8,Math.min(cursor[0]+16,size.w-248)),top:Math.max(82,cursor[1]-14)}}><small>{TOOL_NAMES[p.tool]} · {(circleEraseStep??toolStep).label}</small><span>{(circleEraseStep??toolStep).instruction}</span></div>}<div className={'canvas-tag'+(!p.readOnly&&!panning?' canvas-selection-actions':'')} onPointerDown={!p.readOnly?event=>event.stopPropagation():undefined} onKeyDownCapture={event=>{
+  </svg>{p.overlay}{cursor&&!p.readOnly&&!panning&&display.showCursorHint!==false&&<div className="cursor-tool-hint" data-cursor-tool-hint="true" aria-hidden="true" style={{left:Math.max(8,Math.min(cursor[0]+16,size.w-248)),top:Math.max(82,cursor[1]-14)}}><small>{TOOL_NAMES[p.tool]} · {(circleEraseStep??toolStep).label}</small><span>{(circleEraseStep??toolStep).instruction}</span></div>}{p.layerControlHost===undefined&&<div className={'canvas-tag'+(!p.readOnly&&!panning?' canvas-selection-actions':'')} onPointerDown={!p.readOnly?event=>event.stopPropagation():undefined} onKeyDownCapture={event=>{
     if((event.target as HTMLElement).closest('input,textarea,select,[contenteditable=true]')||!selectionCommands||event.nativeEvent.isComposing||event.altKey||!(event.ctrlKey||event.metaKey)||event.key.toLowerCase()!=='a')return;
     event.preventDefault();event.stopPropagation();if(event.shiftKey)clearSelectedObjects();else selectVisibleObjects();svg.current?.focus({preventScroll:true});
   }}>
@@ -1956,6 +2005,6 @@ export default function CreaseCanvas(input:Props) {
       </>}
       {toolParameters}
     </CanvasToolOptions>:panning?'按住滚轮 / 平移画布':p.readOnly?'实时预览':TOOL_NAMES[p.tool]}
-    <span className="canvas-selection-status">{!p.readOnly&&p.tool==='line'?' · '+NAMES[drawingAssignment]:''}{twoLineReflection&&reflectionIds.length?` · 已选 ${reflectionIds.length} 条参考线`:pending.length?` · 已选 ${pending.length} 点`:''}{activeVertex?` · 已选交点 (${activeVertex.point.map(n=>Number(n.toFixed(3))).join(', ')})`:''}{hoverTarget&&!panning?` · ${p.tool==='select'?'可选':'吸附'}${hoverTarget.kind==='intersection'?'交点':hoverTarget.kind==='circle'?'圆参考点':hoverTarget.kind==='circle-intersection'?'圆交点':'端点'}`:''}{!outline?' · 边界未闭合或无效，未填充纸面':''}</span></div><div className="zoom-controls canvas-view-controls">{!input.readOnly&&p.onToolGuideChange&&<label className="canvas-cursor-hint-toggle"><input type="checkbox" checked={display.showToolGuide!==false} onChange={event=>p.onToolGuideChange?.(event.currentTarget.checked)}/><span>帮助提示</span></label>}{!input.readOnly&&p.onCursorHintChange&&<CanvasCursorHintToggle checked={display.showCursorHint!==false} onChange={p.onCursorHintChange}/>}{p.navigationTargetLabel&&<span className="canvas-navigation-target" role="status" title="中键点击折痕图或平折结果，标记后滚轮和缩放按钮作用于该对象；按住中键拖动可平移。">缩放目标：{p.navigationTargetLabel} · 中键标记</span>}<button onClick={()=>p.overlayNavigation?p.overlayNavigation.onZoom(1.25):zoom(1.25)} aria-label={p.overlayNavigation?"缩小平折结果":"缩小画布"}>−</button><button onClick={()=>p.overlayNavigation?p.overlayNavigation.onFit():fit()}>{p.overlayNavigation?"复位平折视图":"适合画布"}</button><button onClick={()=>p.overlayNavigation?p.overlayNavigation.onZoom(.8):zoom(.8)} aria-label={p.overlayNavigation?"放大平折结果":"放大画布"}>＋</button></div></div></div>;
+    <span className="canvas-selection-status">{!p.readOnly&&p.tool==='line'?' · '+NAMES[drawingAssignment]:''}{twoLineReflection&&reflectionIds.length?` · 已选 ${reflectionIds.length} 条参考线`:pending.length?` · 已选 ${pending.length} 点`:''}{activeVertex?` · 已选交点 (${activeVertex.point.map(n=>Number(n.toFixed(3))).join(', ')})`:''}{hoverTarget&&!panning?` · ${p.tool==='select'?'可选':'吸附'}${hoverTarget.kind==='intersection'?'交点':hoverTarget.kind==='circle'?'圆参考点':hoverTarget.kind==='circle-intersection'?'圆交点':'端点'}`:''}{!outline?' · 边界未闭合或无效，未填充纸面':''}</span></div>}<div className="zoom-controls canvas-view-controls">{!input.readOnly&&p.onToolGuideChange&&<label className="canvas-cursor-hint-toggle"><input type="checkbox" checked={display.showToolGuide!==false} onChange={event=>p.onToolGuideChange?.(event.currentTarget.checked)}/><span>帮助提示</span></label>}{!input.readOnly&&p.onCursorHintChange&&<CanvasCursorHintToggle checked={display.showCursorHint!==false} onChange={p.onCursorHintChange}/>}{p.navigationTargetLabel&&<span className="canvas-navigation-target" role="status" title="中键点击折痕图或平折结果，标记后滚轮和缩放按钮作用于该对象；按住中键拖动可平移。">缩放目标：{p.navigationTargetLabel} · 中键标记</span>}<button onClick={()=>p.overlayNavigation?p.overlayNavigation.onZoom(1.25):zoom(1.25)} aria-label={p.overlayNavigation?"缩小平折结果":"缩小画布"}>−</button><button onClick={()=>p.overlayNavigation?p.overlayNavigation.onFit():fit()}>{p.overlayNavigation?"复位平折视图":"适合画布"}</button><button onClick={()=>p.overlayNavigation?p.overlayNavigation.onZoom(.8):zoom(.8)} aria-label={p.overlayNavigation?"放大平折结果":"放大画布"}>＋</button></div></div></div>;
 }
 

@@ -43,6 +43,59 @@ fn validate_diagram_basic_settings(settings:&Value)->Result<(),ApiError>{
     }
     Ok(())
 }
+fn validate_diagram_state(state:&Value)->Result<(),ApiError>{
+    if !exact(state,&["id","doc","revision"])||!state["id"].is_string()||!state["revision"].as_u64().is_some_and(|n|n<=9_007_199_254_740_991){return Err(invalid("完整作品折序源记录无效。"))}
+    validate_doc(&state["doc"])
+}
+
+fn validate_diagram_branches(diagram:&Value)->Result<(),ApiError>{
+    let bad=||invalid("完整作品的分支步骤或编号无效。");
+    if let Some(order)=diagram.get("branchOrder"){
+        let mut seen=HashSet::new();
+        for id in order.as_array().ok_or_else(bad)?{if !seen.insert(id.as_str().ok_or_else(bad)?){return Err(bad())}}
+    }
+    if diagram.get("branchSteps").is_none()&&diagram.get("branchLabels").is_none(){return Ok(())}
+    let mut outputs=HashMap::new();
+    let mut children:HashMap<&str,HashSet<&str>>=HashMap::new();
+    let mut previous=None;
+    for step in diagram["steps"].as_array().ok_or_else(bad)?{
+        let id=step["id"].as_str().ok_or_else(bad)?;
+        if outputs.insert(id,step["afterId"].as_str().ok_or_else(bad)?).is_some(){return Err(bad())}
+        if let Some(parent)=previous{children.entry(parent).or_default().insert(id);}
+        previous=Some(id);
+    }
+    if let Some(others)=diagram.get("branchSteps"){
+        let entries=others.as_array().ok_or_else(bad)?;
+        for entry in entries{
+            if !exact(entry,&["parentId","step","after"]){return Err(bad())}
+            validate_diagram_state(&entry["after"])?;
+            let id=entry["step"]["id"].as_str().ok_or_else(bad)?;
+            let after=entry["after"]["id"].as_str().ok_or_else(bad)?;
+            if entry["step"]["afterId"].as_str()!=Some(after)||outputs.insert(id,after).is_some(){return Err(bad())}
+            children.entry(entry["parentId"].as_str().ok_or_else(bad)?).or_default().insert(id);
+        }
+        for entry in entries{
+            let parent=entry["parentId"].as_str().ok_or_else(bad)?;
+            if outputs.get(parent).copied()!=Some(entry["step"]["beforeId"].as_str().ok_or_else(bad)?){return Err(bad())}
+        }
+    }
+    if let Some(rules)=diagram.get("branchLabels"){
+        for (parent,rule) in rules.as_object().ok_or_else(bad)?{
+            let arms=children.get(parent.as_str()).filter(|arms|arms.len()>1).ok_or_else(bad)?;
+            let mode=rule["mode"].as_str().ok_or_else(bad)?;
+            if !matches!(mode,"upper"|"lower"|"number"|"custom"){return Err(bad())}
+            if let Some(labels)=rule.get("labels"){
+                if mode!="custom"||!exact(rule,&["mode","labels"]){return Err(bad())}
+                let mut used=HashSet::new();
+                for (id,text) in labels.as_object().ok_or_else(bad)?{
+                    let label=text.as_str().ok_or_else(bad)?;
+                    if !arms.contains(id.as_str())||label.trim().is_empty()||label.trim()!=label||label.chars().any(|c|c<='\u{1f}'||c=='\u{7f}')||!used.insert(label){return Err(bad())}
+                }
+            }else if !exact(rule,&["mode"]){return Err(bad())}
+        }
+    }
+    Ok(())
+}
 fn validate_artwork_value(value:&Value)->Result<(),ApiError>{
     let v2=value["version"]==2;
     let fields=if v2{&["format","version","editor","models","diagram","simulation","construction","design"][..]}else{&["format","version","editor","models","diagram","simulation","construction"][..]};
@@ -81,10 +134,22 @@ fn validate_artwork_value(value:&Value)->Result<(),ApiError>{
     }
     let diagram=&value["diagram"];
     if !diagram.is_null(){
-        let fields=if diagram.get("basicSettings").is_some(){&["format","version","name","states","steps","activeStepId","basicSettings"][..]}else{&["format","version","name","states","steps","activeStepId"][..]};
-        if !exact(diagram,fields)||diagram["format"]!="zhezhi-diagram"||diagram["version"]!=1||!diagram["states"].is_array()||!diagram["steps"].as_array().is_some_and(|x|!x.is_empty())||diagram["states"].as_array().unwrap().len()!=diagram["steps"].as_array().unwrap().len()+1{return Err(invalid("完整作品折序记录无效。"))}
+        let mut fields=vec!["format","version","name","states","steps","activeStepId"];
+        for optional in ["basicSettings","exportSettings","spatialContactSolutions","branchSteps","branchOrder","branchLabels"] {
+            if diagram.get(optional).is_some(){fields.push(optional);}
+        }
+        if !exact(diagram,&fields)||diagram["format"]!="zhezhi-diagram"||diagram["version"]!=1||!diagram["states"].is_array()||!diagram["steps"].as_array().is_some_and(|x|!x.is_empty())||diagram["states"].as_array().unwrap().len()!=diagram["steps"].as_array().unwrap().len()+1{return Err(invalid("完整作品折序记录无效。"))}
         if let Some(settings)=diagram.get("basicSettings"){validate_diagram_basic_settings(settings)?;}
-        for state in diagram["states"].as_array().unwrap(){if !exact(state,&["id","doc","revision"])||!state["id"].is_string()||!state["revision"].as_u64().is_some_and(|n|n<=9_007_199_254_740_991){return Err(invalid("完整作品折序源记录无效。"))}validate_doc(&state["doc"])?;}
+        if let Some(settings)=diagram.get("exportSettings"){
+            let bad=||invalid("完整作品中的折序导出设置无效。");
+            if !settings.is_object()||["pdf","cp"].iter().any(|key|settings.get(*key).is_some_and(|v|!v.is_object()))
+                ||settings.get("format").is_some_and(|v|!matches!(v.as_str(),Some("pdf"|"images")))
+                ||settings.get("coverCPSource").is_some_and(|v|!matches!(v.as_str(),Some("last"|"editor"|"file"))){return Err(bad())}
+            if let Some(doc)=settings.pointer("/pdf/coverCPDoc"){validate_doc(doc)?;}
+            if let Some(doc)=settings.pointer("/cp/snapshot/doc"){validate_doc(doc)?;}
+        }
+        for state in diagram["states"].as_array().unwrap(){validate_diagram_state(state)?;}
+        validate_diagram_branches(diagram)?;
     }
     let simulation=&value["simulation"];
     if !simulation.is_null()&&(!exact(simulation,&["version","source","solver","progress","settings","view"])||simulation["version"]!=1||simulation["source"].is_null()||simulation["solver"]["version"]!=1||!simulation["progress"].as_f64().is_some_and(|x|x.is_finite()&&x.abs()<=1.)){return Err(invalid("完整作品三维姿态记录无效。"))}
@@ -152,7 +217,8 @@ fn artwork_summary(id:&str,revision:&str,updated:&str,artwork:&Value)->Value{
 fn artwork_summary_bytes(id:&str,revision:&str,updated:&str,artwork:&Value,bytes:usize)->Value{
     let name=artwork["editor"]["name"].as_str().unwrap_or("");
     let mut used=0;let name:String=name.chars().take_while(|ch|{used+=ch.len_utf16();used<=160}).collect();
-    json!({"id":id,"name":name,"updated":updated,"revision":revision,"bytes":bytes,"models":artwork["models"]["entries"].as_array().map_or(0,Vec::len),"steps":artwork["diagram"]["steps"].as_array().map_or(0,Vec::len),"simulation":!artwork["simulation"].is_null()})
+    let steps=artwork["diagram"]["steps"].as_array().map_or(0,Vec::len)+artwork["diagram"]["branchSteps"].as_array().map_or(0,Vec::len);
+    json!({"id":id,"name":name,"updated":updated,"revision":revision,"bytes":bytes,"models":artwork["models"]["entries"].as_array().map_or(0,Vec::len),"steps":steps,"simulation":!artwork["simulation"].is_null()})
 }
 fn summary(id:&str,saved:&Saved,record:&Value)->Value{artwork_summary(id,&saved.revision,record["updated"].as_str().unwrap_or(""),&record["artwork"])}
 fn cached_summary_valid(id:&str,value:&Value)->bool{
@@ -240,12 +306,34 @@ impl ArtworkRecovery {
 mod tests{
     use super::*;
     fn artwork()->Value{json!({"format":"zhezhi-artwork","version":1,"editor":{"name":"恢复作品","paper":{"width":200,"height":200},"segments":[]},"models":null,"diagram":null,"simulation":null,"construction":{"tessellation":{},"curve":null}})}
+    #[test]fn branch_routes_and_labels_roundtrip_through_artwork_recovery(){
+        let dir=tempfile::tempdir().unwrap();
+        let store=ArtworkRecovery::new(Storage::new(dir.path().join("data"),false).unwrap());
+        let id="11111111-1111-4111-8111-111111111111";
+        let mut value=artwork();let doc=value["editor"].clone();
+        let state=|id:&str|json!({"id":id,"doc":doc,"revision":0});
+        let step=|id:&str,before:&str,after:&str|json!({"id":id,"beforeId":before,"afterId":after,"pose":null,"title":"","description":""});
+        value["diagram"]=json!({"format":"zhezhi-diagram","version":1,"name":"分支折序","states":[state("s0"),state("fork"),state("left")],
+            "steps":[step("parent","s0","fork"),step("a","fork","left")],"activeStepId":"a",
+            "branchSteps":[{"parentId":"parent","step":step("b","fork","right"),"after":state("right")}],"branchOrder":["parent","a","b"],
+            "branchLabels":{"parent":{"mode":"custom","labels":{"a":"经典","b":"墨镜"}}}});
+        let summary=store.put(&json!({"id":id,"expectedRevision":null,"text":value.to_string()})).unwrap();
+        assert_eq!(summary["steps"],3);
+        assert_eq!(store.list().unwrap()["entries"][0]["steps"],3);
+        let restored=store.get(id).unwrap();
+        assert_eq!(serde_json::from_str::<Value>(restored["text"].as_str().unwrap()).unwrap(),value);
+        let mut bad=value.clone();bad["diagram"]["branchLabels"]["parent"]["labels"]["b"]=json!("经典");
+        assert!(store.put(&json!({"id":id,"expectedRevision":summary["revision"],"text":bad.to_string()})).is_err());
+        assert_eq!(store.get(id).unwrap()["text"],restored["text"]);
+    }
     #[test]fn drawings_with_optional_basic_settings_roundtrip_and_invalid_updates_preserve_prior(){
         let mut value=artwork();let source=value["editor"].clone();
         let states:Vec<Value>=(0..3).map(|i|json!({"id":format!("state-{i}"),"doc":source,"revision":0})).collect();
         let steps:Vec<Value>=(0..2).map(|i|json!({"id":format!("step-{i}"),"title":"折序","description":"保留说明","beforeId":format!("state-{i}"),"afterId":format!("state-{}",i+1),"pose":null})).collect();
         value["diagram"]=json!({"format":"zhezhi-diagram","version":1,"name":"旧版两步绘图","states":states,"steps":steps,"activeStepId":"step-0"});
         assert!(validate_artwork(&value.to_string()).is_ok(),"old drawings without basic settings remain supported");
+        value["diagram"]["exportSettings"]=json!({"format":"images","coverCPSource":"file","pdf":{"author":"制图者","coverCPDoc":source,"coverCPLabel":"封面.cp"},"cp":{"source":"editor","format":"svg","print":{"paper":"A4","orientation":"portrait"},"snapshot":{"name":"折痕编辑区","doc":source}}});
+        value["diagram"]["spatialContactSolutions"]=json!({"version":1,"groups":[]});
         let mut lines=serde_json::Map::new();for (style,pattern) in [("valley","dashed"),("mountain","dash-dot"),("crease","solid"),("auxiliary","dotted"),("boundary","solid")]{lines.insert(style.into(),json!({"color":"#293d35","width":0.7,"strokePattern":pattern,"globalFields":["color","width","strokePattern"]}));}
         value["diagram"]["basicSettings"]=json!({"paper":{"shape":"rectangle","width":100,"height":200,"sides":6},"colors":{"front":"#c5dac2","back":"#f3e6ce","line":"#41634e"},"lineDefaults":lines,"adaptiveLines":true});
         let root=tempfile::tempdir().unwrap();let storage=Storage::new(root.path().join("data"),false).unwrap();let store=ArtworkRecovery::new(storage.clone());let id="11111111-1111-4111-8111-111111111111";
@@ -253,6 +341,7 @@ mod tests{
         assert_eq!(saved["steps"],2);assert_eq!(serde_json::from_str::<Value>(store.get(id).unwrap()["text"].as_str().unwrap()).unwrap(),value);
         assert_eq!(store.list().unwrap()["entries"][0]["steps"],2);
         let mut invalid=Vec::new();
+        for settings in [json!(null),json!({"format":"jpeg"}),json!({"pdf":[]}),json!({"coverCPSource":2}),json!({"pdf":{"coverCPDoc":false}}),json!({"cp":{"snapshot":{"doc":{}}}})]{let mut bad=value.clone();bad["diagram"]["exportSettings"]=settings;invalid.push(bad);}
         for settings in [json!(null),json!(false),json!([])]{let mut bad=value.clone();bad["diagram"]["basicSettings"]=settings;invalid.push(bad);}
         for (field,bad_value) in [("shape",json!("unknown")),("width",json!(0)),("height",json!(100001)),("sides",json!(2)),("sides",json!(6.5))]{let mut bad=value.clone();bad["diagram"]["basicSettings"]["paper"][field]=bad_value;invalid.push(bad);}
         for (field,bad_value) in [("color",json!("red")),("width",json!(0)),("strokePattern",json!("unknown")),("globalFields",json!(["color","color"])),("globalFields",json!(["unknown"])),("extra",json!(true))]{let mut bad=value.clone();bad["diagram"]["basicSettings"]["lineDefaults"]["valley"][field]=bad_value;invalid.push(bad);}

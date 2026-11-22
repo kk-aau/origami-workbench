@@ -43,3 +43,26 @@ test('component discovery supports deep chains without recursive stack growth',(
   const {component,sizes}=faceRelationComponents(count,pairs,new Uint8Array(count-1).fill(2));
   assert.equal(sizes.length,count);assert.equal(component[0],0);assert.equal(component[count-1],count-1);
 });
+
+test('certified monotone arc insertions keep exactly the same component ids and tie order',()=>{
+  let state=95209;
+  const random=()=>{state=(Math.imul(state,1664525)+1013904223)>>>0;return state>>>16;};
+  const pairs:[number,number][]=[];
+  for(let a=0;a<9;a++)for(let b=a+1;b<9;b++)pairs.push([a,b]);
+  const key=(a:number,b:number)=>Math.min(a,b)*9+Math.max(a,b);
+  let accepted=0;
+  for(let sample=0;sample<300;sample++){
+    for(let i=pairs.length-1;i>0;i--){const j=random()%(i+1);[pairs[i],pairs[j]]=[pairs[j],pairs[i]];}
+    const ids=new Map(pairs.map(([a,b],i)=>[key(a,b),i+1]));
+    const values=Uint8Array.from(pairs,()=>random()%3);
+    const before=faceRelationComponents(9,pairs,values,(a,b)=>ids.get(key(a,b))!);
+    for(let i=0;i<pairs.length;i++){
+      if(values[i])continue;
+      const [a,b]=pairs[i],direction=1+random()%2;
+      if(before.preservesOrder!(direction===1?b:a,direction===1?a:b,i+1)){values[i]=direction;accepted++;}
+    }
+    const after=faceRelationComponents(9,pairs,values);
+    assert.deepEqual(after.component,before.component);assert.deepEqual(after.sizes,before.sizes);
+  }
+  assert.ok(accepted>100);
+});

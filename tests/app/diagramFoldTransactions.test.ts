@@ -16,7 +16,12 @@ import {setDiagramStartingFace} from '../../src/app/diagramFoldSettings';
 import {resolveStartingFace} from '../../src/app/flatFoldSettings';
 import {reconcileDiagramFoldAnnotations,reapplyDiagramFoldLayerScope,changeDiagramFoldLayerScope,adoptDiagramFoldCP,refreshDiagramFoldDrawing,updateDiagramFoldDrawingFromCP} from '../../src/app/diagramFoldTransactions';
 import {diagramFoldBackgroundLines,drawingSVG} from '../../src/app/diagramDrawing';
+import {changeGlobalDiagramLineStyle,defaultDiagramLineDefaults} from '../../src/app/diagramLineStyles';
 import {isolateDiagramLineEdits} from '../../src/app/diagramLineEditScope';
+import {diagramGeometryOperations} from '../../src/app/diagramGeometryOperations';
+import {encodePreparedDiagramFile,inspectPreparedDiagram} from '../../src/app/diagramPreparedFile';
+import {prepareExistingCreases} from '../../src/app/diagramProjectPreparation';
+import {normalizeDiagramProjectCP} from '../../src/app/diagramCP';
 
 const config={enabled:true,layers:'all' as const,selectedFaces:[]};
 const line=(a:Point,b:Point,id='new-fold'):DiagramLineAnnotation=>({id,kind:'line',a,b,style:'valley',color:'#314b3c',width:.7});
@@ -31,6 +36,30 @@ function fixture(assignment:Assignment='V'){
   project=updateDiagramFoldLink(project,stepId,config);
   return {doc,project,stepId};
 }
+test('portable canvas preserves prepared CP and strokes; edits invalidate only dependent drawing inputs',async()=>{
+  const {project,stepId}=fixture('F');
+  const original=JSON.stringify(project);
+  const expected=prepareExistingCreases(normalizeDiagramProjectCP(importDiagramProject(exportDiagramProject(project))).project);
+  const {text,complete}=await encodePreparedDiagramFile(project);
+  assert.equal(complete,true);
+  const file=inspectPreparedDiagram(JSON.parse(text))!;
+  assert.equal(JSON.stringify(file.project),JSON.stringify(expected));
+  assert.equal(JSON.stringify(project),original);
+  const verified=importDiagramProject(text);
+  assert.deepEqual([...(await file.matchingDrawings(verified))],[stepId]);
+  assert.deepEqual([...(await file.matchingDrawings({...verified,name:'新工程名'}))],[stepId]);
+  const altered=structuredClone(verified);
+  altered.states[1].revision++;
+  assert.equal((await file.matchingDrawings(altered)).size,0);
+  assert.equal(await file.matches(altered),false);
+  const changedStroke=structuredClone(verified);
+  changedStroke.steps[0].annotations=[];
+  assert.equal((await file.matchingDrawings(changedStroke)).size,0);
+  const damaged=JSON.parse(text);
+  damaged.states[0].doc.paper.width=-1;
+  assert.throws(()=>importDiagramProject(JSON.stringify(damaged)));
+});
+
 function partialOverlapFixture(){
   const raw=blankDoc('局部重叠的上层范围',100,100);raw.segments.push(segment([25,0],[25,100],'M','off-centre-fold'));
   const doc=normalizeDiagramCP(raw).doc;let i=0,project=createDiagramProject(doc,()=>`partial-range-${++i}`),stepId=project.activeStepId;
@@ -103,17 +132,18 @@ test('coincident screen strokes on an exposed lower sheet retain independent mat
   for(const s of savedUpper)assert.ok(after(project).doc.segments.some(n=>n.assignment===s.assignment&&distance(n.a,s.a)<1e-6&&distance(n.b,s.b)<1e-6));
 });
 
-test('M to F without a new CP segment keeps a visible mountain opening guide through refresh and export',()=>{
+test('opening a mountain to flat keeps a valley guide on the front-facing bank through refresh and export',()=>{
   const {project,stepId}=fixture('M'),opened=structuredClone(after(project).doc);
   const hinge=opened.segments.find(s=>s.id==='old-fold')!;hinge.assignment='F';hinge.angle=0;
   const changed=updateDiagramCP(project,project.steps[0].afterId,opened);
   const refreshed=refreshDiagramFoldDrawing(changed,stepId),step=refreshed.steps[0];
-  const guide=step.annotations!.filter((a):a is DiagramLineAnnotation=>a.kind==='line'&&a.id.startsWith('cp-existing:')&&a.style==='mountain');
-  assert.ok(guide.length>0);
+  const guide=step.annotations!.find(a=>a.kind==='line'&&a.id.startsWith('cp-existing:')&&a.foldFaces?.includes(0));
+  assert.ok(guide?.kind==='line'&&guide.style==='valley');
   const preview=projectDiagramFoldCP(step.pose!,before(refreshed).doc,after(refreshed).doc,before(refreshed)).preview;
-  assert.ok(preview.some(part=>part.unfolding&&part.style==='mountain'));
-  const svg=drawingSVG(step.pose!,step.annotations!,'','',preview);
-  assert.match(svg,/stroke-dasharray/);assert.match(svg,/stroke="#41634e" stroke-width="0.7"/);
+  assert.ok(preview.some(part=>part.unfolding&&part.face===0&&part.style==='valley'));
+  const palette=changeGlobalDiagramLineStyle(defaultDiagramLineDefaults(),'valley',{color:'#0011ff'});
+  const svg=drawingSVG(step.pose!,step.annotations!,'','',preview,[],true,palette);
+  assert.match(svg,/data-diagram-boundary-fold-hint="true"[^]*?stroke="#0011ff"[^>]*stroke-dasharray/);
   assert.deepEqual(importDiagramProject(exportDiagramProject(refreshed)).steps[0].annotations,step.annotations);
 });
 
@@ -159,6 +189,28 @@ test('paper-exterior drawing fragments survive CP edits and repeated preview ref
   assert.deepEqual(refreshed.steps[0].annotations?.filter(a=>a.id.startsWith('bg:')),background);
   assert.deepEqual(after(refreshed),after(changed));
   assert.ok(after(refreshed).doc.segments.filter(s=>s.assignment==='M'||s.assignment==='V').every(s=>s.a[0]>=-1e-7&&s.a[0]<=100+1e-7&&s.b[0]>=-1e-7&&s.b[0]<=100+1e-7));
+});
+
+test('recomputing on the other stationary face projects crease ink and preserves only the originally exterior portions',()=>{
+  const {project,stepId}=fixture();
+  const authored=line([-10,30],[50,30],'cross-previous-silhouette');
+  const linked=reconcileDiagramFoldAnnotations(project,stepId,[authored]);
+  const original=linked.steps[0].pose!,state=before(linked);
+  const expected=diagramFoldBackgroundLines(original,[authored]);
+  assert.equal(expected.length,1);close(expected[0].a,[-10,30]);close(expected[0].b,[0,30]);
+  const result=computeFlatFold(state.doc,undefined,{startingFace:1-original.result.geometry.startingFace});
+  const moved=adoptDiagramPose(linked,stepId,state.id,result,defaultModelView()),step=moved.steps[0];
+  // The new silhouette is on the other half of the sheet.
+  assert.notDeepEqual(diagramFoldBackgroundLines(step.pose!,[authored]),expected);
+  const refresh=diagramGeometryOperations.refresh(step,state,after(moved),false,original);
+  const adoption=diagramGeometryOperations.adoptCP(step,state,after(moved),original);
+  for(const annotations of [refresh,adoption.annotations]){
+    assert.deepEqual(annotations.filter(a=>a.id.startsWith('bg:')),expected);
+    const projected=annotations.filter((a):a is DiagramLineAnnotation=>a.kind==='line'&&a.id.startsWith('cp-link:'));
+    assert.ok(projected.length>0);
+    assert.ok(projected.every(a=>a.a[0]>=50-1e-6&&a.b[0]>=50-1e-6));
+  }
+  assert.deepEqual(before(moved),before(linked));assert.deepEqual(after(moved),after(linked));
 });
 
 test('one drawing transaction maps a real two-layer valley into opposite CP assignments and commits both together',()=>{

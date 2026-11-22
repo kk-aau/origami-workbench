@@ -3,7 +3,7 @@ async page=>{
   const button=name=>page.getByRole('button',{name,exact:true});
   const pageError=error=>errors.push(error.message);page.on('pageerror',pageError);
   await page.getByLabel('工程名称',{exact:true}).waitFor();
-  for(const name of ['设置并开始使用','关闭窗口','保留当前工程'])if(await button(name).isVisible().catch(()=>false))await button(name).click();
+  for(const name of ['使用默认位置开始','关闭窗口','保留当前工程'])if(await button(name).isVisible().catch(()=>false))await button(name).click();
   await page.evaluate(()=>{
     window.__artworkConfirm=window.confirm;window.confirm=()=>true;
     window.__artworkDownloads=[];window.__artworkCreateURL=URL.createObjectURL;window.__artworkClick=HTMLAnchorElement.prototype.click;

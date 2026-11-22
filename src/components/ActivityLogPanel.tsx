@@ -20,7 +20,7 @@ const ACTION_LABELS:Record<string,string>={
   'app.start':'应用启动','server.start':'本地服务启动','service.start':'本地服务启动',
   'activity.view':'查看工作日志','activity.export':'导出工作日志','api.failure':'本地操作失败',
   'diagram.save.start':'开始保存折序','diagram.save.success':'折序保存完成','diagram.save.cancel':'取消保存折序','diagram.save.error':'折序保存失败',
-  'diagram.open.start':'开始打开折序','diagram.open.success':'折序打开完成','diagram.open.cancel':'取消打开折序','diagram.open.error':'折序打开失败',
+  'diagram.open.start':'开始打开折序','diagram.open.stage':'打开折序分段耗时','diagram.open.success':'折序打开完成','diagram.open.cancel':'取消打开折序','diagram.open.error':'折序打开失败',
   'diagram.new.start':'开始新建折序','diagram.new.success':'折序新建完成','diagram.new.cancel':'取消新建折序','diagram.new.error':'折序新建失败',
   'diagram.edit':'修改折序绘图','diagram.undo':'撤销折序修改','diagram.redo':'重做折序修改',
   'desktop.confirm.fallback':'使用备用确认窗口','desktop.unresponsive':'应用暂未响应',

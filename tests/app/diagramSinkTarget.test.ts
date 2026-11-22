@@ -1,0 +1,51 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {blankDoc} from '../../src/app/state';
+import {adoptDiagramPose,appendDiagramStep,createDiagramProject,exportDiagramProject,importDiagramProject,updateDiagramCP} from '../../src/app/diagramProject';
+import {computeFlatFold,recomputeFlatLayers} from '../../src/core/flatFold';
+import {buildDiagramStepAnimation} from '../../src/app/diagramStepAnimation';
+import {createDiagramSpatialPose,DEFAULT_DIAGRAM_SPATIAL_CAMERA} from '../../src/app/diagramSpatialPose';
+import {targetForDiagramSinkLeg} from '../../src/app/diagramSinkTarget';
+
+test('重新打开的终点从已保存的几何恢复所选候选，不能获取时不使用第一解',()=>{
+  const before=blankDoc('四种层序',100,100),after=structuredClone(before);
+  for(let x=20;x<100;x+=20)after.segments.push({id:'hinge-'+x,a:[x,0],b:[x,100],assignment:'V',angle:180});
+  let project=createDiagramProject(before);
+  project=appendDiagramStep(updateDiagramCP(project,project.steps[0].afterId,after));
+  const first=computeFlatFold(after),second=recomputeFlatLayers(first,{solutionIndex:1});
+  const state=project.states[1],display=project.steps[1].id;
+  const clip=buildDiagramStepAnimation(project,project.steps[0].id);
+  const initial=adoptDiagramPose(project,display,state.id,first);
+  project=adoptDiagramPose(project,display,state.id,second);
+  const expected=targetForDiagramSinkLeg(project,0,clip)!;
+  assert.notDeepEqual(expected.faceOrders,targetForDiagramSinkLeg(initial,0,clip)!.faceOrders);
+  const reopened=importDiagramProject(exportDiagramProject(project));
+  const pose=reopened.steps[1].pose!;
+  assert.equal(pose.layerSolutionIndex,1);
+  assert.equal(pose.result.layers.status,'unknown');
+  assert.deepEqual(targetForDiagramSinkLeg(reopened,0,clip),expected);
+  assert.equal(pose.result.layers.status,'unknown');
+  pose.layerSolutionIndex=99;
+  assert.throws(()=>targetForDiagramSinkLeg(reopened,0,clip),/所选纸层顺序无法确认/);
+});
+
+test('没有下一张图或下一张还没计算时，终点按中间姿态和操作后 CP 求出接触层序',()=>{
+  const guide=blankDoc('撑开',100,100);
+  guide.segments.push({id:'crease',a:[50,0],b:[50,100],assignment:'V',angle:90});
+  const after=structuredClone(guide);
+  after.segments.at(-1)!.angle=180;
+  let project=createDiagramProject(guide);
+  project=updateDiagramCP(project,project.steps[0].afterId,after);
+  const opened=createDiagramSpatialPose(guide);
+  project=adoptDiagramPose(project,project.steps[0].id,project.states[0].id,opened.result,undefined,opened.spatial);
+  const clip=buildDiagramStepAnimation(project,project.steps[0].id);
+  const data=JSON.stringify(project);
+  const withoutDisplay=targetForDiagramSinkLeg(project,0,clip)!;
+  assert.equal(withoutDisplay.faceOrders?.length,1);
+  assert.equal(JSON.stringify(project),data);
+  project=appendDiagramStep(project);
+  assert.deepEqual(targetForDiagramSinkLeg(project,0,clip),withoutDisplay);
+  const closed=createDiagramSpatialPose(after,0,undefined,project.steps[0].pose!,DEFAULT_DIAGRAM_SPATIAL_CAMERA);
+  project=adoptDiagramPose(project,project.steps[1].id,project.states[1].id,closed.result,undefined,closed.spatial);
+  assert.deepEqual(targetForDiagramSinkLeg(project,0,clip),withoutDisplay);
+});

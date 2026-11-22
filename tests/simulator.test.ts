@@ -132,9 +132,9 @@ test('dragging a picked vertex follows the cursor in screen space without changi
 test('exported simulation FOLD contains current 3D vertices but does not claim target angles as measured angles',()=>{
   const {prepared}=prepareSimulationDocument(singleCrease());
   const original=structuredClone(prepared.fold);
-  const positions=prepared.positions.slice();positions[4]=.25;
+  const positions=new OrigamiModel(prepared).originalPositions.slice();positions[4]=.25/Math.hypot(1,.5);
   const exported=simulationFoldSnapshot(prepared,positions,.5,120);
-  assert.deepEqual(exported.vertices_coords[1],[1,0,.25]);
+  assert.deepEqual(exported.vertices_coords[1].map(value=>Number(value.toFixed(6))),[1,0,.25]);
   assert.equal(exported.vertices_coords.length,prepared.vertexCount);
   assert.deepEqual(exported.frame_classes,['foldedForm']);
   assert.deepEqual(exported.frame_attributes,['3D']);
@@ -275,9 +275,9 @@ test('OBJ and STL export the same current 3D triangles with correctly oriented u
   assert.equal(objFaces.length,prepared.faceCount);
   assert.ok(objVertices.some(vertex=>Math.abs(vertex[2])>.01),'exported pose is actually folded');
   objVertices.forEach((vertex,i)=>{
-    assert.ok(Math.abs(vertex[0]-positions[3*i])<1e-6);
-    assert.ok(Math.abs(vertex[1]+positions[3*i+2])<1e-6);
-    assert.ok(Math.abs(vertex[2]-positions[3*i+1])<1e-6);
+    assert.ok(Math.abs(vertex[0]-(1+positions[3*i]*Math.hypot(1,.5)))<1e-6);
+    assert.ok(Math.abs(vertex[1]-(.5-positions[3*i+2]*Math.hypot(1,.5)))<1e-6);
+    assert.ok(Math.abs(vertex[2]-positions[3*i+1]*Math.hypot(1,.5))<1e-6);
   });
   objFaces.forEach((face,i)=>{
     assert.equal(face.length,3);

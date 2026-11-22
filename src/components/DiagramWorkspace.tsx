@@ -1,11 +1,17 @@
+import type {CPPreviewData} from './DiagramCPPreviewWindow';
+import {diagramBranchNumbering,setDiagramBranchLabels} from '../app/diagramBranches';
+import DiagramBranchInsertDialog from './DiagramBranchInsertDialog';
+import {useJunctionWarningsEnabled} from '../app/junctionWarningPreference';
+import {checkedJunctions} from '../core/editedJunctions';
+import {emptyJunctionWarnings,JunctionWarningSwitch,JunctionWarnings,useEditedJunctions} from './JunctionWarnings';
 import {useLibraryFileIdentity,type CPReturnTarget,type LaunchWorkspaceFile,type WorkspaceFile} from '../app/workspaceFileWindow';
 import HeaderMenu from './HeaderMenu';
 import DiagramLearningHost from './DiagramLearningHost';
 import type {LearningObservation} from '../app/diagramLearning';
 import {useWebTablet} from '../app/useWebTablet';
 import TabletPanelBar,{TabletPanelHeading} from './TabletPanelBar';
-import {prepareExistingCreases,refreshChangedViewDrawings} from '../app/diagramProjectPreparation';
-import {startDiagramProjectImport} from '../app/diagramProjectImportTask';
+import {applyDiagramDrawingEdit,prepareExistingCreases,refreshChangedViewDrawings} from '../app/diagramProjectPreparation';
+import {startDiagramProjectImport,exportDesktopDiagramFile} from '../app/diagramProjectImportTask';
 import {isPreparedArtworkDiagram} from '../app/artworkImportPreparation';
 import {startDiagramThumbnailImport} from '../app/diagramThumbnailTask';
 import {updateDiagramSimulationSurfaceView} from '../app/diagramProject';
@@ -14,15 +20,15 @@ import {startDiagramSimulationEditable} from '../app/diagramSimulationEditableTa
 import {startDiagramGeometry} from '../app/diagramGeometryTask';
 import type {DiagramGeometryKind,DiagramGeometryArgs} from '../app/diagramGeometryOperations';
 import {createDiagramLibrarySaveClient} from '../app/diagramLibrarySaveTask';
-import {sameDiagramProjectContent,diagramProjectNeedsReplacementConfirmation} from '../app/diagramProjectContent';
+import {sameDiagramProjectContent,sameDiagramFileSnapshot,diagramProjectNeedsReplacementConfirmation} from '../app/diagramProjectContent';
 import DiagramSimulationSurfaceOrbit from './DiagramSimulationSurfaceOrbit';
 import {useAdaptiveLineStyle} from '../app/useAdaptiveLineStyle';
 import {readAdaptiveLineStyle} from '../app/adaptiveLineStyle';
-import {forwardRef, useCallback, useEffect, useImperativeHandle, useId, useLayoutEffect, useMemo, useRef, useState, type CSSProperties} from 'react';
+import {Fragment, forwardRef, useCallback, useEffect, useImperativeHandle, useId, useLayoutEffect, useMemo, useReducer, useRef, useState, type CSSProperties} from 'react';
 import {flushSync} from 'react-dom';
 import type {Doc, FlatFoldResult, FlatLayerPreference, FoldGraph, Point} from '../core/types';
 import {buildDiagramFold} from '../core/geometry';
-import {materialFaceInside} from '../core/materialRings';
+import {materialFaceInside,materialFaceRings} from '../core/materialRings';
 import {startFlatFold, startFlatLayerReanalysis, type FlatFoldTask} from '../core/workerClient';
 import {diagramLayerAnalysisKey,applyDiagramLayerAnalysis,applyDiagramStepLayerAnalysis,requestedDiagramLayerSolutionIndex,applyDiagramLayerSolution,diagramPaperLayerAnalysisReason} from '../app/diagramLayerAnalysis';
 import {diagramLayerDisplayState,diagramLayerDisplaySignature,startDiagramLayerDisplayPreparation} from '../app/diagramLayerDisplay';
@@ -30,15 +36,19 @@ import {diagramLocalSurface,diagramLocalSurfaceIssue} from '../app/diagramLocalS
 import {resolveStartingFace,clearStartingFace} from '../app/flatFoldSettings';
 import {setDiagramStartingFace as setStartingFace} from '../app/diagramFoldSettings';
 import {buildDiagramPoseFold} from '../app/diagramFoldGeometry';
-import {download, safeName} from '../app/api';
+import {download, safeName, saveNamedDiagram} from '../app/api';
 import {recordActivity} from '../app/activityLog';
 import {readProjectFile} from '../app/importFile';
-import {selectProjectFile} from '../app/selectProjectFile';
+import {originalDiagramFileNames} from '../app/diagramProjectTransport';
+import {diagramFileName} from '../app/diagramFileName';
+import {projectFileBinding,saveProjectFile,selectProjectFile} from '../app/selectProjectFile';
 import {preferenceStorage} from '../app/preferenceStorage';
 import {blankDoc} from '../app/state';
-import {diagramPDFStepLabel,defaultDiagramPDFOptions,type DiagramPDFOptions} from '../app/diagramPDFLayout';
+import {diagramPanelNumber,diagramPDFStepLabel,defaultDiagramPDFOptions} from '../app/diagramPDFLayout';
 import {diagramThumbnailSizes} from '../app/diagramThumbnailLayout';
 import {DiagramThumbnailCache} from '../app/diagramThumbnailCache';
+import {decodePaperTextures} from '../engine/simPaperTexture';
+import {readPaperPatterns,withPaperPatterns} from '../app/paperPatterns';
 import {defaultModelColors,type ModelColors} from '../app/modelColors';
 import {defaultModelView, type ModelViewState} from '../app/modelViewState';
 import {diagramDepthActive,diagramDepthMaterialPoint,type DiagramDepth} from '../app/diagramDepth';
@@ -51,17 +61,18 @@ import {selectFoldedVertex, type FoldedVertexSelection} from '../app/foldedVerte
 import {diagramPaperVertices,moveDiagramPaperVertices} from '../app/diagramPaperDeformation';
 import {diagramIllustrationMesh} from '../app/diagramIllustrationMesh';
 import {
-  createDiagramProject, appendDiagramStep, advanceDiagramStep, inheritDiagramCurrentPose, duplicateDiagramStep, removeDiagramStep, selectDiagramStep,
+  createDiagramProject, advanceDiagramStep, inheritDiagramCurrentPose, duplicateDiagramStep, removeDiagramStep, selectDiagramStep, addDiagramBranch, selectDiagramBranchStep, diagramBranchFoldPreference,
+  insertDiagramStepOnBranch,createDiagramProcessFigure,upsertDiagramProcessFigure,removeDiagramProcessFigure,
   updateDiagramStep, updateDiagramCP, adoptDiagramPose, updateDiagramPoseResult,updateDiagramPaperPose,
   updateDiagramPoseView, updateDiagramPoseViewport, updateDiagramOrientationLock, updateDiagramHiddenFaces, updateDiagramAnnotations, updateDiagramCanvas, updateDiagramFoldLink,updateDiagramCallouts, defaultDiagramCanvas, exportDiagramProject, importDiagramProject,
   getDiagramStepInitialView, resyncDiagramStepViews,
-  type DiagramProject, type DiagramPose, type DiagramCPState, type DiagramCanvasSettings,
+  type DiagramProject, type DiagramExportSettings, type DiagramPose, type DiagramCPState, type DiagramCanvasSettings,
 } from '../app/diagramProject';
 import {normalizeDiagramCP,normalizeDiagramProjectCP} from '../app/diagramCP';
 import {diagramFoldFacesAtPoint,pickDiagramFoldAnchor,diagramFoldStartingFace,alignDiagramFoldResult,projectDiagramFoldCP,diffDiagramFoldCP,mapDiagramFoldLines} from '../app/diagramFoldLink';
 import {defaultDiagramFoldLink,reconcileDiagramFoldAnnotations,changeDiagramFoldLayerScope,applyDiagramSimulationFoldAngles,adoptDiagramFoldCP,refreshDiagramFoldDrawing,updateDiagramFoldDrawingFromCP} from '../app/diagramFoldTransactions';
 import {hasDiagramActiveFoldChanges,chooseDiagramPrecreaseAnchor} from '../app/diagramPrecreaseAdvance';
-import {diagramStepLayerPreferences,inheritDiagramFixedAnchor} from '../app/diagramStepInheritance';
+import {diagramSpatialRetryAnchor,diagramStepLayerPreferences,inheritDiagramFixedAnchor} from '../app/diagramStepInheritance';
 import {getDiagramReturnTarget} from '../app/diagramReturnReference';
 import {advanceDiagramReturnStep,diagramReturnAggregationPose} from '../app/diagramReturnStep';
 import type {DiagramFoldLinkSettings} from '../app/diagramFoldLinkTypes';
@@ -70,25 +81,36 @@ import {followDiagramPaperAnnotations} from '../app/diagramPaperFollow';
 import {recordDiagramPaperPull,retainDiagramPaperStates,switchDiagramPaperState,initializeDiagramPaperStates,isDiagramPaperPulled,isDiagramPaperPoseIsometric} from '../app/diagramPaperState';
 import DiagramCPWorkspace from './DiagramCPWorkspace';
 import {applyReturnedDiagramCP,applyDiagramCPEdit,getDiagramCPEditAccess} from '../app/diagramCPEditing';
-import DiagramDrawingCanvas, {type DiagramDrawingTool} from './DiagramDrawingCanvas';
+import DiagramDrawingCanvas, {canvasFoldPreview,type DiagramDrawingTool} from './DiagramDrawingCanvas';
+import DiagramProcessFigureEditor from './DiagramProcessFigureEditor';
 import DiagramSpatialOrbit,{type DiagramSpatialCameraJob} from './DiagramSpatialOrbit';
+import DiagramFixedViewPicker from './DiagramFixedViewPicker';
 import DiagramSpatialDiagnosticView from './DiagramSpatialDiagnosticView';
 import {getDiagramSpatialDiagnostic,type DiagramSpatialDiagnostic} from '../app/diagramSpatialDiagnostic';
 import {applyDiagramSpatialCamera} from '../app/diagramSpatialCameraTransaction';
+import {diagramSymbolAnchor,editDiagramSymbolGeometry} from '../app/diagramSymbolGeometryEdit';
+import {DEFAULT_DIAGRAM_SYMBOL_PEN,resolveDiagramSymbolGeometry,resolveDiagramSymbolStyle,overrideDiagramSymbolStyle,type DiagramSymbolStyle} from '../app/diagramSymbolStyles';
 import DiagramSymbolDock from './DiagramSymbolDock';
+import {firstDrawingHint} from '../app/firstDrawingHint';
+import {useDiagramDrawer} from './useDiagramDrawer';
+import DiagramDrawerRail from './DiagramDrawerRail';
 import DiagramThumbnail from './DiagramThumbnail';
+import DiagramBranchRail from './DiagramBranchRail';
 import DiagramPrecisionToolbar,{type DiagramPrecisionSettings} from './DiagramPrecisionToolbar';
+import type {CPPreviewEdit} from './DiagramCPPreviewWindow';
+import DiagramCPPopout,{useCPPopout} from './DiagramCPPopout';
 import DiagramCPInteractive,{type DiagramCPHit} from './DiagramCPInteractive';
 import DiagramLayerStack from './DiagramLayerStack';
 import DiagramLibrary from './DiagramLibrary';
 import DiagramBasicSettingsDialog from './DiagramBasicSettingsDialog';
 import {applyDiagramBasicSettings,canChangeDiagramBasicPaper,defaultDiagramBasicSettings,diagramBasicPaperFromRatio,diagramCustomPaperDoc,ensureDiagramBasicSettings,initializeDiagramBasicPaper,readDiagramBasicSettings,type DiagramBasicSettings} from '../app/diagramBasicSettings';
-import DiagramPDFExport from './DiagramPDFExport';
+import DiagramPDFExport,{type DiagramPDFExportProps} from './DiagramPDFExport';
 import DiagramStepAnimation from './DiagramStepAnimation';
 import DiagramFullAnimation from './DiagramFullAnimation';
 import DiagramCalloutDialog from './DiagramCalloutDialog';
 import DiagramZoomRegionDialog from './DiagramZoomRegionDialog';
-import {diagramStepZoom,diagramStepZooms,diagramZoomPaperBounds,tryMapDiagramZoomArea,diagramStepZoomIssue} from '../app/diagramStepZoom';
+import {validateDiagramZoomProject} from '../app/diagramZoomValidationTask';
+import {diagramProcessFigureZoom,diagramStepZoom,diagramStepZooms,diagramZoomPaperBounds,tryMapDiagramZoomArea,diagramStepZoomIssue} from '../app/diagramStepZoom';
 import {diagramZoomRegionBounds,type DiagramZoomBounds,type DiagramZoomRegion} from '../app/diagramZoomGeometry';
 import {prepareDiagramZoomInteraction} from '../app/diagramZoomInteraction';
 import './DiagramZoomControls.css';
@@ -112,13 +134,12 @@ import {startDiagramSpatialPose,startDiagramSpatialReprojection,startDiagramSpat
 import {sameSpatialCamera} from '../app/diagramArcball';
 import type {SpatialLayerRequest} from '../app/diagramSpatialLayerSolver';
 import {setDiagramLineAnimationTiming} from '../app/diagramAnimationTiming';
-import {buildDiagramStepAnimation,type DiagramStepAnimationClip} from '../app/diagramStepAnimation';
 import {createDiagramAutoArrow} from '../app/diagramAutoArrow';
 import ToolCommandBar,{type ToolCommandBarHandle} from './ToolCommandBar';
 import {DIAGRAM_COMMANDS,isDiagramDrawingCommand,type DiagramCommand} from '../app/diagramCommands';
 import {useToolCommands} from '../app/toolCommandPreferences';
 import {readToolCommandInput,saveToolCommandInput,toolCommandCharacter,TOOL_COMMAND_INPUT_CHANGED} from '../app/toolCommandInput';
-import {createDiagramLibrary,emptyDiagramLibrary,findDiagramLibraryDocument,DiagramLibraryConflictError,DIAGRAM_LIBRARY_KEY,type DiagramLibraryIndex} from '../app/diagramLibrary';
+import {createDiagramLibrary,emptyDiagramLibrary,findDiagramLibraryDocument,diagramLibraryIsDraft,DiagramLibraryConflictError,DIAGRAM_LIBRARY_KEY,type DiagramLibraryIndex} from '../app/diagramLibrary';
 import {mapDiagramCPSelection,fixedDiagramCPSelection,fixedDiagramCPItem} from '../app/diagramCPSelection';
 import {diagramCPEdgeSegment,diagramCPEdgeProperties,diagramCPEdgeFoldAngle,editDiagramCPEdge,findDiagramCPEdge,type DiagramCPEdgeGeometry,type DiagramCPEdgeAssignment} from '../app/diagramCPEdgeEdit';
 import {diagramCreaseCPEdges} from '../app/diagramCreaseSelection';
@@ -126,18 +147,19 @@ import {selectedDiagramLineRange,type DiagramLineFaceSelection} from '../app/dia
 import {isolateDiagramLineEdits} from '../app/diagramLineEditScope';
 import {isDiagramCPLine,type DiagramAnnotation,type DiagramLineAnnotation,type DiagramLineAnimationTiming,type DiagramLineStyle,type DiagramSymbolKind,type DiagramSymbolParams,type DiagramSymbolAnnotation} from '../app/diagramAnnotations';
 import {SYMBOL_LABELS,LINE_LABELS} from '../app/diagramAnnotationSVG';
-import {diagramPoseView as poseView,diagramPresentation,drawingSVG} from '../app/diagramDrawing';
+import {diagramPoseView as poseView,diagramPresentation,drawingSVG,mayExtendBeyondPaper} from '../app/diagramDrawing';
 import {canBindDiagramArrow,resolveDiagramPaperBindings} from '../app/diagramPaperBinding';
 import {DiagramArrowBindingControls} from './DiagramArrowBindingControls';
 import {SYMBOL_CATALOG,getSymbolParameters} from '../app/diagramSymbolCatalog';
 import {getDiagramCadSymbol} from '../app/diagramCadSymbolCatalog';
 import {isDiagramRotationSymbol,diagramSymbolTurnAngle} from '../app/diagramSymbolRotation';
 import {copyDiagramAnnotations,mirrorCopyDiagramAnnotations,transformDiagramAnnotations} from '../app/diagramDrawingTools';
-import {annotationBounds,symbolNativeGrips,symbolNativeBaseline,isDiagramRepeatSymbol,diagramRepeatVisualAngle,setDiagramRepeatVisualAngle} from '../app/diagramAnnotationSVG';
+import {annotationBounds,symbolNativeBaseline,isDiagramRepeatSymbol,diagramRepeatVisualAngle,setDiagramRepeatVisualAngle} from '../app/diagramAnnotationSVG';
 import UnfoldedVertexMap from './UnfoldedVertexMap';
 import PanelDivider from './PanelDivider';
 import {Icon, NumberField} from './Fields';
 import AppDialog from './AppDialog';
+import DiagramEditorCPSourceDialog,{type EditorCPSources} from './DiagramEditorCPSourceDialog';
 import {DiagramLineAppearanceControls} from './DiagramLineStyleControls';
 import ColorPicker from '../ui/ColorPicker';
 import {readDiagramLineDefaults,changeGlobalDiagramLineStyle,changeDiagramLineCategory,applyDiagramLineAppearance,resolveDiagramLineAppearance,overrideDiagramLineAppearance,resetDiagramLineAppearance,type DiagramLineAppearance,type DiagramLineDefaults} from '../app/diagramLineStyles';
@@ -153,7 +175,7 @@ export interface DiagramWorkspaceHandle {
   currentCP():Doc|null;
   applyReturnedCP(target:CPReturnTarget,doc:Doc):void;
   newDrawing():void;
-  save():Promise<void>; open():void; export():void; print():void; library():Promise<void>; enter():void; checkpoint():Promise<boolean>; storageChanged():void;
+  save():Promise<void>; saveFile(asCopy?:boolean):Promise<void>; open():void; export():void; print():void; library():Promise<void>; enter():void; checkpoint():Promise<boolean>; storageChanged():void;
   /** Immutable drawing snapshot; eager callers receive a validated detached copy. */
   capture(options?:{flush?:boolean;deferValidation?:boolean;checkpointOnly?:boolean}):DiagramProject|null;
   /** Preserve the previous library draft and import as a new document. */
@@ -161,9 +183,10 @@ export interface DiagramWorkspaceHandle {
   undo():void;redo():void;status():{name:string|null;dirty:boolean;busy:boolean;present:boolean};
 }
 export interface DiagramWorkspaceProps {
+  onOpenFile?:()=>void;
   launchFile?:LaunchWorkspaceFile;
   browseOnly?:boolean;
-  readEditorCP?:()=>Promise<Doc>;
+  editorCPSources?:EditorCPSources;
   onLearning?:()=>void;
   learningPractice?:{initial:DiagramProject;onChange:(project:DiagramProject,observation:LearningObservation)=>void;onExit:()=>void};
   showCursorHint?:boolean;
@@ -189,10 +212,6 @@ const withBasicSettings=(project:DiagramProject)=>ensureDiagramBasicSettings(pro
 const round=(n:number)=>Number(n.toFixed(4));
 const isExistingCrease=(a:DiagramAnnotation):a is DiagramLineAnnotation&{id:`cp-existing:${string}`}=>a.kind==='line'&&a.id.startsWith('cp-existing:');
 const hasCPSourceBindings=(step:DiagramProject['steps'][number])=>!!step.foldLink?.enabled||step.foldLink?.generated!==undefined||(step.annotations??[]).some(annotation=>isDiagramCPLine(annotation)||annotation.kind==='line'&&annotation.foldFaces!==undefined);
-function symbolBase(annotation:DiagramSymbolAnnotation):Point {
-  const grips=symbolNativeGrips(annotation);
-  return grips.find(g=>g.id==='center')?.point??grips.find(g=>g.id==='base')?.point??annotation.position;
-}
 const TOOL_HINTS:Partial<Record<DiagramDrawingTool,string>>={
   select:'空白处拖框多选 · Shift 增减选择 · 拖动移动 · Ctrl+D 复制 · Delete 删除',
   line:'拖动绘制 / 点击两端 · 垂直 / 角平分自动吸附 · Shift 限制方向 · Alt 暂停吸附 · Esc 取消',
@@ -200,7 +219,7 @@ const TOOL_HINTS:Partial<Record<DiagramDrawingTool,string>>={
   pan:'按住左键平移；滚轮缩放',erase:'点击或按住扫过擦除绘图对象 · Esc 取消',
   perpendicular:'点击绘图折线或纸边，再点击通过点绘制垂线',parallel:'点击绘图折线或纸边，再点击通过点绘制平行线',
   bisector:'选择两条相交绘图线或纸边，再点击角平分线端点',
-  trim:'点击两条交线之间要剪掉的绘图线段',extend:'点击绘图线的端部，延长到其他绘图线',
+  trim:'点击两条交线之间要剪掉的绘图线段',
   vertex:'点击纸角选择成员，再拖动修形',
   fixed:'点击本次保持不动的纸面内部；重合纸层可在左侧指定',
   layer:'点击纸面，在左侧选择参与本次折叠的层',
@@ -214,7 +233,7 @@ function sourceGraph(pose:DiagramPose|null):FoldGraph|null {
 }
 /** View changes do not enter drawing history; keep them when undoing a drawing edit. */
 function keepCurrentViews(next:DiagramProject,current:DiagramProject):DiagramProject {
-  let result:DiagramProject={...next,steps:next.steps.map(step=>{
+  let result:DiagramProject={...next,exportSettings:current.exportSettings,steps:next.steps.map(step=>{
     const latestStep=current.steps.find(s=>s.id===step.id),latest=latestStep?.pose;
     if(latestStep?.canvas?.drawingRotation!==undefined)step={...step,canvas:{...(step.canvas??defaultDiagramCanvas(next.states.find(state=>state.id===step.beforeId)!.doc.paper.width)),drawingRotation:latestStep.canvas.drawingRotation}};
     if(latestStep?.orientationLocked!==undefined)step={...step,orientationLocked:latestStep.orientationLocked};
@@ -246,12 +265,12 @@ function DiagramCadAttributeField({label,value,disabled,onChange}:{label:string;
 }
 
 function RenameDiagramDialog({name,onRename,onClose}:{name:string;onRename:(name:string)=>Promise<string|null>;onClose:()=>void}) {
-  const [value,setValue]=useState(name),[error,setError]=useState(''),form=useRef<HTMLFormElement>(null),input=useRef<HTMLInputElement>(null),composing=useRef(false),submitting=useRef(false);
+  const [value,setValue]=useState(name),[error,setError]=useState(''),form=useRef<HTMLFormElement>(null),input=useRef<HTMLTextAreaElement>(null),composing=useRef(false),submitting=useRef(false);
   useEffect(()=>{const previous=document.activeElement as HTMLElement|null;input.current?.focus();input.current?.select();return()=>{if(previous?.isConnected)previous.focus();};},[]);
   return <div className="diagram-modal-backdrop"><form ref={form} className="diagram-confirm-modal diagram-rename-dialog ui-dialog" role="dialog" aria-modal="true" aria-label="重命名当前绘图" onCompositionStart={()=>{composing.current=true;}} onCompositionEnd={()=>{composing.current=false;}} onSubmit={async event=>{event.preventDefault();if(composing.current||submitting.current)return;submitting.current=true;try{const failure=await onRename(value.trim());if(failure)setError(failure);else onClose();}finally{submitting.current=false;}}} onKeyDown={event=>{
     event.stopPropagation();if(composing.current||event.nativeEvent.isComposing||event.keyCode===229){if(event.key==='Enter')event.preventDefault();return;}if(event.key==='Escape'){event.preventDefault();onClose();}
-    if(event.key==='Tab'){const controls=[...form.current!.querySelectorAll<HTMLElement>('button:not(:disabled),input')],first=controls[0],last=controls.at(-1);if(event.shiftKey&&document.activeElement===first){event.preventDefault();last?.focus();}else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first?.focus();}}
-  }}><h2>重命名绘图</h2><label>绘图名称<input ref={input} aria-label="绘图名称" value={value} maxLength={160} onChange={event=>{setValue(event.target.value);setError('');}}/></label>{error&&<p role="alert">{error}</p>}<div><button type="button" onClick={onClose}>取消</button><button className="diagram-primary" type="submit" disabled={!value.trim()}>保存名称</button></div></form></div>;
+    if(event.key==='Tab'){const controls=[...form.current!.querySelectorAll<HTMLElement>('button:not(:disabled),input,textarea')],first=controls[0],last=controls.at(-1);if(event.shiftKey&&document.activeElement===first){event.preventDefault();last?.focus();}else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first?.focus();}}
+  }}><h2>重命名绘图</h2><label>绘图名称<textarea rows={2} ref={input} aria-label="绘图名称" value={value} maxLength={160} onChange={event=>{setValue(event.target.value);setError('');}}/></label>{error&&<p role="alert">{error}</p>}<div><button type="button" onClick={onClose}>取消</button><button className="diagram-primary" type="submit" disabled={!value.trim()}>保存名称</button></div></form></div>;
 }
 
 function DiagramFileOpeningDialog({state,onCancel}:{state:{name:string;stage:string;cancellable:boolean};onCancel:()=>void}){
@@ -275,19 +294,27 @@ function ReplaceProjectDialog({name,onCancel,onSave,onOpen}:{name:string;onCance
   }}><h2>打开「{name}」</h2><p>当前折序草稿会被替换。可以先保存当前工程，再打开。</p><div><button onClick={onCancel}>取消</button><button onClick={onSave}>保存当前工程</button><button className="diagram-primary" onClick={onOpen}>打开并替换</button></div></section></div>;
 }
 
-const DiagramWorkspace=forwardRef<DiagramWorkspaceHandle,DiagramWorkspaceProps>(function DiagramWorkspace({doc,model,launchFile,browseOnly,readEditorCP,onMessage,onRevealCP,active=true,incomingImage,onImageReceived,onArtworkChange,showCursorHint=true,onCursorHintChange,showToolGuide=true,onToolGuideChange,onLearning,learningPractice},ref){
+function WorkspaceExportDialog({readSettings,onSettingsChange,...props}:Omit<DiagramPDFExportProps,'options'|'settings'>&{readSettings:()=>DiagramExportSettings|undefined}){
+  const [,refresh]=useReducer((n:number)=>n+1,0);
+  const settings=readSettings();
+  const options=useMemo(()=>({...defaultDiagramPDFOptions(props.project),...settings?.pdf}),[props.project,settings?.pdf]);
+  return <DiagramPDFExport {...props} settings={settings} options={options} onSettingsChange={patch=>{onSettingsChange(patch);refresh();}}/>;
+}
+
+const DiagramWorkspace=forwardRef<DiagramWorkspaceHandle,DiagramWorkspaceProps>(function DiagramWorkspace({doc,model,onOpenFile,launchFile,browseOnly,editorCPSources,onMessage,onRevealCP,active=true,incomingImage,onImageReceived,onArtworkChange,showCursorHint=true,onCursorHintChange,showToolGuide=true,onToolGuideChange,onLearning,learningPractice},ref){
   const tablet=useWebTablet();
   const [tabletPanel,setTabletPanel]=useState('');
   useEffect(()=>setTabletPanel(''),[tablet,active]);
   const recovered=useRef(false),recoveryError=useRef(''),recoveredLibraryId=useRef<string|null>(null);
   const [saveClient]=useState(createDiagramLibrarySaveClient);
-  useEffect(()=>()=>{void (async()=>{await repository.current?.waitForPendingSaves();await saveClient.dispose();})();},[saveClient]);
+  useEffect(()=>()=>{void (async()=>{if(importWrite.current)await importWrite.current;await repository.current?.waitForPendingSaves();await saveClient.dispose();})();},[saveClient]);
   const repository=useRef<ReturnType<typeof createDiagramLibrary>|null>(null);
-  if(!repository.current)repository.current=createDiagramLibrary(preferenceStorage,{onWarning:warning=>message(warning),backgroundSave:saveClient.save,prepareThumbnail:text=>startDiagramThumbnailImport(text).promise});
+  if(!repository.current)repository.current=createDiagramLibrary(preferenceStorage,{onWarning:warning=>message(warning),backgroundSave:saveClient.save,prepareThumbnail:(text,recovery)=>startDiagramThumbnailImport(text,undefined,recovery).promise});
   const library=repository.current;
   const [libraryIndex,setLibraryIndex]=useState<DiagramLibraryIndex>(()=>{if(learningPractice)return emptyDiagramLibrary();try{return library.read();}catch(e){recoveryError.current=errorText(e);return emptyDiagramLibrary();}});
   const [libraryOpen,setLibraryOpen]=useState(!learningPractice),[libraryError,setLibraryError]=useState(recoveryError.current),[pdfOpen,setPDFOpen]=useState(false);
   const returnFromCPEditor=useRef(false);
+  const cpEditorPaper=useRef(new Map<string,ReturnType<typeof readPaperPatterns>>());
   const [project,setProject]=useState<DiagramProject>(()=>{
     if(learningPractice)return withBasicSettings(learningPractice.initial);
     // The library resume card loads its source on demand. Mounting this
@@ -299,11 +326,19 @@ const DiagramWorkspace=forwardRef<DiagramWorkspaceHandle,DiagramWorkspaceProps>(
   const [saveConflict,setSaveConflict]=useState<string|null>(null),saveConflictRef=useRef<string|null>(null);
   const [deleteTarget,setDeleteTarget]=useState<{id:string;name:string}|null>(null),deleteTargetRef=useRef(deleteTarget);
   const [deleting,setDeleting]=useState(false),deletingRef=useRef(false),deleteCancel=useRef<HTMLButtonElement>(null);
+  const diskBinding=useRef<string|undefined>(undefined);
+  const diskSnapshot=useRef<DiagramProject|null>(null);
+  const diskSource=useRef<Blob|null>(null);
+  const [diskSaving,setDiskSaving]=useState(false);
   const fileGeneration=useRef(0),libraryAction=useRef(false);
   const getLibraryThumbnail=useCallback((id:string)=>library.getThumbnailAsync(id),[library]);
-  const projectRef=useRef(project);projectRef.current=project;
+  // All project writers update this reference first, including edits made inside a modal.
+  const projectRef=useRef(project);
+  const exportRefreshTimer=useRef<ReturnType<typeof setTimeout>|undefined>(undefined);
+  useEffect(()=>()=>clearTimeout(exportRefreshTimer.current),[]);
   const checkpointProject=useRef(project);
-  const manuallySavedProject=useRef<DiagramProject|null>(!recovered.current||libraryIndex.documents.some(entry=>entry.id===recoveredLibraryId.current&&entry.savedKey!==null&&entry.savedKey===entry.draftKey)?project:null);
+  const importWrite=useRef<Promise<void>|null>(null);
+  const manuallySavedProject=useRef<DiagramProject|null>(!recovered.current||libraryIndex.documents.some(entry=>entry.id===recoveredLibraryId.current&&!diagramLibraryIsDraft(entry))?project:null);
   const past=useRef<DiagramProject[]>([]),future=useRef<DiagramProject[]>([]);
   const [historyVersion,setHistoryVersion]=useState(0),[selection,setSelection]=useState(emptySelection);
   const [tool,setTool]=useState<DiagramDrawingTool>('select'),[tab,setTab]=useState<'model'|'drawing'|'step'|'project'>('drawing');
@@ -338,6 +373,7 @@ const DiagramWorkspace=forwardRef<DiagramWorkspaceHandle,DiagramWorkspaceProps>(
   useEffect(()=>{const refresh=()=>setDirectCommands(readToolCommandInput());window.addEventListener(TOOL_COMMAND_INPUT_CHANGED,refresh);return()=>window.removeEventListener(TOOL_COMMAND_INPUT_CHANGED,refresh);},[]);
   const [legacyLineDefaults]=useState(readDiagramLineDefaults);
   const lineDefaults=project.basicSettings?.lineDefaults??legacyLineDefaults;
+  const symbolStyles=project.basicSettings?.symbolStyles;
   const [globalAdaptiveLines]=useAdaptiveLineStyle();
   const adaptiveLines=project.basicSettings?.adaptiveLines??globalAdaptiveLines;
   const [lineStyle,setLineStyle]=useState<DiagramLineStyle>('valley'),[symbol,setSymbol]=useState<DiagramSymbolKind>('fold');
@@ -345,6 +381,7 @@ const DiagramWorkspace=forwardRef<DiagramWorkspaceHandle,DiagramWorkspaceProps>(
   const foldAngle=180;
   const [spatialCamera,setSpatialCamera]=useState<DiagramSpatialPose['camera']>({...DEFAULT_DIAGRAM_SPATIAL_CAMERA});
   const [orbitMode,setOrbitMode]=useState(false);
+  const [fixedViewStep,setFixedViewStep]=useState<string|null>(null);
   const [drawingColor,setDrawingColor]=useState(()=>lineDefaults.valley.color),[drawingWidth,setDrawingWidth]=useState(()=>lineDefaults.valley.width),[drawingPattern,setDrawingPattern]=useState(()=>lineDefaults.valley.strokePattern),[selectedAnnotationIds,setSelectedAnnotationIds]=useState<string[]>([]);
   const [selectedLineFaces,setSelectedLineFaces]=useState<DiagramLineFaceSelection>({});
   const [zoomDialog,setZoomDialog]=useState<{stepId:string;generation:number;annotation:DiagramSymbolAnnotation;isNew:boolean;basis:DiagramZoomBounds;bounds:DiagramZoomBounds;initial?:DiagramZoomRegion}|null>(null);
@@ -352,21 +389,44 @@ const DiagramWorkspace=forwardRef<DiagramWorkspaceHandle,DiagramWorkspaceProps>(
   // Saved crease/default layer ranges are material settings, not a current UI
   // selection. Only an explicit layer-editing action may display that scope.
   const [layerScopeEditing,setLayerScopeEditing]=useState(false);
+  const [sinkStep,setSinkStep]=useState<string|null>(null);
+  const [scopeCard,setScopeCard]=useState<string|null>(null);
   const [fixedHighlightShown,setFixedHighlightShown]=useState(false);
   const showFixedHighlight=fixedHighlightShown||tool==='fixed';
+  const [toolsCollapsed,setToolsCollapsed]=useDiagramDrawer('tools',headingWidth),[toolsWidth,setToolsWidth]=useState(252);
+  const [cpCollapsed,setCPCollapsed]=useDiagramDrawer('cp',headingWidth);
+  const [comparisonCPCollapsed,setComparisonCPCollapsed]=useState(false);
   const [cpWidth,setCPWidth]=useState(280),[overview,setOverview]=useState(false),[showSymbolBaseline,setShowSymbolBaseline]=useState(false);
+  const [editorCPTarget,setEditorCPTarget]=useState<{owner:DiagramProject;stateId:string;label:string}|null>(null);
   const [editCP,setEditCP]=useState<string|null>(null),[confirmReplace,setConfirmReplace]=useState<DiagramProject|File|null>(null);
   const [fileOpening,setFileOpening]=useState<{name:string;stage:string;cancellable:boolean}|null>(null);
   const fileImportTask=useRef<ReturnType<typeof startDiagramProjectImport>|null>(null);
   const libraryReadRequest=useRef<{cancelled:boolean;task?:ReturnType<typeof startDiagramProjectImport>}|null>(null);
   const replacementLog=useRef<{action:'diagram.open'|'diagram.new';fileName?:string;bytes?:number}>({action:'diagram.open'});
   const [renameOpen,setRenameOpen]=useState(false);
-  const [stepAnimation,setStepAnimation]=useState<{clip:DiagramStepAnimationClip;revision:string;title:string;source:DiagramProject}|null>(null);
+  const [stepAnimation,setStepAnimation]=useState<{stepId:string;revision:string;title:string;source:DiagramProject}|null>(null);
+  const [insertTarget,setInsertTarget]=useState<string|null>(null);
+  const [branchInsert,setBranchInsert]=useState<{stepId:string;generation:number;position:'before'|'after'}|null>(null);
+  const [figureEditor,setFigureEditor]=useState<{ownerId:string;generation:number;figure:DiagramProject;existing:boolean}|null>(null);
+  const processImageInput=useRef<HTMLInputElement>(null),processImageTarget=useRef<{stepId:string;generation:number}|null>(null);
   const [selectedImageId,setSelectedImageId]=useState<string|null>(null),[imageFitToken,setImageFitToken]=useState(0),[imageBusy,setImageBusy]=useState(false);
   const [captureTarget,setCaptureTarget]=useState<{stepId:string;generation:number}|null>(null);
   const imageInput=useRef<HTMLInputElement>(null),imageImportAbort=useRef<AbortController|null>(null),receivedImages=useRef(new Set<string>());
   const [fullAnimation,setFullAnimation]=useState<DiagramProject|null>(null);
-  const animationOpen=!!stepAnimation||!!fullAnimation;
+  const projectGeneration=fileGeneration.current;
+  type SymbolPens=Partial<Record<DiagramSymbolKind,Pick<DiagramSymbolStyle,'color'|'width'>>>;
+  const [draftSymbolPens,setDraftSymbolPens]=useState<{generation:number;pens:SymbolPens}>();
+  const symbolPens=draftSymbolPens?.generation===projectGeneration?draftSymbolPens.pens:undefined;
+  const newSymbolPen={...DEFAULT_DIAGRAM_SYMBOL_PEN,...symbolStyles?.[symbol],...symbolPens?.[symbol]};
+  function changeSymbolPen(patch:Pick<DiagramSymbolStyle,'color'|'width'>){
+    setDraftSymbolPens(previous=>{const pens=previous?.generation===projectGeneration?previous.pens:{};return {generation:projectGeneration,pens:{...pens,[symbol]:{...pens[symbol],...patch}}};});
+  }
+  const drawingDialogOpen=!!stepAnimation||!!fullAnimation||!!insertTarget||!!branchInsert||!!figureEditor;
+  useEffect(()=>{
+    if(!active||libraryOpen||insertTarget&&insertTarget!==project.activeStepId)setInsertTarget(null);
+    if(branchInsert&&(!active||libraryOpen||branchInsert.stepId!==project.activeStepId||branchInsert.generation!==projectGeneration))setBranchInsert(null);
+    if(!active||libraryOpen||figureEditor&&(figureEditor.ownerId!==project.activeStepId||figureEditor.generation!==fileGeneration.current))setFigureEditor(null);
+  },[active,libraryOpen,project.activeStepId,projectGeneration,insertTarget,branchInsert,figureEditor]);
   const closeFullAnimation=useCallback(()=>setFullAnimation(null),[]);
   useEffect(()=>{if(!active||libraryOpen||fullAnimation&&fullAnimation!==project)setFullAnimation(null);},[active,libraryOpen,project,fullAnimation]);
   const closeStepAnimation=useCallback(()=>setStepAnimation(null),[]);
@@ -404,14 +464,26 @@ const DiagramWorkspace=forwardRef<DiagramWorkspaceHandle,DiagramWorkspaceProps>(
   const propertyScroll=useRef<HTMLDivElement>(null);
   const step=project.steps.find(s=>s.id===project.activeStepId)??project.steps[0],stepIndex=project.steps.findIndex(s=>s.id===step.id);
   const before=project.states.find(s=>s.id===step.beforeId)!,after=project.states.find(s=>s.id===step.afterId)!,pose=step.pose;
+  const junctionsEnabled=useJunctionWarningsEnabled();
+  const junctionScope=fileGeneration.current+':'+step.id+':';
+  const spatialStructure=!!(pose?.spatial||step.paperStates?.spatial||step.simulationSurface);
+  const beforeWarnings=useEditedJunctions(before.doc,junctionScope+before.id,spatialStructure,before.revision);
+  const afterWarnings=useEditedJunctions(after.doc,junctionScope+after.id,spatialStructure,after.revision,before.doc);
   const images=step.images??[],paperVisible=step.paperVisible!==false;
-  const thumbnailLayers=useMemo(()=>new Map(active&&!libraryOpen?project.steps.filter(item=>item.id===step.id||thumbnailVisibility.rail.has(item.id)||overview&&thumbnailVisibility.overview.has(item.id)).map(item=>[item.id,diagramLayerDisplayState(project,item.id)]):[]),[project,step.id,active,libraryOpen,overview,thumbnailVisibility]);
+  // Export settings change the printed page, while these references describe the drawing itself.
+  const drawingProject=useMemo<DiagramProject>(()=>({
+    format:project.format,version:project.version,name:project.name,activeStepId:project.activeStepId,
+    steps:project.steps,states:project.states,basicSettings:project.basicSettings,branchSteps:project.branchSteps,branchOrder:project.branchOrder,branchLabels:project.branchLabels,
+  }),[projectGeneration,project.format,project.version,project.name,project.activeStepId,project.steps,project.states,project.basicSettings,project.branchSteps,project.branchOrder,project.branchLabels]);
+  const numbering=useMemo(()=>diagramBranchNumbering(drawingProject),[drawingProject]);
+  const stepNumber=numbering.stepLabels.get(step.id)!;
+  const beforeLabel=numbering.cpLabels.get(before.id)!,afterLabel=numbering.cpLabels.get(after.id)!;
+  const thumbnailLayers=useMemo(()=>new Map(active&&!libraryOpen?drawingProject.steps.filter(item=>item.id===step.id||thumbnailVisibility.rail.has(item.id)||overview&&thumbnailVisibility.overview.has(item.id)).map(item=>[item.id,diagramLayerDisplayState(drawingProject,item.id)]):[]),[drawingProject,step.id,active,libraryOpen,overview,thumbnailVisibility]);
   const thumbnailLayerCandidate=project.steps.find(item=>{
     const state=thumbnailLayers.get(item.id);
     return item.id!==step.id&&state?.status==='pending'&&!!state.key&&thumbnailLayerErrors.get(item.id)?.key!==state.key;
   });
   const thumbnailLayerCandidateId=thumbnailLayerCandidate?.id,thumbnailLayerCandidateKey=thumbnailLayerCandidateId?thumbnailLayers.get(thumbnailLayerCandidateId)?.key:null;
-  const projectGeneration=fileGeneration.current;
   useLayoutEffect(()=>{
     if(!active||libraryOpen)return;
     const rail=stepRail.current,card=rail?.querySelector<HTMLElement>('[aria-current="step"]');
@@ -428,7 +500,7 @@ const DiagramWorkspace=forwardRef<DiagramWorkspaceHandle,DiagramWorkspaceProps>(
     return()=>observer.disconnect();
   },[step.id,stepIndex,project.steps.length,projectGeneration,active,libraryOpen]);
   function thumbnailPreparation(id:string,checkHidden=false):{pending:boolean;message?:string}|undefined{
-    const state=thumbnailLayers.get(id)??(checkHidden?diagramLayerDisplayState(project,id):undefined);if(!state||state.status==='ready')return;
+    const state=thumbnailLayers.get(id)??(checkHidden?diagramLayerDisplayState(drawingProject,id):undefined);if(!state||state.status==='ready')return;
     const error=thumbnailLayerErrors.get(id);
     return error?.key===state.key?{pending:false,message:error.message+' 点击此步骤可重新分析。'}:{pending:state.status==='pending',message:state.message};
   }
@@ -436,38 +508,59 @@ const DiagramWorkspace=forwardRef<DiagramWorkspaceHandle,DiagramWorkspaceProps>(
   const thumbnailCache=useMemo(()=>new DiagramThumbnailCache(),[projectGeneration]);
   useEffect(()=>()=>thumbnailCache.clear(),[thumbnailCache]);
   useEffect(()=>thumbnailCache.prune(new Set(project.steps.map(item=>item.id))),[thumbnailCache,project.steps]);
-  const [pdfSettings,setPDFSettings]=useState<{generation:number;options:DiagramPDFOptions}|null>(null);
-  const pdfOptions=useMemo(()=>pdfSettings?.generation===projectGeneration?pdfSettings.options:defaultDiagramPDFOptions(project),
-    [pdfSettings,projectGeneration,project.name,project.steps.length,project.states[0]?.doc.paper.width,project.states[0]?.doc.paper.height]);
-  const onPDFOptionsChange=useCallback((options:DiagramPDFOptions)=>setPDFSettings({generation:projectGeneration,options}),[projectGeneration]);
-  // Captions and page layout are committed with the thumbnail, not planned on
-  // every pointer edit. PDF dialog changes update the same panel sizes here.
+  const pdfOptions=useMemo(()=>({...defaultDiagramPDFOptions(project),...project.exportSettings?.pdf}),
+    [project.exportSettings?.pdf,projectGeneration,project.name,project.steps.length,Boolean(project.branchSteps?.length),project.states[0]?.doc.paper.width,project.states[0]?.doc.paper.height]);
+  const changeExportSettings=(patch:DiagramExportSettings)=>{
+    if(fileGeneration.current!==projectGeneration)return;
+    const current=projectRef.current,previous=current.exportSettings;
+    const settings={...previous,...patch};
+    if(patch.pdf)settings.pdf={...previous?.pdf,...patch.pdf};
+    // Saving and exporting see this value immediately. Let the covered editor and its
+    // draft/thumbnail subscriptions catch up after a burst of input.
+    projectRef.current={...current,exportSettings:settings};
+    clearTimeout(exportRefreshTimer.current);
+    exportRefreshTimer.current=setTimeout(()=>{
+      exportRefreshTimer.current=undefined;
+      if(fileGeneration.current===projectGeneration)setProject(projectRef.current);
+    },180);
+  };
+  function closePDFExport(){
+    clearTimeout(exportRefreshTimer.current);
+    exportRefreshTimer.current=undefined;
+    setProject(projectRef.current);
+    setPDFOpen(false);
+  }
+  // Apply the final page settings to the step rail when it becomes visible again.
+  const lastRailOptions=useRef(pdfOptions);
+  useLayoutEffect(()=>{if(!pdfOpen)lastRailOptions.current=pdfOptions;},[pdfOptions,pdfOpen]);
+  const railOptions=pdfOpen?lastRailOptions.current:pdfOptions;
   const thumbnailImageSizes=useMemo(()=>{
-    try{return diagramThumbnailSizes(project,pdfOptions);}
-    catch{return diagramThumbnailSizes(project,{...defaultDiagramPDFOptions(project),title:project.name.slice(0,120)});}
-  },[step.id,overview,pdfOpen,active,libraryOpen,projectGeneration,pdfOptions,project.steps.length]);
+    try{return diagramThumbnailSizes(drawingProject,railOptions);}
+    catch{return diagramThumbnailSizes(drawingProject,{...defaultDiagramPDFOptions(drawingProject),title:drawingProject.name.slice(0,120)});}
+  },[step.id,overview,active,libraryOpen,projectGeneration,railOptions,project.steps.length]);
   const thumbnailEditingId=active&&!libraryOpen&&!overview&&!pdfOpen?step.id:null;
-  const thumbnailEditingSession=useMemo(()=>({}),[thumbnailEditingId,projectGeneration]);
+  const thumbnailEditingSession=useMemo(()=>({}),[thumbnailEditingId,projectGeneration,symbolStyles]);
   const previousThumbnailEdit=useRef<{id:string;session:object;cache:DiagramThumbnailCache}|null>(null);
   useLayoutEffect(()=>{
     const previous=previousThumbnailEdit.current;
     if(previous&&(previous.id!==thumbnailEditingId||previous.session!==thumbnailEditingSession||previous.cache!==thumbnailCache)&&previous.cache===thumbnailCache){
       const item=project.steps.find(value=>value.id===previous.id),size=thumbnailImageSizes.get(previous.id);
       // Flush the step being left even if its card is currently offscreen.
-      if(item&&size)thumbnailCache.request(item.id,{step:item,states:project.states,lineDefaults,adaptiveLines,zoom:thumbnailZooms.get(item.id)?.region,size,preparation:thumbnailPreparation(item.id,true)});
+      if(item&&size)thumbnailCache.request(item.id,{step:item,states:project.states,lineDefaults,symbolStyles,paperPatterns:project.basicSettings?.paperPatterns,adaptiveLines,zoom:thumbnailZooms.get(item.id)?.region,size,preparation:thumbnailPreparation(item.id,true)});
     }
     previousThumbnailEdit.current=thumbnailEditingId?{id:thumbnailEditingId,session:thumbnailEditingSession,cache:thumbnailCache}:null;
   });
-  const stateIndices=useMemo(()=>new Map(project.states.map((state,index)=>[state.id,index])),[project.states]);
   const effectiveZoom=thumbnailZooms.get(step.id)??null;
-  const zoomIssue=useMemo(()=>diagramStepZoomIssue(project,step.id),[project,step.id]);
+  const zoomIssue=useMemo(()=>diagramStepZoomIssue(drawingProject,step.id),[drawingProject,step.id]);
   const paperZoomBounds=useMemo(()=>diagramZoomPaperBounds(pose,images,paperVisible,before.doc.paper,step.simulationSurface),[pose,images,paperVisible,before.doc.paper,step.simulationSurface]);
-  const [comparison,setComparison]=useState(false),[comparisonPhase,setComparisonPhase]=useState<'before'|'after'>('before'),[comparisonLayers,setComparisonLayers]=useState(false),[comparisonSymbols,setComparisonSymbols]=useState(false);
+  const [comparison,setComparison]=useState(false),[comparisonPhase,setComparisonPhase]=useState<'before'|'after'>('before');
   const centralCP=editCP===before.id?before:editCP===after.id?after:null;
   const centralCPAccess=centralCP?getDiagramCPEditAccess(project,step.id,centralCP.id):null;
   useEffect(()=>{if(editCP&&!centralCP)setEditCP(null);},[editCP,centralCP]);
-  const annotations=useMemo(()=>resolveDiagramPaperBindings(pose,step.annotations??[]),[pose,step.annotations]);
+  const annotations=useMemo(()=>resolveDiagramPaperBindings(pose,step.annotations??[],symbolStyles),[pose,step.annotations,symbolStyles]);
   const selectedAnnotations=annotations.filter(a=>selectedAnnotationIds.includes(a.id)&&(paperVisible||isDiagramImageAnnotationVisible(a))).map(a=>a.kind==='line'?selectedDiagramLineRange(a,selectedLineFaces):a),selectedAnnotation=selectedAnnotations.length===1?selectedAnnotations[0]:undefined;
+  const firstSelected=selectedAnnotations[0];
+  const selectedPen=firstSelected?.kind==='symbol'?resolveDiagramSymbolStyle(firstSelected,symbolStyles):firstSelected??(tool==='symbol'?newSymbolPen:undefined);
   const selectedLines=selectedAnnotations.filter((a):a is DiagramLineAnnotation=>a.kind==='line');
   const selectedZoomSymbol=selectedAnnotation?.kind==='symbol'&&selectedAnnotation.symbol==='zoom'?selectedAnnotation:null;
   const selectedReturnSymbol=selectedAnnotation?.kind==='symbol'&&selectedAnnotation.symbol==='return'?selectedAnnotation:null;
@@ -488,16 +581,17 @@ const DiagramWorkspace=forwardRef<DiagramWorkspaceHandle,DiagramWorkspaceProps>(
   const [transformAngle,setTransformAngle]=useState(45),[transformScale,setTransformScale]=useState(1.25);
   const [precision,setPrecision]=useState<DiagramPrecisionSettings>({ratioA:1,ratioB:1,expression:'√2-1'});
   const selectedSymbolDefinition=selectedAnnotation?.kind==='symbol'?SYMBOL_CATALOG.find(item=>item.kind===selectedAnnotation.symbol):null;
-  const selectedSymbolParameters=selectedAnnotation?.kind==='symbol'?getSymbolParameters(selectedAnnotation):null;
+  const selectedSymbolGeometry=selectedAnnotation?.kind==='symbol'?resolveDiagramSymbolGeometry(selectedAnnotation,symbolStyles):null;
+  const selectedSymbolParameters=selectedSymbolGeometry?getSymbolParameters(selectedSymbolGeometry):null;
   const selectedIsCad=selectedAnnotation?.kind==='symbol'&&(selectedAnnotation.cadProperties!==undefined||!!selectedSymbolDefinition?.sourceOnly);
   const selectedCadDefinition=selectedAnnotation?.kind==='symbol'&&selectedIsCad?getDiagramCadSymbol(selectedAnnotation.symbol):undefined;
-  const selectedSymbolBase=selectedAnnotation?.kind==='symbol'?symbolBase(selectedAnnotation):null;
-  const nativeBaseline=selectedAnnotation?.kind==='symbol'?symbolNativeBaseline(selectedAnnotation):null;
+  const selectedSymbolBase=selectedSymbolGeometry?diagramSymbolAnchor(selectedSymbolGeometry):null;
+  const nativeBaseline=selectedSymbolGeometry?symbolNativeBaseline(selectedSymbolGeometry):null;
   const selectedSymbolBaseline=nativeBaseline?{length:Math.hypot(nativeBaseline.end[0]-nativeBaseline.start[0],nativeBaseline.end[1]-nativeBaseline.start[1]),angle:Math.atan2(nativeBaseline.end[1]-nativeBaseline.start[1],nativeBaseline.end[0]-nativeBaseline.start[0])*180/Math.PI,rooted:nativeBaseline.rooted}:null;
   const [draftSymbolText,setDraftSymbolText]=useState('');
   useEffect(()=>{setDraftSymbolText(selectedAnnotation?.kind==='symbol'?selectedAnnotation.text??'':'');},[selectedAnnotation?.id,selectedAnnotation?.kind==='symbol'?selectedAnnotation.text:undefined]);
   const graph=useMemo(()=>pose?.paperDeformation?.nodes.length?diagramIllustrationMesh(pose).graph:sourceGraph(pose),[pose?.sourceStateId,pose?.sourceRevision,pose?.sourceDoc,pose?.paperDeformation]);
-  const originState=pose?project.states.find(s=>s.id===pose.sourceStateId):null,originIndex=originState?project.states.indexOf(originState):-1;
+  const originState=pose?project.states.find(s=>s.id===pose.sourceStateId):null,originLabel=originState?numbering.cpLabels.get(originState.id):'未知 CP';
   const otherSource=!!pose&&pose.sourceStateId!==before.id&&pose.sourceStateId!==after.id;
   const stale=!!pose&&originState?.revision!==pose.sourceRevision;
   const layerAnalysisKey=useMemo(()=>diagramLayerAnalysisKey(project,step.id),[step.id,pose,project.states]);
@@ -523,27 +617,33 @@ const DiagramWorkspace=forwardRef<DiagramWorkspaceHandle,DiagramWorkspaceProps>(
   const paperDisplayStatus=paperLayerStatus+(pose&&!paperPresentation?.solid&&!paperLocalSurface?(currentView.xray?' · 透视':' · 透明预览'):'');
   const foldLink=step.foldLink??defaultDiagramFoldLink();
   const paperPulled=useMemo(()=>step.paperVisible!==false&&isDiagramPaperPulled(step),[step]);
-  const orbitHistory=useMemo(()=>{if(!orbitMode||!pose?.spatial)return [];const history=project.steps.slice(0,stepIndex).flatMap(item=>item.paperStates?.spatial?[item.paperStates.spatial]:item.paperStates?.flat?[item.paperStates.flat]:item.pose?[item.pose]:[]);history.push(pose);return history;},[orbitMode,project,stepIndex,pose]);
-  useEffect(()=>{if(!active||libraryOpen||overview||centralCP||step.paperVisible===false||(!pose?.spatial&&!simulationSurface)||paperPulled||stale||pdfOpen||editCP||confirmReplace||fileOpening||animationOpen||captureTarget||calloutDialog||zoomDialog)setOrbitMode(false);},[active,libraryOpen,overview,centralCP,step.paperVisible,!!pose?.spatial,!!simulationSurface,paperPulled,stale,pdfOpen,editCP,confirmReplace,fileOpening,animationOpen,captureTarget,calloutDialog,zoomDialog]);
+  const preloadOrbit=!!(active&&!libraryOpen&&!overview&&!centralCP&&step.paperVisible!==false&&pose?.spatial&&!paperPulled&&!stale);
+  const orbitHistory=useMemo(()=>{
+    if(!preloadOrbit||!pose)return [];
+    const history=project.steps.slice(0,stepIndex).flatMap(item=>item.paperStates?.spatial?[item.paperStates.spatial]:item.paperStates?.flat?[item.paperStates.flat]:item.pose?[item.pose]:[]);
+    history.push(pose);return history;
+  },[preloadOrbit,project.steps,stepIndex,pose]);
+  useEffect(()=>{if(!active||libraryOpen||overview||centralCP||step.paperVisible===false||(!pose?.spatial&&!simulationSurface)||paperPulled||stale||pdfOpen||editCP||confirmReplace||fileOpening||drawingDialogOpen||captureTarget||calloutDialog||zoomDialog)setOrbitMode(false);},[active,libraryOpen,overview,centralCP,step.paperVisible,!!pose?.spatial,!!simulationSurface,paperPulled,stale,pdfOpen,editCP,confirmReplace,fileOpening,drawingDialogOpen,captureTarget,calloutDialog,zoomDialog]);
   const legacyPaperFaces=useMemo(()=>{
     if(!pose||pose.result.geometry.graph?.zhezhi_flatCreases==='marks'||!pose.sourceDoc.segments.some(s=>s.assignment==='F'))return false;
     try{return JSON.stringify(buildDiagramFold(pose.sourceDoc).graph.faces_vertices)!==JSON.stringify(pose.result.geometry.faces);}catch{return false;}
   },[pose]);
-  const [cpHovered,setCPHovered]=useState<{stateId:string;hit:DiagramCPHit}|null>(null);
+  const [cpHovered,setCPHovered]=useState<{stateId:string;hit:DiagramCPHit;fromScope?:boolean}|null>(null);
   type PaperHover={kind:'drawing';point:Point}|{kind:'cp';point?:Point}|{kind:'layer';face:number};
   const [paperHover,setPaperHover]=useState<PaperHover|null>(null);
   const hoverFrame=useRef<number|null>(null),pendingPaperHover=useRef<PaperHover|null>(null);
+  const showPaperLayerHover=!['line','polyline','parallel','perpendicular','bisector','trim','mirror-copy'].includes(tool);
   const queuePaperHover=useCallback((value:PaperHover|null)=>{
     pendingPaperHover.current=value;
     if(hoverFrame.current===null)hoverFrame.current=requestAnimationFrame(()=>{hoverFrame.current=null;setPaperHover(pendingPaperHover.current);});
   },[]);
   useEffect(()=>()=>{if(hoverFrame.current!==null)cancelAnimationFrame(hoverFrame.current);},[]);
-  useEffect(()=>{queuePaperHover(null);},[step.id,pose?.result,pose?.paperDeformation,pose?.view?.side,pose?.view?.rotation,active,centralCP,overview,paperVisible]);
+  useEffect(()=>{queuePaperHover(null);},[step.id,pose?.result,pose?.paperDeformation,pose?.view?.side,pose?.view?.rotation,active,centralCP,overview,paperVisible,showPaperLayerHover]);
   const localLayerModel=useMemo(()=>{
     if(!pose||stale||!paperVisible)return null;
     try{return prepareDiagramLocalLayerProbe(pose);}catch{return null;}
   },[pose?.result,pose?.sourceDoc,pose?.paperDeformation,pose?.view?.side,pose?.view?.rotation,pose?.view?.projectionCenter,pose?.hiddenFaces,stale,paperVisible]);
-  const [cpSelected,setCPSelected]=useState<{stateId:string;hit:DiagramCPHit;point?:Point;edge?:DiagramCPEdgeGeometry}|null>(null);
+  const [cpSelected,setCPSelected]=useState<{stateId:string;hit:DiagramCPHit;point?:Point;edge?:DiagramCPEdgeGeometry;fromDetached?:boolean;fromDrawing?:boolean}|null>(null);
   const selectedCPEdge=useMemo(()=>{
     if(cpSelected?.hit.kind!=='edge')return null;
     const state=project.states.find(item=>item.id===cpSelected.stateId);
@@ -566,26 +666,26 @@ const DiagramWorkspace=forwardRef<DiagramWorkspaceHandle,DiagramWorkspaceProps>(
   const cpMap=(pick:{stateId:string;hit:DiagramCPHit}|null)=>{
     if(!pick||!pose)return {highlight:undefined,error:''};
     const state=project.states.find(s=>s.id===pick.stateId);if(!state)return {highlight:undefined,error:'选择的 CP 不在当前工程中。'};
-    try{const mapped=mapDiagramCPSelection(pose,state,pick.hit,originState??undefined);return {highlight:{...mapped,label:`CP${project.states.indexOf(state)} ${{face:'F',vertex:'V',edge:'E'}[pick.hit.kind]}${pick.hit.index+1} · ${mapped.faces.map(f=>'F'+(f+1)).join('/')}`},error:''};}catch(e){return {highlight:undefined,error:errorText(e)};}
+    try{const mapped=mapDiagramCPSelection(pose,state,pick.hit,originState??undefined);return {highlight:{...mapped,label:`${numbering.cpLabels.get(state.id)} ${{face:'F',vertex:'V',edge:'E'}[pick.hit.kind]}${pick.hit.index+1} · ${mapped.faces.map(f=>'F'+(f+1)).join('/')}`},error:''};}catch(e){return {highlight:undefined,error:errorText(e)};}
   };
-  const cpHoverMap=useMemo(()=>cpMap(cpHovered),[cpHovered,pose,project.states]);
+  const cpHoverMap=useMemo(()=>cpMap(cpHovered),[cpHovered,pose,project.states,numbering]);
   const localLayerProbe=useMemo(()=>{
     if(!localLayerModel||!paperHover||busy||centralCP||overview||!active)return null;
     try{
-      if(paperHover.kind==='drawing')return localLayerModel.at(paperHover.point);
+      if(paperHover.kind==='drawing')return showPaperLayerHover?localLayerModel.at(paperHover.point):null;
       if(paperHover.kind==='layer')return localLayerModel.faceSample(paperHover.face);
       if(cpHovered?.hit.kind!=='face'||!cpHoverMap.highlight?.faces.length)return null;
       return paperHover.point?localLayerModel.fromCP(paperHover.point,cpHoverMap.highlight.faces):localLayerModel.faceSample(cpHoverMap.highlight.faces[0]);
     }catch{return null;}
-  },[localLayerModel,paperHover,cpHovered,cpHoverMap,busy,centralCP,overview,active]);
+  },[localLayerModel,paperHover,cpHovered,cpHoverMap,busy,centralCP,overview,active,showPaperLayerHover]);
   const localPaperHighlight=useMemo(()=>localLayerProbe&&paperHover?.kind!=='cp'?localLayerModel?.highlight(localLayerProbe.face):undefined,[localLayerModel,localLayerProbe?.face,paperHover?.kind]);
-  const cpSelectedMap=useMemo(()=>cpMap(cpSelected),[cpSelected,pose,project.states]);
+  const cpSelectedMap=useMemo(()=>cpMap(cpSelected),[cpSelected,pose,project.states,numbering]);
   const fixedTargetState=foldLink.enabled&&foldLink.fixed?(foldLink.fixed.target?project.states.find(s=>s.id===foldLink.fixed!.target!.stateId):after):undefined;
   const fixedCPHit=useMemo(()=>{
     if(!fixedTargetState||!foldLink.fixed)return null;
     try{return foldLink.fixed.target?fixedDiagramCPItem(fixedTargetState,foldLink.fixed):{kind:'face' as const,index:diagramFoldStartingFace(fixedTargetState.doc,foldLink.fixed)};}catch{return null;}
   },[fixedTargetState,foldLink.fixed]);
-  const cpFixedMap=useMemo(()=>cpMap(fixedTargetState&&fixedCPHit?{stateId:fixedTargetState.id,hit:fixedCPHit}:null),[fixedTargetState,fixedCPHit,pose,project.states]);
+  const cpFixedMap=useMemo(()=>cpMap(fixedTargetState&&fixedCPHit?{stateId:fixedTargetState.id,hit:fixedCPHit}:null),[fixedTargetState,fixedCPHit,pose,project.states,numbering]);
   const fixedSourceFaces=useMemo(()=>foldLink.enabled&&foldLink.fixed&&graph&&!stale?(graph.faces_vertices??[]).flatMap((_,face)=>materialFaceInside(graph,face,foldLink.fixed!.point)?[face]:[]):[],[foldLink.enabled,foldLink.fixed,graph,stale]);
   useEffect(()=>{setCPHovered(null);setCPSelected(null);setSelectedLineFaces({});setLayerScopeEditing(false);},[step.id,before.id,after.id,pose?.sourceStateId,pose?.sourceRevision]);
   useEffect(()=>{
@@ -614,10 +714,10 @@ const DiagramWorkspace=forwardRef<DiagramWorkspaceHandle,DiagramWorkspaceProps>(
   // A camera commit replaces the pose/view shell, but does not change material
   // projection. Keep every other pose field and view setting as dependencies.
   },[active,libraryOpen,!!busy,!!pose,pose?.sourceStateId,pose?.sourceRevision,pose?.sourceDoc,pose?.result,pose?.spatial,pose?.displayOrder,pose?.layerSolutionIndex,pose?.hiddenFaces,pose?.paperDeformation,foldAppearanceKey,before,after,foldLink.enabled,foldLink.precreases]);
-  const foldCanvasPreview=useMemo(()=>foldPreview.preview.map((line,index)=>({id:'fold-preview-'+index,a:line.a,b:line.b,face:line.face,visibility:line.visibility,existing:line.existing,unfolding:line.unfolding,strokeSpan:line.strokeSpan,style:line.style??(line.assignment==='V'?'valley':line.assignment==='M'?'mountain':line.assignment==='F'?'crease':'auxiliary') as DiagramLineStyle})),[foldPreview.preview]);
+  const foldCanvasPreview=useMemo(()=>foldPreview.preview.map(canvasFoldPreview),[foldPreview.preview]);
   const selectedCallout=step.callouts?.find(callout=>callout.id===selectedCalloutId);
   const calloutCPMarkup=useCallback((stateId:string,sourceUnits?:number,hideExistingCreases?:boolean)=>{const state=[before,after].find(item=>item.id===stateId);return state?diagramCalloutCPMarkup(state.doc,defaultCreaseDisplay(),{enabled:adaptiveLines,units:sourceUnits,hideExistingCreases}):'';},[before,after,adaptiveLines]);
-  const calloutMainSVG=useMemo(()=>calloutDialog?drawingSVG(pose,annotations,'','',foldPreview.valid?foldPreview.preview:undefined,images,paperVisible,lineDefaults,[],undefined,undefined,undefined,0,simulationSurface):undefined,[simulationSurface,calloutDialog,pose,annotations,foldPreview,images,paperVisible,lineDefaults,adaptiveLines]);
+  const calloutMainSVG=useMemo(()=>calloutDialog?drawingSVG(pose,annotations,'','',foldPreview.valid?foldPreview.preview:undefined,images,paperVisible,lineDefaults,[],undefined,{enabled:adaptiveLines,symbolStyles},undefined,0,simulationSurface,project.basicSettings?.paperPatterns):undefined,[symbolStyles,project.basicSettings?.paperPatterns,simulationSurface,calloutDialog,pose,annotations,foldPreview,images,paperVisible,lineDefaults,adaptiveLines]);
   useEffect(()=>{setSelectedCalloutId(null);setCalloutDialog(null);},[step.id]);
   useEffect(()=>{if(selectedCalloutId&&!step.callouts?.some(callout=>callout.id===selectedCalloutId))setSelectedCalloutId(null);},[step.callouts,selectedCalloutId]);
   const selectedFoldFaceSets=useMemo(()=>{
@@ -627,7 +727,14 @@ const DiagramWorkspace=forwardRef<DiagramWorkspaceHandle,DiagramWorkspaceProps>(
   const selectedFoldFaces=[...new Set(selectedFoldFaceSets.flat())].sort((a,b)=>a-b);
   const commonFoldFaces=selectedFoldFaces.filter(face=>selectedFoldFaceSets.every(faces=>faces.includes(face)));
   const layerScopeActive=selectedSourceFoldLines.length>0||layerScopeEditing&&selectedAnnotationIds.length===0&&!cpSelected;
-  const displayedFoldFaces=selectedSourceFoldLines.length?selectedFoldFaces:layerScopeActive&&foldLink.layers==='selected'?foldLink.selectedFaces:[];
+  const displayedFoldFaces=selectedSourceFoldLines.length?selectedFoldFaces:foldLink.enabled&&pose?.sourceStateId===before.id&&!stale&&foldLink.layers==='selected'?foldLink.selectedFaces:[];
+  // Folded face IDs belong to the pose. Carry their material contours to both CPs.
+  const drawingFaceIds=active&&paperVisible&&!stale&&!centralCP&&!overview
+    ? [...new Set([...displayedFoldFaces,...(localPaperHighlight?.faces??[]),...(cpSelected?.fromDrawing&&cpSelected.hit.kind==='face'?cpSelectedMap.highlight?.faces??[]:[])])].sort((a,b)=>a-b).join(',')
+    : '';
+  const drawingFaceRegions=useMemo(()=>graph&&drawingFaceIds?drawingFaceIds.split(',').map(Number)
+    .filter(face=>graph.faces_vertices?.[face]).map(face=>materialFaceRings(graph,face).map(ring=>ring.map(v=>graph.vertices_coords[v]))):undefined,[graph,drawingFaceIds]);
+
   const fixedDisplayPoint=foldLink.fixed?.target?.kind==='vertex'?foldLink.fixed.target.point:foldLink.fixed?.point;
   const depthFixedPoint=pose&&fixedDisplayPoint&&diagramDepthActive(pose)?diagramDepthMaterialPoint(diagramIllustrationMesh(pose),fixedDisplayPoint):null;
   const fixedCanvasPoint=pose&&foldLink.enabled&&foldLink.fixed&&fixedDisplayPoint?modelProjection(pose.result.geometry.vertices,currentView.side==='back',currentView.rotation,currentView?.projectionCenter).project(depthFixedPoint??[
@@ -653,17 +760,45 @@ const DiagramWorkspace=forwardRef<DiagramWorkspaceHandle,DiagramWorkspaceProps>(
     setTool('select');setOverview(false);setEditCP(null);setLibraryOpen(false);
     message(`已将「${input.name}」插入「${result.project.name}」当前步骤，可拖动图片或四角调整。`);
   }
-  async function importImage(file:File){
+  function openFigure(figure:DiagramProject,existing:boolean){
+    setInsertTarget(null);
+    setFigureEditor({ownerId:projectRef.current.activeStepId,generation:fileGeneration.current,figure,existing});
+  }
+  function copyCurrentFigure(){
+    flushFields();
+    try{openFigure(createDiagramProcessFigure(projectRef.current,step.id,'copy'),false);}
+    catch(cause){message(errorText(cause));}
+  }
+  function editProcessImage(input:PreparedDiagramImage,stepId:string,generation:number){
+    if(!mounted.current||!activeRef.current||fileGeneration.current!==generation||projectRef.current.activeStepId!==stepId)throw Error('步骤已切换，请在目标步骤重新添加过程图。');
+    const figure=createDiagramProcessFigure(projectRef.current,stepId,'image');
+    const result=insertDiagramImage(figure,figure.activeStepId,input,'image-'+crypto.randomUUID());
+    openFigure(updateDiagramStep(result.project,figure.activeStepId,{title:input.name}),false);
+  }
+  function finishFigure(edited?:DiagramProject){
+    const owner=projectRef.current.steps.find(item=>item.id===figureEditor?.ownerId);
+    if(!figureEditor||!owner||owner.id!==projectRef.current.activeStepId||fileGeneration.current!==figureEditor.generation)throw Error('工程或所属步骤已切换，请重新打开过程图。');
+    const saved=owner.processFigures?.find(item=>item.activeStepId===figureEditor.figure.activeStepId);
+    if(figureEditor.existing&&(!saved||!sameDiagramProjectContent(saved,figureEditor.figure)))throw Error('这张过程图已发生变化，请关闭后重新打开。');
+    commit(edited?upsertDiagramProcessFigure(projectRef.current,owner.id,edited):removeDiagramProcessFigure(projectRef.current,owner.id,figureEditor.figure.activeStepId));
+    setFigureEditor(null);
+    message(edited?'过程图已保存到本步后。':'过程图已删除，可撤销。');
+  }
+  async function importImage(file:File,processTarget?:{stepId:string;generation:number}){
     imageImportAbort.current?.abort();const controller=new AbortController();imageImportAbort.current=controller;
     const stepId=projectRef.current.activeStepId,generation=fileGeneration.current;setImageBusy(true);
-    try{const image=await prepareDiagramImage(file,controller.signal);if(!controller.signal.aborted)addPreparedImage(image,stepId,generation);}
+    try{
+      const image=await prepareDiagramImage(file,controller.signal,!!processTarget);if(controller.signal.aborted)return;
+      if(processTarget)editProcessImage(image,processTarget.stepId,processTarget.generation);else addPreparedImage(image,stepId,generation);
+    }
     catch(error){if(!controller.signal.aborted)message(errorText(error));}
     finally{if(imageImportAbort.current===controller){imageImportAbort.current=null;setImageBusy(false);}}
   }
-  async function insertSimulationImage(capture:SimulationImageCapture,name:string,stepId:string,generation:number,signal?:AbortSignal){
-    const image=await prepareDiagramImage({dataUrl:capture.dataUrl,name,source:'simulation'},signal);
+  async function insertSimulationImage(capture:SimulationImageCapture,name:string,stepId:string,generation:number,signal?:AbortSignal,asFigure=false){
+    const image=await prepareDiagramImage({...capture,name,source:'simulation'},signal);
+    if(capture.artwork)image.artwork=capture.artwork;
     if(signal?.aborted)throw new DOMException('截图已取消。','AbortError');
-    addPreparedImage(image,stepId,generation);
+    if(asFigure)editProcessImage(image,stepId,generation);else addPreparedImage(image,stepId,generation);
   }
   function changeImages(next:DiagramImage[],showPaper=paperVisible){
     try{commit(updateDiagramImages(projectRef.current,step.id,next,next.length?showPaper:true));if(selectedImageId&&!next.some(image=>image.id===selectedImageId))setSelectedImageId(null);}
@@ -728,7 +863,7 @@ const DiagramWorkspace=forwardRef<DiagramWorkspaceHandle,DiagramWorkspaceProps>(
   }
   function commit(next:DiagramProject,history=true){
     if(next===projectRef.current)return;
-    next=refreshChangedViewDrawings(next,projectRef.current);
+    next=applyDiagramDrawingEdit(next,projectRef.current);
     if(history){past.current=[...past.current,projectRef.current].slice(-HISTORY_LIMIT);future.current=[];setHistoryVersion(n=>n+1);}
     projectRef.current=next;setProject(next);
     if(history)recordActivity('diagram.edit',{count:next.steps.length});
@@ -766,17 +901,16 @@ const DiagramWorkspace=forwardRef<DiagramWorkspaceHandle,DiagramWorkspaceProps>(
   function openStepAnimation(){
     if(busy)return;
     flushFields();
-    try{
-      const current=projectRef.current,s=current.steps.find(item=>item.id===current.activeStepId)!;
-      const clip=buildDiagramStepAnimation(current,s.id),index=current.steps.findIndex(item=>item.id===s.id);
-      setStepAnimation({clip,revision:`diagram-animation:${s.id}:${crypto.randomUUID()}`,title:`第 ${index+1} 步${s.title?' · '+s.title:''}`,source:current});
-    }catch(error){message(errorText(error));}
+    const current=projectRef.current;
+    const s=current.steps.find(item=>item.id===current.activeStepId);
+    if(!s){message('找不到要播放的折序步骤。');return;}
+    setStepAnimation({stepId:s.id,revision:`diagram-animation:${s.id}:${crypto.randomUUID()}`,title:`第 ${diagramBranchNumbering(current).stepLabels.get(s.id)} 步${s.title?' · '+s.title:''}`,source:current});
   }
   function generateMainArrow(){
     if(busy)return;flushFields();
     try{
       const current=projectRef.current,s=current.steps.find(item=>item.id===current.activeStepId)!;
-      const result=createDiagramAutoArrow(current,s.id,{color:drawingColor,width:drawingWidth});
+      const result=createDiagramAutoArrow(current,s.id);
       commit(updateDiagramAnnotations(current,s.id,[...(s.annotations??[]),result.annotation]));
       clearDrawingSelection(true);setSelectedAnnotationIds([result.annotation.id]);setTool('select');setTab('drawing');setPropertiesOpen(true);setOverview(false);
       message(`已生成${result.action==='precrease'?'预折':result.action==='unfold'?'展开':'折叠'}主箭头，绑定 F${result.sourceFace+1}，可拖动和调整。${result.warnings.join(' ')}`);
@@ -812,7 +946,7 @@ const DiagramWorkspace=forwardRef<DiagramWorkspaceHandle,DiagramWorkspaceProps>(
       for(const item of index.documents){try{matches.set(item.id,await library.loadAsync(item.id,text=>startDiagramProjectImport({storedText:text}).promise));}catch{/* Damaged records are never selected as a save target. */}}
       const entry=findDiagramLibraryDocument(index,projectRef.current,id=>matches.get(id)!,documentIdRef.current);
       documentIdRef.current=entry?.id??null;setDocumentId(entry?.id??null);setLibraryIndex(index);setLibraryError('');clearSaveConflict();
-      if(entry){const next={...projectRef.current,name:entry.name};commit(next,false);setDraftName(entry.name);manuallySavedProject.current=entry.savedKey===entry.draftKey?next:null;rememberCheckpoint(next,false);}
+      if(entry){const next={...projectRef.current,name:entry.name};commit(next,false);setDraftName(entry.name);manuallySavedProject.current=diagramLibraryIsDraft(entry)?null:next;rememberCheckpoint(next,false);}
       setStorageMessage(manuallySavedProject.current?'已保存到文档库':entry?'草稿已暂存':'当前绘图尚未保存到新目录');
     }catch(e){documentIdRef.current=null;setDocumentId(null);setLibraryError(errorText(e));message('保存目录已切换，绘图目录暂未读取；当前绘图仍保留，可保存为新的绘图。');}
   }
@@ -820,21 +954,24 @@ const DiagramWorkspace=forwardRef<DiagramWorkspaceHandle,DiagramWorkspaceProps>(
     const changed=!sameDiagramProjectContent(checkpointProject.current,snapshot);checkpointProject.current=snapshot;
     if(notify&&changed)artworkChangeRef.current?.();
   }
-  async function checkpointDraft(snapshot?:DiagramProject):Promise<boolean> {
+  async function checkpointDraft(snapshot?:DiagramProject,idle=false):Promise<boolean> {
     if(learningPractice){learningPractice.onChange(snapshot??projectWithPendingCaptions(),{comparison,editCP,tool,selectedLineCount:selectedLines.length,side:currentView.side,cpSelection:cpSelected?{stateId:cpSelected.stateId,kind:cpSelected.hit.kind,index:cpSelected.hit.index}:null});return true;}
-    if(!library.hasPendingSave()&&sameDiagramProjectContent(snapshot??projectWithPendingCaptions(),checkpointProject.current))return true;
-    if(saveConflictRef.current)return false;
     const generation=fileGeneration.current;
+    if(importWrite.current)await importWrite.current;
+    if(generation!==fileGeneration.current||!mounted.current)return false;
+    if(documentIdRef.current&&!library.hasPendingSave()&&sameDiagramProjectContent(snapshot??projectWithPendingCaptions(),checkpointProject.current))return true;
+    if(saveConflictRef.current)return false;
     try{
       // Resolve the first save's ID before queuing another new-document save.
       if(!documentIdRef.current&&library.hasPendingSave())await library.waitForPendingSaves();
       if(generation!==fileGeneration.current||!mounted.current)return false;
       do{
         const source=projectRef.current,captions=JSON.stringify(pendingCaptions.current),current=snapshot??projectWithPendingCaptions();
-        if(sameDiagramProjectContent(current,checkpointProject.current))return true;
-        const entry=await library.saveAsync(current,{id:documentIdRef.current??undefined,kind:'draft'},{legacyDraft:true});
+        if(documentIdRef.current&&sameDiagramProjectContent(current,checkpointProject.current))return true;
+        const entry=await library.saveAsync(current,{id:documentIdRef.current??undefined,kind:'draft'},{incremental:idle,coalesce:idle,legacyDraft:!idle});
         if(generation!==fileGeneration.current||!mounted.current)return false;
-        documentIdRef.current=entry.id;setDocumentId(entry.id);refreshLibrary();setLibraryError('');rememberCheckpoint(current);setStorageMessage(sameDiagramProjectContent(projectWithPendingCaptions(),current)?'草稿已暂存':'有未暂存修改 · 切换步骤或保存时写入');
+        documentIdRef.current=entry.id;setDocumentId(entry.id);if(!idle)void refreshLibrary();setLibraryError('');rememberCheckpoint(current,!idle);setStorageMessage(sameDiagramProjectContent(projectWithPendingCaptions(),current)?'草稿已暂存':'正在等待自动暂存');
+        if(idle&&!sameDiagramProjectContent(projectWithPendingCaptions(),current)){snapshot=undefined;continue;}
         if(snapshot||source===projectRef.current&&captions===JSON.stringify(pendingCaptions.current))return true;
         // Leaving waits for edits made while the previous snapshot was saving.
       }while(!saveConflictRef.current);
@@ -849,6 +986,7 @@ const DiagramWorkspace=forwardRef<DiagramWorkspaceHandle,DiagramWorkspaceProps>(
   async function save(){
     if(learningPractice){flushFields();await checkpointDraft();await downloadProjectBackup();return;}
     while(libraryAction.current&&mounted.current)await new Promise(resolve=>setTimeout(resolve,50));
+    if(importWrite.current)await importWrite.current;
     if(!mounted.current)return;
     flushFields();const generation=fileGeneration.current;
     recordActivity('diagram.save.start',{count:projectRef.current.steps.length});
@@ -871,6 +1009,7 @@ const DiagramWorkspace=forwardRef<DiagramWorkspaceHandle,DiagramWorkspaceProps>(
     if(libraryAction.current)return;libraryAction.current=true;
     flushFields();const generation=fileGeneration.current;
     try{
+      if(importWrite.current)await importWrite.current;
       await library.waitForPendingSaves();
       if(generation!==fileGeneration.current||!mounted.current)return;
       const current=projectRef.current,suffix='（副本）',next={...current,name:current.name.slice(0,160-suffix.length)+suffix};
@@ -878,34 +1017,79 @@ const DiagramWorkspace=forwardRef<DiagramWorkspaceHandle,DiagramWorkspaceProps>(
       if(generation!==fileGeneration.current||!mounted.current)return;
       documentIdRef.current=entry.id;setDocumentId(entry.id);
       const latest=projectRef.current===current?next:{...projectRef.current,name:next.name};
-      replaceProjectSnapshot(latest);setDraftName(next.name);clearSaveConflict();refreshLibrary();setLibraryError('');manuallySavedProject.current=next;rememberCheckpoint(next);setStorageMessage('已另存到文档库');
+      diskBinding.current=undefined;diskSnapshot.current=null;diskSource.current=null;replaceProjectSnapshot(latest);setDraftName(next.name);clearSaveConflict();refreshLibrary();setLibraryError('');manuallySavedProject.current=next;rememberCheckpoint(next);setStorageMessage('已另存到文档库');
       recordActivity('diagram.save.success',{stage:'save-as',count:next.steps.length});message('当前完整绘图已另存为「'+next.name+'」，原绘图及其他窗口的版本均保留。');
     }catch(error){setLibraryError(errorText(error));message('另存未完成：'+errorText(error)+'。当前内容仍保留，可下载工程备份。');}
     finally{finishLibraryAction();}
+  }
+  async function saveFile(asCopy=false){
+    if(backupSaveLock.current)return;
+    backupSaveLock.current=true;setDiskSaving(true);
+    const generation=fileGeneration.current;
+    try{
+      flushFields();
+      const snapshot=projectRef.current;
+      const binding=asCopy?undefined:diskBinding.current;
+      if(binding&&diskSnapshot.current&&window.desktop?.verifyProjectFile&&sameDiagramFileSnapshot(snapshot,diskSnapshot.current)){
+        const start=performance.now(),path=await window.desktop.verifyProjectFile(binding);
+        recordActivity('diagram.save.stage',{stage:'原文件校验',durationMs:Math.round(performance.now()-start)});
+        if(mounted.current&&generation===fileGeneration.current)message('折序工程已保存到 '+path+'（内容无变化）');
+        return;
+      }
+      const reuse=binding&&diskSource.current&&diskSnapshot.current?{source:diskSource.current,base:diskSnapshot.current}:undefined;
+      let savedSnapshot=snapshot;
+      let content:Blob;
+      const encode=async(filename?:string)=>{
+        const name=filename?diagramFileName(filename):undefined;
+        if(filename&&!name)throw Error('请选择 1 至 160 个字符的折序工程名称。');
+        savedSnapshot=name&&name!==snapshot.name?{...snapshot,name}:snapshot;
+        content=new Blob([await exportDesktopDiagramFile(savedSnapshot,reuse)],{type:'application/json'});
+        if(!mounted.current||generation!==fileGeneration.current)throw Error('当前折序工程已切换。');
+        return content;
+      };
+      if(!mounted.current||generation!==fileGeneration.current)return;
+      const writeStart=performance.now(),filename=safeName(snapshot.name)+'.zds';
+      const result=!binding
+        ?await saveNamedDiagram(filename,encode)
+        :await saveProjectFile(await encode(binding&&diskSource.current instanceof File?diskSource.current.name:undefined),filename,binding);
+      if(!mounted.current||generation!==fileGeneration.current||result.status==='cancelled')return;
+      if(result.status==='saved'){
+        diskBinding.current=result.binding;diskSnapshot.current=savedSnapshot;
+        diskSource.current=new File([content!],result.path.split(/[\\/]/).pop()!,{type:'application/json'});
+        if(savedSnapshot.name!==snapshot.name&&projectRef.current.name===snapshot.name){
+          replaceProjectSnapshot({...projectRef.current,name:savedSnapshot.name});setDraftName(savedSnapshot.name);
+        }
+        recordActivity('diagram.save.stage',{stage:'原文件校验与原子写回',durationMs:Math.round(performance.now()-writeStart)});
+        message('折序工程已保存到 '+result.path);
+      }
+    }catch(e){if(mounted.current&&generation===fileGeneration.current)message('折序工程保存失败：'+errorText(e));}
+    finally{backupSaveLock.current=false;if(mounted.current)setDiskSaving(false);}
   }
   async function downloadProjectBackup(){
     if(backupSaveLock.current)return;backupSaveLock.current=true;setBackupSaving(true);
     try{
       flushFields();
-      const result=await download(exportDiagramProject(projectRef.current),safeName(projectRef.current.name)+'.diagram.json');
+      const snapshot=projectRef.current;
+      const result=await download(await exportDesktopDiagramFile(snapshot),safeName(snapshot.name)+'.diagram.json');
       if(!mounted.current)return;
       if(result.status==='cancelled'){message('已取消保存工程备份。');return;}
       message(result.status==='saved'?'完整折序工程备份保存完成。':'已发起完整折序工程备份浏览器下载，请确认下载结果。');
     }catch(e){if(mounted.current)message('工程备份保存失败：'+errorText(e));}
     finally{backupSaveLock.current=false;if(mounted.current)setBackupSaving(false);}
   }
-  function activateLibraryProject(next:DiagramProject,id:string|null,knownSaved?:boolean){
+  function activateLibraryProject(next:DiagramProject,id:string|null,knownSaved?:boolean,notify=true){
+    diskBinding.current=undefined;diskSnapshot.current=null;diskSource.current=null;
     next=withBasicSettings(next);
     clearSaveConflict();
     imageImportAbort.current?.abort();setCaptureTarget(null);setZoomDialog(null);setSelectedImageId(null);
     svgPreparation.current?.cancel();svgPreparation.current=null;svgSaveController.current?.abort();setSVGExporting(false);setThumbnailLayerErrors(new Map());
-    fileGeneration.current++;
+    fileGeneration.current++;cpEditorPaper.current.clear();
     pendingCaptions.current=null;
     cancelTask();past.current=[];future.current=[];replaceProjectSnapshot(next);documentIdRef.current=id;setDocumentId(id);setHistoryVersion(n=>n+1);
     setLayerScopeEditing(false);
     setSelection(emptySelection());setSelectedAnnotationIds([]);setSelectedLineFaces({});setCPSelected(null);setCPHovered(null);setFoldFaceCandidates([]);setFoldPickPoint(null);setEditCP(null);setConfirmReplace(null);setOverview(false);setTool('select');setTab('drawing');setLibraryOpen(false);
     const entry=id&&knownSaved===undefined?library.read().documents.find(item=>item.id===id):null;
-    manuallySavedProject.current=(knownSaved??!!(entry?.savedKey&&entry.savedKey===entry.draftKey))?next:null;rememberCheckpoint(next);
+    manuallySavedProject.current=(knownSaved??!!(entry&&!diagramLibraryIsDraft(entry)))?next:null;rememberCheckpoint(next,notify);
   }
   function captureArtworkDiagram(options?:{flush?:boolean;deferValidation?:boolean;checkpointOnly?:boolean}):DiagramProject|null {
     if(options?.checkpointOnly)return libraryOpen&&!documentIdRef.current&&!recovered.current?null:checkpointProject.current;
@@ -943,7 +1127,7 @@ const DiagramWorkspace=forwardRef<DiagramWorkspaceHandle,DiagramWorkspaceProps>(
       // failing store after partially replacing this workspace.
       if(options?.isCurrent&&!options.isCurrent())return false;
       activateLibraryProject(next,entry?.id??null,false);
-      recovered.current=false;returnFromCPEditor.current=false;setPDFOpen(false);setStepAnimation(null);setFullAnimation(null);setRenameOpen(false);
+      recovered.current=false;cpEditorPaper.current.clear();returnFromCPEditor.current=false;setPDFOpen(false);setStepAnimation(null);setFullAnimation(null);setRenameOpen(false);
       setLibraryIndex(index);setLibraryError('');setStorageMessage(entry?'完整作品中的绘图已另存为草稿':'尚未打开折序绘图');
       if(!entry)setLibraryOpen(true);
       return true;
@@ -953,7 +1137,7 @@ const DiagramWorkspace=forwardRef<DiagramWorkspaceHandle,DiagramWorkspaceProps>(
   function finishLibraryAction(){libraryAction.current=false;}
   async function runLibraryAction(action:()=>Promise<void>){
     if(libraryAction.current)return;libraryAction.current=true;
-    try{await library.waitForPendingSaves();await library.readAsync();if(mounted.current)await action();}
+    try{if(importWrite.current)await importWrite.current;await library.waitForPendingSaves();await library.readAsync();if(mounted.current)await action();}
     catch(error){setLibraryError(errorText(error));message(errorText(error));}
     finally{finishLibraryAction();}
   }
@@ -969,17 +1153,26 @@ const DiagramWorkspace=forwardRef<DiagramWorkspaceHandle,DiagramWorkspaceProps>(
   async function revealCPInEditor(state:DiagramCPState){
     flushFields();
     const origin=window.desktop?.documentId;
-    const target:CPReturnTarget|undefined=origin?{origin,session:crypto.randomUUID(),stepId:step.id,stateId:state.id,revision:state.revision,generation:fileGeneration.current,label:'第 '+(stepIndex+1)+' 步 · '+(state.id===step.beforeId?'操作前 CP':'操作后 CP')}:undefined;
-    if(await onRevealCP?.(structuredClone(state.doc),target))returnFromCPEditor.current=true;
+    const target:CPReturnTarget|undefined=origin?{origin,session:crypto.randomUUID(),stepId:step.id,stateId:state.id,revision:state.revision,generation:fileGeneration.current,spatial:spatialStructure,label:'第 '+stepNumber+' 步 · '+(state.id===step.beforeId?'操作前 CP':'操作后 CP')}:undefined;
+    const appearance=project.basicSettings?.paperPatterns;
+    if(await onRevealCP?.(structuredClone(appearance?withPaperPatterns(state.doc,appearance):state.doc),target)){
+      if(target)cpEditorPaper.current.set(target.session,appearance??readPaperPatterns(state.doc.metadata?.paperPatterns));
+      returnFromCPEditor.current=true;
+    }
   }
   function applyReturnedCP(target:CPReturnTarget,doc:Doc){
     if(fileGeneration.current!==target.generation)throw Error('来源窗口已切换绘图，修改仍保留在折痕编辑窗口。');
     if(busy||fileOpening||editCP||libraryAction.current||saveConflictRef.current)throw Error('请先完成折序窗口中的当前操作，再应用 CP。');
     flushFields();
-    const current=projectRef.current,cleaned=normalizeDiagramCP(doc);
-    const updated=applyReturnedDiagramCP(current,target.stepId,target.stateId,target.revision,cleaned.doc);
+    const current=projectRef.current,owner=current.states.find(state=>state.id===target.stateId);
+    const returnedPrint=readPaperPatterns(doc.metadata?.paperPatterns);
+    const initialPrint=cpEditorPaper.current.has(target.session)?cpEditorPaper.current.get(target.session):current.basicSettings?.paperPatterns??readPaperPatterns(owner?.doc.metadata?.paperPatterns);
+    const changed=returnedPrint?.front!==initialPrint?.front||returnedPrint?.back!==initialPrint?.back||JSON.stringify(returnedPrint?.styles)!==JSON.stringify(initialPrint?.styles);
+    const cleaned=normalizeDiagramCP(withPaperPatterns(doc,readPaperPatterns(owner?.doc.metadata?.paperPatterns)));
+    let updated=applyReturnedDiagramCP(current,target.stepId,target.stateId,target.revision,cleaned.doc);
+    if(changed)updated={...updated,basicSettings:{...readDiagramBasicSettings(updated),paperPatterns:returnedPrint}};
     if(updated!==current){cancelTask();commit(updated);clearDrawingSelection();}
-    setLibraryOpen(false);message(target.label+' 已应用。'+cleaned.warnings.join(''));
+    cpEditorPaper.current.delete(target.session);setLibraryOpen(false);message(target.label+' 已应用。'+cleaned.warnings.join(''));
   }
   async function openLibraryDocument(id:string){
     await runLibraryAction(async()=>{
@@ -1010,7 +1203,7 @@ const DiagramWorkspace=forwardRef<DiagramWorkspaceHandle,DiagramWorkspaceProps>(
       const prepared=paper?{doc:paper,settings:{...settings,paper:{...settings.paper,shape:'custom' as const,...paper.paper}}}:diagramBasicPaperFromRatio(name,settings);
       const leaving=projectRef.current,next=initializeDiagramBasicPaper(createDiagramProject(prepared.doc),prepared.settings),entry=await library.saveAsync(next,{kind:'draft'});
       if(projectRef.current!==leaving&&!await checkpointDraft())return;
-      activateLibraryProject(next,entry.id);refreshLibrary();setLibraryError('');recordActivity('diagram.new.success',{count:next.steps.length});message('已按基本信息创建折序绘图。');created=true;
+      activateLibraryProject(next,entry.id);refreshLibrary();setLibraryError('');recordActivity('diagram.new.success',{count:next.steps.length});message(firstDrawingHint('diagram','已按基本信息创建折序绘图。'));created=true;
     });
     return created;
   }
@@ -1025,7 +1218,7 @@ const DiagramWorkspace=forwardRef<DiagramWorkspaceHandle,DiagramWorkspaceProps>(
       if(!sameDiagramProjectContent(projectRef.current,target.project))throw Error('绘图已发生变化，请重新打开基本信息后设置。');
       if(target.mode==='source'){
         if(launchFile&&!learningPractice){await launchFile({kind:'diagram-source',doc:target.source!,name,settings});setBasicDialog(null);return;}
-        const next=createDiagramProject({...target.source!,name});next.basicSettings=settings;replacementLog.current={action:'diagram.new'};await requestProjectReplacement(next);setBasicDialog(null);return;
+        const next=createDiagramProject({...withPaperPatterns(target.source!,undefined),name});next.basicSettings=settings;replacementLog.current={action:'diagram.new'};await requestProjectReplacement(next);setBasicDialog(null);return;
       }
       flushFields();commit(applyDiagramBasicSettings(projectRef.current,name,settings));
       const paint=settings.lineDefaults[lineStyle];setDrawingColor(paint.color);setDrawingWidth(paint.width);setDrawingPattern(paint.strokePattern);setBasicDialog(null);message('基本信息已更新，随当前工程保存。');
@@ -1069,17 +1262,37 @@ const DiagramWorkspace=forwardRef<DiagramWorkspaceHandle,DiagramWorkspaceProps>(
   function openPDFExport(){flushFields();setPDFOpen(true);}
   async function requestProjectReplacement(next:DiagramProject){
     flushFields();
-    if(diagramProjectNeedsReplacementConfirmation(projectWithPendingCaptions(),manuallySavedProject.current,!libraryOpen))setConfirmReplace(next);
+    if(diagramProjectNeedsReplacementConfirmation(projectWithPendingCaptions(),diskSnapshot.current??manuallySavedProject.current,!libraryOpen))setConfirmReplace(next);
     else await completeProjectReplacement(next);
   }
-  async function completeProjectReplacement(next:DiagramProject){
+  async function completeProjectReplacement(next:DiagramProject,binding?:string,source?:Blob){
     const {action,...details}=replacementLog.current;
     await runLibraryAction(async()=>{
       flushFields();
       if((documentIdRef.current||!libraryOpen||recovered.current)&&!await checkpointDraft()){recordActivity(`${action}.error`,{...details,stage:'checkpoint',reason:'当前绘图暂存未完成，未替换绘图。'},'error');return;}
-      const leaving=projectRef.current,entry=await library.saveAsync(next,{kind:'draft'});
-      if(projectRef.current!==leaving&&!await checkpointDraft())return;
-      activateLibraryProject(next,entry.id);refreshLibrary();setLibraryError('');recordActivity(`${action}.success`,{...details,stage:'replace',count:next.steps.length});message('折序工程已打开，已加入文档库。');
+      const activateStart=performance.now();
+      activateLibraryProject(next,null,false,false);diskBinding.current=binding;diskSnapshot.current=binding?projectRef.current:null;diskSource.current=binding?source??null:null;
+      const storedName=originalDiagramFileNames.get(next);
+      if(binding&&storedName)diskSnapshot.current={...projectRef.current,name:storedName};
+      const generation=fileGeneration.current,isCurrent=()=>mounted.current&&generation===fileGeneration.current;
+      setFileOpening(null);setLibraryError('');setStorageMessage('已打开 · 正在后台加入文档库');
+      recordActivity(`${action}.success`,{...details,stage:'replace',count:next.steps.length});
+      const painted=new Promise<void>(resolve=>{
+        const fallback=setTimeout(resolve,180);
+        requestAnimationFrame(()=>requestAnimationFrame(()=>{
+          clearTimeout(fallback);resolve();
+          if(isCurrent()&&action==='diagram.open')recordActivity('diagram.open.stage',{stage:'切换画布至首次绘制',durationMs:Math.round(performance.now()-activateStart)});
+        }));
+      });
+      const pending=painted.then(async()=>{
+        const start=performance.now(),entry=await library.saveAsync(next,{kind:'draft'});
+        if(!isCurrent())return;
+        documentIdRef.current=entry.id;setDocumentId(entry.id);void refreshLibrary();
+        setStorageMessage(sameDiagramProjectContent(projectWithPendingCaptions(),checkpointProject.current)?'草稿已暂存':'正在等待自动暂存');
+        if(action==='diagram.open')recordActivity('diagram.open.stage',{stage:'写入文档库',durationMs:Math.round(performance.now()-start)});
+      }).catch(cause=>{if(isCurrent()){setLibraryError(errorText(cause));setStorageMessage('文档库暂存失败');message('工程已打开，后台暂存失败：'+errorText(cause));}});
+      importWrite.current=pending;
+      void pending.finally(()=>{if(importWrite.current===pending)importWrite.current=null;});
     });
   }
   function cancelFileImport(){
@@ -1104,7 +1317,7 @@ const DiagramWorkspace=forwardRef<DiagramWorkspaceHandle,DiagramWorkspaceProps>(
       // Paint the final stage before handing the prepared graph to storage.
       await new Promise<void>(resolve=>setTimeout(resolve,0));
       if(!mounted.current||generation!==fileGeneration.current||fileImportTask.current!==pending)return;
-      await completeProjectReplacement(next);
+      await completeProjectReplacement(next,projectFileBinding(file),file);
     }catch(cause){
       if(!mounted.current||generation!==fileGeneration.current||pending&&fileImportTask.current!==pending)return;
       recordActivity('diagram.open.error',{stage:'read',fileName:file.name,bytes:file.size,reason:errorText(cause)},'error');message('打开失败，当前工程仍保留：'+errorText(cause));
@@ -1116,10 +1329,10 @@ const DiagramWorkspace=forwardRef<DiagramWorkspaceHandle,DiagramWorkspaceProps>(
     flushFields();replacementLog.current={action:'diagram.open',fileName:file.name,bytes:file.size};
     // Keep only the File handle until the user decides; no JSON parse or
     // geometry normalization may delay this confirmation.
-    if(diagramProjectNeedsReplacementConfirmation(projectWithPendingCaptions(),manuallySavedProject.current,!libraryOpen))setConfirmReplace(file);
+    if(diagramProjectNeedsReplacementConfirmation(projectWithPendingCaptions(),diskSnapshot.current??manuallySavedProject.current,!libraryOpen))setConfirmReplace(file);
     else await loadDiagramFile(file);
   }
-  function open(){if(learningPractice){message('请先退出教学，再打开外部工程。');return;}if(fileImportTask.current||libraryAction.current)return;flushFields();const generation=fileGeneration.current,nativePicker=!!window.desktop?.openProject;recordActivity('diagram.open.start',{stage:'choose-file'});void selectProjectFile(openInput.current,'diagram').then(file=>{if(!mounted.current||generation!==fileGeneration.current)return;if(file)return readDiagramFile(file);else if(nativePicker)recordActivity('diagram.open.cancel',{stage:'choose-file'});}).catch(cause=>{if(!mounted.current||generation!==fileGeneration.current)return;recordActivity('diagram.open.error',{stage:'choose-file',reason:errorText(cause)},'error');message(errorText(cause));});}
+  function open(){if(learningPractice){message('请先退出教学，再打开外部工程。');return;}if(fileImportTask.current||libraryAction.current)return;if(onOpenFile){onOpenFile();return;}flushFields();const generation=fileGeneration.current,nativePicker=!!window.desktop?.openProject;recordActivity('diagram.open.start',{stage:'choose-file'});void selectProjectFile(openInput.current,'diagram').then(file=>{if(!mounted.current||generation!==fileGeneration.current)return;if(file)return readDiagramFile(file);else if(nativePicker)recordActivity('diagram.open.cancel',{stage:'choose-file'});}).catch(cause=>{if(!mounted.current||generation!==fileGeneration.current)return;recordActivity('diagram.open.error',{stage:'choose-file',reason:errorText(cause)},'error');message(errorText(cause));});}
   async function exportDrawing(){
     if(svgPreparation.current||svgSaveController.current)return false;
     flushFields();const source=projectRef.current,current=source.steps.find(item=>item.id===source.activeStepId)!;
@@ -1128,7 +1341,7 @@ const DiagramWorkspace=forwardRef<DiagramWorkspaceHandle,DiagramWorkspaceProps>(
     const controller=new AbortController();svgSaveController.current=controller;
     try{
       const generation=fileGeneration.current,signature=diagramLayerDisplaySignature(source);
-      preparation=startDiagramLayerDisplayPreparation(source,{stepIds:[current.id]});
+      preparation=startDiagramLayerDisplayPreparation(source,{stepIds:[current.id],purpose:'export'});
       svgPreparation.current=preparation;setSVGExporting(true);
       const prepared=await preparation.promise;
       if(prepared.cancelled||!mounted.current||!activeRef.current||generation!==fileGeneration.current||svgPreparation.current!==preparation)return false;
@@ -1136,7 +1349,8 @@ const DiagramWorkspace=forwardRef<DiagramWorkspaceHandle,DiagramWorkspaceProps>(
       if(prepared.issues.length){message('SVG 导出未完成：'+prepared.issues.map(issue=>issue.message).join(' '));return false;}
       const p=prepared.project,s=p.steps.find(item=>item.id===current.id)!;
       const preview=s.paperVisible!==false&&s.foldLink?.enabled&&s.pose?projectDiagramFoldCP(s.pose,p.states.find(st=>st.id===s.beforeId)!.doc,p.states.find(st=>st.id===s.afterId)!.doc,p.states.find(st=>st.id===s.beforeId)!,s.foldLink.precreases).preview:undefined;
-      const result=await download(drawingSVG(s.pose,s.annotations??[],diagramPDFStepLabel(s,p.steps.indexOf(s)),s.description,preview,s.images,s.paperVisible!==false,lineDefaults,s.callouts,(stateId,sourceUnits,hideExistingCreases)=>{const state=p.states.find(item=>item.id===stateId);return state?diagramCalloutCPMarkup(state.doc,defaultCreaseDisplay(),{enabled:adaptiveLines,units:sourceUnits,hideExistingCreases}):'';},{enabled:adaptiveLines},diagramStepZoom(p,s.id)?.region,s.canvas?.drawingRotation??0,s.simulationSurface),safeName(p.name)+'-步骤'+(p.steps.indexOf(s)+1)+'.svg','image/svg+xml',{signal:controller.signal});
+      if(s.simulationSurface&&p.basicSettings?.paperPatterns)await decodePaperTextures(p.basicSettings.paperPatterns);
+      const result=await download(drawingSVG(s.pose,s.annotations??[],diagramPDFStepLabel(s,p.steps.indexOf(s)),s.description,preview,s.images,s.paperVisible!==false,lineDefaults,s.callouts,(stateId,sourceUnits,hideExistingCreases)=>{const state=p.states.find(item=>item.id===stateId);return state?diagramCalloutCPMarkup(state.doc,defaultCreaseDisplay(),{enabled:adaptiveLines,units:sourceUnits,hideExistingCreases}):'';},{enabled:adaptiveLines,symbolStyles:p.basicSettings?.symbolStyles},diagramStepZoom(p,s.id)?.region,s.canvas?.drawingRotation??0,s.simulationSurface,p.basicSettings?.paperPatterns),safeName(p.name)+'-步骤'+(p.steps.indexOf(s)+1)+'.svg','image/svg+xml',{signal:controller.signal});
       if(controller.signal.aborted||!mounted.current||!activeRef.current||generation!==fileGeneration.current||svgPreparation.current!==preparation)return false;
       if(result.status==='cancelled'){message('已取消保存当前步骤 SVG。');return false;}
       message(result.status==='saved'?'当前步骤 SVG 折图保存完成。':'已发起当前步骤 SVG 浏览器下载，请确认下载结果。');return true;
@@ -1144,13 +1358,13 @@ const DiagramWorkspace=forwardRef<DiagramWorkspaceHandle,DiagramWorkspaceProps>(
     finally{if(svgSaveController.current===controller)svgSaveController.current=null;if(preparation&&svgPreparation.current===preparation){svgPreparation.current=null;if(mounted.current)setSVGExporting(false);}}
   }
   function print(){openPDFExport();}
-  function newDrawing(){setLibraryError('');setBasicDialog({mode:'new',name:'折序工程',initial:defaultDiagramBasicSettings(),project:projectRef.current});}
-  useImperativeHandle(ref,()=>({currentCP:()=>libraryOpen?null:(centralCP??before).doc,applyReturnedCP,newDrawing,startFile:async(file)=>{
+  function newDrawing(){setLibraryError('');setBasicDialog({mode:'new',name:'折序工程',initial:{...defaultDiagramBasicSettings(),paperPatterns:readPaperPatterns(doc.metadata?.paperPatterns)},project:projectRef.current});}
+  useImperativeHandle(ref,()=>({currentCP:()=>libraryOpen?null:project.basicSettings?.paperPatterns?withPaperPatterns((centralCP??before).doc,project.basicSettings.paperPatterns):(centralCP??before).doc,applyReturnedCP,newDrawing,startFile:async(file)=>{
     if(file.kind==='stored'){await openLibraryDocument(file.id);if(documentIdRef.current!==file.id)await window.desktop?.documents?.setLibraryIdentity(null);}
     else if(file.kind==='diagram-new')await newLibraryDocument(file.name,file.settings,file.paper);
     else if(file.kind==='file')await readDiagramFile(file.file,true);
-    else if(file.kind==='diagram-source'){const next=createDiagramProject({...file.doc,name:file.name});next.basicSettings=file.settings;await completeProjectReplacement(next);}
-  },save,open,export:openPDFExport,print,library:showLibrary,enter:enterWorkspace,storageChanged,capture:captureArtworkDiagram,restore:restoreArtworkDiagram,undo,redo,status:()=>{const present=!!documentIdRef.current||!libraryOpen||recovered.current;return {name:present?projectRef.current.name:null,present,dirty:present&&(library.hasPendingSave()||!manuallySavedProject.current||!sameDiagramProjectContent(projectWithPendingCaptions(),manuallySavedProject.current)),busy:!!busy||!!fileOpening||libraryAction.current};},checkpoint:async()=>{while(libraryAction.current&&mounted.current)await new Promise(resolve=>setTimeout(resolve,50));if(!mounted.current)return false;flushFields();await library.waitForPendingSaves();return libraryOpen&&!documentIdRef.current?true:await checkpointDraft();}}));
+    else if(file.kind==='diagram-source'){const next=createDiagramProject({...withPaperPatterns(file.doc,undefined),name:file.name});next.basicSettings=file.settings;await completeProjectReplacement(next);}
+  },save,saveFile,open,export:openPDFExport,print,library:showLibrary,enter:enterWorkspace,storageChanged,capture:captureArtworkDiagram,restore:restoreArtworkDiagram,undo,redo,status:()=>{const present=!!documentIdRef.current||!libraryOpen||recovered.current;return {name:present?projectRef.current.name:null,present,dirty:present&&(diskBinding.current?(!diskSnapshot.current||!sameDiagramProjectContent(projectWithPendingCaptions(),diskSnapshot.current)):(library.hasPendingSave()||!manuallySavedProject.current||!sameDiagramProjectContent(projectWithPendingCaptions(),manuallySavedProject.current))),busy:diskSaving||!!busy||!!fileOpening||!!importWrite.current||libraryAction.current};},checkpoint:async()=>{while(libraryAction.current&&mounted.current)await new Promise(resolve=>setTimeout(resolve,50));if(!mounted.current)return false;flushFields();await library.waitForPendingSaves();return libraryOpen&&!documentIdRef.current?true:await checkpointDraft();}}));
   const artworkChangeRef=useRef(onArtworkChange);artworkChangeRef.current=onArtworkChange;
 
   useEffect(()=>{mounted.current=true;return()=>{mounted.current=false;ticket.current++;task.current?.cancel();fileImportTask.current?.cancel();fileImportTask.current=null;if(libraryReadRequest.current){libraryReadRequest.current.cancelled=true;libraryReadRequest.current.task?.cancel();libraryReadRequest.current=null;}};},[]);
@@ -1158,7 +1372,7 @@ const DiagramWorkspace=forwardRef<DiagramWorkspaceHandle,DiagramWorkspaceProps>(
   // Analyse the saved paper itself, independently of the CP-folding task. A
   // display-only result must never rebuild faces or reapply crease bindings.
   useEffect(()=>{
-    if(!active||libraryOpen||pdfOpen||editCP||confirmReplace||fileOpening||animationOpen||busy||currentDiagnostic||!layerAnalysisKey)return;
+    if(!active||libraryOpen||pdfOpen||editCP||confirmReplace||fileOpening||drawingDialogOpen||busy||currentDiagnostic||!layerAnalysisKey)return;
     const key=layerAnalysisKey,current=projectRef.current.steps.find(item=>item.id===step.id)?.pose;
     if(!current||current.spatial)return;
     const retry=layerRetry?.key===key&&layerRetry.revision!==consumedLayerRetry.current;
@@ -1206,11 +1420,11 @@ const DiagramWorkspace=forwardRef<DiagramWorkspaceHandle,DiagramWorkspaceProps>(
       setLayerAnalysis({key,running:false,error:message});
     });
     return()=>{stop();if(stopLayerAnalysis.current===stop)stopLayerAnalysis.current=null;if(mounted.current)setLayerAnalysis(previous=>previous?.key===key&&previous.running?{key,running:false}:previous);};
-  },[active,libraryOpen,pdfOpen,editCP,confirmReplace,fileOpening,animationOpen,busy,currentDiagnostic,step.id,layerAnalysisKey,pose?.result.layers.status,layerRetry]);
+  },[active,libraryOpen,pdfOpen,editCP,confirmReplace,fileOpening,drawingDialogOpen,busy,currentDiagnostic,step.id,layerAnalysisKey,pose?.result.layers.status,layerRetry]);
   // Restore inactive thumbnails without selecting or re-folding their paper.
   // The key excludes camera and caption changes so those do not restart work.
   useEffect(()=>{
-    if(!active||libraryOpen||pdfOpen||editCP||confirmReplace||fileOpening||animationOpen||busy||layerAnalysing||!thumbnailLayerCandidateId||!thumbnailLayerCandidateKey)return;
+    if(!active||libraryOpen||pdfOpen||editCP||confirmReplace||fileOpening||drawingDialogOpen||busy||layerAnalysing||!thumbnailLayerCandidateId||!thumbnailLayerCandidateKey)return;
     const id=thumbnailLayerCandidateId,key=thumbnailLayerCandidateKey,snapshot=projectRef.current,generation=fileGeneration.current;
     const preparation=startDiagramLayerDisplayPreparation(snapshot,{stepIds:[id]});let live=true;
     const fail=(text:string)=>{if(live&&mounted.current&&generation===fileGeneration.current)setThumbnailLayerErrors(previous=>new Map(previous).set(id,{key,message:text}));};
@@ -1225,7 +1439,7 @@ const DiagramWorkspace=forwardRef<DiagramWorkspaceHandle,DiagramWorkspaceProps>(
       else if(diagramLayerDisplayState(latest,id).status!=='ready')fail('本步骤纸面已变化，请重新分析。');
     }).catch(cause=>fail('折图准备未完成：'+errorText(cause)));
     return()=>{live=false;preparation.cancel();};
-  },[active,libraryOpen,pdfOpen,editCP,confirmReplace,fileOpening,animationOpen,busy,layerAnalysing,thumbnailLayerCandidateId,thumbnailLayerCandidateKey,projectGeneration]);
+  },[active,libraryOpen,pdfOpen,editCP,confirmReplace,fileOpening,drawingDialogOpen,busy,layerAnalysing,thumbnailLayerCandidateId,thumbnailLayerCandidateKey,projectGeneration]);
   useEffect(()=>{
     if(!active||libraryOpen||editCP||confirmReplace||fileOpening){svgPreparation.current?.cancel();svgPreparation.current=null;svgSaveController.current?.abort();setSVGExporting(false);}
   },[active,libraryOpen,editCP,confirmReplace,fileOpening]);
@@ -1341,21 +1555,27 @@ const DiagramWorkspace=forwardRef<DiagramWorkspaceHandle,DiagramWorkspaceProps>(
     setFoldFaceCandidates([]);setFoldPickPoint(null);
     if(active&&pending?.stepId===step.id)void compute(pending.stateId,false,pending.history,false,pending);
   },[step.id]);
-  // Browsing another step is a checkpoint. Ordinary edits stay in memory
-  // until that explicit boundary; camera movement is excluded from content.
+  // Capture pending captions as well as committed drawing edits.
   const previousStepCheckpoint=useRef({id:step.id,generation:projectGeneration});
   useEffect(()=>{
     const previous=previousStepCheckpoint.current;
     previousStepCheckpoint.current={id:step.id,generation:projectGeneration};
     if(previous.generation!==projectGeneration||previous.id===step.id||libraryAction.current||deletingRef.current)return;
-    void checkpointDraft(projectWithPendingCaptions());
+    void checkpointDraft(projectWithPendingCaptions(),true);
   },[step.id,projectGeneration]);
   useEffect(()=>{
     if(saveConflictRef.current)return;
     const snapshot=projectWithPendingCaptions();
-    if(!sameDiagramProjectContent(snapshot,checkpointProject.current))setStorageMessage('有未暂存修改 · 切换步骤或保存时写入');
+    if(!sameDiagramProjectContent(snapshot,checkpointProject.current)){
+      setStorageMessage('正在等待自动暂存');
+      if(learningPractice||libraryOpen||deletingRef.current)return;
+      const generation=fileGeneration.current,timer=setTimeout(()=>{
+        if(mounted.current&&generation===fileGeneration.current&&!saveConflictRef.current&&!deletingRef.current)void checkpointDraft(projectWithPendingCaptions(),true);
+      },750);
+      return()=>clearTimeout(timer);
+    }
     else setStorageMessage(!documentIdRef.current?'尚未保存到文档库':manuallySavedProject.current&&sameDiagramProjectContent(snapshot,manuallySavedProject.current)?'已保存到文档库':'草稿已暂存');
-  },[project,draftTitle,draftDescription]);
+  },[project,draftTitle,draftDescription,libraryOpen]);
 
   useEffect(()=>{
     if(!active)return;
@@ -1365,14 +1585,43 @@ const DiagramWorkspace=forwardRef<DiagramWorkspaceHandle,DiagramWorkspaceProps>(
       if(libraryOpen&&['z','y'].includes(name))return;
       if(['z','y'].includes(name)&&(e.target as Element)?.closest('input,textarea,select,[contenteditable="true"]'))return;
       e.preventDefault();e.stopImmediatePropagation();
-      if(name==='z')e.shiftKey?redo():undo();if(name==='y')redo();if(name==='s')save();if(name==='o')open();
+      if(name==='z')e.shiftKey?redo():undo();if(name==='y')redo();if(name==='s'){if(window.desktop?.isDesktop)void saveFile(e.shiftKey);else void save();}if(name==='o')open();
     };
     window.addEventListener('keydown',key);return()=>window.removeEventListener('keydown',key);
   },[active,libraryOpen,editCP,confirmReplace,fileOpening,pdfOpen,historyVersion]);
 
   function switchStep(id:string){flushFields();cancelTask();setEditCP(null);commit(selectDiagramStep(projectRef.current,id),false);setOverview(false);clearDrawingSelection();}
+  function chooseBranchStep(id:string){
+    flushFields();cancelTask();setEditCP(null);clearDrawingSelection();
+    try{commit(selectDiagramBranchStep(projectRef.current,id),false);setOverview(false);if(tablet)setTabletPanel('');}
+    catch(e){message(errorText(e));}
+  }
+  function addStepBranch(){
+    if(busy||imageBusy)return;
+    flushFields();cancelTask();setEditCP(null);clearDrawingSelection();
+    try{
+      const current=projectRef.current;
+      commit(addDiagramBranch(current,current.activeStepId));setOverview(false);setTool('select');
+      if(tablet)setTabletPanel('');
+    }catch(e){message(errorText(e));}
+  }
+
+  function addStepAt(leafId:string,anchorId:string,position:'before'|'after'){
+    const next=insertDiagramStepOnBranch(projectRef.current,{leafId,anchorId,position});
+    cancelTask();setEditCP(null);clearDrawingSelection();commit(next);setInsertTarget(null);setBranchInsert(null);setOverview(false);setTabletPanel('');
+    message('已添加第 '+diagramBranchNumbering(next).stepLabels.get(next.activeStepId)+' 步，可撤销。');
+  }
+  function requestStepInsertion(position:'before'|'after'){
+    if(busy||imageBusy)return;
+    flushFields();
+    const current=projectRef.current;
+    if(current.branchSteps?.length){
+      setInsertTarget(null);setBranchInsert({stepId:current.activeStepId,generation:fileGeneration.current,position});return;
+    }
+    try{addStepAt(current.steps.at(-1)!.id,current.activeStepId,position);}catch(cause){message(errorText(cause));}
+  }
   function exchangeCP(stateId:string|null){
-    if(busy||confirmReplace||fileOpening||animationOpen)return;
+    if(busy||confirmReplace||fileOpening||drawingDialogOpen)return;
     flushFields();clearDrawingSelection();setOverview(false);setPropertiesOpen(false);setComparison(false);setEditCP(stateId);
   }
   function editSourceStep(stateId:string){
@@ -1396,13 +1645,13 @@ const DiagramWorkspace=forwardRef<DiagramWorkspaceHandle,DiagramWorkspaceProps>(
     }catch(e){message(errorText(e));}
   }
   function hoverCP(stateId:string,hit:DiagramCPHit|null,point?:Point){queuePaperHover(hit?.kind==='face'?{kind:'cp',point}:null);setCPHovered(previous=>hit?(previous?.stateId===stateId&&previous.hit.kind===hit.kind&&previous.hit.index===hit.index?previous:{stateId,hit}):null);}
-  function selectCP(stateId:string,hit:DiagramCPHit,point?:Point){
-    if(learningPractice&&comparison&&hit.kind==='face')setComparisonLayers(true);
+  function selectCP(stateId:string,hit:DiagramCPHit,point?:Point,fromDrawing=false){
+    if(learningPractice&&comparison&&hit.kind==='face'){if(tablet)setTabletPanel('layers');else setToolsCollapsed(false,false);}
     setSelectedImageId(null);setFixedHighlightShown(false);setLayerScopeEditing(false);
     const state=projectRef.current.states.find(item=>item.id===stateId);
     let edge:DiagramCPEdgeGeometry|undefined;
     try{if(hit.kind==='edge'&&state){const segment=diagramCPEdgeSegment(state,hit.index);edge={a:segment.a,b:segment.b};}}catch{}
-    setCPSelected({stateId,hit,point,...(edge?{edge}:{})});setSelectedAnnotationIds([]);setSelectedLineFaces({});setTab('drawing');setOverview(false);
+    setCPSelected({stateId,hit,point,fromDrawing,...(edge?{edge}:{})});setSelectedAnnotationIds([]);setSelectedLineFaces({});setTab('drawing');setOverview(false);
     if(hit.kind==='edge')setTool('select');
   }
   function changeCPEdge(assignment:DiagramCPEdgeAssignment,action:'fold'|'precrease'='fold'){
@@ -1502,6 +1751,7 @@ const DiagramWorkspace=forwardRef<DiagramWorkspaceHandle,DiagramWorkspaceProps>(
     }catch(e){if(!mounted.current||ticket.current!==request)return;pendingNext.current=null;recordActivity('diagram.next.error',{stage,reason:errorText(e)},'error');message(errorText(e));}
     finally{if(mounted.current&&ticket.current===request){task.current=null;setBusy(null);setComputeMessage('');}}
   }
+  useEffect(()=>{if(editorCPTarget&&(!active||libraryOpen||editorCPTarget.owner!==project))setEditorCPTarget(null);},[active,libraryOpen,project,editorCPTarget]);
   function applyCP(stateId:string,next:Doc,warnings:string[]=[]):boolean{try{
     const current=projectRef.current,currentStep=current.steps.find(s=>s.id===current.activeStepId)!,access=getDiagramCPEditAccess(current,currentStep.id,stateId);
     if(!access.editable)throw Error(access.reason);
@@ -1531,7 +1781,11 @@ const DiagramWorkspace=forwardRef<DiagramWorkspaceHandle,DiagramWorkspaceProps>(
       if(s.foldLink?.enabled&&stateId===s.afterId){commit(next);clearDrawingSelection();message('操作后 CP 已采用，主图折痕同步；操作前纸面姿态保留。');return;}
       if(cleaned.changed){commit(next);setSelection(emptySelection());message('来源 CP 已自动整理，正在重新计算本步折图。');void compute(stateId);return;}
       next=adoptDiagramPose(next,s.id,stateId,model.result);
-      if(stateId===s.beforeId&&hasCPSourceBindings(s)&&s.pose&&(s.pose.sourceStateId!==stateId||s.pose.sourceRevision!==next.states.find(state=>state.id===stateId)!.revision))next=adoptDiagramFoldCP(next,s.id,next.states.find(state=>state.id===s.afterId)!.doc);
+      if(stateId===s.beforeId&&hasCPSourceBindings(s)&&s.pose){
+        const sourceChanged=s.pose.sourceStateId!==stateId||s.pose.sourceRevision!==next.states.find(state=>state.id===stateId)!.revision;
+        if(sourceChanged)next=adoptDiagramFoldCP(next,s.id,next.states.find(state=>state.id===s.afterId)!.doc,s.pose);
+        else if(s.foldLink?.enabled)next=refreshDiagramFoldDrawing(next,s.id,undefined,false,s.pose);
+      }
       commit(next);setSelection(emptySelection());message('已将当前平折模型及其来源 CP 复制到本步骤。');
     }catch(e){message(errorText(e));}
   }
@@ -1595,14 +1849,20 @@ const DiagramWorkspace=forwardRef<DiagramWorkspaceHandle,DiagramWorkspaceProps>(
       const origin=reanalyse&&snapshot?null:fixed?{face:diagramFoldStartingFace(state.doc,fixed),stale:false}:resolveStartingFace(state.doc,buildDiagramFold(state.doc).graph),sourceWarning=origin?.stale?'原起始面设置已失效，本次采用默认起始面。':'';
       let spatial:DiagramSpatialPose|undefined;
       const spatialMode=mode?mode==='spatial':reanalyse&&snapshot?!!snapshot.spatial:hasSpatialFoldAngles(state.doc)||!!snapshot?.spatial||!!inherit?.sourcePose?.spatial;
+      const branchPreference=!spatialMode&&!reanalyse?diagramBranchFoldPreference(p,s,state,fixed||state.doc.flatFold?origin?.face:undefined):undefined;
       const nextTask:FlatFoldTask=spatialMode?(()=>{
         const root=origin?.face??snapshot?.result.geometry.startingFace??0;
-        const stationary=fixed??(snapshot?.spatial?{point:[0,0] as Point,matrix:[1,0,0,1,0,0] as import('../app/diagramFoldLinkTypes').DiagramFoldMatrix,spatialTransform:snapshot.spatial.faceTransforms[root]}:undefined);
-        const previous=inherit?.sourcePose??snapshot??undefined,history=p.steps.slice(0,p.steps.findIndex(step=>step.id===s.id)+1).flatMap(step=>step.paperStates?.spatial?[step.paperStates.spatial]:step.paperStates?.flat?[step.paperStates.flat]:step.pose?[step.pose]:[]);
+        const stepPosition=p.steps.findIndex(step=>step.id===s.id),priorStep=p.steps[stepPosition-1];
+        const retryAnchor=!fixed&&!inherit&&!reanalyse&&!origin?.stale?diagramSpatialRetryAnchor(p,stepPosition,stateId,state!.doc,root):undefined;
+        if(retryAnchor)inherit={fixed:retryAnchor,sourceFixed:retryAnchor,sourcePose:priorStep.pose??undefined};
+        const stationary=fixed??retryAnchor??(snapshot?.spatial?{point:[0,0] as Point,matrix:[1,0,0,1,0,0] as import('../app/diagramFoldLinkTypes').DiagramFoldMatrix,spatialTransform:snapshot.spatial.faceTransforms[root]}:undefined);
+        // Manual retry on an empty step needs the same contact ancestry as Next.
+        const previous=inherit?.sourcePose??snapshot??(priorStep?.afterId===s.beforeId?priorStep.pose:undefined)??undefined;
+        const history=p.steps.slice(0,stepPosition+1).flatMap(step=>step.paperStates?.spatial?[step.paperStates.spatial]:step.paperStates?.flat?[step.paperStates.flat]:step.pose?[step.pose]:[]);
         if(previous&&history.at(-1)!==previous)history.push(previous);
         const job=startDiagramSpatialPose([state!.doc,root,stationary,previous,hasNonFlatFoldAngles(state!.doc)?camera??previous?.spatial?.camera??spatialCamera:DEFAULT_DIAGRAM_SPATIAL_CAMERA],history);
         return {promise:job.promise.then(answer=>{spatial=hasNonFlatFoldAngles(state!.doc)?answer.spatial:undefined;return answer.result;}),cancel:job.cancel};
-      })():reanalyse&&snapshot?startFlatLayerReanalysis(snapshot.result,{timeoutMs:Infinity,solutionIndex:requestedDiagramLayerSolutionIndex(snapshot),constraints:snapshot.result.layers.constraints}):startFlatFold(state.doc,{flatCreases:'marks',solutionIndex:0,startingFace:origin?.face??0,timeoutMs:Infinity,onProgress:r=>{if(mounted.current&&ticket.current===request)setComputeMessage(sourceWarning+r.geometry.message);}});
+      })():reanalyse&&snapshot?startFlatLayerReanalysis(snapshot.result,{timeoutMs:Infinity,solutionIndex:requestedDiagramLayerSolutionIndex(snapshot),constraints:snapshot.result.layers.constraints}):startFlatFold(state.doc,{flatCreases:'marks',solutionIndex:branchPreference?.solutionIndex??0,startingFace:branchPreference?.startingFace??origin?.face??0,timeoutMs:Infinity,onProgress:r=>{if(mounted.current&&ticket.current===request)setComputeMessage(sourceWarning+r.geometry.message);}});
       task.current=nextTask;setBusy({stepId:s.id,stateId,kind:reanalyse?'layers':'fold'});setComputeMessage(spatialMode?'正在按设定折角构建空间纸面并确认遮挡…':reanalyse?'正在分析修改后模型的遮挡关系…':sourceWarning+'正在构建平折几何…');
       let result=await nextTask.promise;
       if(!spatialMode&&mounted.current&&ticket.current===request&&fixed&&result.geometry.status==='ready'){
@@ -1644,25 +1904,29 @@ const DiagramWorkspace=forwardRef<DiagramWorkspaceHandle,DiagramWorkspaceProps>(
         try{
           if(sourceChanged||linkedStep.foldLink?.enabled){
             const selected=next.steps.find(st=>st.id===s.id)!,beforeCP=next.states.find(st=>st.id===s.beforeId)!,afterCP=next.states.find(st=>st.id===s.afterId)!;
+            const drawingPose=!reanalyse&&selected.annotations?.some(mayExtendBeyondPaper)?current.pose??undefined:undefined;
             setBusy({stepId:s.id,stateId,kind:'fold'});
             if(sourceChanged){
-              const answer=await geometry('adoptCP',[selected,beforeCP,afterCP],request,'正在同步当前步骤的折痕…');
+              const answer=await geometry('adoptCP',[selected,beforeCP,afterCP,drawingPose],request,'正在同步当前步骤的折痕…');
               if(answer.changed)next=updateDiagramCP(next,afterCP.id,answer.doc);
               next=updateDiagramFoldLink(updateDiagramAnnotations(next,s.id,answer.annotations),s.id,answer.settings);
             }else{
-              const annotations=await geometry('refresh',[selected,beforeCP,afterCP,reanalyse],request,'正在生成当前步骤的折痕显示…');
+              const annotations=await geometry('refresh',[selected,beforeCP,afterCP,reanalyse,drawingPose],request,'正在生成当前步骤的折痕显示…');
               next=updateDiagramAnnotations(next,s.id,annotations);
             }
           }
         }
         catch(cause){
           if(!mounted.current||ticket.current!==request)return;
-          const settings=next.steps.find(st=>st.id===s.id)!.foldLink??defaultDiagramFoldLink();
+          // Keep the drawing and its original paper together on projection
+          // failure. Unlock the after CP so the user can repair it.
+          const recovery=current.pose?latest:next;
+          const settings=recovery.steps.find(st=>st.id===s.id)!.foldLink??defaultDiagramFoldLink();
           const {fixed:_fixed,generated:_generated,...rest}=settings;
           task.current=null;setBusy(null);setComputeMessage('');
-          next=updateDiagramFoldLink(next,s.id,{...rest,enabled:false,selectedFaces:[]});commit(next,history);clearDrawingSelection();
+          commit(updateDiagramFoldLink(recovery,s.id,{...rest,enabled:false,selectedFaces:[]}),history);clearDrawingSelection();
           recordActivity('diagram.compute.error',{stage:'cp-sync',result:'link-disabled',reason:errorText(cause)},'error');
-          message('折图已重新计算；CP 联动暂已停用，请检查操作后 CP 后再启用。'+errorText(cause));return;
+          message('折痕同步失败，已暂时停用 CP 联动，请检查操作后 CP。'+errorText(cause));return;
         }
       }
       let fixedInheritance='';
@@ -1790,16 +2054,21 @@ const DiagramWorkspace=forwardRef<DiagramWorkspaceHandle,DiagramWorkspaceProps>(
       if(!scopeAlreadyIsolated)next=isolateDiagramLineEdits(annotations,next,selectedLineFaces);
       const current=projectRef.current,s=current.steps.find(item=>item.id===step.id)!,settings=s.foldLink??defaultDiagramFoldLink(),oldIds=new Set((s.annotations??[]).map(item=>item.id));
       const addedFold=next.some(a=>a.kind==='line'&&(a.style==='valley'||a.style==='mountain')&&!oldIds.has(a.id));
-      const config=addedFold&&settings.layers==='selected'&&!settings.selectedFaces.length?{...settings,layers:'top' as const}:undefined;
+      const addedSinks=next.filter((a):a is DiagramLineAnnotation=>a.kind==='line'&&!!a.sinkFold&&!oldIds.has(a.id));
+      if(addedSinks.length&&(!settings.enabled||addedSinks.some(line=>!line.foldFaces?.length)))throw Error('请先在 CP 中选择参与沉折的纸面。');
+      const config=addedFold&&!addedSinks.length&&settings.layers==='selected'&&!settings.selectedFaces.length?{...settings,layers:'top' as const}:undefined;
       const previousF=annotations.filter(isExistingCrease),nextF=next.filter(isExistingCrease);
       const linked=(values:DiagramAnnotation[])=>values.filter(a=>a.kind==='line'&&(a.style==='valley'||a.style==='mountain'));
       const styleOnly=!convertExisting&&JSON.stringify(linked(annotations))===JSON.stringify(linked(next))&&JSON.stringify(previousF)!==JSON.stringify(nextF);
       const withoutWindows=(values:DiagramAnnotation[])=>values.filter(a=>a.kind!=='symbol'||a.symbol!=='tearWindow');
       const windowOnly=JSON.stringify(withoutWindows(annotations))===JSON.stringify(withoutWindows(next));
-      commit(styleOnly||windowOnly?updateDiagramAnnotations(current,step.id,next):reconcileDiagramFoldAnnotations(current,step.id,next,config));return true;
+      commit(styleOnly||windowOnly?updateDiagramAnnotations(current,step.id,next):reconcileDiagramFoldAnnotations(current,step.id,next,config));
+      if(addedSinks.length)message('已生成沉折边界，区域内的峰谷线已互换。');
+      return true;
     }catch(e){message(errorText(e));return false;}
   }
   function chooseFoldAction(action:NonNullable<DiagramLineAnnotation['foldAction']>){
+    setSinkStep(null);
     if(!paperVisible){setFoldAction(action);chooseTool('line');message('图片上的折线仅作标注，不修改 CP。');return;}
     if(busy||paperPulled)return;
     try{
@@ -1817,8 +2086,16 @@ const DiagramWorkspace=forwardRef<DiagramWorkspaceHandle,DiagramWorkspaceProps>(
   }
   function changeSelectedFoldAction(action:NonNullable<DiagramLineAnnotation['foldAction']>){
     if(busy||paperPulled||!selectedFoldLines.length)return;
-    if(!paperVisible){const ids=new Set(selectedFoldLines.map(line=>line.id));applyAnnotations(annotations.map(annotation=>annotation.kind==='line'&&ids.has(annotation.id)?{...annotation,foldAction:action,foldFaces:[]}:annotation));return;}
-    const next=isolateDiagramLineEdits(annotations,annotations.map(a=>selectedFoldLines.some(line=>line.id===a.id)?{...a,foldAction:action}:a),selectedLineFaces);
+    const selectedIds=new Set(selectedFoldLines.map(line=>line.id));
+    const changed=annotations.map(annotation=>{
+      if(annotation.kind!=='line'||!selectedIds.has(annotation.id))return annotation;
+      const line={...annotation,foldAction:action};
+      if(action==='precrease'||!paperVisible){delete line.sinkFold;delete line.sinkGroup;delete line.sinkAssignment;}
+      if(!paperVisible)line.foldFaces=[];
+      return line;
+    });
+    if(!paperVisible){applyAnnotations(changed);return;}
+    const next=isolateDiagramLineEdits(annotations,changed,selectedLineFaces);
     try{
       if(action==='precrease'&&!foldLink.enabled){
         if(!pose||pose.sourceStateId!==before.id||stale)throw Error('请先计算操作前 CP，再设置预折痕。');
@@ -1875,7 +2152,7 @@ const DiagramWorkspace=forwardRef<DiagramWorkspaceHandle,DiagramWorkspaceProps>(
     if(!selectedLines.length||style==='auxiliary'&&selectedExisting.length)return;
     // Linked F lines are physical marks in the after CP. Preserve that route
     // when an active fold is changed to an existing crease.
-    if(paperVisible&&style==='crease'&&foldLink.enabled&&pose&&pose.sourceStateId===before.id&&!stale){
+    if(paperVisible&&style==='crease'&&foldLink.enabled&&pose&&pose.sourceStateId===before.id&&!stale&&!selectedLines.some(line=>line.sinkFold)){
       try{
         const routes=selectedCreaseEdges.after.map(index=>diagramCPEdgeSegment(after,index)).filter(edge=>edge.assignment!=='B'&&edge.assignment!=='A');
         if(routes.length){
@@ -1914,8 +2191,9 @@ const DiagramWorkspace=forwardRef<DiagramWorkspaceHandle,DiagramWorkspaceProps>(
     const modified=annotations.map(a=>{
       if(a.kind!=='line'||!ids.has(a.id))return a;
       const line:DiagramLineAnnotation=changeDiagramLineCategory(a,style,lineDefaults);
-      if(style==='valley'||style==='mountain')line.foldAction=a.style==='valley'||a.style==='mountain'?a.foldAction??'fold':'fold';
-      else {delete line.foldAction;delete line.foldAngle;}
+      if(style==='valley'||style==='mountain'){
+        line.foldAction=a.style==='valley'||a.style==='mountain'?a.foldAction??'fold':'fold';
+      }else {delete line.foldAction;delete line.foldAngle;delete line.sinkFold;delete line.sinkGroup;delete line.sinkAssignment;}
       return line;
     });
     const next=isolateDiagramLineEdits(annotations,modified,selectedLineFaces).map(a=>{
@@ -1963,11 +2241,23 @@ const DiagramWorkspace=forwardRef<DiagramWorkspaceHandle,DiagramWorkspaceProps>(
   }
   function chooseLayerFace(face:number){
     if(!pose)return;
-    if(layerOrderEditing){setLayerOrderFace(face);setLayerChoice(null);selectCP(pose.sourceStateId,{kind:'face',index:face});return;}
+    if(layerOrderEditing){setLayerOrderFace(face);setLayerChoice(null);selectCP(pose.sourceStateId,{kind:'face',index:face},undefined,true);return;}
     if(selectedTearWindow){toggleLayerVisibility(face);return;}
     if(tool==='fixed'){fixCP(face,{stateId:pose.sourceStateId,hit:{kind:'face',index:face}});return;}
     if(selectedFoldLines.length||layerScopeEditing||tool==='layer'||foldLink.enabled&&foldLink.layers==='selected'){toggleFoldFace(face);return;}
-    selectCP(pose.sourceStateId,{kind:'face',index:face});
+    selectCP(pose.sourceStateId,{kind:'face',index:face},undefined,true);
+  }
+  function pickPaperFace(point:Point){
+    if(!pose||!localLayerModel||!originState||stale)return;
+    const probe=localLayerModel.at(point);
+    if(!probe)return;
+    const material=localLayerModel.materialPoint(probe.face,point);
+    if(!material)return;
+    const source=buildDiagramFold(originState.doc).graph;
+    const faces=source.faces_vertices??[];
+    const face=faces[probe.face]&&materialFaceInside(source,probe.face,material)?probe.face:
+      faces.findIndex((_,id)=>materialFaceInside(source,id,material));
+    if(face>=0)selectCP(originState.id,{kind:'face',index:face},material,true);
   }
   function pickFixed(point:Point,face?:number){
     if(!pose||busy)return;
@@ -2008,7 +2298,7 @@ const DiagramWorkspace=forwardRef<DiagramWorkspaceHandle,DiagramWorkspaceProps>(
       clearDrawingSelection(true);message(`已删除框内 ${annotations.length-next.length} 个绘图对象，可撤销。`);
     }catch(e){message(errorText(e));}
   }
-  function chooseTool(next:DiagramDrawingTool){setOrbitMode(false);if(next==='vertex'&&!restoreDepthForDrag())return;const currentStep=projectRef.current.steps.find(item=>item.id===projectRef.current.activeStepId)!;if(next==='vertex'&&currentStep.paperStates?.spatial&&currentStep.paperStates.active==='flat'){try{commit(switchDiagramPaperState(projectRef.current,currentStep.id,'spatial'));}catch(error){message(errorText(error));return;}}setSelectedCalloutId(null);if(paperPulled&&['line','polyline','erase','perpendicular','parallel','bisector','trim','extend','fixed','ratio-point','special-point'].includes(next)){message('请切回平整状态或立体状态后再编辑折痕。');return;}if(['line','polyline','perpendicular','parallel','bisector','trim','extend'].includes(next)){const appearance=lineDefaults[lineStyle];setDrawingColor(appearance.color);setDrawingWidth(appearance.width);setDrawingPattern(appearance.strokePattern);}setLayerScopeEditing(next==='layer');setFixedHighlightShown(next==='fixed');setTool(next);setOverview(false);setSelection(emptySelection());if(!['select','pan','layer','mirror-copy'].includes(next))setSelectedAnnotationIds([]);setTab(next==='vertex'?'model':'drawing');if(next==='vertex')setPropertiesOpen(true);if(propertyScroll.current)propertyScroll.current.scrollTop=0;}
+  function chooseTool(next:DiagramDrawingTool){setOrbitMode(false);if(next==='vertex'&&!restoreDepthForDrag())return;const currentStep=projectRef.current.steps.find(item=>item.id===projectRef.current.activeStepId)!;if(next==='vertex'&&currentStep.paperStates?.spatial&&currentStep.paperStates.active==='flat'){try{commit(switchDiagramPaperState(projectRef.current,currentStep.id,'spatial'));}catch(error){message(errorText(error));return;}}setSelectedCalloutId(null);if(paperPulled&&['line','polyline','erase','perpendicular','parallel','bisector','trim','fixed','ratio-point','special-point'].includes(next)){message('请切回平整状态或立体状态后再编辑折痕。');return;}if(['line','polyline','perpendicular','parallel','bisector','trim'].includes(next)){const appearance=lineDefaults[lineStyle];setDrawingColor(appearance.color);setDrawingWidth(appearance.width);setDrawingPattern(appearance.strokePattern);}setLayerScopeEditing(next==='layer');setFixedHighlightShown(next==='fixed');setTool(next);setOverview(false);setSelection(emptySelection());if(!['select','pan','layer','mirror-copy'].includes(next))setSelectedAnnotationIds([]);setTab(next==='vertex'?'model':'drawing');if(next==='vertex')setPropertiesOpen(true);if(propertyScroll.current)propertyScroll.current.scrollTop=0;}
   function chooseLine(next:DiagramLineStyle){
     chooseTool('line');const appearance=lineDefaults[next];setLineStyle(next);setDrawingColor(appearance.color);setDrawingWidth(appearance.width);setDrawingPattern(appearance.strokePattern);
   }
@@ -2024,7 +2314,7 @@ const DiagramWorkspace=forwardRef<DiagramWorkspaceHandle,DiagramWorkspaceProps>(
     resetDrawingSelection();setOverview(false);setTool('select');
     setZoomDialog({stepId:step.id,generation:fileGeneration.current,annotation:structuredClone(annotation),isNew,basis,bounds,initial:annotation.zoomArea?tryMapDiagramZoomArea(annotation.zoomArea,basis)??undefined:undefined});
   }
-  function confirmZoomRegion(region:DiagramZoomRegion){
+  async function confirmZoomRegion(region:DiagramZoomRegion,onProgress:(message:string)=>void,signal:AbortSignal){
     const target=zoomDialog;if(!target)return;
     try{
       if(!activeRef.current||target.generation!==fileGeneration.current||projectRef.current.activeStepId!==target.stepId)throw new Error('工程或步骤已切换，请在目标步骤重新选择放大区域。');
@@ -2032,7 +2322,14 @@ const DiagramWorkspace=forwardRef<DiagramWorkspaceHandle,DiagramWorkspaceProps>(
       if(!target.isNew&&!old.some(annotation=>annotation.id===target.annotation.id))throw new Error('放大符号已不存在，请重新放置。');
       const annotation={...target.annotation,zoomArea:{region,basis:target.basis}};
       const next=updateDiagramAnnotations(current,s.id,target.isNew?[...old,annotation]:old.map(item=>item.id===annotation.id?annotation:item));
-      exportDiagramProject(next);commit(next);setZoomDialog(null);selectDrawingAnnotations([annotation.id]);
+      await validateDiagramZoomProject(next,signal,onProgress);
+      signal.throwIfAborted();
+      if(!activeRef.current||target.generation!==fileGeneration.current||projectRef.current!==current)throw new Error('工程或步骤已更新，请重新确认放大区域。');
+      onProgress('正在更新放大画面…');
+      await new Promise<void>(resolve=>requestAnimationFrame(()=>setTimeout(resolve,0)));
+      signal.throwIfAborted();
+      if(!activeRef.current||target.generation!==fileGeneration.current||projectRef.current!==current)throw new Error('工程或步骤已更新，请重新确认放大区域。');
+      commit(next);setZoomDialog(null);selectDrawingAnnotations([annotation.id]);
       message('放大区域已保存：从下一步开始放大，后续保持；放置缩小符号后于下一步恢复完整视图。');
     }catch(error){message(errorText(error));throw error;}
   }
@@ -2086,7 +2383,7 @@ const DiagramWorkspace=forwardRef<DiagramWorkspaceHandle,DiagramWorkspaceProps>(
   function anchoredSymbol(next:DiagramSymbolAnnotation){
     if(selectedAnnotation?.kind!=='symbol')return;
     try{
-      const previous=symbolBase(selectedAnnotation),base=symbolBase(next);
+      const previous=selectedSymbolBase!,base=diagramSymbolAnchor(resolveDiagramSymbolGeometry(next,symbolStyles));
       next={...next,position:[next.position[0]+previous[0]-base[0],next.position[1]+previous[1]-base[1]]};
       applyAnnotations(annotations.map(a=>a.id===next.id?next:a));
     }catch(e){message(errorText(e));}
@@ -2111,7 +2408,7 @@ const DiagramWorkspace=forwardRef<DiagramWorkspaceHandle,DiagramWorkspaceProps>(
     if(selectedAnnotation?.kind!=='symbol')return false;
     try{
       if(selectedAnnotation.symbol==='equalDivision'){
-        const next=editDiagramEqualDivisionRatio(selectedAnnotation,key,value);
+        const next=editDiagramSymbolGeometry(selectedAnnotation,symbolStyles,shown=>editDiagramEqualDivisionRatio(shown,key,value));
         applyAnnotations(annotations.map(annotation=>annotation.id===next.id?next:annotation));
       }else anchoredSymbol({...selectedAnnotation,cadAttributes:{...selectedAnnotation.cadAttributes,[key]:value}});
       return true;
@@ -2129,7 +2426,7 @@ const DiagramWorkspace=forwardRef<DiagramWorkspaceHandle,DiagramWorkspaceProps>(
       if(symbol!=='return')delete next.returnStepId;
       delete next.curveControl;
       if(keepBaseline&&selectedSymbolBaseline){
-        const baseline=symbolNativeBaseline(next),start=baseline?.start,end=baseline?.end;
+        const baseline=symbolNativeBaseline(resolveDiagramSymbolGeometry(next,symbolStyles)),start=baseline?.start,end=baseline?.end;
         if(start&&end){
           const length=Math.hypot(end[0]-start[0],end[1]-start[1]);
           if(length>1e-8){next.size*=selectedSymbolBaseline.length/length;next.rotation+=selectedSymbolBaseline.angle-Math.atan2(end[1]-start[1],end[0]-start[0])*180/Math.PI;}
@@ -2153,8 +2450,12 @@ const DiagramWorkspace=forwardRef<DiagramWorkspaceHandle,DiagramWorkspaceProps>(
     editAnnotation({position:[selectedAnnotation.position[0]+point[0]-selectedSymbolBase[0],selectedAnnotation.position[1]+point[1]-selectedSymbolBase[1]]});
   }
   function drawingStyle(patch:Partial<DiagramLineAppearance>){
-    if(selectedAnnotations.length)applyAnnotations(annotations.map(a=>!selectedAnnotationIds.includes(a.id)?a:a.kind==='line'?overrideDiagramLineAppearance(a,patch):{...a,...(patch.color!==undefined?{color:patch.color}:{}),...(patch.width!==undefined?{width:patch.width}:{})}));
+    if(selectedAnnotations.length)applyAnnotations(annotations.map(a=>!selectedAnnotationIds.includes(a.id)?a:a.kind==='line'?overrideDiagramLineAppearance(a,patch):overrideDiagramSymbolStyle(a,{...(patch.color!==undefined?{color:patch.color}:{}),...(patch.width!==undefined?{width:patch.width}:{})})));
+    else if(tool==='symbol')changeSymbolPen(patch);
     else {if(patch.color)setDrawingColor(patch.color);if(patch.width!==undefined)setDrawingWidth(patch.width);}
+  }
+  function resetSelectedSymbolPens(){
+    applyAnnotations(annotations.map(a=>a.kind==='symbol'&&selectedAnnotationIds.includes(a.id)?{...a,...DEFAULT_DIAGRAM_SYMBOL_PEN,appearanceOverrides:[]}:a));
   }
   function useGlobalDrawingStyle(){
     applyAnnotations(annotations.map(a=>a.kind==='line'&&selectedAnnotationIds.includes(a.id)?resetDiagramLineAppearance(a,lineDefaults):a));
@@ -2167,7 +2468,7 @@ const DiagramWorkspace=forwardRef<DiagramWorkspaceHandle,DiagramWorkspaceProps>(
   function rotateSelectionCopy(){
     const angle=Number(rotateCopyAngle);
     if(!rotateCopyAngle?.trim()||!Number.isFinite(angle)||busy||selectedExisting.length||(paperPulled&&selectedLines.length))return;
-    const bounds=annotationBounds(selectedAnnotations);
+    const bounds=annotationBounds(selectedAnnotations,{symbolStyles});
     if(!bounds)return;
     const center:Point=[bounds.x+bounds.width/2,bounds.y+bounds.height/2];
     try{
@@ -2210,8 +2511,8 @@ const DiagramWorkspace=forwardRef<DiagramWorkspaceHandle,DiagramWorkspaceProps>(
     if(workspaceElement.current?.querySelector('[data-diagram-model]'))focus();else requestAnimationFrame(focus);
   }
   function runDiagramCommand(command:DiagramCommand){
-    if(!active||busy||libraryOpen||editCP||confirmReplace||fileOpening||pdfOpen||animationOpen)return;
-    if(paperPulled&&(command.startsWith('line:')||command.startsWith('action:')||['line','polyline','erase','perpendicular','parallel','bisector','trim','extend','fixed','ratio-point','special-point'].includes(command))){message('请切回平整状态或立体状态后再编辑折痕。');return;}
+    if(!active||busy||libraryOpen||editCP||confirmReplace||fileOpening||pdfOpen||drawingDialogOpen)return;
+    if(paperPulled&&(command.startsWith('line:')||command.startsWith('action:')||['line','polyline','erase','perpendicular','parallel','bisector','trim','fixed','ratio-point','special-point'].includes(command))){message('请切回平整状态或立体状态后再编辑折痕。');return;}
     if(['vertex','fixed','layer'].includes(command)&&!paperVisible){message('请先恢复显示折图纸面，再操作纸角或纸层。');return;}
     if(['vertex','fixed','layer'].includes(command)&&!pose){message('请先计算操作前 CP，再操作纸角或纸层。');return;}
     if(command==='fixed'&&!foldLink.enabled){message('请先启用“折线与 CP 联动”，再选择固定侧。');return;}
@@ -2227,7 +2528,7 @@ const DiagramWorkspace=forwardRef<DiagramWorkspaceHandle,DiagramWorkspaceProps>(
   }
   function transformSelection(kind:'rotate'|'scale'|'mirror-x'|'mirror-y'){
     if(selectedExisting.length){message('已有折痕的位置跟随纸面；请只选择本步绘图对象进行变换。');return;}
-    const bounds=annotationBounds(selectedAnnotations);if(!bounds)return;
+    const bounds=annotationBounds(selectedAnnotations,{symbolStyles});if(!bounds)return;
     const center:Point=[bounds.x+bounds.width/2,bounds.y+bounds.height/2];
     try{applyAnnotations(transformDiagramAnnotations(annotations,selectedAnnotationIds,kind==='rotate'?{kind:'rotate',center,angle:transformAngle}:kind==='scale'?{kind:'scale',center,factor:transformScale}:{kind:'mirror',center,axis:kind==='mirror-x'?'x':'y'}));}catch(e){message(errorText(e));}
   }
@@ -2244,13 +2545,114 @@ const DiagramWorkspace=forwardRef<DiagramWorkspaceHandle,DiagramWorkspaceProps>(
     };
     window.addEventListener('keydown',key);return()=>window.removeEventListener('keydown',key);
   },[active,libraryOpen,editCP,confirmReplace,fileOpening,pdfOpen,busy,annotations,selectedAnnotationIds,selectedCalloutId,step.callouts,tool,directCommands]);
+  function changesCP(stack:DiagramProject[],state:DiagramCPState){
+    const previous=stack.at(-1)?.states.find(item=>item.id===state.id);
+    return !!previous&&previous.revision!==state.revision;
+  }
+  function detachedScopeReason(stepId:string){
+    if(stepId!==projectRef.current.activeStepId||!active||libraryOpen)return '请回到对应步骤选面。';
+    if(busy||fileOpening||confirmReplace||editCP)return '请先完成主窗口操作。';
+    if(!paperVisible||paperPulled)return '请先显示平整或立体折图。';
+    if(!pose||stale||pose.sourceStateId!==before.id||pose.result.geometry.status!=='ready')return '请先计算操作前 CP。';
+    if(!foldLink.enabled)return '请在主图启用 CP 联动。';
+    return '';
+  }
+  const scopeReason=detachedScopeReason(step.id);
+  const sinkScope=foldLink.layers==='selected'&&foldLink.selectedFaces.length>0;
+  const sinkReason=scopeReason||(!sinkScope?'请先在 CP 中选择参与沉折的纸面。':'');
+  const drawingSink=sinkStep===step.id&&tool==='line'&&(lineStyle==='valley'||lineStyle==='mountain')&&!sinkReason;
+  useEffect(()=>{setSinkStep(null);setScopeCard(null);},[step.id,before.id,before.revision]);
+  useEffect(()=>{if(!sinkScope||!foldLink.enabled||tool!=='line'||(lineStyle!=='valley'&&lineStyle!=='mountain'))setSinkStep(null);},[sinkScope,foldLink.enabled,tool,lineStyle]);
+
+  function chooseSinkDrawing(checked:boolean){
+    if(!checked){setSinkStep(null);return;}
+    if(sinkReason){message(sinkReason);return;}
+    resetDrawingSelection();setScopeCard(null);setFoldAction('fold');
+    if(lineStyle==='valley'||lineStyle==='mountain')chooseTool('line');
+    else chooseLine('valley');
+    setSinkStep(step.id);
+    message('在主图横跨所选纸层画一道谷线或峰线，生成沉折边界。');
+  }
+  function changeCPDrawScope(state:DiagramCPState,face:number|null){
+    const current=projectRef.current,target=current.steps.find(item=>item.id===current.activeStepId)!;
+    const source=current.states.find(item=>item.id===target.beforeId)!;
+    const reason=detachedScopeReason(target.id);
+    if(reason||!target.pose)throw Error(reason||'请先计算操作前 CP。');
+    const settings=target.foldLink??defaultDiagramFoldLink();
+    const faces=new Set(settings.layers==='selected'?settings.selectedFaces:[]);
+    if(face===null)faces.clear();
+    else{
+      const mapped=mapDiagramCPSelection(target.pose,state,{kind:'face',index:face},source).faces;
+      const deselect=mapped.every(id=>faces.has(id));
+      for(const id of mapped){if(deselect)faces.delete(id);else faces.add(id);}
+    }
+    commit(changeDiagramFoldLayerScope(current,target.id,{...settings,layers:faces.size?'selected':'top',selectedFaces:[...faces].sort((a,b)=>a-b)}));
+    resetDrawingSelection();setLayerScopeEditing(true);
+  }
+  function previewData(stepId:string,phase:'before'|'after',previous?:CPPreviewData|null){
+    const target=project.steps.find(item=>item.id===stepId);if(!target)return null;
+    const before=project.states.find(item=>item.id===target.beforeId);
+    const state=phase==='before'?before:project.states.find(item=>item.id===target.afterId);
+    if(!before||!state)return null;
+    const access=getDiagramCPEditAccess(project,stepId,state.id);
+    const reason=busy||fileOpening||confirmReplace||editCP?'请先完成主窗口中的当前操作。':access.reason;
+    return {stepId,stateId:state.id,revision:state.revision,generation:fileGeneration.current,reason:access.editable?reason:access.reason,cpLabel:numbering.cpLabels.get(state.id)!,title:(phase==='before'?'操作前 ':'操作后 ')+numbering.cpLabels.get(state.id),doc:state.doc,junctions:junctionsEnabled?checkedJunctions(state.doc,!!(target.pose?.spatial||target.paperStates?.spatial||target.simulationSurface),previous?.stateId===state.id&&previous.generation===fileGeneration.current?previous.doc:before.doc):emptyJunctionWarnings,adaptive:adaptiveLines,spatial:!!(target.pose?.spatial||target.paperStates?.spatial||target.simulationSurface),
+      canUndo:changesCP(past.current,state),canRedo:changesCP(future.current,state),historyVersion,
+      drawingFaceRegions:stepId===step.id?drawingFaceRegions:undefined,scopeReason:detachedScopeReason(stepId),sinkDrawing:stepId===step.id&&drawingSink,scopeFaces:target.foldLink?.layers==='selected'?target.foldLink.selectedFaces:[],sourceRevision:before.revision,
+      presentation:{before,phase,pose:target.paperStates?.spatial??target.paperStates?.flat??target.pose,precreases:target.foldLink?.precreases}};
+  }
+  function editDetachedCP(stepId:string,phase:'before'|'after',edit:CPPreviewEdit){
+    const current=projectRef.current,target=current.steps.find(item=>item.id===stepId);
+    const state=current.states.find(item=>item.id===(phase==='before'?target?.beforeId:target?.afterId));
+    if(!state||state.id!==edit.stateId||edit.generation!==fileGeneration.current||state.revision!==edit.revision)
+      throw Error('来源 CP 已变化，请在最新图上重试。');
+    if(busy||fileOpening||confirmReplace||editCP)throw Error('请先完成主窗口中的当前操作。');
+    if(edit.type==='scope'||edit.type==='sink'){
+      const reason=detachedScopeReason(stepId);
+      const source=current.states.find(item=>item.id===target?.beforeId);
+      if(reason||!target?.pose||!source||source.revision!==edit.sourceRevision)throw Error(reason||'来源纸面已变化，请重新选面。');
+      if(edit.type==='scope')changeCPDrawScope(state,edit.face);
+      else{
+        if(edit.checked&&sinkReason)throw Error(sinkReason);
+        chooseSinkDrawing(edit.checked);
+      }
+    }else if(edit.type==='edit'){
+      const cleaned=normalizeDiagramCP(edit.doc);
+      commit(applyDiagramCPEdit(current,stepId,state.id,cleaned.doc));
+      if(current.activeStepId===stepId)clearDrawingSelection();
+    }else{
+      const access=getDiagramCPEditAccess(current,stepId,state.id);
+      if(!access.editable)throw Error(access.reason);
+      if(edit.historyVersion!==historyVersion||!changesCP(edit.type==='undo'?past.current:future.current,state))
+        throw Error('此 CP 的编辑历史已变化。');
+      if(edit.type==='undo')undo();else redo();
+    }
+    return projectRef.current.states.find(item=>item.id===state.id)!.revision;
+  }
+  function hoverDetachedCP(stateId:string,hit:DiagramCPHit|null,selected=false){
+    if(selected){
+      setCPSelected(old=>hit===null?(old?.fromDetached&&old.stateId===stateId?null:old):{stateId,hit,fromDetached:true});
+      return;
+    }
+    setCPHovered(old=>hit===null?(old?.fromScope&&old.stateId===stateId?null:old):{stateId,hit,fromScope:true});
+  }
+  const {open:openBeforeCP,detachedStep:beforeDetached}=useCPPopout('before',(id,last)=>previewData(id,'before',last),message,(id,edit)=>editDetachedCP(id,'before',edit),hoverDetachedCP);
+  const {open:openAfterCP,detachedStep:afterDetached}=useCPPopout('after',(id,last)=>previewData(id,'after',last),message,(id,edit)=>editDetachedCP(id,'after',edit),hoverDetachedCP);
+  const sinkToggle=<label className="checkbox" title={sinkReason||'边界使用主图所选谷线或峰线，封闭范围内峰谷互换'}><input type="checkbox" checked={drawingSink} disabled={!!sinkReason} onChange={event=>chooseSinkDrawing(event.target.checked)}/>沉折</label>;
   const cpCard=(state:DiagramCPState,which:'before'|'after',expanded=false)=>{
-    const index=project.states.indexOf(state),isBefore=which==='before',exchanged=centralCP?.id===state.id,access=getDiagramCPEditAccess(project,step.id,state.id);
-    return <section className={'diagram-cp-card'+(exchanged?' is-exchanged':'')} data-teach={isBefore?'cp-before':'cp-after'} aria-label={isBefore?'本步骤操作前 CP':'本步骤操作后 CP'} key={state.id}><header><div><span>{exchanged?'原主图':isBefore?'操作前':'操作后'}</span><strong>{exchanged?'步骤折图':`CP${index}`}</strong></div><small>{exchanged?`CP${index} 已在主画布`:index===0?'教程起始状态':index===project.steps.length?'教程最终状态':`步骤 ${index} → ${index+1} 共享`}</small></header>
-      {exchanged?<div className="diagram-cp-workspace-placeholder"><DiagramThumbnail step={step} states={project.states} lineDefaults={lineDefaults} adaptiveLines={adaptiveLines} zoom={effectiveZoom?.region}/><small>点击“返回折图”交换回来</small></div>:<DiagramCPInteractive adaptiveLineStyle={adaptiveLines} expanded={expanded} doc={state.doc} presentation={{before,pose:step.paperStates?.spatial??step.paperStates?.flat??pose,phase:isBefore?'before':'after',precreases:foldLink.precreases}} hovered={cpHovered?.stateId===state.id?cpHovered.hit:null} selected={cpSelected?.stateId===state.id?cpSelected.hit:null} highlightedEdges={isBefore?selectedCreaseEdges.before:selectedCreaseEdges.after} fixed={showFixedHighlight&&foldLink.enabled&&fixedTargetState?.id===state.id?fixedCPHit:null} disabled={!!busy||!active||!!centralCP||!!(confirmReplace||fileOpening)} onHover={(hit,point)=>hoverCP(state.id,hit,point)} onSelect={(hit,point)=>selectCP(state.id,hit,point)}/>}
-      <div className="diagram-cp-meta"><span>{state.doc.segments.length} 条线段</span><span>版本 {state.revision+1}</span></div>
-      {!access.editable&&<p className="diagram-cp-workspace-access">{access.reason}</p>}
-      <div className="diagram-cp-actions"><button disabled={!!busy||!active||!!(confirmReplace||fileOpening)} aria-pressed={exchanged} onClick={()=>exchangeCP(exchanged?null:state.id)}>{exchanged?'返回折图':'切换到主画布'}</button><button disabled={!!busy||!access.editable} title={access.reason||'导入并替换此 CP'} onClick={()=>{importTarget.current={stateId:state.id,project:projectRef.current};cpInput.current?.click();}}>导入 CP</button><button disabled={!!busy||!access.editable} onClick={async()=>{try{const owner=projectRef.current;const source=readEditorCP?await readEditorCP():doc;if(owner===projectRef.current)applyCP(state.id,source);}catch(error){message(errorText(error));}}} title={access.reason||'复制折痕编辑区当前 CP 到这个共享状态'}>采用编辑区 CP</button>{isBefore?<button className="diagram-primary" disabled={!!busy||paperPulled} onClick={()=>compute(state.id)}>计算折图</button>:<button className="diagram-primary" disabled={!!busy||paperPulled||!pose||stale||otherSource||pose.sourceStateId!==before.id} onClick={updateAfterCreases} title={paperPulled?'切回平整状态或立体状态后更新折痕':!pose||stale||otherSource||pose.sourceStateId!==before.id?'请先计算操作前 CP，再更新主图折痕':'将操作后 CP 的新增和修改折痕映射到主图，保留当前纸张姿态'}>更新主图折痕</button>}</div>
+    if((which==='before'?beforeDetached:afterDetached)===step.id)return null;
+    const index=project.states.indexOf(state),label=numbering.cpLabels.get(state.id)!,isBefore=which==='before',exchanged=centralCP?.id===state.id,access=getDiagramCPEditAccess(project,step.id,state.id);
+    const picking=scopeCard===state.id&&!scopeReason;
+    return <section className={'diagram-cp-card'+(exchanged?' is-exchanged':'')} data-teach={isBefore?'cp-before':'cp-after'} aria-label={isBefore?'本步骤操作前 CP':'本步骤操作后 CP'} key={state.id}><header><div><span>{exchanged?'原主图':isBefore?'操作前':'操作后'}</span><strong>{exchanged?'步骤折图':label}</strong></div><small>{exchanged?`${label} 已在主画布`:index===0?'教程起始状态':index===project.steps.length?'教程最终状态':`步骤 ${numbering.stepLabels.get(project.steps[index-1].id)} → ${numbering.stepLabels.get(project.steps[index].id)} 共享`}</small><DiagramCPPopout title={(isBefore?'操作前 ':'操作后 ')+label} open={()=>void (isBefore?openBeforeCP:openAfterCP)(step.id)}/></header>
+      {exchanged?<div className="diagram-cp-workspace-placeholder"><DiagramThumbnail symbolStyles={symbolStyles} paperPatterns={project.basicSettings?.paperPatterns} step={step} states={project.states} lineDefaults={lineDefaults} adaptiveLines={adaptiveLines} zoom={effectiveZoom?.region}/><small>点击“返回折图”交换回来</small></div>:<DiagramCPInteractive scopePicking={picking} scopeFaces={picking||drawingSink?foldLink.selectedFaces:undefined} drawingFaceRegions={drawingFaceRegions} junctions={isBefore?beforeWarnings:afterWarnings} onDetach={()=>void (isBefore?openBeforeCP:openAfterCP)(step.id)} adaptiveLineStyle={adaptiveLines} expanded={expanded} doc={state.doc} presentation={{before,pose:step.paperStates?.spatial??step.paperStates?.flat??pose,phase:isBefore?'before':'after',precreases:foldLink.precreases}} hovered={cpHovered?.stateId===state.id?cpHovered.hit:null} selected={cpSelected?.stateId===state.id?cpSelected.hit:null} highlightedEdges={isBefore?selectedCreaseEdges.before:selectedCreaseEdges.after} fixed={showFixedHighlight&&foldLink.enabled&&fixedTargetState?.id===state.id?fixedCPHit:null} disabled={!!busy||!active||!!centralCP||!!(confirmReplace||fileOpening)} onHover={(hit,point)=>hoverCP(state.id,hit,point)} onSelect={(hit,point)=>{
+        if(!picking){selectCP(state.id,hit,point);return;}
+        if(hit.kind==='face'){try{changeCPDrawScope(state,hit.index);}catch(error){message(errorText(error));}}
+      }}/>}
+      {!isBefore&&!exchanged&&<div className="diagram-cp-sink-tools">
+        <button type="button" disabled={!!scopeReason} title={scopeReason||'点击 CP 中的纸面加入或移出范围'} aria-pressed={picking} onClick={()=>setScopeCard(picking?null:state.id)}>选择纸面{sinkScope?` · ${foldLink.selectedFaces.length} 层`:''}</button>
+        {sinkToggle}
+      </div>}
+      <div className="diagram-cp-actions"><button disabled={!!busy||!active||!!(confirmReplace||fileOpening)} aria-pressed={exchanged} onClick={()=>exchangeCP(exchanged?null:state.id)}>{exchanged?'返回折图':'切换到主画布'}</button><button disabled={!!busy||!access.editable} title={access.reason||'导入并替换此 CP'} onClick={()=>{importTarget.current={stateId:state.id,project:projectRef.current};cpInput.current?.click();}}>导入 CP</button><button disabled={!!busy||!access.editable||!editorCPSources} onClick={()=>setEditorCPTarget({owner:project,stateId:state.id,label:(isBefore?'操作前 ':'操作后 ')+label})} title={access.reason||'从已打开的折痕工程选择 CP'}>采用编辑区 CP</button>{isBefore?<button className="diagram-primary" disabled={!!busy||paperPulled} onClick={()=>compute(state.id)}>计算折图</button>:<button className="diagram-primary" disabled={!!busy||paperPulled||!pose||stale||otherSource||pose.sourceStateId!==before.id} onClick={updateAfterCreases} title={paperPulled?'切回平整状态或立体状态后更新折痕':!pose||stale||otherSource||pose.sourceStateId!==before.id?'请先计算操作前 CP，再更新主图折痕':'将操作后 CP 的新增和修改折痕映射到主图，保留当前纸张姿态'}>更新主图折痕</button>}</div>
       <div className="diagram-cp-editor-action"><button disabled={!!busy||!active||!!editCP||!!(confirmReplace||fileOpening)||!onRevealCP} onClick={()=>revealCPInEditor(state)} title="编辑此 CP，完成后点击“应用并返回”更新本步骤">在折痕编辑中打开</button></div>
     </section>;
   };
@@ -2288,8 +2690,9 @@ const DiagramWorkspace=forwardRef<DiagramWorkspaceHandle,DiagramWorkspaceProps>(
   </>);
   const objectControls=(<section><header><h3>{selectedLines.length?'外观与位置':'选中对象'}</h3><small>{selectedAnnotations.length>1?`${selectedAnnotations.length} 个对象`:selectedAnnotation?(selectedAnnotation.kind==='line'?LINE_LABELS[selectedAnnotation.style]:SYMBOL_LABELS[selectedAnnotation.symbol]):'折线与符号'}</small></header>
           {selectedLines.length>0&&<><DiagramLineAppearanceControls value={resolveDiagramLineAppearance(selectedLines[0],lineDefaults)} onChange={drawingStyle} disabled={!!busy} ariaLabel="选中线段外观"/>{selectedLines.some(line=>line.appearanceOverrides?.length)&&<button type="button" onClick={useGlobalDrawingStyle} disabled={!!busy}>使用全局样式</button>}</>}
-          {!selectedLines.length&&<><NumberField label="绘图线宽" value={selectedAnnotations[0]?.width??drawingWidth} min={.05} max={1000} step={.1} disabled={!!busy} onChange={width=>drawingStyle({width})}/>
-          <label className="diagram-color-field"><span>绘图颜色</span><ColorPicker aria-label="绘图颜色" disabled={!!busy} value={(selectedAnnotations[0]?.color??drawingColor).replace(/^#([0-9a-f])([0-9a-f])([0-9a-f])$/i,'#$1$1$2$2$3$3')} onChange={color=>drawingStyle({color})}/><small>{(selectedAnnotations[0]?.color??drawingColor).toUpperCase()}</small></label></>}
+          {!selectedLines.length&&<><NumberField label="绘图线宽" value={selectedPen?.width??drawingWidth} min={.05} max={1000} step={.1} disabled={!!busy} onChange={width=>drawingStyle({width})}/>
+          <label className="diagram-color-field"><span>绘图颜色</span><ColorPicker aria-label="绘图颜色" disabled={!!busy} value={(selectedPen?.color??drawingColor).replace(/^#([0-9a-f])([0-9a-f])([0-9a-f])$/i,'#$1$1$2$2$3$3')} onChange={color=>drawingStyle({color})}/><small>{(selectedPen?.color??drawingColor).toUpperCase()}</small></label></>}
+          {selectedAnnotations.some(a=>a.kind==='symbol')&&<button type="button" disabled={!!busy} onClick={resetSelectedSymbolPens}>使用工程符号样式</button>}
           {selectedLines.length?objectPrecisionControls:<details className="diagram-precision-settings" key={selectedAnnotationIds.join(':')}><summary>精确位置与变换</summary>{objectPrecisionControls}</details>}
           {!!selectedAnnotations.length&&<div className="diagram-button-row diagram-selection-actions"><button disabled={!!busy||selectedExisting.length>0} onClick={copySelection}>复制选中 · Ctrl+D</button><button disabled={!!busy||selectedExisting.length>0} onClick={deleteAnnotation}>删除 · Delete</button></div>}
           <p className="diagram-note">空白处拖框选择；Shift 增减选择，Ctrl+A 全选。多个对象可一起移动和变换。</p>
@@ -2310,14 +2713,14 @@ const DiagramWorkspace=forwardRef<DiagramWorkspaceHandle,DiagramWorkspaceProps>(
     {foldFaceCandidates.length>0&&foldPickPoint&&<p className="diagram-note">此处有 {foldFaceCandidates.length} 个重合纸面，请在叠片或列表中{foldPickKind==='fixed'?'点“固定”':'选择参与纸层'}。</p>}
     {foldPreview.error&&<p className="diagram-note" role="status">{foldPreview.error}{foldPreview.pending&&<button onClick={()=>{foldPreviewTask.current?.cancel();foldPreviewTask.current=null;setFoldPreview({preview:[],error:'已停止折痕显示计算。',valid:false});}}>停止</button>}</p>}
   </section>);
-  const cpSelectionControls=(<>{cpSelected&&cpSelected.hit.kind!=='edge'&&<section className="diagram-cp-selection-controls" aria-label="CP 选择操作"><header><h3>CP{project.states.findIndex(s=>s.id===cpSelected.stateId)} · {{face:'纸面 F',vertex:'顶点 V',edge:'线段 E'}[cpSelected.hit.kind]}{cpSelected.hit.index+1}</h3><button onClick={()=>setCPSelected(null)} title="清除 CP 选择">×</button></header>
+  const cpSelectionControls=(<>{cpSelected&&cpSelected.hit.kind!=='edge'&&<section className="diagram-cp-selection-controls" aria-label="CP 选择操作"><header><h3>{numbering.cpLabels.get(cpSelected.stateId)} · {{face:'纸面 F',vertex:'顶点 V',edge:'线段 E'}[cpSelected.hit.kind]}{cpSelected.hit.index+1}</h3><button onClick={()=>setCPSelected(null)} title="清除 CP 选择">×</button></header>
           <p className="diagram-note">{cpSelectedMap.highlight?.faces.length?`对应主图纸面 ${cpSelectedMap.highlight.faces.map(f=>'F'+(f+1)).join('、')}`:pose?cpSelectedMap.error:'先计算操作前 CP，查看主图对应位置。'}</p>
           {cpSelectedMap.highlight&&<div className="diagram-cp-pin-actions">{cpSelectedMap.highlight.faces.map(face=><button key={face} disabled={!!busy||paperPulled} onClick={()=>fixCP(face)}>{cpSelected.hit.kind==='vertex'?`固定顶点 · 参考 F${face+1}`:`固定纸面${cpSelectedMap.highlight!.faces.length>1?' · F'+(face+1):''}`}</button>)}</div>}
           {!!foldLink.fixed&&<button className="diagram-full-button" disabled={!!busy} onClick={unfixCP}>取消固定</button>}
           {cpSelected.hit.kind==='vertex'&&cpSelectedMap.highlight&&cpSelectedMap.highlight.faces.length>1&&<p className="diagram-note">顶点连接多个纸面，选择一个邻接纸面来确定固定朝向。</p>}
         </section>}</>);
   const tearWindowControls=selectedTearWindow?<section className="diagram-tear-window-controls" aria-label="撕纸透视设置">
-    <NumberField label="透视半径" value={getSymbolParameters(selectedTearWindow).radius*selectedTearWindow.size/100} min={.1} max={10000} step={1} suffix="mm" disabled={!!busy} onChange={radius=>editAnnotation({size:radius*100/getSymbolParameters(selectedTearWindow).radius})}/>
+    <NumberField label="透视半径" value={selectedSymbolParameters!.radius*selectedTearWindow.size/100} min={.1} max={10000} step={1} suffix="mm" disabled={!!busy} onChange={radius=>editAnnotation({size:radius*100/selectedSymbolParameters!.radius})}/>
     <p>眼睛按钮只控制圆内纸层。拖动红色定位点移动窗口，拖动蓝色夹点调整大小。</p>
   </section>:undefined;
   const layerContextControls=<div className="diagram-context-content" data-diagram-context="layers">
@@ -2337,8 +2740,9 @@ const DiagramWorkspace=forwardRef<DiagramWorkspaceHandle,DiagramWorkspaceProps>(
     <div role="group" aria-label="纸面状态">{(['flat','spatial','pulled'] as const).map(state=><button key={state} disabled={!!busy||stale||state==='spatial'&&!hasNonFlatFoldAngles(pose.sourceDoc)} title={state==='spatial'&&!hasNonFlatFoldAngles(pose.sourceDoc)?'折痕角度均为 0° 或 180°，请使用平整状态':undefined} aria-pressed={(paperPulled?'pulled':step.paperStates?.active??(pose.spatial?'spatial':'flat'))===state} onClick={()=>switchPaperState(state)}>{{flat:'平整状态',spatial:'立体状态',pulled:'拖角状态'}[state]}</button>)}</div>
     <DiagramDepthControls key={step.id} pose={pose} preview={depthPreview?.stepId===step.id&&depthPreview.pose===pose?depthPreview.value:undefined} disabled={!!busy||stale||paperPulled} onChange={changeDepth} onPreview={previewDepth} onCameraVisibleChange={setDepthCameraVisible}/>
     <div className="diagram-spatial-view-controls">
-      <span className={'diagram-pose-badge'+(stale||otherSource?' is-stale':'')}>{stale?'CP 已更新 · 折图保留':paperPulled?'拖角造型 · 折痕锁定':pose.spatial?((!pose.spatial.camera.rotation&&pose.spatial.camera.yaw===0&&pose.spatial.camera.elevation===0)?'固定面俯视':(!pose.spatial.camera.rotation&&pose.spatial.camera.yaw===OBLIQUE_DIAGRAM_CAMERA.yaw&&pose.spatial.camera.elevation===OBLIQUE_DIAGRAM_CAMERA.elevation)?'斜视 · 30°':'自定义视角'):otherSource?`CP${originIndex} 折图副本`:`来源 CP${originIndex}`}</span>
+      <span className={'diagram-pose-badge'+(stale||otherSource?' is-stale':'')}>{stale?'CP 已更新 · 折图保留':paperPulled?'拖角造型 · 折痕锁定':pose.spatial?((!pose.spatial.camera.rotation&&pose.spatial.camera.yaw===0&&pose.spatial.camera.elevation===0)?'固定面俯视':(!pose.spatial.camera.rotation&&pose.spatial.camera.yaw===OBLIQUE_DIAGRAM_CAMERA.yaw&&pose.spatial.camera.elevation===OBLIQUE_DIAGRAM_CAMERA.elevation)?'斜视 · 30°':'自定义视角'):otherSource?`${originLabel} 折图副本`:`来源 ${originLabel}`}</span>
       {pose.spatial&&<div role="group" aria-label="立体视角快捷切换">
+        <button disabled={!!busy||stale||paperPulled} onClick={()=>{setOrbitMode(false);setFixedViewStep(step.id);}}>固定视角</button>
         <button disabled={!!busy||stale||paperPulled} aria-pressed={(!pose.spatial.camera.rotation&&pose.spatial.camera.yaw===0&&pose.spatial.camera.elevation===0)} title="垂直固定纸面观察，保持折痕角度" onClick={()=>{setOrbitMode(false);void changeSpatialCamera({...DEFAULT_DIAGRAM_SPATIAL_CAMERA});}}>俯视</button>
         <button disabled={!!busy||stale||paperPulled} aria-pressed={(!pose.spatial.camera.rotation&&pose.spatial.camera.yaw===OBLIQUE_DIAGRAM_CAMERA.yaw&&pose.spatial.camera.elevation===OBLIQUE_DIAGRAM_CAMERA.elevation)} title="倾斜视角 30° 查看纸面高度，保持折痕角度" onClick={()=>{setOrbitMode(false);void changeSpatialCamera({...OBLIQUE_DIAGRAM_CAMERA});}}>斜视</button>
         <button disabled={!!busy||stale||paperPulled} aria-pressed={orbitMode} title="按住左键自由转动纸面视角，松开应用；Esc 退出" onClick={()=>{resetDrawingSelection();setTool('select');setOrbitMode(value=>!value);}}>转动视角</button>
@@ -2358,27 +2762,46 @@ const DiagramWorkspace=forwardRef<DiagramWorkspaceHandle,DiagramWorkspaceProps>(
     <button onClick={showLibrary} title="返回折序绘图文档库"><Icon name="folder"/>文档库</button>
     <button title="撤销 Ctrl+Z" disabled={!past.current.length} onClick={undo}><Icon name="undo"/></button>
     <button title="重做 Ctrl+Y" disabled={!future.current.length} onClick={redo}><Icon name="redo"/></button>
-    <button data-teach="compare" aria-pressed={comparison&&!overview} onClick={()=>{setComparison(v=>!v);setTabletPanel('');setEditCP(null);setOverview(false);setPropertiesOpen(false);queuePaperHover(null);}}>左右对照</button>
+    <button data-teach="compare" aria-pressed={comparison&&!overview} onClick={()=>{setComparison(v=>!v);if(!comparison)setComparisonCPCollapsed(false);setTabletPanel('');setEditCP(null);setOverview(false);setPropertiesOpen(false);queuePaperHover(null);}}>左右对照</button>
+    <button onClick={event=>{
+      const trigger=event.currentTarget.closest('.header-menu')?.querySelector<HTMLButtonElement>('.header-menu-trigger');
+      (trigger??event.currentTarget).focus();openPDFExport();
+    }}>导出图解</button>
     <button aria-pressed={overview} onClick={()=>{setEditCP(null);setOverview(v=>!v);}}>整页预览</button>
     <button aria-label="更多属性" aria-expanded={propertiesOpen} aria-controls="diagram-advanced-properties" onClick={()=>{setPropertiesOpen(open=>!open);setTabletPanel('');}}>更多属性</button>
   </>;
   const paperView=<div className="diagram-view-tools" role="group" aria-label="纸面视图">{paperStateControls}{paperVisible&&simulationSurface&&<div className="diagram-paper-state-controls"><span className="diagram-pose-badge">模拟曲面</span><button disabled={!!busy} aria-pressed={orbitMode} onClick={()=>{resetDrawingSelection();setTool('select');setOrbitMode(value=>!value);}}>转动视角</button></div>}</div>;
   useEffect(()=>{if(learningPractice)learningPractice.onChange(projectWithPendingCaptions(),{comparison,editCP,tool,selectedLineCount:selectedLines.length,side:currentView.side,cpSelection:cpSelected?{stateId:cpSelected.stateId,kind:cpSelected.hit.kind,index:cpSelected.hit.index}:null});},[project,comparison,editCP,tool,selectedLines.length,currentView.side,cpSelected,draftTitle,draftDescription]);
-  return <div ref={workspaceElement} className={'diagram-workspace diagram-compact-workspace'+(libraryOpen?' is-library':'')+(propertiesOpen?' has-properties':'')+(centralCP?' is-cp-workspace':'')+(comparison&&!overview?' is-comparison':'')+(comparisonLayers?' with-comparison-layers':'')+(comparisonSymbols?' with-comparison-symbols':'')} data-tablet-panel={tablet?tabletPanel:undefined} data-diagram-workspace="true" data-diagram-layout="compact" data-model-history="true" style={{'--diagram-cp-width':cpWidth+'px'} as CSSProperties} onContextMenu={e=>{if(centralCP||!(e.target as Element).closest('.diagram-model-surface,.diagram-cp-card,[data-diagram-layer-stack]'))return;e.preventDefault();e.stopPropagation();clearDrawingSelection(true);}}>
+  const bothDetached=beforeDetached===step.id&&afterDetached===step.id;
+  const visiblePhase=comparisonPhase==='before'&&beforeDetached===step.id?'after':comparisonPhase==='after'&&afterDetached===step.id?'before':comparisonPhase;
+  const showToolsHandle=!tablet&&!centralCP&&!overview;
+  const showCPHandle=!tablet&&!bothDetached;
+  const cpDrawerClosed=showCPHandle&&(comparison&&!overview?comparisonCPCollapsed:cpCollapsed);
+  const captionInShelf=showToolsHandle&&!toolsCollapsed;
+  const stepCaption=(
+    <section className="diagram-step-caption" aria-label="本步骤内容">
+            <label className="diagram-step-title-field" htmlFor="diagram-step-title"><span>标题</span><textarea rows={2} id="diagram-step-title" aria-label="步骤标题" value={draftTitle} disabled={!!busy} maxLength={200} placeholder="首次放置符号后自动填写" onChange={e=>editCaption('title',e.target.value)} onBlur={e=>finishCaption('title',e.target.value)}/></label>
+            <label className="diagram-step-description-field" htmlFor="diagram-step-description"><span>说明</span><textarea id="diagram-step-description" aria-label="本步说明" value={draftDescription} disabled={!!busy} maxLength={5000} rows={1} placeholder="描述本步骤的折叠动作…" onChange={e=>editCaption('description',e.target.value)} onBlur={e=>finishCaption('description',e.target.value)}/></label>
+            <div className="diagram-step-navigation"><button disabled={stepIndex===0||!!busy} onClick={()=>{flushFields();switchStep(projectRef.current.steps[stepIndex-1].id);}}>← 上一步</button><button className="diagram-primary" disabled={!!busy} title={hasReturnInstruction?'恢复返回目标的聚合状态，并保留期间折痕':paperPulled?'进入下一步；CP 未变化时保留当前拖角造型':'操作后 CP → 下步折图'} data-teach="next" onClick={nextStep}>下一步 →</button></div>
+          </section>
+  );
+  return <div ref={workspaceElement} className={'diagram-workspace diagram-compact-workspace'+(libraryOpen?' is-library':'')+(propertiesOpen?' has-properties':'')+(centralCP?' is-cp-workspace':'')+(comparison&&!overview?' is-comparison':'')} data-tablet-panel={tablet?tabletPanel:undefined} data-diagram-workspace="true" data-diagram-layout="compact" data-model-history="true" style={{'--diagram-cp-width':cpWidth+'px'} as CSSProperties} onContextMenu={e=>{if(centralCP||!(e.target as Element).closest('.diagram-model-surface,.diagram-cp-card,[data-diagram-layer-stack]'))return;e.preventDefault();e.stopPropagation();clearDrawingSelection(true);}}>
     {libraryOpen&&onLearning&&<button className="diagram-learning-library-entry" onClick={onLearning}>学习与引导</button>}
     {libraryOpen?<DiagramLibrary index={libraryIndex} currentId={documentId} currentProject={project} getThumbnail={getLibraryThumbnail} onOpen={id=>{if(launchFile)void launchFile({kind:'stored',id}).catch(e=>setLibraryError(errorText(e)));else void openLibraryDocument(id);}} onNew={newDrawing} onImport={open} onSaveCurrent={browseOnly?undefined:save} onContinueCurrent={documentId?continueLibraryDocument:undefined} onDelete={requestLibraryDeletion} busy={!!busy||deleting||!!deleteTarget} error={libraryError}
       onCreateFolder={(name,parentId)=>changeLibrary(()=>{library.createFolder(name,parentId);})}
       onMove={(id,folderId)=>changeLibrary(()=>library.moveDocument(id,folderId))}
       onRename={(id,name)=>changeLibrary(()=>{library.renameDocument(id,name);if(id===documentIdRef.current)commit({...projectRef.current,name:name.trim()},false);})}/>:<>
-    <aside className="diagram-step-rail">{tablet&&<TabletPanelHeading title="折纸步骤" onClose={()=>setTabletPanel('')}/>}<header><strong>折纸步骤</strong><small>{project.steps.length} 步</small></header><div className="diagram-step-actions"><button onClick={()=>{flushFields();cancelTask();setEditCP(null);commit(appendDiagramStep(projectRef.current));setOverview(false);}}><span>＋</span>新建</button><button onClick={()=>{flushFields();cancelTask();setEditCP(null);commit(duplicateDiagramStep(projectRef.current,step.id));setOverview(false);}}>复制</button><button className="diagram-delete-step" disabled={!!busy||project.steps.length<=1} onClick={deleteStep} title={project.steps.length<=1?'至少保留一个步骤':'删除当前步骤，可撤销'}>删除本步骤</button></div>
-      <nav ref={stepRail} aria-label="折序步骤列表">{project.steps.map((item,index)=><button className={'diagram-step-card'+(item.id===step.id?' is-active':'')} key={item.id} aria-current={item.id===step.id?'step':undefined} onClick={()=>{switchStep(item.id);if(tablet)setTabletPanel('');}}><span className="diagram-step-number">{String(index+1).padStart(2,'0')}</span><div className="diagram-step-thumb"><DiagramThumbnail deferred="rail" imageCache={thumbnailCache} imageSize={thumbnailImageSizes.get(item.id)} editingSession={item.id===thumbnailEditingId?thumbnailEditingSession:undefined} onVisibility={onThumbnailVisibility} preparation={thumbnailPreparation(item.id)} step={item} states={project.states} lineDefaults={lineDefaults} adaptiveLines={adaptiveLines} zoom={thumbnailZooms.get(item.id)?.region}/></div><strong>{item.title||"未命名步骤"}</strong><small>CP{stateIndices.get(item.beforeId)} → CP{stateIndices.get(item.afterId)}</small></button>)}</nav>
-      <footer><span className="diagram-status-dot"/>CP 连续衔接 <strong>N＋1</strong></footer>
-    </aside>
+    <DiagramBranchRail project={drawingProject} numbering={numbering} onBranchLabels={(id,mode,labels)=>commit(setDiagramBranchLabels(projectRef.current,id,mode,labels))} railRef={stepRail} disabled={!!busy||imageBusy}
+      tabletHeading={tablet?<TabletPanelHeading title="折纸步骤" onClose={()=>setTabletPanel('')}/>:undefined}
+      actions={<><button type="button" disabled={!!busy||imageBusy} onClick={()=>requestStepInsertion('after')}>新建</button><button type="button" disabled={!!busy||imageBusy} onClick={()=>{flushFields();setInsertTarget(step.id);}}>插入</button><button onClick={()=>{flushFields();cancelTask();setEditCP(null);commit(duplicateDiagramStep(projectRef.current,step.id));setOverview(false);}}>复制</button><button className="diagram-delete-step" disabled={!!busy||project.steps.length<=1} onClick={deleteStep} title={project.steps.length<=1?'至少保留一个步骤':'删除当前步骤，可撤销'} aria-label="删除本步骤">删除</button></>} onAddBranch={addStepBranch} onSelect={chooseBranchStep}
+      onFigure={(id,figure)=>{chooseBranchStep(id);openFigure(figure,true);}}
+      renderThumbnail={(item,states)=><DiagramThumbnail symbolStyles={symbolStyles} paperPatterns={project.basicSettings?.paperPatterns} deferred="rail" imageCache={thumbnailCache} imageSize={thumbnailImageSizes.get(item.id)} editingSession={item.id===thumbnailEditingId?thumbnailEditingSession:undefined} onVisibility={onThumbnailVisibility} preparation={thumbnailPreparation(item.id)} step={item} states={states} lineDefaults={lineDefaults} adaptiveLines={adaptiveLines} zoom={thumbnailZooms.get(item.id)?.region}/>}/>
+
     <main className="diagram-main" data-drawing-tool={tool}>
-      {tablet&&<TabletPanelBar label="折序工作面板" items={[['steps','步骤'],['layers','绘图工具'],['symbols','符号'],...(!comparison||overview?[['cp','CP'] as const]:[]),['styles','样式']]} value={tabletPanel} onChange={value=>{setTabletPanel(value);setPropertiesOpen(false);}}/>}
+      {tablet&&<TabletPanelBar label="折序工作面板" items={[['steps','步骤'],...(!overview&&!centralCP?[['layers','绘图工具'],['symbols','符号']] as const:[]),...(!comparison||overview?[['cp','CP'] as const]:[]),['styles','样式']]} value={tabletPanel} onChange={value=>{setTabletPanel(value);setPropertiesOpen(false);}}/>}
       {saveConflict&&<section className="diagram-save-conflict" role="alert" aria-label="绘图保存冲突" data-diagram-save-conflict="true"><div><strong>其他窗口已有新版本</strong><p>当前内容仍保留在本窗口，自动暂存已暂停。另存后可继续编辑。</p></div><div><button type="button" onClick={saveAsNewDrawing}>另存当前绘图</button><button type="button" disabled={backupSaving} onClick={()=>void downloadProjectBackup()}>{backupSaving?'正在保存备份…':'保存工程备份'}</button></div></section>}
       <div ref={headingElement} className="diagram-document-heading" aria-label="当前绘图">
-        <div className="diagram-document-name"><strong title={project.name}>{project.name}</strong><button disabled={!!busy} onClick={()=>{flushFields();setRenameOpen(true);}}>重命名</button><span className="diagram-step-readout">第 {stepIndex+1} / {project.steps.length} 步{headingWidth>=550&&<> · CP{stepIndex} → CP{stepIndex+1}</>}</span></div>
+        <div className="diagram-document-name"><strong title={project.name}>{project.name}</strong><button disabled={!!busy} onClick={()=>{flushFields();setRenameOpen(true);}}>重命名</button><span className="diagram-step-readout">第 {stepNumber} / {project.steps.length} 步{headingWidth>=550&&<> · {beforeLabel} → {afterLabel}</>}</span></div>
         <div className="diagram-toolbar-end" data-scroll-actions={learningPractice&&compactProjectActions?true:undefined}>
           {compactProjectActions&&!learningPractice?<HeaderMenu label="工程操作" align={compactPaperView||!showPaperView?'right':'left'}>{projectActions}</HeaderMenu>:projectActions}
         </div>
@@ -2390,10 +2813,20 @@ const DiagramWorkspace=forwardRef<DiagramWorkspaceHandle,DiagramWorkspaceProps>(
     <div className="diagram-drafting-bar">{tablet&&<TabletPanelHeading title="样式" onClose={()=>setTabletPanel('')}/>}<div className="diagram-grid-inline" role="group" aria-label="网格参数">
       <label><input type="checkbox" disabled={!!busy} checked={canvasSettings.grid} onChange={e=>updateCanvas({grid:e.target.checked})}/>网格</label><label title="端点、交点、垂直和角平分线吸附；Alt 临时关闭"><input type="checkbox" disabled={!!busy} checked={canvasSettings.snap} onChange={e=>updateCanvas({snap:e.target.checked})}/>吸附</label><label><input type="checkbox" disabled={!!busy} checked={canvasSettings.diagonalGrid} onChange={e=>updateCanvas({diagonalGrid:e.target.checked})}/>对角</label>
       <div className="diagram-grid-division-controls" role="group" aria-label="纸张网格等分" title="按纸张宽度等分，横向与纵向使用相同格距，保持正方格。"><button type="button" aria-label="网格等分减半" title="等分数减半" disabled={!!busy||canvasGrid.divisions<=GRID_MIN} onClick={()=>updateGridDivisions(adjustGridDivisions(canvasGrid.divisions,-1))}>÷2</button><DiagramIntegerField label="网格等分" disabled={!!busy} value={canvasGrid.divisions} min={GRID_MIN} max={GRID_MAX} onChange={updateGridDivisions}/><button type="button" aria-label="网格等分加倍" title="等分数加倍" disabled={!!busy||canvasGrid.divisions>=GRID_MAX} onClick={()=>updateGridDivisions(adjustGridDivisions(canvasGrid.divisions,1))}>×2</button></div>
-    </div>{tool==='symbol'&&<div className="diagram-new-symbol-style" role="group" aria-label="新符号样式"><NumberField label="新符号线宽" value={drawingWidth} min={.05} max={1000} step={.1} disabled={!!busy} onChange={setDrawingWidth}/><label><span>符号颜色</span><ColorPicker aria-label="新符号颜色" value={drawingColor.replace(/^#([0-9a-f])([0-9a-f])([0-9a-f])$/i,'#$1$1$2$2$3$3')} disabled={!!busy} onChange={setDrawingColor}/></label></div>}{pose&&<div className="diagram-paper-parameters"><NumberField label="观察旋转" value={currentView.rotation} min={0} max={359.999} suffix="°" disabled={!!busy||!!step.orientationLocked} onChange={rotation=>updateView({...currentView,rotation,cameras:{}})}/></div>}<button type="button" aria-label="固定纸面朝向" aria-pressed={!!step.orientationLocked} className={step.orientationLocked?'active':''} disabled={!!busy} title={step.orientationLocked?'已固定当前朝向；翻面和旋转符号仍在下一步生效，点击解除':'固定当前整图朝向；翻面和旋转符号仍在下一步生效'} onClick={toggleOrientationLock}>{step.orientationLocked?'朝向已固定':'固定朝向'}</button><div><button disabled={!selectedAnnotations.length||!!busy} onClick={copySelection} title="复制选中绘图对象 Ctrl+D">复制选中</button><label title="仅控制已有折痕的显示，不删除 CP；本步折叠线仍显示"><input type="checkbox" checked={currentView.showExistingCreases!==false} disabled={!pose||!!busy} onChange={e=>{resetDrawingSelection();updateView({...currentView,showExistingCreases:e.target.checked});}}/>显示已有折痕</label><button disabled={!pose} aria-pressed={currentView.xray} onClick={()=>updateView({...currentView,xray:!currentView.xray})}>透视</button><button disabled={!pose||!!step.orientationLocked} title={step.orientationLocked?'请先解除固定朝向':undefined} data-teach="flip" onClick={()=>updateView({...currentView,side:currentView.side==='front'?'back':'front',cameras:{}})}>翻面</button></div></div>
-      <div className="diagram-body"><section className="diagram-drawing">{comparison&&!overview&&<header className="diagram-comparison-heading"><strong>主图</strong><span>可直接绘图与选层</span><button aria-pressed={comparisonLayers} onClick={()=>setComparisonLayers(v=>!v)}>绘图与纸层</button><button aria-pressed={comparisonSymbols} onClick={()=>setComparisonSymbols(v=>!v)}>符号库</button></header>}{overview&&<header className="diagram-drawing-heading"><h2>{project.name}</h2><span>查看各步骤的折图与说明</span></header>}
-        {overview?<div className="diagram-overview">{project.steps.map((item,index)=><button key={item.id} onClick={()=>switchStep(item.id)}><div><DiagramThumbnail deferred="overview" imageCache={thumbnailCache} imageSize={thumbnailImageSizes.get(item.id)} editingSession={item.id===thumbnailEditingId?thumbnailEditingSession:undefined} onVisibility={onThumbnailVisibility} preparation={thumbnailPreparation(item.id)} step={item} states={project.states} lineDefaults={lineDefaults} adaptiveLines={adaptiveLines} zoom={thumbnailZooms.get(item.id)?.region}/></div><strong>{diagramPDFStepLabel(item,index)}</strong><p>{item.description||'尚未填写说明'}</p></button>)}</div>:<div className="diagram-edit-layout"><div className="diagram-illustration">
-          <div className="diagram-paper-work-area"><aside className="diagram-context-shelf" aria-label="绘图工具与纸层设置"><section className="diagram-drawing-tools" aria-label="折序绘图工具"><details open>
+    </div>{tool==='symbol'&&<div className="diagram-new-symbol-style" role="group" aria-label="新符号样式"><NumberField label="新符号线宽" value={newSymbolPen.width} min={.05} max={1000} step={.1} disabled={!!busy} onChange={width=>changeSymbolPen({width})}/><label><span>符号颜色</span><ColorPicker aria-label="新符号颜色" value={newSymbolPen.color.replace(/^#([0-9a-f])([0-9a-f])([0-9a-f])$/i,'#$1$1$2$2$3$3')} disabled={!!busy} onChange={color=>changeSymbolPen({color})}/></label></div>}{pose&&<div className="diagram-paper-parameters"><NumberField label="观察旋转" value={currentView.rotation} min={0} max={359.999} suffix="°" disabled={!!busy||!!step.orientationLocked} onChange={rotation=>updateView({...currentView,rotation,cameras:{}})}/></div>}<button type="button" aria-label="固定纸面朝向" aria-pressed={!!step.orientationLocked} className={step.orientationLocked?'active':''} disabled={!!busy} title={step.orientationLocked?'已固定当前朝向；翻面和旋转符号仍在下一步生效，点击解除':'固定当前整图朝向；翻面和旋转符号仍在下一步生效'} onClick={toggleOrientationLock}>{step.orientationLocked?'朝向已固定':'固定朝向'}</button><div><button disabled={!selectedAnnotations.length||!!busy} onClick={copySelection} title="复制选中绘图对象 Ctrl+D">复制选中</button><label title="仅控制已有折痕的显示，不删除 CP；本步折叠线仍显示"><input type="checkbox" checked={currentView.showExistingCreases!==false} disabled={!pose||!!busy} onChange={e=>{resetDrawingSelection();updateView({...currentView,showExistingCreases:e.target.checked});}}/>显示已有折痕</label><JunctionWarningSwitch/><button disabled={!pose} aria-pressed={currentView.xray} onClick={()=>updateView({...currentView,xray:!currentView.xray})}>透视</button><button disabled={!pose||!!step.orientationLocked} title={step.orientationLocked?'请先解除固定朝向':undefined} data-teach="flip" onClick={()=>updateView({...currentView,side:currentView.side==='front'?'back':'front',cameras:{}})}>翻面</button></div></div>
+      <div className={'diagram-body'+(bothDetached?' cp-shelf-empty':showCPHandle?' has-cp-handle':'')+(cpDrawerClosed?' cp-drawer-closed':'')}><section className="diagram-drawing">{comparison&&!overview&&<header className="diagram-comparison-heading"><strong>主图</strong><span>可直接绘图与选层</span><button data-teach="drawing-tools" aria-pressed={tablet?tabletPanel==='layers':!toolsCollapsed} onClick={()=>tablet?setTabletPanel(v=>v==='layers'?'':'layers'):setToolsCollapsed(v=>!v)}>绘图与纸层</button></header>}{overview&&<header className="diagram-drawing-heading"><h2>{project.name}</h2><span>查看各步骤的折图与说明</span></header>}
+        {overview?<div className="diagram-overview">{project.steps.map((item,index)=><Fragment key={item.id}>
+          <button onClick={()=>switchStep(item.id)}><div><DiagramThumbnail symbolStyles={symbolStyles} paperPatterns={project.basicSettings?.paperPatterns} deferred="overview" imageCache={thumbnailCache} imageSize={thumbnailImageSizes.get(item.id)} editingSession={item.id===thumbnailEditingId?thumbnailEditingSession:undefined} onVisibility={onThumbnailVisibility} preparation={thumbnailPreparation(item.id)} step={item} states={project.states} lineDefaults={lineDefaults} adaptiveLines={adaptiveLines} zoom={thumbnailZooms.get(item.id)?.region}/></div><strong>{diagramPDFStepLabel(item,index,undefined,numbering.stepLabels.get(item.id))}</strong><p>{item.description||'尚未填写说明'}</p></button>
+          {item.processFigures?.map((figure,figureIndex)=>{
+            const drawing=figure.steps[0],settings=figure.basicSettings;
+            return <button key={drawing.id} disabled={!!busy} onClick={()=>{switchStep(item.id);openFigure(figure,true);}}>
+              <div><DiagramThumbnail symbolStyles={symbolStyles??settings?.symbolStyles} deferred="overview" processFigure step={drawing} states={figure.states} paperPatterns={settings?.paperPatterns} lineDefaults={settings?.lineDefaults??lineDefaults} adaptiveLines={settings?.adaptiveLines??adaptiveLines} zoom={diagramProcessFigureZoom(project,item,figure)??undefined}/></div>
+              <strong>过程图 {diagramPanelNumber({stepIndex:index,figureIndex,branchLabel:numbering.stepLabels.get(item.id)})}{drawing.title?' · '+drawing.title:''}</strong>
+              {drawing.description&&<p>{drawing.description}</p>}
+            </button>;
+          })}
+        </Fragment>)}</div>:<div className="diagram-edit-layout"><div className="diagram-illustration">
+          <div className="diagram-paper-work-area"><aside className="diagram-context-shelf" aria-label="绘图工具与纸层设置" hidden={showToolsHandle&&toolsCollapsed} style={showToolsHandle?{flexBasis:toolsWidth,width:toolsWidth,maxWidth:'55%'}:undefined}>{tablet&&<TabletPanelHeading title={tabletPanel==='symbols'?'折纸符号':'绘图工具'} onClose={()=>setTabletPanel('')}/>}<div className="diagram-shelf-scroll"><section className="diagram-drawing-tools" aria-label="折序绘图工具"><details open>
               <summary>线段类型</summary>
               <div className="diagram-tool-group diagram-type-squares" role="group" aria-label="线段类型">
                 {([['valley','谷线'],['mountain','峰线'],['crease','折痕'],['boundary','边界']] as const).map(([style,label])=>
@@ -2408,46 +2841,49 @@ const DiagramWorkspace=forwardRef<DiagramWorkspaceHandle,DiagramWorkspaceProps>(
                 <button aria-pressed={tool==='select'} onClick={()=>chooseTool('select')}><Icon name="select"/><span>选择</span></button>
                 <button disabled={paperPulled} data-teach="line" aria-pressed={tool==='line'} onClick={()=>chooseTool('line')}><Icon name="line"/><span>线段</span></button>
                 <button disabled={!!busy||!selectedAnnotations.length||(paperPulled&&selectedLines.length>0)} aria-pressed={tool==='mirror-copy'} onClick={beginMirrorCopy}><Icon name="mirrorselection"/><span>镜像复制</span></button>
-                <button disabled={paperPulled} aria-pressed={tool==='extend'} onClick={()=>chooseTool('extend')}><Icon name="extend"/><span>延长</span></button>
                 <button disabled={!!busy||!selectedAnnotations.length||!!selectedExisting.length||(paperPulled&&selectedLines.length>0)} onClick={()=>setRotateCopyAngle(String(transformAngle))}><Icon name="rotatecopyselection"/><span>旋转复制</span></button>
               </div>
             </details>
             <details open><summary>折线效果</summary>
               <div className="diagram-fold-action-toggle" role="group" aria-label="折线效果">
-                <button disabled={!!busy||paperPulled||overview} aria-pressed={foldAction==='fold'} onClick={()=>chooseFoldAction('fold')}>折叠</button>
+                <button disabled={!!busy||paperPulled||overview} aria-pressed={!drawingSink&&foldAction==='fold'} onClick={()=>chooseFoldAction('fold')}>折叠</button>
                 <button disabled={!!busy||paperPulled||overview} aria-pressed={foldAction==='precrease'} onClick={()=>chooseFoldAction('precrease')}>预折</button>
+                {sinkToggle}
               </div>
             </details>
             <details open><summary>精确构造</summary>{precisionControls}</details>
-                  {selectedCallout&&<>{selectedCallout.source.kind==='cp'&&<label className="checkbox"><input type="checkbox" disabled={!!busy} checked={selectedCallout.hideExistingCreases??false} onChange={e=>changeCallouts((step.callouts??[]).map(c=>c.id===selectedCallout.id?{...c,hideExistingCreases:e.target.checked}:c))}/>屏蔽已有折痕</label>}<button disabled={!!busy} onClick={()=>setCalloutDialog({type:selectedCallout.source.kind,editId:selectedCallout.id})}>重新选区</button><button disabled={!!busy} onClick={deleteCallout}>删除圆框</button></>}</section>{tablet&&<TabletPanelHeading title="绘图工具" onClose={()=>setTabletPanel('')}/>}
+            <DiagramSymbolDock symbolStyles={symbolStyles} selectedSymbol={symbol} placing={tool==='symbol'} symbolSelected={selectedAnnotation?.kind==='symbol'} disabled={!!busy||!active||!!editCP||!!(confirmReplace||fileOpening)} forceExpanded={tablet&&tabletPanel==='symbols'} onChoose={value=>{chooseSymbol(value);if(tablet)setTabletPanel('');}} onChooseCallout={value=>{chooseCallout(value);if(tablet)setTabletPanel('');}} onGenerateArrow={generateMainArrow} autoArrowUnavailable={!pose||!paperVisible?'先计算并显示操作前折图':paperPulled?'先切回平整状态或立体状态':stale||otherSource||pose.sourceStateId!==before.id?'先计算最新的操作前折图':undefined}/>
+                  {selectedCallout&&<>{selectedCallout.source.kind==='cp'&&<label className="checkbox"><input type="checkbox" disabled={!!busy} checked={selectedCallout.hideExistingCreases??false} onChange={e=>changeCallouts((step.callouts??[]).map(c=>c.id===selectedCallout.id?{...c,hideExistingCreases:e.target.checked}:c))}/>屏蔽已有折痕</label>}<button disabled={!!busy} onClick={()=>setCalloutDialog({type:selectedCallout.source.kind,editId:selectedCallout.id})}>重新选区</button><button disabled={!!busy} onClick={deleteCallout}>删除圆框</button></>}</section>
             {(effectiveZoom||zoomIssue||selectedZoomSymbol||selectedAnnotation?.kind==='symbol'&&selectedAnnotation.symbol==='zoomOut')&&<section className="diagram-zoom-controls" aria-label="局部放大设置">
               <header><h3>{effectiveZoom?'局部放大视图':'下一步视图'}</h3></header>
               {zoomIssue&&<p role="alert">{zoomIssue}</p>}
               {selectedZoomSymbol?.zoomArea&&!selectedZoomRegion&&<p role="alert">当前纸幅无法使用此选区，请重新选择放大区域。</p>}
-              {effectiveZoom&&<><p>由第 {project.steps.findIndex(item=>item.id===effectiveZoom.sourceStepId)+1} 步启用，后续步骤保持放大。</p><button type="button" disabled={!!busy} onClick={()=>chooseSymbol('zoomOut')}>放置缩小符号</button></>}
+              {effectiveZoom&&<><p>由第 {numbering.stepLabels.get(effectiveZoom.sourceStepId)} 步启用，后续步骤保持放大。</p><button type="button" disabled={!!busy} onClick={()=>chooseSymbol('zoomOut')}>放置缩小符号</button></>}
               {selectedZoomSymbol&&<><p>{selectedZoomSymbol.zoomArea?(selectedZoomSymbol.zoomArea.region.kind==='circle'?'圆形选区已设置。':'波浪线分区已设置。'):'请先选择需要放大的区域。'}下一步开始生效。</p><button type="button" disabled={!!busy} onClick={()=>openZoomSelection(selectedZoomSymbol)}>{selectedZoomSymbol.zoomArea?'重新选择放大区域':'选择放大区域'}</button></>}
               {selectedAnnotation?.kind==='symbol'&&selectedAnnotation.symbol==='zoomOut'&&<p>此步仍保持当前视图；下一步恢复完整纸面。</p>}
             </section>}
             {!!images.length&&<DiagramImageControls images={images} selectedId={selectedImageId} paperVisible={paperVisible} disabled={!!busy||imageBusy} onSelect={selectImage} onChange={changeImages} onPaperVisible={visible=>{resetDrawingSelection();changeImages(images,visible);setImageFitToken(value=>value+1);}}/>}
+            <details className="diagram-layers-disclosure" open><summary>纸层顺序</summary>
             {paperVisible&&pose?<DiagramLayerStack showPreview={false} pose={pose} hoveredFaces={localPaperHighlight?.faces??cpHoverMap.highlight?.faces} selectedFaces={selectedTearWindow?.cutawayFaces??(selectedSourceFoldLines.length?selectedFoldFaces:cpSelectedMap.highlight?.faces??displayedFoldFaces)} fixedFaces={fixedSourceFaces} disabled={!!busy||!active||!!editCP||!!(confirmReplace||fileOpening)||stale} visibilityContext={selectedTearWindow?{label:'撕纸透视 · 圆内',hiddenFaces:selectedTearWindow.cutawayFaces??[]}:undefined} controls={selectedTearWindow?tearWindowControls:layerContextControls} faceActions={selectedTearWindow?undefined:layerFaceActions} selectionHint={layerSelectionHint} analysing={layerAnalysing} analysisError={layerAnalysisError??localSurfaceIssue} analysisUnavailableReason={layerAnalysisUnavailableReason} adjustmentMode={layerOrderEditing} adjustmentFace={layerOrderFace} onAdjustmentModeChange={enabled=>{resetDrawingSelection();setLayerChoice(null);setLayerOrderEditing(enabled);setTool('select');}} onAdjustLayer={adjustLayerOrder} onRelativeConstraints={changeRelativeLayerConstraints} adjustingLayer={!!busy&&layerChoice?.key===layerAnalysisKey&&!layerChoice.error} layerAdjustmentError={layerChoice?.key===layerAnalysisKey?layerChoice.error:undefined} layerAdjustmentFeedback={layerChoice?.key===layerAnalysisKey?layerChoice.feedback:undefined} onAnalyse={retryLayerAnalysis} onHoverFace={face=>{setCPHovered(null);queuePaperHover(face===null?null:{kind:'layer',face});}} onSelectFace={chooseLayerFace} onToggleVisible={toggleLayerVisibility} onShowAll={()=>updateLayerVisibility([])} onHideAll={()=>updateLayerVisibility(pose.result.geometry.faces.map((_,face)=>face))}/>:paperVisible&&simulationSurface?<p className="diagram-context-empty">当前显示保存的模拟曲面。可转动视角、添加符号和说明；重新计算 CP 会替换此姿态。</p>:paperVisible?<><p className="diagram-context-empty">先计算操作前 CP，显示纸层示意并选择作用纸层。</p>{layerContextControls}</>:<p className="diagram-context-empty">本步以图片展示，右侧 CP 保持原有折叠数据。需要继续折纸时，可恢复显示折图纸面。</p>}
+            </details>
+            </div>
+            {captionInShelf&&stepCaption}
           </aside>
-          <div className="diagram-model-surface" hidden={!!centralCP}><DiagramDrawingCanvas depthPreview={depthPreview?.stepId===step.id&&depthPreview.pose===pose?depthPreview.value:undefined} depthCameraVisible={depthCameraVisible&&!busy&&!stale&&!paperPulled} onDepthPreview={previewDepth} onDepthCommit={changeDepth} onDepthViewport={rememberDepthViewport} key={`drawing:${step.id}`} showCursorHint={showCursorHint} onCursorHintChange={onCursorHintChange} zoomRegion={effectiveZoom?.region} zoomSelectionRegion={selectedZoomRegion} callouts={step.callouts} selectedCalloutId={selectedCalloutId??undefined} onSelectCallout={id=>{resetDrawingSelection();setSelectedCalloutId(id);}} onCalloutsChange={changeCallouts} onCreateCallout={chooseCallout} calloutCPMarkup={calloutCPMarkup} adaptiveLineStyle={adaptiveLines} lineDefaults={lineDefaults} commandToken={commandActivation} pose={pose} simulationSurface={simulationSurface} annotations={annotations} images={images} paperVisible={paperVisible} onImagesChange={changeImages} selectedImageId={selectedImageId??undefined} onSelectImage={selectImage} fitToken={imageFitToken} tool={tool} lineStyle={lineStyle} foldAction={foldAction} foldAngle={foldAngle} symbol={symbol} color={drawingColor} width={drawingWidth} strokePattern={drawingPattern} selection={selection} onSelect={setSelection} onMove={move} onViewChange={updateView} onDrawingRotationChange={drawingRotation=>updateCanvas({drawingRotation},false)} orientationLocked={!!step.orientationLocked} onAnnotationsChange={applyAnnotations} canvas={canvasSettings} gridPaper={before.doc} paperLocked={paperPulled} precision={precision} onPrecisionPoint={addPrecisionPoint} selectedIds={selectedAnnotationIds} selectedLineFaces={selectedLineFaces} onSelectedIds={selectDrawingAnnotations} onClearSelection={resetDrawingSelection} onDeleteInBox={deleteInBox} mirrorSource={selectedAnnotations} onMirrorCopy={mirrorSelection} onCancelMirrorCopy={()=>setTool('select')} onSymbolPlaced={()=>{setTool('select');setTab('drawing');}} onCancelSymbolPlacement={()=>setTool('select')} disabled={!!busy} active={active&&!basicDialog&&!orbitMode&&!libraryOpen&&!pdfOpen&&!editCP&&!confirmReplace&&!animationOpen&&!captureTarget&&!calloutDialog&&!zoomDialog} showSymbolBaseline={showSymbolBaseline} foldLinkEnabled={foldLink.enabled&&foldPreview.valid} foldLinkPreview={foldCanvasPreview} foldLinkCP={foldLink.enabled?{before,after:after.doc,precreases:foldLink.precreases}:undefined} foldLinkFixed={showFixedHighlight?fixedCanvasPoint:undefined} selectedFoldFaces={displayedFoldFaces} onPickFixed={pickFixed} onPickLayerPoint={pickFoldLayer} onHoverPaper={point=>{if(point)setCPHovered(null);queuePaperHover(point?{kind:'drawing',point}:null);}} cpHighlight={localPaperHighlight??cpHoverMap.highlight} cpSelectedHighlight={cpSelectedMap.highlight} cpFixedHighlight={showFixedHighlight&&foldLink.enabled?cpFixedMap.highlight:undefined}/>
-            {orbitMode&&simulationSurface&&<DiagramSimulationSurfaceOrbit key={`surface-orbit:${step.id}`} surface={simulationSurface} drawingRotation={canvasSettings.drawingRotation??0} onCommit={changeSimulationView} onExit={()=>setOrbitMode(false)}/>}
-            <DiagramLocalLayers probe={localLayerProbe} hidden={pose?.hiddenFaces}/>{orbitMode&&pose?.spatial&&!paperPulled&&<DiagramSpatialOrbit key={`orbit:${step.id}`} pose={pose} history={orbitHistory} drawingRotation={canvasSettings.drawingRotation??0} disabled={!!busy} onCommit={changeSpatialCamera} onExit={()=>{if(busy?.kind==='camera')cancelTask();setOrbitMode(false);}}/>}
+          {showToolsHandle&&<DiagramDrawerRail side="left" name="绘图工具与纸层" label="绘图工具与纸层宽度" collapsed={toolsCollapsed} onToggle={()=>setToolsCollapsed(v=>!v)} value={toolsWidth} min={176} max={420} onChange={setToolsWidth} onReset={()=>setToolsWidth(252)}/>}
+          <div className="diagram-model-surface" hidden={!!centralCP}><DiagramDrawingCanvas symbolStyles={symbolStyles} newSymbolPens={symbolPens} onImageGestureChange={moving=>thumbnailCache.setPaused(moving)} paperPatterns={project.basicSettings?.paperPatterns} depthPreview={depthPreview?.stepId===step.id&&depthPreview.pose===pose?depthPreview.value:undefined} depthCameraVisible={depthCameraVisible&&!busy&&!stale&&!paperPulled} onDepthPreview={previewDepth} onDepthCommit={changeDepth} onDepthViewport={rememberDepthViewport} key={`drawing:${step.id}`} showCursorHint={showCursorHint} onCursorHintChange={onCursorHintChange} zoomRegion={effectiveZoom?.region} zoomSelectionRegion={selectedZoomRegion} callouts={step.callouts} selectedCalloutId={selectedCalloutId??undefined} onSelectCallout={id=>{resetDrawingSelection();setSelectedCalloutId(id);}} onCalloutsChange={changeCallouts} onCreateCallout={chooseCallout} calloutCPMarkup={calloutCPMarkup} adaptiveLineStyle={adaptiveLines} lineDefaults={lineDefaults} commandToken={commandActivation} pose={pose} simulationSurface={simulationSurface} annotations={annotations} images={images} paperVisible={paperVisible} onImagesChange={changeImages} selectedImageId={selectedImageId??undefined} onSelectImage={selectImage} fitToken={imageFitToken} tool={tool} lineStyle={lineStyle} foldAction={foldAction} sinkDrawing={drawingSink} foldAngle={foldAngle} symbol={symbol} color={drawingColor} width={drawingWidth} strokePattern={drawingPattern} selection={selection} onSelect={setSelection} onMove={move} onViewChange={updateView} onDrawingRotationChange={drawingRotation=>updateCanvas({drawingRotation},false)} orientationLocked={!!step.orientationLocked} onAnnotationsChange={applyAnnotations} canvas={canvasSettings} gridPaper={before.doc} paperLocked={paperPulled} precision={precision} onPrecisionPoint={addPrecisionPoint} selectedIds={selectedAnnotationIds} selectedLineFaces={selectedLineFaces} onSelectedIds={selectDrawingAnnotations} onQuickSelect={()=>chooseTool('select')} onClearSelection={resetDrawingSelection} onDeleteInBox={deleteInBox} mirrorSource={selectedAnnotations} onMirrorCopy={mirrorSelection} onCancelMirrorCopy={()=>setTool('select')} onSymbolPlaced={()=>{setTool('select');setTab('drawing');}} onCancelSymbolPlacement={()=>setTool('select')} disabled={!!busy} active={active&&!basicDialog&&!orbitMode&&!libraryOpen&&!pdfOpen&&!editCP&&!confirmReplace&&!drawingDialogOpen&&!captureTarget&&!calloutDialog&&!zoomDialog} showSymbolBaseline={showSymbolBaseline} foldLinkEnabled={foldLink.enabled&&foldPreview.valid} foldLinkPreview={foldCanvasPreview} foldLinkCP={foldLink.enabled?{before,after:after.doc,precreases:foldLink.precreases}:undefined} foldLinkFixed={showFixedHighlight?fixedCanvasPoint:undefined} drawingFoldFaces={foldLink.layers==='selected'?foldLink.selectedFaces:undefined} selectedFoldFaces={displayedFoldFaces} onPickPaperFace={pickPaperFace} onPickFixed={pickFixed} onPickLayerPoint={pickFoldLayer} onHoverPaper={showPaperLayerHover?point=>{if(point)setCPHovered(null);queuePaperHover(point?{kind:'drawing',point}:null);}:undefined} cpHighlight={cpHovered?.fromScope?cpHoverMap.highlight:localPaperHighlight??cpHoverMap.highlight} scopeHover={!!cpHovered?.fromScope} cpSelectedHighlight={cpSelectedMap.highlight} cpFixedHighlight={showFixedHighlight&&foldLink.enabled?cpFixedMap.highlight:undefined}/>
+            {orbitMode&&simulationSurface&&<DiagramSimulationSurfaceOrbit patterns={project.basicSettings?.paperPatterns} key={`surface-orbit:${step.id}`} surface={simulationSurface} drawingRotation={canvasSettings.drawingRotation??0} onCommit={changeSimulationView} onExit={()=>setOrbitMode(false)}/>}
+            {active&&fixedViewStep===step.id&&pose?.spatial&&!paperPulled&&!stale&&<DiagramFixedViewPicker pose={pose} face={fixedSourceFaces[0]??pose.result.geometry.startingFace??0} fixedMatrix={fixedSourceFaces.length?foldLink.fixed?.matrix:undefined} drawingRotation={(canvasSettings.drawingRotation??0)+(pose.view?.rotation??0)} disabled={!!busy} onClose={()=>setFixedViewStep(null)} onApply={changeSpatialCamera}/>}
+            <DiagramLocalLayers probe={localLayerProbe} hidden={pose?.hiddenFaces}/>{preloadOrbit&&pose&&<DiagramSpatialOrbit key={`orbit:${step.id}`} interactive={orbitMode} pose={pose} history={orbitHistory} drawingRotation={canvasSettings.drawingRotation??0} disabled={!!busy} onCommit={changeSpatialCamera} onExit={()=>{if(busy?.kind==='camera')cancelTask();setOrbitMode(false);}}/>}
             <FoldAnglePanel value={selectedFoldAngle} selectionKey={cpSelected??selectedAnnotationIds} selectedCount={cpEdgeChosen?(selectedCPEdgeProperties?.assignment==='M'||selectedCPEdgeProperties?.assignment==='V'?1:0):selectedFoldLines.length} ignoredCount={cpEdgeChosen?0:selectedAnnotationIds.length-selectedFoldLines.length} disabled={!creaseActionEditable} disabledReason={busy?'正在计算，完成后可修改。':paperPulled?'切回平整状态或立体状态后可修改。':stale?'请先重新计算操作前 CP。':undefined} onApply={changeSelectedFoldAngle} allowUnknown unknownLabel="自适应"/>
             {!pose&&!simulationSurface&&!annotations.length&&!images.length&&!step.callouts?.length&&['select','pan','vertex'].includes(tool)&&<div className="diagram-empty diagram-empty-overlay"><div className="diagram-empty-paper"><Icon name="grid"/></div><p className="diagram-eyebrow">从真实 CP 开始绘制</p><h3>这一页还没有折图</h3><p>计算右侧 CP 或采用已有平折模型，<br/>也可以直接画折线、拖入折纸符号。</p><div><button className="diagram-primary" disabled={!!busy} onClick={()=>compute(before.id)}>计算操作前 CP</button></div></div>}
-          </div>{centralCP&&centralCPAccess&&<DiagramCPWorkspace adaptiveLineStyle={adaptiveLines} key={`${step.id}:${centralCP.id}`} showToolGuide={showToolGuide} onToolGuideChange={onToolGuideChange} showCursorHint={showCursorHint} onCursorHintChange={onCursorHintChange} doc={centralCP.doc} presentation={{before,pose:step.paperStates?.spatial??step.paperStates?.flat??pose,phase:centralCP.id===before.id?'before':'after',precreases:foldLink.precreases}} gridSettings={{grid:canvasSettings.grid,snap:canvasSettings.snap,diagonalGrid:canvasSettings.diagonalGrid,divisions:canvasGrid.divisions}} onGridSettings={updateCanvas} index={project.states.indexOf(centralCP)} editable={centralCPAccess.editable} reason={centralCPAccess.reason} disabled={!!busy||!active||!!(confirmReplace||fileOpening)||pdfOpen||animationOpen} onCommit={next=>applyCP(centralCP.id,next)} onReturn={()=>exchangeCP(null)} onMessage={message} recovery={centralCPAccess.ownerStepId?{label:'到上一步修改',onClick:()=>editSourceStep(centralCP.id)}:centralCP.id===before.id&&stepIndex===0&&foldLink.enabled&&!paperPulled?{label:'停用联动并编辑初始 CP',onClick:unlockInitialCP}:centralCP.id===after.id&&foldLink.enabled&&!paperPulled&&!centralCPAccess.editable?{label:'重新计算操作前 CP',onClick:()=>void compute(before.id)}:undefined}/>}</div>
-          <div className={'diagram-layer-status'+(pose&&pose.result.layers.status!=='solved'?' is-unconfirmed':'')} role="status"><span className="diagram-tool-hint">{tool==='symbol'?`点击放置「${SYMBOL_LABELS[symbol]}」，或从符号库拖入`:TOOL_HINTS[tool]}{['line','polyline'].includes(tool)&&(lineStyle==='valley'||lineStyle==='mountain')?' · '+(foldAction==='precrease'?'预折后展开':'本步折叠'):''}{pose?' · '+paperDisplayStatus:''}</span><span>滚轮缩放 · 中键平移</span></div>
-          <section className="diagram-step-caption" aria-label="本步骤内容">
-            <label className="diagram-step-title-field" htmlFor="diagram-step-title"><span>标题</span><input id="diagram-step-title" aria-label="步骤标题" value={draftTitle} disabled={!!busy} maxLength={200} placeholder="首次放置符号后自动填写" onChange={e=>editCaption('title',e.target.value)} onBlur={e=>finishCaption('title',e.target.value)}/></label>
-            <label className="diagram-step-description-field" htmlFor="diagram-step-description"><span>说明</span><textarea id="diagram-step-description" aria-label="本步说明" value={draftDescription} disabled={!!busy} maxLength={5000} rows={1} placeholder="描述本步骤的折叠动作…" onChange={e=>editCaption('description',e.target.value)} onBlur={e=>finishCaption('description',e.target.value)}/></label>
-            <div className="diagram-step-navigation"><button disabled={stepIndex===0||!!busy} onClick={()=>{flushFields();switchStep(projectRef.current.steps[stepIndex-1].id);}}>← 上一步</button><button className="diagram-primary" disabled={!!busy} title={hasReturnInstruction?'恢复返回目标的聚合状态，并保留期间折痕':paperPulled?'进入下一步；CP 未变化时保留当前拖角造型':'操作后 CP → 下步折图'} data-teach="next" onClick={nextStep}>下一步 →</button></div>
-          </section>
-        </div><DiagramSymbolDock selectedSymbol={symbol} placing={tool==='symbol'} disabled={!!busy||!active||!!editCP||!!(confirmReplace||fileOpening)} onClose={tablet?()=>setTabletPanel(''):undefined} onChoose={value=>{chooseSymbol(value);if(tablet)setTabletPanel('');}} onChooseCallout={value=>{chooseCallout(value);if(tablet)setTabletPanel('');}} onGenerateArrow={generateMainArrow} autoArrowUnavailable={!pose||!paperVisible?'先计算并显示操作前折图':paperPulled?'先切回平整状态或立体状态':stale||otherSource||pose.sourceStateId!==before.id?'先计算最新的操作前折图':undefined}/></div>}
+          </div>{centralCP&&centralCPAccess&&<DiagramCPWorkspace junctions={centralCP.id===before.id?beforeWarnings:afterWarnings} adaptiveLineStyle={adaptiveLines} key={`${step.id}:${centralCP.id}`} showToolGuide={showToolGuide} onToolGuideChange={onToolGuideChange} showCursorHint={showCursorHint} onCursorHintChange={onCursorHintChange} doc={centralCP.doc} presentation={{before,pose:step.paperStates?.spatial??step.paperStates?.flat??pose,phase:centralCP.id===before.id?'before':'after',precreases:foldLink.precreases}} gridSettings={{grid:canvasSettings.grid,snap:canvasSettings.snap,diagonalGrid:canvasSettings.diagonalGrid,divisions:canvasGrid.divisions}} onGridSettings={updateCanvas} cpLabel={numbering.cpLabels.get(centralCP.id)!} editable={centralCPAccess.editable} reason={centralCPAccess.reason} disabled={!!busy||!active||!!(confirmReplace||fileOpening)||pdfOpen||drawingDialogOpen} onCommit={next=>applyCP(centralCP.id,next)} onReturn={()=>exchangeCP(null)} onMessage={message} recovery={centralCPAccess.ownerStepId?{label:'到上一步修改',onClick:()=>editSourceStep(centralCP.id)}:centralCP.id===before.id&&stepIndex===0&&foldLink.enabled&&!paperPulled?{label:'停用联动并编辑初始 CP',onClick:unlockInitialCP}:centralCP.id===after.id&&foldLink.enabled&&!paperPulled&&!centralCPAccess.editable?{label:'重新计算操作前 CP',onClick:()=>void compute(before.id)}:undefined}/>}</div>
+          <div className={'diagram-layer-status'+(pose&&pose.result.layers.status!=='solved'?' is-unconfirmed':'')} role="status"><span className="diagram-tool-hint">{tool==='symbol'?`点击放置「${SYMBOL_LABELS[symbol]}」，或从符号库拖入`:TOOL_HINTS[tool]}{['line','polyline'].includes(tool)&&(lineStyle==='valley'||lineStyle==='mountain')?' · '+(drawingSink?`沉折 · 已选 ${foldLink.selectedFaces.length} 层`:foldAction==='precrease'?'预折后展开':'本步折叠'):''}{pose?' · '+paperDisplayStatus:''}</span><span>滚轮缩放 · 中键平移</span></div>
+          {!captionInShelf&&stepCaption}
+        </div></div>}
         {busy&&<div className="diagram-compute-status" role="status"><span className="diagram-spinner"/><div><strong>{busy.kind==='camera'?'更新观察视角':busy.kind==='layers'?(layerChoice?'切换纸层方案':'重分析模型层序'):'计算本步平折'}</strong><p>{computeMessage}</p></div><button onClick={()=>{cancelTask();message('已停止本次折序计算。');}}>停止</button></div>}
-      </section><PanelDivider label="折图与 CP 区宽度" side="right" value={cpWidth} min={210} max={420} onChange={setCPWidth} onReset={()=>setCPWidth(280)}/>{comparison&&!overview?<aside className="diagram-comparison-cp" aria-label="放大 CP 对照"><nav aria-label="对照 CP 状态"><button data-teach="cp-before" aria-pressed={comparisonPhase==='before'} onClick={()=>{setComparisonPhase('before');setCPHovered(null);queuePaperHover(null);}}>操作前 CP{stepIndex}</button><button data-teach="cp-after" aria-pressed={comparisonPhase==='after'} onClick={()=>{setComparisonPhase('after');setCPHovered(null);queuePaperHover(null);}}>操作后 CP{stepIndex+1}</button><span>悬停对应高亮 · 点击选面</span></nav>{cpCard(comparisonPhase==='before'?before:after,comparisonPhase,true)}</aside>:<aside className="diagram-cp-shelf">{tablet&&<TabletPanelHeading title="CP" onClose={()=>setTabletPanel('')}/>}{cpCard(before,'before')}{cpCard(after,'after')}</aside>}</div>
-      <ToolCommandBar<DiagramCommand> ref={commandBar} tool={tool==='symbol'?`symbol:${symbol}`:tool} commands={commands} onTool={runDiagramCommand} onFocusCanvas={focusDrawingCanvas} ariaLabel="折序工具命令" placeholder="L 折线 · MI 镜像 · SFOLD 谷折箭头" disabled={!active||!!busy||!!editCP||!!(confirmReplace||fileOpening)||pdfOpen||animationOpen}/>
-      <footer className="diagram-footer"><span>{localMessage||'当前步骤独立编辑；相邻步骤共享中间 CP。'}</span><small>{storageMessage}</small></footer>
+      </section>{showCPHandle&&<DiagramDrawerRail side="right" name="前后 CP" label="折图与 CP 区宽度" collapsed={cpDrawerClosed} onToggle={()=>{if(comparison&&!overview)setComparisonCPCollapsed(v=>!v);else setCPCollapsed(v=>!v);setCPHovered(null);queuePaperHover(null);}} resizable={!(comparison&&!overview)} value={cpWidth} min={210} max={420} onChange={setCPWidth} onReset={()=>setCPWidth(280)}/>}{!bothDetached&&!cpDrawerClosed&&(comparison&&!overview?<aside className="diagram-comparison-cp" aria-label="放大 CP 对照"><nav aria-label="对照 CP 状态"><button disabled={beforeDetached===step.id} data-teach="cp-before" aria-pressed={visiblePhase==='before'} onClick={()=>{setComparisonPhase('before');setCPHovered(null);queuePaperHover(null);}}>操作前 {beforeLabel}</button><button disabled={afterDetached===step.id} data-teach="cp-after" aria-pressed={visiblePhase==='after'} onClick={()=>{setComparisonPhase('after');setCPHovered(null);queuePaperHover(null);}}>操作后 {afterLabel}</button><span>悬停对应高亮 · 点击选面</span></nav>{cpCard(visiblePhase==='before'?before:after,visiblePhase,true)}</aside>:<aside className="diagram-cp-shelf">{tablet&&<TabletPanelHeading title="CP" onClose={()=>setTabletPanel('')}/>}{cpCard(before,'before')}{cpCard(after,'after')}</aside>)}</div>
+      <ToolCommandBar<DiagramCommand> ref={commandBar} tool={tool==='symbol'?`symbol:${symbol}`:tool} commands={commands} onTool={runDiagramCommand} onFocusCanvas={focusDrawingCanvas} ariaLabel="折序工具命令" placeholder="L 折线 · MI 镜像 · SFOLD 谷折箭头" disabled={!active||!!busy||!!editCP||!!(confirmReplace||fileOpening)||pdfOpen||drawingDialogOpen}/>
+      <footer className="diagram-footer"><JunctionWarnings issues={beforeWarnings} label={'操作前 '+beforeLabel}/><JunctionWarnings issues={afterWarnings} label={'操作后 '+afterLabel}/><span>{localMessage||'当前步骤独立编辑；相邻步骤共享中间 CP。'}</span><small>{storageMessage}</small></footer>
     </main>
     <aside id="diagram-advanced-properties" className="diagram-properties" hidden={!propertiesOpen}><header className="diagram-inspector-heading"><strong>更多属性</strong><button type="button" aria-label="关闭更多属性" onClick={()=>setPropertiesOpen(false)}><svg viewBox="0 0 20 20" aria-hidden="true"><path d="m5 5 10 10M15 5 5 15"/></svg></button></header><nav aria-label="折序属性"><button aria-pressed={tab==='drawing'} onClick={()=>{setTab('drawing');if(propertyScroll.current)propertyScroll.current.scrollTop=0;}}>绘图与符号</button><button aria-pressed={tab==='model'} onClick={()=>setTab('model')}>纸层与顶点</button><button aria-pressed={tab==='step'} onClick={()=>setTab('step')}>步骤</button><button aria-pressed={tab==='project'} onClick={()=>setTab('project')}>工程</button></nav><div ref={propertyScroll} className="diagram-property-scroll">
       {tab==='drawing'&&<>
@@ -2457,17 +2893,17 @@ const DiagramWorkspace=forwardRef<DiagramWorkspaceHandle,DiagramWorkspaceProps>(
         
         {selectedAnnotation?.kind==='symbol'&&selectedSymbolDefinition&&selectedSymbolParameters&&<section className="diagram-symbol-components"><header><h3>符号设置</h3><small>{selectedSymbolDefinition.label}</small></header>
           <label className="diagram-text-field"><span>符号类型</span><select aria-label="选中符号类型" disabled={!!busy} value={selectedAnnotation.symbol} onChange={e=>resetSymbolComponents(e.target.value as DiagramSymbolKind)}>{SYMBOL_CATALOG.map(item=><option key={item.kind} value={item.kind}>{item.label}</option>)}</select></label>
-          <DiagramArrowBindingControls pose={pose} annotation={selectedAnnotation} disabled={!!busy} onChange={next=>applyAnnotations(annotations.map(a=>a.id===next.id?next:a))} onMessage={message}/>
+          <DiagramArrowBindingControls pose={pose} annotation={selectedSymbolGeometry!} disabled={!!busy} onChange={next=>applyAnnotations(annotations.map(a=>a.id===next.id?{...selectedAnnotation,paperBinding:next.paperBinding}:a))} onMessage={message}/>
           {selectedReturnSymbol&&<div role="group" aria-label="返回步骤设置">
             <label className="diagram-text-field"><span>返回目标步骤</span><select aria-label="返回目标步骤" disabled={!!busy} value={selectedReturnSymbol.returnStepId??''} onChange={event=>setReturnStep(event.target.value)}>
               <option value="">仅图示，不自动返回</option>
-              {project.steps.slice(0,stepIndex).map((candidate,index)=>{const ready=returnTargetReady(candidate);return <option key={candidate.id} value={candidate.id} disabled={!ready}>第 {index+1} 步{candidate.title?' · '+candidate.title:''}{ready?'':'（请先生成折图）'}</option>;})}
+              {project.steps.slice(0,stepIndex).map(candidate=>{const ready=returnTargetReady(candidate);return <option key={candidate.id} value={candidate.id} disabled={!ready}>第 {numbering.stepLabels.get(candidate.id)} 步{candidate.title?' · '+candidate.title:''}{ready?'':'（请先生成折图）'}</option>;})}
             </select></label>
             <p className="diagram-note">{stepIndex===0?'当前没有更早的步骤可返回。':selectedReturnSymbol.returnStepId?'点击“下一步”后恢复目标步骤的聚合状态；期间新增折痕保留为已有折痕。符号编号随步骤顺序更新。':'选择一个目标步骤，启用下一步自动返回。'}</p>
             {project.steps.find(candidate=>candidate.id===selectedReturnSymbol.returnStepId)?.paperStates?.active==='pulled'&&<p className="diagram-note">目标正在显示拖角图示，将采用它保存的平整或立体聚合状态。</p>}
           </div>}
           <p className="diagram-note">拖动画布上的控制点调整形状，拖动红点移动位置。Alt 临时暂停吸附。</p>
-          {isDiagramRepeatSymbol(selectedAnnotation.symbol)&&<div className="diagram-coordinate-row"><NumberField label="重复符号画面角度" value={diagramRepeatVisualAngle(selectedAnnotation,canvasSettings.drawingRotation??0)} min={-360000} max={360000} suffix="°" disabled={!!busy} onChange={angle=>anchoredSymbol(setDiagramRepeatVisualAngle(selectedAnnotation,angle,canvasSettings.drawingRotation??0))}/><button type="button" disabled={!!busy} onClick={()=>anchoredSymbol(setDiagramRepeatVisualAngle(selectedAnnotation,0,canvasSettings.drawingRotation??0))}>摆正</button></div>}
+          {isDiagramRepeatSymbol(selectedAnnotation.symbol)&&<div className="diagram-coordinate-row"><NumberField label="重复符号画面角度" value={diagramRepeatVisualAngle(selectedSymbolGeometry!,canvasSettings.drawingRotation??0)} min={-360000} max={360000} suffix="°" disabled={!!busy} onChange={angle=>anchoredSymbol(editDiagramSymbolGeometry(selectedAnnotation,symbolStyles,shown=>setDiagramRepeatVisualAngle(shown,angle,canvasSettings.drawingRotation??0)))}/><button type="button" disabled={!!busy} onClick={()=>anchoredSymbol(editDiagramSymbolGeometry(selectedAnnotation,symbolStyles,shown=>setDiagramRepeatVisualAngle(shown,0,canvasSettings.drawingRotation??0)))}>摆正</button></div>}
           {isDiagramRotationSymbol(selectedAnnotation.symbol)&&<><NumberField label="旋转角度" value={diagramSymbolTurnAngle(selectedAnnotation)} min={0} max={360} step={1} suffix="°" disabled={!!busy} onChange={turnAngle=>editAnnotation({turnAngle})}/><p className="diagram-note">双击符号中央的角度可直接编辑；下一步自动按箭头方向旋转。</p></>}
           {!selectedReturnSymbol?.returnStepId&&(selectedCadDefinition?selectedCadDefinition.attributes.map((attribute,index)=><DiagramCadAttributeField key={selectedAnnotation.id+':'+attribute.key} label={attribute.label} value={selectedAnnotation.cadAttributes?.[attribute.key]??(index===0?selectedAnnotation.text:undefined)??attribute.defaultValue} disabled={!!busy||attribute.editable===false} onChange={value=>editCadAttribute(attribute.key,value)}/>):selectedSymbolDefinition.textLabel&&<label className="diagram-text-field"><span>{selectedSymbolDefinition.textLabel}</span><input aria-label="符号编号文字" value={draftSymbolText} maxLength={200} placeholder="留空使用默认编号" onChange={e=>setDraftSymbolText(e.target.value)} onBlur={e=>{if(e.target.value!==(selectedAnnotation.text??''))editAnnotation({text:e.target.value});}}/></label>)}
           <div className="diagram-button-row"><button disabled={!!busy} aria-pressed={!!selectedAnnotation.mirrored} onClick={()=>anchoredSymbol({...selectedAnnotation,mirrored:!selectedAnnotation.mirrored})}>反向符号</button><button disabled={!!busy} onClick={()=>resetSymbolComponents()}>恢复默认形状</button></div>
@@ -2475,7 +2911,7 @@ const DiagramWorkspace=forwardRef<DiagramWorkspaceHandle,DiagramWorkspaceProps>(
           <div className="diagram-component-fields">
             {selectedSymbolBaseline&&<NumberField label="基线长度" value={selectedSymbolBaseline.length} min={.001} max={1e6} step={1} disabled={!!busy} onChange={resizeSymbolBaseline}/>}
             {selectedCadDefinition?selectedCadDefinition.parameters.map(parameter=>{
-              const value=selectedAnnotation.cadProperties?.[parameter.key]??parameter.defaultValue,disabled=!!busy||!parameter.editable;
+              const value=selectedSymbolGeometry?.cadProperties?.[parameter.key]??parameter.defaultValue,disabled=!!busy||!parameter.editable;
               return parameter.type==='boolean'?<label className="diagram-cad-flip-field" key={parameter.key} title={parameter.description}><span>{parameter.label}</span><input type="checkbox" aria-label={parameter.label} disabled={disabled} checked={value===1} onChange={e=>editCadProperty(parameter.key,e.target.checked?1:0)}/></label>:parameter.type==='choice'?<label className="diagram-text-field" key={parameter.key} title={parameter.description}><span>{parameter.label}</span><select aria-label={parameter.label} disabled={disabled} value={value} onChange={e=>editCadProperty(parameter.key,Number(e.target.value))}>{parameter.values!.map(option=><option key={option} value={option}>{option}</option>)}</select></label>:<NumberField key={parameter.key} label={parameter.label} value={value} min={parameter.min} max={parameter.max} step={parameter.step} suffix={parameter.unit} disabled={disabled} onChange={value=>editCadProperty(parameter.key,value)}/>;
             }):selectedSymbolDefinition.parameters.filter(parameter=>!selectedSymbolBaseline||parameter.key!=='length'&&parameter.key!=='height').map(parameter=>parameter.key==='count'?<DiagramIntegerField key={parameter.key} label={parameter.label} value={selectedSymbolParameters[parameter.key]} min={parameter.min} max={parameter.max} disabled={!!busy} onChange={value=>editSymbolParameter(parameter.key,value)}/>:<NumberField key={parameter.key} label={parameter.label} value={selectedSymbolParameters[parameter.key]} min={parameter.min} max={parameter.max} step={parameter.step} disabled={!!busy} onChange={value=>editSymbolParameter(parameter.key,value)}/>)}
           </div>
@@ -2487,17 +2923,35 @@ const DiagramWorkspace=forwardRef<DiagramWorkspaceHandle,DiagramWorkspaceProps>(
         {selectedAnnotations.length>0&&objectControls}
         {!!annotations.length&&<section><header><h3>本步绘图对象</h3><small>{annotations.length} 个</small></header><div className="diagram-object-list">{annotations.map((a,index)=><button key={a.id} aria-pressed={selectedAnnotationIds.includes(a.id)} onClick={e=>{setTool('select');selectDrawingAnnotations(e.shiftKey?(selectedAnnotationIds.includes(a.id)?selectedAnnotationIds.filter(id=>id!==a.id):[...selectedAnnotationIds,a.id]):[a.id]);setSelection(emptySelection());setOverview(false);}}><span>{String(index+1).padStart(2,'0')}</span>{a.kind==='line'?LINE_LABELS[a.style]+(a.foldAction==='precrease'?' · 预折后展开':''):SYMBOL_LABELS[a.symbol]}</button>)}</div></section>}
       </>}
-      {tab==='model'&&<>{(pose?.spatial||hasNonFlatFoldAngles(before.doc)||hasNonFlatFoldAngles(after.doc))&&<section aria-label="空间视角"><header><h3>空间视角</h3></header><div className="diagram-coordinate-row"><NumberField label="空间旋转" value={spatialCamera.yaw} min={-360} max={360} suffix="°" disabled={!!busy||paperPulled||stale} onChange={yaw=>setSpatialCamera(camera=>({...camera,yaw}))}/><NumberField label="空间俯仰" value={spatialCamera.elevation} min={-360} max={360} suffix="°" disabled={!!busy||paperPulled||stale} onChange={elevation=>setSpatialCamera(camera=>({...camera,elevation}))}/></div><div className="diagram-button-row"><button disabled={!!busy||paperPulled||stale} onClick={()=>{setOrbitMode(false);void (pose?.spatial?changeSpatialCamera(spatialCamera):compute(pose?.sourceStateId??before.id,false,true,true,undefined,spatialCamera));}}>应用空间视角</button><button disabled={!!busy||paperPulled||stale} onClick={()=>{setOrbitMode(false);void (pose?.spatial?changeSpatialCamera({...DEFAULT_DIAGRAM_SPATIAL_CAMERA}):compute(pose?.sourceStateId??before.id,false,true,true,undefined,{...DEFAULT_DIAGRAM_SPATIAL_CAMERA}));}}>固定面俯视</button></div><p className="diagram-note">默认垂直固定纸面俯视。点画布上方“转动视角”后按住左键旋转，松开应用；也可在此输入角度。折角保持不变。</p></section>}<section><header><h3>模型来源</h3><small>{pose?.spatial?'空间折叠结果':'平折结果'}</small></header>{pose?<div className="diagram-source-box"><Icon name="grid"/><div><strong>CP{originIndex} · {paperPulled?'拖角状态':pose?.spatial?'空间模型':'平整模型'}</strong><small>{stale?'来源 CP 已变化，可重新计算更新。':otherSource?'复制自其他步骤的 CP；可计算本步前后 CP 更新。':'保留独立顶点与视图副本。'}</small></div></div>:<p className="diagram-note">先计算 CP 或采用已有平折模型。</p>}<p className="diagram-field-caption">采用折痕编辑区当前平折模型</p><div className="diagram-button-row"><button disabled={!model||!!busy||!getDiagramCPEditAccess(project,step.id,before.id).editable} title={getDiagramCPEditAccess(project,step.id,before.id).reason} onClick={()=>adoptCurrent(before.id)}>采用到操作前 CP</button><button disabled={!model||!!busy||!getDiagramCPEditAccess(project,step.id,after.id).editable} title={getDiagramCPEditAccess(project,step.id,after.id).reason} onClick={()=>adoptCurrent(after.id)}>采用到操作后 CP</button></div><p className="diagram-note">会将该模型的来源 CP 复制到选定状态；相邻步骤共享此 CP 的更新。</p>{pose&&<button className="diagram-full-button" disabled={!!busy} onClick={()=>compute(pose.sourceStateId,true)}>重分析修改后的层序</button>}</section>
+      {tab==='model'&&<>{(pose?.spatial||hasNonFlatFoldAngles(before.doc)||hasNonFlatFoldAngles(after.doc))&&<section aria-label="空间视角"><header><h3>空间视角</h3></header><div className="diagram-coordinate-row"><NumberField label="空间旋转" value={spatialCamera.yaw} min={-360} max={360} suffix="°" disabled={!!busy||paperPulled||stale} onChange={yaw=>setSpatialCamera(camera=>({...camera,yaw}))}/><NumberField label="空间俯仰" value={spatialCamera.elevation} min={-360} max={360} suffix="°" disabled={!!busy||paperPulled||stale} onChange={elevation=>setSpatialCamera(camera=>({...camera,elevation}))}/></div><div className="diagram-button-row"><button disabled={!!busy||paperPulled||stale} onClick={()=>{setOrbitMode(false);void (pose?.spatial?changeSpatialCamera(spatialCamera):compute(pose?.sourceStateId??before.id,false,true,true,undefined,spatialCamera));}}>应用空间视角</button><button disabled={!!busy||paperPulled||stale} onClick={()=>{setOrbitMode(false);void (pose?.spatial?changeSpatialCamera({...DEFAULT_DIAGRAM_SPATIAL_CAMERA}):compute(pose?.sourceStateId??before.id,false,true,true,undefined,{...DEFAULT_DIAGRAM_SPATIAL_CAMERA}));}}>固定面俯视</button></div><p className="diagram-note">默认垂直固定纸面俯视。点画布上方“转动视角”后按住左键旋转，松开应用；也可在此输入角度。折角保持不变。</p></section>}<section><header><h3>模型来源</h3><small>{pose?.spatial?'空间折叠结果':'平折结果'}</small></header>{pose?<div className="diagram-source-box"><Icon name="grid"/><div><strong>{originLabel} · {paperPulled?'拖角状态':pose?.spatial?'空间模型':'平整模型'}</strong><small>{stale?'来源 CP 已变化，可重新计算更新。':otherSource?'复制自其他步骤的 CP；可计算本步前后 CP 更新。':'保留独立顶点与视图副本。'}</small></div></div>:<p className="diagram-note">先计算 CP 或采用已有平折模型。</p>}<p className="diagram-field-caption">采用折痕编辑区当前平折模型</p><div className="diagram-button-row"><button disabled={!model||!!busy||!getDiagramCPEditAccess(project,step.id,before.id).editable} title={getDiagramCPEditAccess(project,step.id,before.id).reason} onClick={()=>adoptCurrent(before.id)}>采用到操作前 CP</button><button disabled={!model||!!busy||!getDiagramCPEditAccess(project,step.id,after.id).editable} title={getDiagramCPEditAccess(project,step.id,after.id).reason} onClick={()=>adoptCurrent(after.id)}>采用到操作后 CP</button></div><p className="diagram-note">会将该模型的来源 CP 复制到选定状态；相邻步骤共享此 CP 的更新。</p>{pose&&<button className="diagram-full-button" disabled={!!busy} onClick={()=>compute(pose.sourceStateId,true)}>重分析修改后的层序</button>}</section>
       <section><header><h3>重合顶点</h3><small>{selection.group.length?`${selection.group.length} 个成员`:'尚未选择'}</small></header><p className="diagram-note">点击折图上的角，选择要移动的原始顶点成员。</p>{selection.group.length?<><div className="diagram-members">{selection.group.map(index=><label key={index} className={selection.selected.includes(index)?'is-selected':''}><input type="checkbox" checked={selection.selected.includes(index)} disabled={!!busy} onChange={()=>setSelection(previous=>({...previous,selected:previous.selected.includes(index)?previous.selected.filter(i=>i!==index):[...previous.selected,index]}))}/><span>顶点 V{index+1}</span><small>{graph?.vertices_coords[index]?.map(round).join(', ')}</small></label>)}</div><div className="diagram-button-row"><button onClick={()=>setSelection(previous=>({...previous,selected:[...previous.group]}))}>选择全部</button><button onClick={()=>setSelection(previous=>({...previous,selected:previous.group.slice(0,1)}))}>只选一个</button></div></>:<div className="diagram-property-empty">在主画面选中一个纸角</div>}{graph&&pose&&<details className="diagram-unfolded"><summary>在展开 CP 上选择顶点</summary><UnfoldedVertexMap source={graph} selection={selection} disabled={!!busy} onChoose={index=>{setTool('vertex');setSelection(previous=>selectFoldedVertex(diagramPaperVertices(pose),previous,index,'unfolded'));}}/><button className="diagram-full-button" disabled={!!busy||paperPulled} onClick={regenerateCleanPose}>合点并重新生成折图</button><p className="diagram-note">合并来源 CP 的多余共线点、删除重复线段，再更新此顶点图和折图。会替换本步二维修形，可撤销；独立材料切口保留。</p></details>}</section>
       {selectionPoint&&<section><header><h3>纸角位置</h3><small>二维模型坐标</small></header><div className="diagram-coordinate-row"><NumberField label="X 坐标" value={selectionPoint[0]} disabled={!!busy} onChange={x=>move(selection,[x,selectionPoint[1]])}/><NumberField label="Y 坐标" value={selectionPoint[1]} disabled={!!busy} onChange={y=>move(selection,[selectionPoint[0],y])}/></div><p className="diagram-note">修改选中成员，不改变 CP。修形会使原层序失效。</p></section>}
       <section><h3>立体姿态</h3><p className="diagram-note">为谷折或峰折设置 0～180°，下一步主图与步骤动画按目标角度折叠。空间视角可调整观察方向；拖角用于图示修形，可恢复到原折叠姿态。</p></section></>}
-      {tab==='step'&&<section><h3>CP 连续关系</h3><div className="diagram-state-chain"><strong>CP{stepIndex}</strong><span>→ 第 {stepIndex+1} 步 →</span><strong>CP{stepIndex+1}</strong></div><p className="diagram-note">共 {project.steps.length} 个步骤、{project.states.length} 个 CP 状态。中间状态由相邻两步共享。</p></section>}
-      {tab==='project'&&<><section><h3>折序工程</h3><label className="diagram-text-field"><span>工程名称</span><input aria-label="折序工程名称" value={draftName} onChange={e=>setDraftName(e.target.value)} maxLength={200} onBlur={e=>{const name=e.target.value.trim();if(name)commit({...projectRef.current,name});else setDraftName(project.name);}}/></label><div className="diagram-button-row"><button onClick={open}>打开工程</button><button className="diagram-primary" onClick={save}>保存工程</button></div><button className="diagram-full-button" onClick={openPDFExport}>导出图解 / 步骤图片</button><div className="diagram-button-row"><button disabled={backupSaving} onClick={()=>void downloadProjectBackup()}>{backupSaving?'正在保存备份…':'保存工程备份'}</button><button disabled={svgExporting||!pose&&!annotations.length&&!images.length&&!step.callouts?.length} onClick={()=>void exportDrawing()}>{svgExporting?"正在导出…":"当前步骤 SVG"}</button></div><p className="diagram-note">折序工程独立保存，包含 CP 状态链、步骤说明、模型修形、绘图折线、折纸符号与观察视图。</p></section><section><h3>本地草稿</h3><p className="diagram-note">{storageMessage}。切换工作区保留内容，重新打开应用时恢复本地暂存。</p><button className="diagram-full-button" onClick={newFromCurrentCP}>从当前 CP 新建折序工程</button></section></>}
+      {tab==='step'&&<section><h3>CP 连续关系</h3><div className="diagram-state-chain"><strong>{beforeLabel}</strong><span>→ 第 {stepNumber} 步 →</span><strong>{afterLabel}</strong></div><p className="diagram-note">共 {project.steps.length} 个步骤、{project.states.length} 个 CP 状态。中间状态由相邻两步共享。</p></section>}
+      {tab==='project'&&<><section><h3>折序工程</h3><label className="diagram-text-field"><span>工程名称</span><input aria-label="折序工程名称" value={draftName} onChange={e=>setDraftName(e.target.value)} maxLength={200} onBlur={e=>{const name=e.target.value.trim();if(name)commit({...projectRef.current,name});else setDraftName(project.name);}}/></label><div className="diagram-button-row"><button onClick={open}>打开工程</button><button className="diagram-primary" onClick={()=>void saveFile()}>保存工程</button></div><button className="diagram-full-button" onClick={openPDFExport}>导出图解 / 步骤图片</button><div className="diagram-button-row"><button disabled={backupSaving} onClick={()=>void downloadProjectBackup()}>{backupSaving?'正在保存备份…':'保存工程备份'}</button><button disabled={svgExporting||!pose&&!annotations.length&&!images.length&&!step.callouts?.length} onClick={()=>void exportDrawing()}>{svgExporting?"正在导出…":"当前步骤 SVG"}</button></div><p className="diagram-note">折序工程独立保存，包含 CP 状态链、步骤说明、模型修形、绘图折线、折纸符号与观察视图。</p></section><section><h3>本地草稿</h3><p className="diagram-note">{storageMessage}。切换工作区保留内容，重新打开应用时恢复本地暂存。</p><button className="diagram-full-button" onClick={newFromCurrentCP}>从当前 CP 新建折序工程</button></section></>}
     </div><footer>{project.steps.length} 个步骤 / {project.states.length} 个 CP 状态</footer></aside></>}
-    <input ref={openInput} hidden type="file" accept=".json,.diagram.json" onChange={e=>{const file=e.target.files?.[0];e.target.value='';if(file)void readDiagramFile(file);}}/>
+    <input ref={openInput} hidden type="file" accept=".zds,.json,.diagram.json" onChange={e=>{const file=e.target.files?.[0];e.target.value='';if(file)void readDiagramFile(file);}}/>
     <input ref={imageInput} hidden type="file" accept="image/png,image/jpeg,image/webp" onChange={event=>{const file=event.target.files?.[0];event.target.value='';if(file)void importImage(file);}}/>
+    <input ref={processImageInput} hidden type="file" aria-label="导入过程图图片" accept="image/png,image/jpeg,image/webp" onChange={event=>{const file=event.target.files?.[0],target=processImageTarget.current;event.target.value='';processImageTarget.current=null;if(file&&target)void importImage(file,target);}}/>
+    {branchInsert?.stepId===step.id&&branchInsert.generation===projectGeneration&&active&&!libraryOpen&&<DiagramBranchInsertDialog
+      project={drawingProject} numbering={numbering} position={branchInsert.position} onClose={()=>setBranchInsert(null)}
+      onApply={(leafId,anchorId)=>addStepAt(leafId,anchorId,branchInsert.position)}/>}
+    {insertTarget===step.id&&active&&!libraryOpen&&<AppDialog title={`在第 ${stepNumber} 步插入`} size="small" bodyClassName="diagram-step-insert-options" onClose={()=>setInsertTarget(null)}>
+      <section aria-label="插入步骤"><h3>折叠步骤</h3>
+        <button onClick={()=>requestStepInsertion('before')}>在此步前插入一步</button>
+        <button onClick={()=>requestStepInsertion('after')}>在此步后插入一步</button>
+      </section>
+      <section aria-label="添加过程图"><h3>过程图</h3><p>排在本步后面，沿用本步编号，可单独画箭头和写说明。</p>
+        <button disabled={!pose&&!simulationSurface&&!annotations.length&&!images.length&&!step.callouts?.length} onClick={copyCurrentFigure}>复制当前折图</button>
+        <button onClick={()=>{setInsertTarget(null);openStepAnimation();}}>从步骤动画截取</button>
+        <button onClick={()=>{processImageTarget.current={stepId:step.id,generation:fileGeneration.current};flushSync(()=>setInsertTarget(null));processImageInput.current?.click();}}>从本地图片导入</button>
+      </section>
+    </AppDialog>}
+    {figureEditor&&figureEditor.ownerId===step.id&&figureEditor.generation===projectGeneration&&active&&!libraryOpen&&<DiagramProcessFigureEditor parent={project} host={step} symbolStyles={symbolStyles}
+      key={figureEditor.figure.activeStepId} initial={figureEditor.figure} label={`第 ${stepNumber} 步`} onClose={()=>setFigureEditor(null)}
+      onSave={finishFigure} onRemove={figureEditor.existing?()=>finishFigure():undefined}/>}
     <input ref={cpInput} hidden type="file" accept=".json,.fold,.cp,.opx,.ori,.orh" onChange={async e=>{const file=e.target.files?.[0],target=importTarget.current;importTarget.current=null;e.target.value='';if(!file||!target)return;try{const result=await readProjectFile(file);if(!mounted.current)return;if(!activeRef.current||projectRef.current!==target.project){message('读取期间工程或步骤已变化，未覆盖当前 CP；请重新导入。');return;}applyCP(target.stateId,result.doc,result.warnings);}catch(cause){message(errorText(cause));}}}/>
-    {basicDialog&&active&&<DiagramBasicSettingsDialog initial={basicDialog.initial} name={basicDialog.name} creating={basicDialog.mode!=='edit'} currentPaper={basicDialog.mode==='new'?doc:undefined} paperEditable={basicDialog.mode==='new'||basicDialog.mode==='edit'&&canChangeDiagramBasicPaper(project)&&basicDialog.initial.paper.shape!=='custom'} busy={basicBusy} error={basicDialog.mode==='new'?libraryError:''} onSubmit={applyBasicDialog} onClose={()=>setBasicDialog(null)}/> }
+    {basicDialog&&active&&<DiagramBasicSettingsDialog initial={basicDialog.initial} name={basicDialog.name} creating={basicDialog.mode!=='edit'} project={basicDialog.mode==='edit'?basicDialog.project:undefined} currentPaper={basicDialog.mode==='new'?doc:undefined} paperEditable={basicDialog.mode==='new'||basicDialog.mode==='edit'&&canChangeDiagramBasicPaper(project)&&basicDialog.initial.paper.shape!=='custom'} busy={basicBusy} error={basicDialog.mode==='new'?libraryError:''} onSubmit={applyBasicDialog} onClose={()=>setBasicDialog(null)}/> }
     {renameOpen&&active&&<RenameDiagramDialog name={project.name} onRename={renameCurrentProject} onClose={()=>setRenameOpen(false)}/>}
     {diagnosticOpen&&currentDiagnostic&&active&&!libraryOpen&&<DiagramSpatialDiagnosticView diagnostic={currentDiagnostic} onClose={()=>setDiagnosticOpen(false)}/>}
     {rotateCopyAngle!==null&&active&&<AppDialog title="旋转复制" size="small" onClose={()=>setRotateCopyAngle(null)}
@@ -2506,13 +2960,19 @@ const DiagramWorkspace=forwardRef<DiagramWorkspaceHandle,DiagramWorkspaceProps>(
     </AppDialog>}
     {deleteTarget&&active&&<AppDialog title="删除绘图" aria-label="删除绘图确认" data-delete-document="diagram" data-delete-document-id={deleteTarget.id} size="small" className="diagram-library-window" onClose={cancelLibraryDeletion} initialFocusRef={deleteCancel} busy={deleting} closeDisabled={deleting} footer={<><button ref={deleteCancel} type="button" className="ui-button" onClick={cancelLibraryDeletion} disabled={deleting}>取消</button><button type="button" className="ui-button is-danger" onClick={()=>void deleteLibraryDocument()} disabled={deleting||!!busy}>删除绘图</button></>}><p>确定删除绘图「<strong className="document-delete-name">{deleteTarget.name}</strong>」？</p><p>此绘图的草稿和手动保存版本都会删除，且无法恢复。建议先下载工程备份。</p>{libraryError&&<p role="alert">删除未完成：{libraryError}</p>}</AppDialog>}
     {fileOpening&&active&&<DiagramFileOpeningDialog state={fileOpening} onCancel={cancelFileImport}/>}
-    {confirmReplace&&active&&<ReplaceProjectDialog name={confirmReplace.name} onCancel={()=>{const {action,...details}=replacementLog.current;recordActivity(`${action}.cancel`,{...details,stage:'replace'});setConfirmReplace(null);}} onSave={save} onOpen={()=>void (confirmReplace instanceof File?loadDiagramFile(confirmReplace):completeProjectReplacement(confirmReplace))}/>}
-    {zoomDialog&&active&&!libraryOpen&&zoomDialog.stepId===step.id&&<DiagramZoomRegionDialog svg={drawingSVG(pose,annotations.filter(annotation=>annotation.id!==zoomDialog.annotation.id),'','',foldPreview.valid?foldPreview.preview:undefined,images,paperVisible,lineDefaults,step.callouts,calloutCPMarkup,{enabled:adaptiveLines},undefined,0,simulationSurface)} bounds={zoomDialog.bounds} initial={zoomDialog.initial} onConfirm={confirmZoomRegion} onClose={()=>setZoomDialog(null)}/>}
+    {confirmReplace&&active&&<ReplaceProjectDialog name={confirmReplace.name} onCancel={()=>{const {action,...details}=replacementLog.current;recordActivity(`${action}.cancel`,{...details,stage:'replace'});setConfirmReplace(null);}} onSave={diskBinding.current?()=>void saveFile():save} onOpen={()=>void (confirmReplace instanceof File?loadDiagramFile(confirmReplace):completeProjectReplacement(confirmReplace))}/>}
+    {zoomDialog&&active&&!libraryOpen&&zoomDialog.stepId===step.id&&<DiagramZoomRegionDialog svg={drawingSVG(pose,annotations.filter(annotation=>annotation.id!==zoomDialog.annotation.id),'','',foldPreview.valid?foldPreview.preview:undefined,images,paperVisible,lineDefaults,step.callouts,calloutCPMarkup,{enabled:adaptiveLines,symbolStyles},undefined,0,simulationSurface,project.basicSettings?.paperPatterns)} bounds={zoomDialog.bounds} initial={zoomDialog.initial} onConfirm={confirmZoomRegion} onClose={()=>setZoomDialog(null)}/>}
     {calloutDialog&&active&&<DiagramCalloutDialog type={calloutDialog.type} initialSourcePoint={calloutDialog.sourcePoint} initialCallout={calloutDialog.editId?step.callouts?.find(item=>item.id===calloutDialog.editId):undefined} pose={pose} annotations={annotations} images={images} lineDefaults={lineDefaults} before={before} after={after} mainSVG={calloutMainSVG} onConfirm={createCallout} onClose={()=>setCalloutDialog(null)}/>}
-    {pdfOpen&&active&&<DiagramPDFExport editorDoc={doc} project={project} lineDefaults={lineDefaults} options={pdfOptions} onOptionsChange={onPDFOptionsChange} onClose={()=>setPDFOpen(false)} onMessage={message}/>}
-    {captureTarget&&active&&!libraryOpen&&captureTarget.stepId===step.id&&<DiagramSimulationCapture colors={currentView.colors??defaultModelColors()} onApplyAngles={applySimulationAngles} onApplySurface={applySimulationSurface} before={before.doc} after={after.doc} title={step.title||`第 ${stepIndex+1} 步`} onClose={()=>setCaptureTarget(null)} onCapture={(capture,name,signal)=>insertSimulationImage(capture,name,captureTarget.stepId,captureTarget.generation,signal)}/>}
+    {editorCPTarget&&editorCPSources&&active&&!libraryOpen&&editorCPTarget.owner===project&&<DiagramEditorCPSourceDialog sources={editorCPSources} target={editorCPTarget.label} onClose={()=>setEditorCPTarget(null)} onApply={source=>{
+      if(activeRef.current&&mounted.current&&projectRef.current===editorCPTarget.owner)applyCP(editorCPTarget.stateId,source);
+      setEditorCPTarget(null);
+    }}/>}
+    {pdfOpen&&active&&<WorkspaceExportDialog key={projectGeneration} editorDoc={doc} project={drawingProject} lineDefaults={lineDefaults} readSettings={()=>projectRef.current.exportSettings} onSettingsChange={changeExportSettings} onSaveProject={saveFile} onClose={closePDFExport} onMessage={message}/>}
+    {captureTarget&&active&&!libraryOpen&&captureTarget.stepId===step.id&&<DiagramSimulationCapture patterns={project.basicSettings?.paperPatterns??readPaperPatterns(before.doc.metadata?.paperPatterns)} colors={currentView.colors??defaultModelColors()} onApplyAngles={applySimulationAngles} onApplySurface={applySimulationSurface} before={before.doc} after={after.doc} title={step.title||`第 ${stepNumber} 步`} onClose={()=>setCaptureTarget(null)} onCapture={(capture,name,signal)=>insertSimulationImage(capture,name,captureTarget.stepId,captureTarget.generation,signal)}/>}
     {fullAnimation&&active&&!libraryOpen&&fullAnimation===project&&<DiagramFullAnimation project={fullAnimation} initialIndex={stepIndex} onClose={closeFullAnimation}/>}
-    {stepAnimation&&active&&!libraryOpen&&stepAnimation.source===project&&<DiagramStepAnimation clip={stepAnimation.clip} revision={stepAnimation.revision} title={stepAnimation.title} onClose={closeStepAnimation} onCapture={(capture,name,signal)=>insertSimulationImage(capture,name,step.id,fileGeneration.current,signal)}/>}
+    {stepAnimation&&active&&!libraryOpen&&stepAnimation.source===project&&<DiagramStepAnimation
+      key={stepAnimation.revision} project={stepAnimation.source} blenderDocumentId={documentId??`draft:${window.desktop?.documentId??project.states[0].id}`} stepId={stepAnimation.stepId}
+      patterns={project.basicSettings?.paperPatterns??readPaperPatterns(before.doc.metadata?.paperPatterns)} revision={stepAnimation.revision} title={stepAnimation.title} onClose={closeStepAnimation} onCapture={(capture,name,signal)=>insertSimulationImage(capture,name,stepAnimation.stepId,projectGeneration,signal)} onCaptureFigure={(capture,name,signal)=>insertSimulationImage(capture,name,stepAnimation.stepId,projectGeneration,signal,true)}/>}
   </div>;
 });
 export {DiagramWorkspace as DiagramEditor};

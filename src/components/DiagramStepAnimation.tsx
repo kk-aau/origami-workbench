@@ -1,25 +1,43 @@
 import {appAsset} from '../app/webRuntime';
-import {useCallback, useEffect, useId, useRef, useState, type KeyboardEvent} from 'react';
+import {useCallback, useEffect, useId, useMemo, useRef, useState, type KeyboardEvent} from 'react';
 import type {DiagramStepAnimationClip} from '../app/diagramStepAnimation';
+import {diagramAnimationPreparation} from '../app/diagramAnimationPreparation';
+import type {DiagramProject} from '../app/diagramProject';
 import {startFlatLayerReanalysis, type FlatFoldTask} from '../core/workerClient';
-import {SimulatorBridge, type SimulatorStatus, type SimulationImageCapture} from '../engine/simulator';
+import {SimulatorBridge, type SimulatorStatus, type SimulationImageCapture,type SimulatorCommand} from '../engine/simulator';
 import {simulationLayerOrder} from '../engine/simLayerOrder';
 import {startSimulationStepPlanning,type SimulationStepPlanningTask} from '../engine/simStepPlanningClient';
 import type {SimulationCameraPreset} from '../engine/simDisplay';
 import type {SimulationStepMotion} from '../engine/simStepPath';
+import type {SimulationStepPlanningResult} from '../engine/simStepPlanningClient';
+import BlenderAnimationExport from './BlenderAnimationExport';
+import DiagramFullAnimation from './DiagramFullAnimation';
+import {diagramSinkGuide} from '../app/diagramSinkGuide';
+import {automaticSinkOperation,type AutomaticSinkOperation} from '../app/diagramAutomaticSinkPlayback';
+import {diagramBranchNumbering} from '../app/diagramBranches';
+import type {DiagramFullAnimationEntry} from '../app/diagramFullAnimation';
+import AppDialog from './AppDialog';
 import './DiagramStepAnimation.css';
 
 export interface DiagramStepAnimationProps {
-  clip: DiagramStepAnimationClip;
+  blenderDocumentId:string;
+  stepId:string;
+  patterns?:import('../app/paperPatterns').PaperPatterns;
+  project: DiagramProject;
   revision: string;
   title: string;
   onClose: () => void;
   onCapture?: (capture:SimulationImageCapture,name:string,signal?:AbortSignal) => Promise<void>;
+  onCaptureFigure?: (capture:SimulationImageCapture,name:string,signal?:AbortSignal) => Promise<void>;
 }
 
 const DURATION_MS = 4000;
 const STABLE_STRAIN = .03;
 const FOCUSABLE = 'button:not(:disabled),input:not(:disabled),select:not(:disabled),summary,iframe,[tabindex="0"]';
+
+function animationCameraCommand(preset:SimulationCameraPreset,authored:DiagramStepAnimationClip['camera']):SimulatorCommand {
+  return preset==='isometric'&&authored?{type:'zhezhi-sim-camera-pose',view:authored,preset}:{type:'zhezhi-sim-camera',preset};
+}
 
 function PlaybackIcon({kind}:{kind:'play'|'pause'|'replay'}) {
   return <svg viewBox="0 0 20 20" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
@@ -28,10 +46,67 @@ function PlaybackIcon({kind}:{kind:'play'|'pause'|'replay'}) {
 }
 
 /** An isolated preview: progress is a target pose; the solver may still settle after the timeline stops. */
-export default function DiagramStepAnimation({clip,revision,title,onClose,onCapture}:DiagramStepAnimationProps) {
+export default function DiagramStepAnimation(props:DiagramStepAnimationProps) {
+  const {project,stepId,onClose}=props;
+  const guide=useMemo(()=>diagramSinkGuide(project,stepId),[project,stepId]);
+  const automatic=useMemo(()=>guide?undefined:automaticSinkOperation(project,stepId),[project,stepId,guide]);
+  if(guide)return <DiagramFullAnimation project={project} initialIndex={guide.startIndex} onClose={onClose}
+    sink={{first:guide.startIndex,last:guide.guideIndex,step:props}}/>;
+  if(automatic)return <AutomaticSinkAnimation step={props} operation={automatic}/>;
+  return <SingleStepAnimation {...props}/>;
+}
+
+function AutomaticSinkAnimation({step,operation}:{step:DiagramStepAnimationProps;operation:AutomaticSinkOperation}){
+  type Preview={project:DiagramProject;entries:DiagramFullAnimationEntry[]};
+  const [preview,setPreview]=useState<Preview|null>(null),[error,setError]=useState(''),[ordinary,setOrdinary]=useState(false);
+  const [status,setStatus]=useState('正在从沉口轮廓计算辅助折线和撑开姿态…');
+  useEffect(()=>{
+    if(ordinary)return;
+    const {index,pattern}=operation;
+    const source=step.project;
+    setPreview(null);setError('');
+    let worker:Worker|undefined;
+    try{
+      worker=new Worker(new URL('../workers/diagramAutomaticSink.worker.ts',import.meta.url),{type:'module'});
+      worker.onmessage=({data}:MessageEvent<({type:'ready'}&Preview)|{type:'progress'|'error';message:string}>)=>{
+        if(data.type==='progress'){setStatus(data.message);return;}
+        if(data.type==='ready')setPreview({project:data.project,entries:data.entries});
+        else setError(data.message);
+        worker?.terminate();
+      };
+      worker.onerror=()=>{setError('沉折计算线程已中断。');worker?.terminate();};
+      worker.onmessageerror=()=>{setError('无法读取沉折中间姿态。');worker?.terminate();};
+      const project:DiagramProject={format:source.format,version:source.version,name:source.name,
+        basicSettings:source.basicSettings,activeStepId:source.steps[index].id,states:source.states.slice(index,index+3),
+        steps:source.steps.slice(index,index+2).map(({id,title,description,beforeId,afterId,pose,paperStates,foldLink,canvas,annotations})=>
+          ({id,title,description,beforeId,afterId,pose,paperStates,foldLink,canvas,annotations}))};
+      worker.postMessage({project,pattern});
+    }catch(reason){setError(reason instanceof Error?reason.message:'无法启动沉折计算。');}
+    return()=>worker?.terminate();
+  },[step.project,operation,ordinary]);
+  if(ordinary)return <SingleStepAnimation {...step}/>;
+  if(preview)return <DiagramFullAnimation project={preview.project} initialIndex={0} onClose={step.onClose}
+    sink={{first:0,last:1,step,operationIndex:operation.index,entries:preview.entries}}/>;
+  return <AppDialog title="步骤动画 · 沉折" onClose={step.onClose} size="small">
+    <p role={error?'alert':'status'}>{error||status}</p>
+    {error&&<button onClick={()=>setOrdinary(true)}>查看普通步骤动画</button>}
+  </AppDialog>;
+}
+
+function SingleStepAnimation({patterns,project,revision,title,onClose,onCapture,onCaptureFigure,blenderDocumentId,stepId}:DiagramStepAnimationProps) {
+  const input=useMemo(()=>diagramAnimationPreparation(project,stepId),[project,stepId]);
+  const numbering=useMemo(()=>project.branchSteps?.length?diagramBranchNumbering(project):undefined,[project]);
+  const beforeLabel=numbering?.cpLabels.get(project.steps[input.index].beforeId)??'CP'+input.index;
+  const afterLabel=numbering?.cpLabels.get(project.steps[input.index].afterId)??'CP'+(input.index+1);
+  const [clip,setClip]=useState<DiagramStepAnimationClip|null>(input.preparation.clip??null);
   const dialog = useRef<HTMLElement>(null), iframe = useRef<HTMLIFrameElement>(null), bridge = useRef<SimulatorBridge|null>(null);
+  const [coloredCreases,setColoredCreases]=useState(false),coloredCreasesRef=useRef(false);
+  const [fixedInactive,setFixedInactive]=useState(false),fixedInactiveRef=useRef(false);
+  const [quality,setQuality]=useState<'standard'|'fine'>('standard');
+  const qualityRef=useRef(quality);qualityRef.current=quality;
   const progressRef = useRef(0), playingRef = useRef(false), closeRef = useRef(onClose);
   const durationRef = useRef(DURATION_MS);
+  const planRef=useRef<SimulationStepPlanningResult|null>(null);
   const [progress,setProgress] = useState(0), [playing,setPlaying] = useState(false), [speed,setSpeed] = useState(1);
   const [loaded,setLoaded] = useState(false), [status,setStatus] = useState<SimulatorStatus|null>(null);
   const [camera,setCamera] = useState<SimulationCameraPreset|'free'>('isometric'), [pausedByUser,setPausedByUser] = useState(false);
@@ -75,10 +150,35 @@ export default function DiagramStepAnimation({clip,revision,title,onClose,onCapt
   },[]);
 
   useEffect(()=>{
+    if(input.preparation.clip){setClip(input.preparation.clip);return;}
+    let worker:Worker|undefined,disposed=false;
+    const stop=()=>{worker?.terminate();worker=undefined;};
+    const fail=(reason:string)=>{if(!disposed)setPlanningError(reason);stop();};
+    // Give the dialog a paint before structured-cloning a potentially large project.
+    let frame=requestAnimationFrame(()=>{
+      frame=requestAnimationFrame(()=>{
+        try{
+          worker=new Worker(new URL('../workers/diagramStepAnimation.worker.ts',import.meta.url),{type:'module'});
+          worker.onmessage=({data}:MessageEvent<{clip:DiagramStepAnimationClip}|{error:string}>)=>{
+            if(disposed)return;
+            if('error' in data){fail(data.error);return;}
+            const clip={...data.clip,beforeLabel:'CP'+input.index,afterLabel:'CP'+(input.index+1)};
+            input.rememberClip(clip);setClip(clip);stop();
+          };
+          worker.onerror=()=>fail('步骤动画准备线程异常，请重新打开。');
+          worker.onmessageerror=()=>fail('无法读取步骤动画准备结果。');
+          worker.postMessage({project:input.workerProject(),stepId});
+        }catch(error){fail(error instanceof Error?error.message:'无法准备本步动画。');}
+      });
+    });
+    return()=>{disposed=true;cancelAnimationFrame(frame);stop();};
+  },[input,stepId]);
+
+  useEffect(()=>{
     const frame=iframe.current;
-    if(!frame)return;
+    if(!frame||!clip)return;
     let disposed=false, frameDocument:Document|null=null, layerJob:FlatFoldTask|null=null,planningJob:SimulationStepPlanningTask|null=null;
-    progressRef.current=0;
+    progressRef.current=0;planRef.current=null;
     playingRef.current=false;
     setProgress(0);setPlaying(false);setLoaded(false);setStatus(null);setPausedByUser(false);setCamera('isometric');
     setPlanningError(null);setPreparing('正在计算折叠路径…');setPathMethod('');setPathBatches([]);setPressAngle(null);setPathWarnings([]);setEndAngleError(null);setCurvedPreview(false);durationRef.current=DURATION_MS;
@@ -94,10 +194,13 @@ export default function DiagramStepAnimation({clip,revision,title,onClose,onCapt
       }
     });
     bridge.current=connection;
-    planningJob=startSimulationStepPlanning(clip.fold,{...clip.animation,collisionPolicy:'allow',motionPolicy:'allow-dynamic'},{initialGeometry:clip.initialGeometry,initialContactOrder:clip.initialContactOrder,onProgress:message=>{if(!disposed)setPreparing(message);}});
-    void planningJob.promise.then(result=>{
+    if(!input.preparation.plan)planningJob=startSimulationStepPlanning(clip.fold,{...clip.animation,collisionPolicy:'allow',motionPolicy:'allow-dynamic'},{initialGeometry:clip.initialGeometry,initialContactOrder:clip.initialContactOrder,initialDisplayOrder:clip.initialDisplayOrder,onProgress:message=>{if(!disposed)setPreparing(message);}});
+    const planned=planningJob?.promise??Promise.resolve(input.preparation.plan!);
+    void planned.then(result=>{
       if(disposed)return;
       setPathMethod(result.method);
+      if(!input.preparation.plan)input.rememberPlan(result);
+      planRef.current=result;
       setPathWarnings(result.warnings??[]);
       setEndAngleError(result.animation.dynamic?.endAngleError??null);
       setCurvedPreview(result.animation.materialMode==='bendable');
@@ -107,9 +210,13 @@ export default function DiagramStepAnimation({clip,revision,title,onClose,onCapt
       durationRef.current=DURATION_MS*Math.max(1,batches.length);
       const playbackFold=result.fold??clip.fold;
       connection.send({type:'zhezhi-sim-load',fold:playbackFold,revision,animation:result.animation});
+      connection.send({type:'zhezhi-sim-render-quality',quality:qualityRef.current});
+      connection.send({type:'zhezhi-sim-fixed-inactive-layers',enabled:fixedInactiveRef.current});
+      connection.send({type:'zhezhi-sim-crease-style',style:coloredCreasesRef.current?'assignment':'crease'});
+      connection.send({type:'zhezhi-sim-paper-print',patterns});
       connection.send({type:'zhezhi-sim-colors',front:clip.colors.front,back:clip.colors.back,line:clip.colors.line});
       connection.send({type:'zhezhi-sim-view',mode:'paper'});
-      connection.send(clip.camera?{type:'zhezhi-sim-camera-pose',view:clip.camera}:{type:'zhezhi-sim-camera',preset:'isometric'});
+      connection.send(animationCameraCommand('isometric',clip.camera));
       if(result.animation.layerTimeline){
         const faceOrders=result.animation.layerTimeline.at(-1)!.faceOrders;
         const order=faceOrders.length?{sourceSignature:result.animation.sourceSignature,sourceFaceCount:clip.initialGeometry?.geometry.faces.length??clip.fold.faces_vertices!.length,faceOrders}:null;
@@ -157,7 +264,7 @@ export default function DiagramStepAnimation({clip,revision,title,onClose,onCapt
       connection.dispose();
       if(bridge.current===connection)bridge.current=null;
     };
-  },[clip,revision]);
+  },[clip,revision,input]);
 
   useEffect(()=>{
     if(!playing||!loaded)return;
@@ -209,17 +316,17 @@ export default function DiagramStepAnimation({clip,revision,title,onClose,onCapt
     progressRef.current=value;setProgress(value);
     bridge.current?.send({type:'zhezhi-sim-progress',value});
   }
-  async function captureCurrentStep(){
+  async function captureCurrentStep(save=onCapture){
     const connection=bridge.current;
-    if(!onCapture||!connection||!loaded||status?.status==='error'||captureAbort.current)return;
+    if(!save||!connection||!loaded||status?.status==='error'||captureAbort.current)return;
     pause();setCaptureError('');setCapturingImage(true);
     const controller=new AbortController();captureAbort.current=controller;
     const current=()=>captureAbort.current===controller&&!controller.signal.aborted&&bridge.current===connection;
     const name=`${title||'本步折叠'} · ${Math.round(progressRef.current*100)}%`;
     try{
-      const capture=await connection.captureImage({signal:controller.signal});
+      const capture=await connection.captureImage({signal:controller.signal,trimTransparent:true,vectorFrame:true});
       if(!current())return;
-      await onCapture(capture,name,controller.signal);
+      await save(capture,name,controller.signal);
       if(current())close();
     }catch(error){
       if(current())setCaptureError(`截取失败：${error instanceof Error?error.message:'无法截取当前步骤，请重试。'}`);
@@ -259,9 +366,16 @@ export default function DiagramStepAnimation({clip,revision,title,onClose,onCapt
         <div><p>折序绘图 · 步骤动画</p><h2 id={titleId}>{title||'本步折叠'}</h2></div>
         <button type="button" className="diagram-animation-close" aria-label="关闭步骤动画" onClick={close}>×</button>
       </header>
+      {!clip?<div className="diagram-animation-stage" id={descriptionId}>
+        {planningError?<div className="diagram-animation-error" role="alert"><strong>此步骤暂时无法演示</strong><p>{planningError}</p></div>
+          :<div className="diagram-animation-loading" role="status"><span aria-hidden="true"/><p>正在准备本步纸面…</p></div>}
+      </div>:<>
       <div className="diagram-animation-viewbar">
-        <span className={'diagram-animation-state'+(failed?' is-error':'')} role="status"><i aria-hidden="true"/>{stateText}{loaded&&!failed&&pathMethod&&<small className="diagram-animation-path">{pathMethod==='dynamic'?(curvedPreview?'曲面预览':'数值折叠'):pathMethod==='local-flex'?`局部柔性压痕${pressAngle===null?'':` · 峰值 ${Number(pressAngle.toFixed(1))}°`}`:pathMethod==='scheduled'?'自定义时序':pathMethod==='batched'?'自动分批':pathMethod==='coupled'?'联动折叠':pathMethod==='sequential'?'分段折叠':'同步折叠'}</small>}</span>
-        <div role="group" aria-label="动画视角">{([['front','正面'],['back','背面'],['isometric','立体']] as const).map(([value,label])=><button type="button" key={value} aria-label={`动画${label}视角`} aria-pressed={camera===value} disabled={!ready} onClick={()=>{setCamera(value);bridge.current?.send({type:'zhezhi-sim-camera',preset:value});}}>{label}</button>)}</div>
+        <span className={'diagram-animation-state'+(failed?' is-error':'')} role="status"><i aria-hidden="true"/>{stateText}{loaded&&!failed&&pathMethod&&<small className="diagram-animation-path" title="动作演示按选定路径播放，全程碰撞检查另行执行。">{pathMethod==='dynamic'?(curvedPreview?'曲面预览':'数值折叠'):pathMethod==='local-flex'?`局部柔性压痕${pressAngle===null?'':` · 峰值 ${Number(pressAngle.toFixed(1))}°`}`:pathMethod==='scheduled'?'自定义时序':pathMethod==='batched'?'自动分批':pathMethod==='coupled'?'联动折叠':pathMethod==='sequential'?'分段折叠':'同步折叠'}</small>}</span>
+        <div role="group" aria-label="渲染方式">{(['standard','fine'] as const).map(mode=><button type="button" key={mode} aria-pressed={quality===mode} onClick={()=>{setQuality(mode);qualityRef.current=mode;bridge.current?.send({type:'zhezhi-sim-render-quality',quality:mode});}}>{mode==='fine'?'精细渲染':'标准渲染'}</button>)}</div>
+        <button type="button" aria-pressed={coloredCreases} title="按操作后 CP 显示本步目标折痕，蓝谷、红峰随纸面正反面切换" onClick={()=>{const enabled=!coloredCreases;setColoredCreases(enabled);coloredCreasesRef.current=enabled;bridge.current?.send({type:'zhezhi-sim-crease-style',style:enabled?'assignment':'crease'});}}>折痕样式</button>
+        <button type="button" aria-pressed={fixedInactive} title="未参与运动的纸层保持原位，参与及随动纸层照常运动。" onClick={()=>{const enabled=!fixedInactive;setFixedInactive(enabled);fixedInactiveRef.current=enabled;bridge.current?.send({type:'zhezhi-sim-fixed-inactive-layers',enabled});}}>固定未参与纸层</button>
+        <div role="group" aria-label="动画视角">{([['front','正面'],['back','背面'],['isometric','立体']] as const).map(([value,label])=><button type="button" key={value} aria-label={`动画${label}视角`} aria-pressed={camera===value} disabled={!ready} onClick={()=>{setCamera(value);bridge.current?.send(animationCameraCommand(value,clip.camera));}}>{label}</button>)}</div>
       </div>
       <div className="diagram-animation-stage">
         <iframe ref={iframe} src={appAsset('simulator/index.html')} title="步骤折叠动画画布"/>
@@ -270,8 +384,8 @@ export default function DiagramStepAnimation({clip,revision,title,onClose,onCapt
         <span className="diagram-animation-viewhint">拖动旋转 · 滚轮缩放</span>
       </div>
       <footer className="diagram-animation-controls">
-        <div className="diagram-animation-timeline-labels"><span>操作前 <strong>{clip.beforeLabel}</strong></span><output aria-label="当前动画进度">{percent}<small>%</small></output><span>操作后 <strong>{clip.afterLabel}</strong></span></div>
-        <input className="diagram-animation-timeline" aria-label="步骤动画进度" aria-valuetext={`${percent}%，${clip.beforeLabel} 至 ${clip.afterLabel}`} type="range" min="0" max="1" step=".001" value={progress} disabled={!ready} onChange={event=>seek(Number(event.target.value))}/>
+        <div className="diagram-animation-timeline-labels"><span>操作前 <strong>{beforeLabel}</strong></span><output aria-label="当前动画进度">{percent}<small>%</small></output><span>操作后 <strong>{afterLabel}</strong></span></div>
+        <input className="diagram-animation-timeline" aria-label="步骤动画进度" aria-valuetext={`${percent}%，${beforeLabel} 至 ${afterLabel}`} type="range" min="0" max="1" step=".001" value={progress} disabled={!ready} onChange={event=>seek(Number(event.target.value))}/>
         {!!clip.animation.timings?.length&&<div className="diagram-animation-batches"><span>按各折痕的启动条件执行，可重叠折叠。</span></div>}
         {batches.length>1&&!clip.animation.timings?.length&&<div className="diagram-animation-batches">
           <output aria-label="当前动画子步骤">第 {batchIndex+1} / {batches.length} 批 · {batchAction}</output>
@@ -279,14 +393,15 @@ export default function DiagramStepAnimation({clip,revision,title,onClose,onCapt
           <span>批内并行，按批次依次执行</span>
         </div>}
         <div className="diagram-animation-playbar">
-          <div className="diagram-animation-play-buttons"><button type="button" className="diagram-animation-primary" aria-label={playing?'暂停步骤动画':progress>=1?'重新播放步骤动画':'播放步骤动画'} disabled={!ready} onClick={()=>playing?pause():play()}><PlaybackIcon kind={playing?'pause':'play'}/>{playing?'暂停':'播放'}</button><button type="button" disabled={!ready} onClick={()=>play(true)} aria-label="从头重播步骤动画"><PlaybackIcon kind="replay"/>重播</button>{onCapture&&<button type="button" aria-label="截取本步图片" aria-busy={capturingImage||undefined} disabled={!ready} onClick={()=>void captureCurrentStep()}>{capturingImage?'正在截取…':'截取本步图片'}</button>}</div>
+          <div className="diagram-animation-play-buttons"><button type="button" className="diagram-animation-primary" aria-label={playing?'暂停步骤动画':progress>=1?'重新播放步骤动画':'播放步骤动画'} disabled={!ready} onClick={()=>playing?pause():play()}><PlaybackIcon kind={playing?'pause':'play'}/>{playing?'暂停':'播放'}</button><button type="button" disabled={!ready} onClick={()=>play(true)} aria-label="从头重播步骤动画"><PlaybackIcon kind="replay"/>重播</button>{onCapture&&<button type="button" aria-label="截取本步图片" aria-busy={capturingImage||undefined} disabled={!ready} onClick={()=>void captureCurrentStep()}>{capturingImage?'正在截取…':'截取本步图片'}</button>}{onCaptureFigure&&<button type="button" disabled={!ready} onClick={()=>void captureCurrentStep(onCaptureFigure)}>存为过程图</button>}</div>
+          <BlenderAnimationExport key={JSON.stringify([revision,blenderDocumentId,stepId])} target={{documentId:blenderDocumentId,stepId}} position={{stepIndex:0,progress}} source={ready&&planRef.current?{step:{clip,plan:planRef.current,duration:durationRef.current},patterns,title,speed}:null}/>
           <p id={descriptionId}>拖动进度条查看这一步的折叠过程。</p>
           <label className="diagram-animation-speed"><span>速度</span><select aria-label="步骤动画播放速度" value={speed} onChange={event=>setSpeed(Number(event.target.value))}><option value="0.5">0.5×</option><option value="1">1×</option><option value="2">2×</option></select></label>
         </div>
         {captureError&&<p className="diagram-animation-collision-note" role="alert">{captureError}</p>}
         {pathMethod==='dynamic'&&endAngleError!==null?<p className="diagram-animation-collision-note" role="status">{curvedPreview?'曲面':'数值'}预览 · 终点最大折角偏差 {endAngleError.toFixed(1)}°。{targetPending?'100% 表示目标进度，实际纸面尚未达到指定折角。':'实际折角已接近目标。'}</p>:pathWarnings.length>0&&<p className="diagram-animation-collision-note" role="status">本步提示见上方说明。</p>}
         {((clip.warnings?.length??0)+pathWarnings.length)>0&&<details className="diagram-animation-warnings"><summary>本步提示 · {(clip.warnings?.length??0)+pathWarnings.length}</summary><ul>{[...(clip.warnings??[]),...pathWarnings].map((warning,index)=><li key={index}>{warning}</li>)}</ul></details>}
-      </footer>
+      </footer></>}
     </section>
   </div>;
 }

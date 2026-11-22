@@ -18,3 +18,19 @@ test('animation outlines retain boundary weight while the same interior fold use
   assert.equal(count('M',3),fold,'mountain and valley have the same fine solid line');
   assert.ok(count('B',3)>fold*1.8,'the same edge becomes a visibly heavier boundary despite pixel-centre quantisation');
 });
+
+test('unchanged creases retain neutral ink in both raster captures and vector process figures',async()=>{
+  const {meshTopologyFor}=await import('../../vendor/simulator/oristudio/packages/origami-simulator/src/webgl/meshRenderer');
+  const {renderMeshToSvg}=await import('../../vendor/simulator/oristudio/packages/origami-simulator/src/svgRenderer');
+  const model={indices:new Uint32Array(),edgesVertices:[[0,1],[2,3]] as [number,number][],edgesAssignment:['V','M'] as FoldAssignment[]};
+  const positions=new Float32Array([-.7,0,-.3,.7,0,-.3,-.7,0,.3,.7,0,.3]);
+  const camera=cameraUniforms({yaw:0,pitch:0,zoom:.8},[0,0,0],1,200,200);
+  const settings={frontColor:[1,1,1],backColor:[1,1,1],mountainColor:[1,0,0],valleyColor:[0,0,1],borderColor:[0,0,0],background:[1,1,1],showFaces:false,showEdges:true,lighting:false,faceAlpha:1,creaseWidthPx:2,creaseDash:{border:null,mountain:null,valley:null}} as RenderSettings;
+  const mask=new Set([0]),raster=new SimulationRasterizer();
+  const image=raster.render(positions,model,camera,settings,undefined,undefined,undefined,undefined,mask);
+  let red=0,blue=0,black=0;
+  for(let i=0;i<image.length;i+=4){if(image[i]===255&&image[i+1]===0&&image[i+2]===0)red++;if(image[i]===0&&image[i+1]===0&&image[i+2]===255)blue++;if(image[i]===0&&image[i+1]===0&&image[i+2]===0)black++;}
+  assert.equal(red,0);assert.ok(blue>0);assert.ok(black>0);
+  const vector=renderMeshToSvg(positions,meshTopologyFor(model),camera,settings,{coloredEdges:mask})!;
+  assert.ok(vector);assert.match(vector.svg,/stroke="#0000ff"/);assert.match(vector.svg,/stroke="#000000"/);assert.doesNotMatch(vector.svg,/stroke="#ff0000"/);
+});

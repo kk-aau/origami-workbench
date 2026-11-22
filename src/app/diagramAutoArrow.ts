@@ -1,3 +1,4 @@
+import {DEFAULT_DIAGRAM_SYMBOL_PEN,overrideDiagramSymbolStyle} from './diagramSymbolStyles';
 import {epsilonFor} from '../core/geometry';
 import {materialFaceInside} from '../core/materialRings';
 import type {Point} from '../core/types';
@@ -93,6 +94,8 @@ export function createDiagramAutoArrow(project:DiagramProject,stepId:string,styl
   }).sort((a,b)=>b.score-a.score||a.sourceFace-b.sourceFace);
   const best=candidates[0];if(!best)throw Error('找不到层序明确且可见的移动纸面。请确认层序、显示移动纸面，或调整固定侧后重试。');
   const symbol=action==='precrease'?'unfold':action==='unfold'?'pull':direction*(pose.view?.side==='back'?-1:1)>0?'fold':'mountainFold';
-  const annotation=bindDiagramArrow(pose,fitDiagramArrow({id:style.id??crypto.randomUUID(),kind:'symbol',symbol,position:[0,0],size:30,rotation:0,color:style.color??'#293d35',width:style.width??.7,cadProperties:{}},best.start,best.finish),best.sourceFace);
+  const base:DiagramSymbolAnnotation={id:style.id??crypto.randomUUID(),kind:'symbol',symbol,position:[0,0],size:30,rotation:0,...DEFAULT_DIAGRAM_SYMBOL_PEN,appearanceOverrides:[],cadProperties:{}};
+  const pen={...(style.color!==undefined?{color:style.color}:{}),...(style.width!==undefined?{width:style.width}:{})};
+  const annotation=bindDiagramArrow(pose,fitDiagramArrow(overrideDiagramSymbolStyle(base,pen),best.start,best.finish),best.sourceFace);
   return {annotation,action,sourceFace:best.sourceFace,axis:[display(first),display(last)],warnings:clip.warnings??[]};
 }

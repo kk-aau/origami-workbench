@@ -31,5 +31,16 @@ test('custom cover CP replaces only the cover vector, preserving project states'
  const p=createDiagramProject(blankDoc('project',100,100)),before=structuredClone(p),custom=blankDoc('chosen',123,45);
  const options={...defaultDiagramPDFOptions(p),cover:'standard' as const,coverImage:'none' as const,coverCPDoc:custom,coverCPLabel:'CP · file <x>'};
  const plan=planDiagramPDF(p,options),svg=diagramPDFPageSVG(p,options,plan,0,defaultDiagramLineDefaults(),false);
- assert.equal(XMLValidator.validate(svg),true);assert(svg.includes('CP · file &lt;x&gt;'));assert.notEqual(svg,diagramPDFPageSVG(p,{...options,coverCPDoc:undefined},plan,0,defaultDiagramLineDefaults(),false));assert.deepEqual(p,before);
+ assert.equal(XMLValidator.validate(svg),true);assert(!svg.includes('CP · file'));assert.notEqual(svg,diagramPDFPageSVG(p,{...options,coverCPDoc:undefined},plan,0,defaultDiagramLineDefaults(),false));assert.deepEqual(p,before);
+});
+
+test('intro cover uses the CP paper outline without framing its square layout slot',()=>{
+  for(const [width,height] of [[100,200],[200,100]]){
+    const project=createDiagramProject(blankDoc('长方形',width,height));
+    const options=defaultDiagramPDFOptions(project),plan=planDiagramPDF(project,options);
+    const svg=diagramPDFPageSVG(project,options,plan,0,defaultDiagramLineDefaults(),true);
+    assert.equal(plan.pages[0].kind,'intro');
+    assert.doesNotMatch(svg,/<rect\b[^>]*fill="none"[^>]*stroke="#293d35"/);
+    assert.ok(svg.includes(`x2="${width}"`)&&svg.includes(`y2="${height}"`));
+  }
 });

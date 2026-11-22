@@ -1,3 +1,5 @@
+import {usePaperPixels} from './usePaperPixels';
+import type {PaperPatterns} from '../app/paperPatterns';
 import {useEffect,useMemo,useRef,useState,type PointerEvent} from 'react';
 import type {SimulationPose} from '../engine/simPose';
 import type {DiagramSpatialPose} from '../app/diagramSpatialPose';
@@ -13,7 +15,7 @@ type Camera=DiagramSpatialPose['camera'];
 type Drag={id:number;x:number;y:number;left:number;top:number;width:number;height:number;view:View;camera:Camera};
 /** Captured surfaces rotate without solving or modifying any vertex. Only
  * complete gestures enter project history; cancelled previews are disposable. */
-export default function DiagramSimulationSurfaceOrbit({surface,drawingRotation=0,onCommit,onExit}:{surface:DiagramSimulationSurface;drawingRotation?:number;onCommit:(view:View)=>void;onExit:()=>void}){
+export default function DiagramSimulationSurfaceOrbit({surface,patterns,drawingRotation=0,onCommit,onExit}:{patterns?:PaperPatterns;surface:DiagramSimulationSurface;drawingRotation?:number;onCommit:(view:View)=>void;onExit:()=>void}){
   const host=useRef<HTMLDivElement>(null),drag=useRef<Drag|null>(null),keyboard=useRef<View|null>(null),frame=useRef(0),axisStart=useRef<View|null>(null);
   const [view,setView]=useState(surface.pose.view),pending=useRef(view),[moving,setMoving]=useState(false),[gizmoShown,setGizmoShown]=useState(true);
   const [error,setError]=useState('');
@@ -35,7 +37,8 @@ export default function DiagramSimulationSurfaceOrbit({surface,drawingRotation=0
     try{props.current.onCommit(value);setError('');}catch(cause){update(props.current.surface.pose.view);setError(cause instanceof Error?cause.message:'视角未能保存。');}
   };
   useEffect(()=>{window.addEventListener('blur',cancel);return()=>window.removeEventListener('blur',cancel);},[]);
-  const artwork=useMemo(()=>renderDiagramSimulationSurface({...surface,pose:{...surface.pose,view}},{resolution:480}),[surface,view]);
+  const pixels=usePaperPixels(patterns);
+  const artwork=useMemo(()=>renderDiagramSimulationSurface({...surface,pose:{...surface.pose,view}},{resolution:480,patterns}),[surface,view,patterns,pixels]);
   const {x,y,width,height}=artwork.bounds,pad=Math.max(width,height)*.16;
   const box=viewport??{x:x-pad,y:y-pad,width:width+2*pad,height:height+2*pad};
   const totalRotation=drawingRotation+(surface.displayRotation??0);

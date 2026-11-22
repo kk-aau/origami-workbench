@@ -14,6 +14,10 @@ export interface RigidFoldGeometryOptions {
   /** Absolute signed targets. Zero is unfolded, including zero-angle M/V edges. */
   edgesFoldAngle?:readonly (number|null)[];
   startingFace?:number;
+  /** Material face used to construct the geometry before registering the fixed face. */
+  referenceFace?:number;
+  /** Refine an already near-closed rigid candidate using every material hinge. */
+  preferStableHinges?:boolean;
   /** Optional pose of the stationary face, not an additional fold-angle delta. */
   fixedFaceTransform?:RigidFoldTransform3D;
 }
@@ -69,6 +73,26 @@ function area(points:Point[],ring:number[]):number {
   for(let i=0;i<ring.length;i++){const b=points[ring[i]],c=points[ring[(i+1)%ring.length]];result+=(b[0]-a[0])*(c[1]-a[1])-(b[1]-a[1])*(c[0]-a[0]);}
   return result/2;
 }
+/** Characteristic paper width (net area / boundary length) favours broad
+ * material faces over slivers. The CP alone selects the construction frame. */
+export function rigidFoldReferenceFace(graph:FoldGraph):number {
+  const points=graph.vertices_coords;
+  let best=0,width=0;
+  for(let f=0;f<(graph.faces_vertices?.length??0);f++){
+    const rings=materialFaceRings(graph,f);
+    let net=0,perimeter=0;
+    for(const [h,ring] of rings.entries()){
+      net+=(h===0?1:-1)*Math.abs(area(points,ring));
+      ring.forEach((v,i)=>{
+        const a=points[v],b=points[ring[(i+1)%ring.length]];
+        perimeter+=Math.hypot(b[0]-a[0],b[1]-a[1]);
+      });
+    }
+    const score=net/perimeter;
+    if(score>width){width=score;best=f;}
+  }
+  return best;
+}
 function ringNormal(vertices:V[],ring:number[],sign:number):V {
   const a=vertices[ring[0]],sum:V=[0,0,0];
   for(let i=0;i<ring.length;i++){const n=cross(sub(vertices[ring[i]],a),sub(vertices[ring[(i+1)%ring.length]],a));for(let k=0;k<3;k++)sum[k]+=n[k]*sign;}
@@ -76,6 +100,61 @@ function ringNormal(vertices:V[],ring:number[],sign:number):V {
 }
 function onRing(point:Point,points:Point[],ring:number[]):boolean {
   return ring.some((v,i)=>{const a=points[v],b=points[ring[(i+1)%ring.length]];return !materialOrientation(a,b,point)&&point[0]>=Math.min(a[0],b[0])&&point[0]<=Math.max(a[0],b[0])&&point[1]>=Math.min(a[1],b[1])&&point[1]<=Math.max(a[1],b[1]);});
+}
+
+type Neighbour={face:number;weight:number};
+/** Diagonally preconditioned conjugate gradient for the grounded face graph.
+ * The fixed face has zero correction in every component. */
+function solveFrameCorrection(adj:Neighbour[][],degree:number[],root:number,rhs:number[]){
+  const solution=rhs.map(()=>0),residual=rhs.slice();
+  residual[root]=0;
+  let direction=residual.map((v,i)=>v/degree[i]);
+  const energy=()=>residual.reduce((sum,v,i)=>sum+v*v/degree[i],0);
+  let remaining=energy();
+  const target=remaining*1e-22;
+  for(let i=0;i<adj.length*4&&remaining>target;i++){
+    const product=adj.map((list,f)=>f===root?0:list.reduce((sum,n)=>sum+n.weight*(direction[f]-direction[n.face]),0));
+    const denominator=product.reduce((sum,v,f)=>sum+v*direction[f],0);
+    if(!(denominator>0))return;
+    const step=remaining/denominator;
+    for(let f=0;f<adj.length;f++){solution[f]+=step*direction[f];residual[f]-=step*product[f];}
+    const next=energy();
+    direction=residual.map((v,f)=>v/degree[f]+next/remaining*direction[f]);
+    remaining=next;
+  }
+  if(remaining<=target)return solution;
+}
+
+/** Different paths through a hinge loop can accumulate different tiny rigid
+ * transforms. Fit one correction per face to the relative transform on EVERY
+ * hinge. Longer crease segments provide a better baseline for its direction. */
+function refineHingeFrames(matrices:number[][],root:number,edges:[number,number][],points:Point[],uses:Occurrence[][],angles:number[],tolerance:number,angleTolerance:number){
+  if(matrices.length<2||uses.filter(row=>row.length===2).length<matrices.length)return;
+  const adj:Neighbour[][]=matrices.map(()=>[]),degree=matrices.map(()=>0),rhs=Array.from({length:6},()=>matrices.map(()=>0));
+  for(const [e,banks] of uses.entries()){
+    if(banks.length!==2)continue;
+    const [{face:i},{face:j,direction}]=banks,[a,b]=edges[e],axis=sub(cp(points[b]),cp(points[a])),weight=norm(axis);
+    const rotation=angles[e]===0?identity():ear.math.makeMatrix3Rotate(direction*angles[e]*Math.PI/180,unit(axis),cp(points[a]));
+    const inverse=ear.math.invertMatrix3(matrices[j]);if(!inverse)return;
+    const delta=ear.math.multiplyMatrices3(ear.math.multiplyMatrices3(matrices[i],rotation),inverse);
+    const twist=[(delta[5]-delta[7])/2,(delta[6]-delta[2])/2,(delta[1]-delta[3])/2,...delta.slice(9)];
+    // Only small closure residuals admit a linearized rigid correction.
+    if(delta.slice(0,9).some((v,k)=>Math.abs(v-(k%4===0?1:0))>angleTolerance*Math.PI/180)||Math.hypot(...twist.slice(3))>tolerance)return;
+    adj[i].push({face:j,weight});adj[j].push({face:i,weight});degree[i]+=weight;degree[j]+=weight;
+    twist.forEach((error,k)=>{rhs[k][j]+=weight*error;rhs[k][i]-=weight*error;});
+  }
+  const shifts:number[][]=[];
+  for(const component of rhs){
+    const shift=solveFrameCorrection(adj,degree,root,component);if(!shift)return;
+    shifts.push(shift);
+  }
+  for(let f=0;f<matrices.length;f++){
+    if(f===root)continue;
+    const [x,y,z,tx,ty,tz]=shifts.map(row=>row[f]),axis:V=[x,y,z],angle=norm(axis);
+    const correction=angle?ear.math.makeMatrix3Rotate(angle,unit(axis),[0,0,0]):identity();
+    correction.splice(9,3,tx,ty,tz);
+    matrices[f]=ear.math.multiplyMatrices3(correction,matrices[f]);
+  }
 }
 
 /** Exact requested endpoint by a face spanning tree, followed by independent
@@ -118,7 +197,21 @@ export function solveRigidFoldGeometry(graph:FoldGraph,options:RigidFoldGeometry
       const rs=materialFaceRings(graph,f);rings.push(rs);
       rs.forEach((ring,h)=>{
         if(!Array.isArray(ring)||ring.length<3||!ring.every(vertexIndex))fail('invalid','FACE','材料边界环的顶点索引无效。',{face:f});
-        if(new Set(ring).size!==ring.length)fail('unsupported','WEAK_FACE','此材料面包含重复边界顶点，需要先明确切口与刚性分面。',{face:f});
+        if(new Set(ring).size!==ring.length){
+          // A boundary walk can double back at a crease tip, or along a
+          // genuine slit. Only name a hinge if both darts use the same edge.
+          const explicit=h===0?graph.faces_edges?.[f]:graph.faces_holeEdges?.[f]?.[h-1];
+          for(let i=0;i<ring.length;i++){
+            const tip=ring[i],prev=(i+ring.length-1)%ring.length,a=ring[prev];
+            if(a!==ring[(i+1)%ring.length])continue;
+            const candidates=lookup.get(pairKey(a,tip))??[];
+            const e=explicit?.[i]??(candidates.length===1?candidates[0]:-1);
+            if(!candidates.includes(e)||(explicit&&explicit[prev]!==e)||!targetAngles[e]||!['M','V'].includes(assignments[e]))continue;
+            const at=points[tip].map(n=>Number(n.toFixed(4))).join(', ');
+            fail('unsupported','WEAK_FACE',`纸面 F${f+1} 的${assignments[e]==='M'?'峰':'谷'}折在 CP 坐标（${at}）处折返，两侧仍属于同一纸面。若要沿此线刚性折叠，请检查端点是否接到了预期的交点或纸边。`,{face:f,edge:e});
+          }
+          fail('unsupported','WEAK_FACE',`纸面 F${f+1} 包含重复边界顶点，需要先明确切口与刚性分面。`,{face:f});
+        }
         const signed=area(points,ring);
         if(!Number.isFinite(signed)||signed===0)fail('invalid','FACE','材料面退化，不能确定朝向。',{face:f});
         if(h===0)signs[f]=Math.sign(signed);
@@ -161,7 +254,10 @@ export function solveRigidFoldGeometry(graph:FoldGraph,options:RigidFoldGeometry
       });
       if(!count)fail('invalid','UNOWNED_VERTEX','展开折痕标记落在纸面外或孔洞内。');
     });
-    const matrices:(number[]|undefined)[]=sourceFaces.map(()=>undefined),queue=[root];matrices[root]=fixed;
+    const reference=options.referenceFace??root;
+    if(!Number.isInteger(reference)||reference<0||reference>=sourceFaces.length)fail('invalid','REFERENCE_FACE','用于计算的基准纸面不存在。');
+    const matrices:(number[]|undefined)[]=sourceFaces.map(()=>undefined),queue=[reference];
+    matrices[reference]=options.referenceFace===undefined?fixed:identity();
     for(let head=0;head<queue.length;head++){
       const f=queue[head],parent=matrices[f]!;
       for(const next of neighbors[f]){
@@ -173,6 +269,13 @@ export function solveRigidFoldGeometry(graph:FoldGraph,options:RigidFoldGeometry
       }
     }
     if(queue.length!==sourceFaces.length)fail('unsupported','DISCONNECTED','存在未连接固定面的独立纸片，需要分别确定其固定姿态。');
+    if(options.preferStableHinges)refineHingeFrames(matrices as number[][],reference,edges,points,uses,targetAngles,tolerance,angleTolerance);
+    if(options.referenceFace!==undefined){
+      const inverse=ear.math.invertMatrix3(matrices[root]!);
+      if(!inverse)fail('invalid','FIXED_FRAME','固定纸面的姿态无法对齐。');
+      const align=ear.math.multiplyMatrices3(fixed,inverse);
+      for(const f of queue)matrices[f]=f===root?fixed:ear.math.multiplyMatrices3(align,matrices[f]!);
+    }
     const vertices:V[]=Array(points.length),owner:number[]=Array(points.length).fill(-1);
     for(const f of queue){
       const matrix=matrices[f]!;

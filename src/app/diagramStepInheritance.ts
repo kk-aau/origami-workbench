@@ -4,12 +4,25 @@ import ear from 'rabbit-ear';
 import {distance,epsilonFor,polygonArea} from '../core/geometry';
 import {flatLayerEdges} from '../core/flatLayerOrder';
 import type {Doc,FlatFoldResult,FoldGraph,Point} from '../core/types';
-import type {DiagramPose} from './diagramProject';
+import type {DiagramPose,DiagramProject} from './diagramProject';
 import type {DiagramFoldAnchor,DiagramFoldMatrix} from './diagramFoldLinkTypes';
 import {buildDiagramPoseDocFold,buildDiagramPoseFold} from './diagramFoldGeometry';
 import {diagramFoldStartingFace,applyDiagramFoldMatrix} from './diagramFoldLink';
 import {liftDiagramFoldMatrix,spatialFaceMatrix,validateDiagramSpatialPose} from './diagramSpatialPose';
 import type {RigidFoldTransform3D} from '../core/rigidFoldGeometry';
+
+/** Reconstruct Next's stationary world frame for a saved, still-empty step.
+ * The CP's own starting face remains authoritative on manual calculation. */
+export function diagramSpatialRetryAnchor(project:DiagramProject,stepIndex:number,stateId:string,doc:Doc,root:number){
+  const step=project.steps[stepIndex],prior=project.steps[stepIndex-1];
+  if(!step||step.pose||step.simulationSurface||step.beforeId!==stateId||prior?.afterId!==stateId)return;
+  const pose=prior.pose,fixed=prior.foldLink?.enabled?prior.foldLink.fixed:undefined;
+  if(!pose?.spatial||!fixed?.spatialTransform||pose.sourceStateId!==prior.beforeId||
+    pose.sourceRevision!==project.states.find(state=>state.id===prior.beforeId)?.revision)return;
+  try{
+    if(diagramFoldStartingFace(doc,fixed)===root)return fixed;
+  }catch{ /* A changed crease can put the old anchor on a boundary. */ }
+}
 
 /** A preference in the new geometry's material-face IDs and genuine +Z axis.
  * It is input to a fresh layer solve, never a saved drawing permutation. */

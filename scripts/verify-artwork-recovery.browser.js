@@ -8,7 +8,7 @@ async page=>{
   await page.setViewportSize({width:1366,height:768});
   const setup=async()=>{
     await page.getByLabel('工程名称',{exact:true}).waitFor();
-    for(const name of ['设置并开始使用','关闭窗口','保留当前工程','知道了'])if(await button(name).isVisible().catch(()=>false))await button(name).click();
+    for(const name of ['使用默认位置开始','关闭窗口','保留当前工程','知道了'])if(await button(name).isVisible().catch(()=>false))await button(name).click();
     await page.evaluate(()=>{
       window.confirm=()=>true;window.__recoveryDownloads=[];
       const create=URL.createObjectURL,click=HTMLAnchorElement.prototype.click;

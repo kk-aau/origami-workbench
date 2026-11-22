@@ -1,5 +1,6 @@
+import {trianglePlaneLookup,reliablePlane,sameTrianglePlane,type Vector,subtract,vectorDot} from './simTrianglePlane';
 import {toViewSpace,projectViewPoint,type CameraUniforms} from '../../vendor/simulator/oristudio/packages/origami-simulator/src/webgl/camera';
-import {edgeAssignmentCode,edgeAssignmentVisible,edgeAssignmentColor,edgeAssignmentDash,normalDirectionColor,diagramPaperColor,diagramEdgeColor,diagramEdgeFolded,meshTopologyFor,type MeshTopology,type RenderSettings} from '../../vendor/simulator/oristudio/packages/origami-simulator/src/webgl/meshRenderer';
+import {cameraEdgeAssignment,edgeAssignmentCode,edgeAssignmentVisible,edgeAssignmentColor,edgeAssignmentDash,normalDirectionColor,diagramPaperColor,diagramEdgeColor,diagramEdgeFolded,meshTopologyFor,type MeshTopology,type RenderSettings} from '../../vendor/simulator/oristudio/packages/origami-simulator/src/webgl/meshRenderer';
 import {strainInk} from './simDisplay';
 import {creasePlaneInverseDepthGradient} from '../../vendor/simulator/oristudio/packages/origami-simulator/src/webgl/creasePlaneDepth';
 
@@ -8,22 +9,47 @@ import {creasePlaneInverseDepthGradient} from '../../vendor/simulator/oristudio/
  * material normal. Only numerically coincident triangles or roundoff-equal
  * depth samples can use it; separated samples retain physical depth. */
 export interface SimulationRasterLayerOrder {
+  rigidContact?:(face:number,other:number)=>boolean;
   triangleSourceFaces:readonly number[];
   faceOrders:readonly (readonly [number,number,number])[];
 }
 
-type Vector=[number,number,number];
-type RasterPlane={vertices:Vector[];errors:Vector[];normal:Vector;normalError:Vector};
-const subtract=(a:Vector,b:Vector):Vector=>[a[0]-b[0],a[1]-b[1],a[2]-b[2]];
-const vectorCross=(a:Vector,b:Vector):Vector=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];
-const vectorDot=(a:Vector,b:Vector)=>a[0]*b[0]+a[1]*b[1]+a[2]*b[2];
-/** A solver coordinate was rounded once to Float32. Its uncertainty is local
- * to that coordinate, including the subnormal range. A separate edge-scaled
- * term below accounts for the preceding double-precision rigid transform;
- * cancellation near the origin must not make that uncertainty disappear. */
-const coordinateError=(value:number)=>2**Math.max(-150,Math.floor(Math.log2(Math.abs(value)||2**-149))-24);
+// A Float32 coordinate is an integer multiple of 2^-149. Using that common
+// unit gives exact plane membership for the stored mesh, even for two
+// different triangulations. No coordinate or distance tolerance is involved.
+function exactRasterPlaneLookup(positions:Float32Array,indices:Uint32Array){
+  type Point=[bigint,bigint,bigint];
+  type Plane=[bigint,bigint,bigint,bigint];
+  const vertices=new Map<number,Point>(),planes=new Map<number,Plane>();
+  function point(i:number):Point{
+    let p=vertices.get(i);
+    if(!p){
+      const unit=2**149;
+      p=[BigInt(positions[i*3]*unit),BigInt(positions[i*3+1]*unit),BigInt(positions[i*3+2]*unit)];
+      vertices.set(i,p);
+    }
+    return p;
+  }
+  return (face:number,other:number)=>{
+    let plane=planes.get(face);
+    if(!plane){
+      const a=point(indices[3*face]),b=point(indices[3*face+1]),c=point(indices[3*face+2]);
+      const ux=b[0]-a[0],uy=b[1]-a[1],uz=b[2]-a[2],vx=c[0]-a[0],vy=c[1]-a[1],vz=c[2]-a[2];
+      const x=uy*vz-uz*vy,y=uz*vx-ux*vz,z=ux*vy-uy*vx;
+      plane=[x,y,z,x*a[0]+y*a[1]+z*a[2]];
+      planes.set(face,plane);
+    }
+    const [x,y,z,d]=plane;
+    if(x===0n&&y===0n&&z===0n)return false;
+    for(let corner=0;corner<3;corner++){
+      const p=point(indices[3*other+corner]);
+      if(x*p[0]+y*p[1]+z*p[2]!==d)return false;
+    }
+    return true;
+  };
+}
 
-function rasterLayerComparison(positions:Float32Array,indices:Uint32Array,camera:CameraUniforms,order:SimulationRasterLayerOrder|undefined):((face:number,owner:number,equalDepth:boolean)=>number)|null {
+export function rasterLayerComparison(positions:Float32Array,indices:Uint32Array,camera:CameraUniforms,order:SimulationRasterLayerOrder|undefined):((face:number,owner:number,equalDepth:boolean)=>number)|null {
   if(!order||order.triangleSourceFaces.length!==indices.length/3||!order.faceOrders.length)return null;
   const relations=new Map<number,Map<number,{a:number;b:number;sign:number}>>();
   for(const [a,b,sign] of order.faceOrders){
@@ -32,34 +58,8 @@ function rasterLayerComparison(positions:Float32Array,indices:Uint32Array,camera
     for(const [left,right] of [[a,b],[b,a]]){const rows=relations.get(left)??new Map();rows.set(right,relation);relations.set(left,rows);}
   }
   if(!relations.size)return null;
-  const planes=new Map<number,RasterPlane>(),cache=new Map<number,Map<number,{coplanar:number;contact:number}>>();
-  const plane=(face:number):RasterPlane=>{
-    const old=planes.get(face);if(old)return old;
-    const vertices=Array.from({length:3},(_,i)=>Array.from(positions.slice(indices[face*3+i]*3,indices[face*3+i]*3+3)) as Vector);
-    const u=subtract(vertices[1],vertices[0]),v=subtract(vertices[2],vertices[0]);
-    // A rigid transform can cancel an O(edge-length) coordinate down to 1e-15
-    // before the final Float32 conversion. Its last rounding alone would then
-    // suggest an impossible 1e-22 accuracy and reject a retained paper stack.
-    // Bound those earlier double operations in this triangle's own units;
-    // neither the scene size nor another remote sheet changes the tolerance.
-    const transformError=Math.max(Math.hypot(...u),Math.hypot(...v),Math.hypot(...subtract(vertices[2],vertices[1])))*Number.EPSILON*64;
-    const errors=vertices.map(p=>p.map(n=>coordinateError(n)+transformError) as Vector);
-    const du=errors[1].map((e,k)=>e+errors[0][k]),dv=errors[2].map((e,k)=>e+errors[0][k]);
-    const normal=vectorCross(u,v),normalError=[0,1,2].map(k=>{
-      const j=(k+1)%3,l=(k+2)%3;
-      return Math.abs(u[j])*dv[l]+Math.abs(v[l])*du[j]+du[j]*dv[l]+Math.abs(u[l])*dv[j]+Math.abs(v[j])*du[l]+du[l]*dv[j];
-    }) as Vector;
-    const result={vertices,errors,normal,normalError};planes.set(face,result);return result;
-  };
-  const liesOn=(points:RasterPlane,reference:RasterPlane)=>points.vertices.every((p,i)=>{
-    const w=subtract(p,reference.vertices[0]),dw=points.errors[i].map((e,k)=>e+reference.errors[0][k]);
-    let uncertainty=0,roundoff=0;
-    for(let k=0;k<3;k++){
-      uncertainty+=Math.abs(reference.normal[k])*dw[k]+Math.abs(w[k])*reference.normalError[k]+dw[k]*reference.normalError[k];
-      roundoff+=Math.abs(reference.normal[k]*w[k]);
-    }
-    return Math.abs(vectorDot(reference.normal,w))<=uncertainty+roundoff*Number.EPSILON*32;
-  });
+  const cache=new Map<number,Map<number,{coplanar:number;contact:number}>>();
+  const plane=trianglePlaneLookup(positions,indices);
   const eye=camera.center.map((n,k)=>n+camera.camDist*camera.rotation[k+6]) as Vector;
   return (face,owner,equalDepth)=>{
     let known=cache.get(face);if(!known){known=new Map();cache.set(face,known);}
@@ -70,11 +70,11 @@ function rasterLayerComparison(positions:Float32Array,indices:Uint32Array,camera
       const current=plane(face),previous=plane(owner);
       // Both complete triangles must share a plane within their own Float32
       // uncertainty. Crossing triangles and real micro-gaps retain depth order.
-      if(Math.hypot(...current.normal)>Math.hypot(...current.normalError)*100&&Math.hypot(...previous.normal)>Math.hypot(...previous.normalError)*100){
+      if(reliablePlane(current)&&reliablePlane(previous)){
         const second=a===relation.b?current:previous;
         const facing=vectorDot(second.normal,subtract(eye,second.vertices[0]));
         const side=facing!==0?(relation.sign*facing>0?1:-1)*(a===relation.a?1:-1):0;
-        if(liesOn(current,previous)&&liesOn(previous,current))comparison=side;
+        if(sameTrianglePlane(current,previous)||order.rigidContact?.(face,owner))comparison=side;
         contact=side;
       }
     }
@@ -91,7 +91,7 @@ export class SimulationRasterizer {
   private owner=new Int32Array();
   private diagramTopologies=new WeakMap<object,MeshTopology>();
 
-  render(positions:Float32Array,model:Parameters<typeof meshTopologyFor>[0],camera:CameraUniforms,settings:RenderSettings,strain?:Float32Array,layerOrder?:SimulationRasterLayerOrder,boundaryWidthPx?:number):Uint8ClampedArray {
+  render(positions:Float32Array,model:Parameters<typeof meshTopologyFor>[0],camera:CameraUniforms,settings:RenderSettings,strain?:Float32Array,layerOrder?:SimulationRasterLayerOrder,boundaryWidthPx?:number,displayAssignments?:Parameters<typeof meshTopologyFor>[0]['edgesAssignment'],coloredEdges?:ReadonlySet<number>):Uint8ClampedArray {
     const {width,height}=camera;
     if(width!==this.width||height!==this.height){
       this.width=width;this.height=height;
@@ -103,6 +103,7 @@ export class SimulationRasterizer {
     depth.fill(-Infinity);
     this.owner.fill(-1);
     const compareLayers=settings.faceAlpha===1?rasterLayerComparison(positions,model.indices,camera,layerOrder):null;
+    const exactlyCoplanar=exactRasterPlaneLookup(positions,model.indices);
     // Keep depth comparisons transitive: round away three low mantissa bits
     // at the nearest visible depth. A pairwise epsilon creates inconsistent
     // ties (A≈B, B≈C, A≠C) and makes contact colours depend on draw order.
@@ -134,6 +135,8 @@ export class SimulationRasterizer {
       if(!Number.isFinite(area)||Math.abs(area)<1e-8)continue;
       const minX=Math.max(0,Math.floor(Math.min(ax,bx,cx))),maxX=Math.min(width-1,Math.ceil(Math.max(ax,bx,cx)));
       const minY=Math.max(0,Math.floor(Math.min(ay,by,cy))),maxY=Math.min(height-1,Math.ceil(Math.max(ay,by,cy)));
+      const print=settings.colorMode!=='strain'&&settings.colorMode!=='normals'?settings.paperPrint:undefined;
+      const image=area>0?print?.front:print?.back;
       let color=(area>0?settings.backColor:settings.frontColor).map(value=>value*255);
       if(settings.colorMode==='normals'){
         const u=[0,1,2].map(axis=>points[b*3+axis]-points[a*3+axis]),v=[0,1,2].map(axis=>points[c*3+axis]-points[a*3+axis]);
@@ -148,6 +151,12 @@ export class SimulationRasterizer {
         const shade=Math.max(.68,Math.min(1.08,.74+diffuse*.3+Math.abs(normal[2])/nLength*.04));
         color=settings.diagramStyle?diagramPaperColor(color.map(v=>v/255),normal).map(v=>v*255):color.map(value=>value*shade);
       }
+      // Interpolate in material coordinates with perspective correction. The
+      // physical back is mirrored so a print reads normally from that side.
+      const tinted=[0,0,0];
+      const base=area>0?settings.backColor:settings.frontColor;
+      const light=image?color.map((v,k)=>base[k]>0?v/(255*base[k]):1):undefined;
+      let coplanarOwners:Map<number,boolean>|undefined;
       for(let y=minY;y<=maxY;y++)for(let x=minX;x<=maxX;x++){
         const px=x+.5,py=y+.5;
         const wb=((px-ax)*(cy-ay)-(py-ay)*(cx-ax))/area;
@@ -156,7 +165,7 @@ export class SimulationRasterizer {
         const q=wa*inverse[a]+wb*inverse[b]+wc*inverse[c],pixel=y*width+x;
         const distance=1/q;
         if(distance<camera.camDist-camera.depthRange||distance>camera.camDist+camera.depthRange)continue;
-        if(settings.faceAlpha<1){paint(pixel,color,settings.faceAlpha);continue;}
+        const transparent=settings.faceAlpha<1;
         // Trusted coincident material layers outrank topology IDs. Without a
         // certified relation (or at a real separation), retain physical depth.
         // A fixed depth epsilon discards real small separations (for example,
@@ -167,31 +176,57 @@ export class SimulationRasterizer {
         // edge/contact without widening the whole-plane coplanarity tolerance.
         const stableDepth=Math.round(q/depthStep)*depthStep;
         const layer=compareLayers&&this.owner[pixel]>=0?compareLayers(face,this.owner[pixel],stableDepth===depth[pixel]):0;
-        if(layer<0||layer===0&&stableDepth<=depth[pixel])continue;
-        depth[pixel]=stableDepth;this.owner[pixel]=face;paint(pixel,color);
+        if(!transparent&&(layer<0||layer===0&&stableDepth<=depth[pixel]))continue;
+        // Even double interpolation can land on opposite sides of a rounding
+        // bin. Keep the existing material on an exact geometric tie without
+        // overriding a certified contact or swallowing a real depth gap.
+        const owner=this.owner[pixel];
+        if(!transparent&&layer===0&&owner>=0){
+          coplanarOwners??=new Map();
+          let same=coplanarOwners.get(owner);
+          if(same===undefined){same=exactlyCoplanar(face,owner);coplanarOwners.set(owner,same);}
+          if(same)continue;
+        }
+        if(!transparent){depth[pixel]=stableDepth;this.owner[pixel]=face;}
+        if(image&&print&&light){
+          const uv=print.uv,fa=wa*inverse[a]/q,fb=wb*inverse[b]/q,fc=wc*inverse[c]/q;
+          const u=uv[a*2]*fa+uv[b*2]*fb+uv[c*2]*fc,v=uv[a*2+1]*fa+uv[b*2+1]*fb+uv[c*2+1]*fc;
+          const ix=Math.max(0,Math.min(image.width-1,(area>0?u:1-u)*image.width-.5)),iy=Math.max(0,Math.min(image.height-1,v*image.height-.5));
+          const x0=Math.floor(ix),y0=Math.floor(iy),dx=ix-x0,dy=iy-y0,x1=Math.min(x0+1,image.width-1),y1=Math.min(y0+1,image.height-1);
+          for(let k=0;k<3;k++)tinted[k]=color[k];
+          for(let j=0;j<4;j++){
+            const off=4*((j>=2?y1:y0)*image.width+(j%2?x1:x0)),w=(j%2?dx:1-dx)*(j>=2?dy:1-dy)*image.data[off+3]/255;
+            for(let k=0;k<3;k++)tinted[k]+=w*(image.data[off+k]*light[k]-color[k]);
+          }
+          paint(pixel,tinted,settings.faceAlpha);
+        }else paint(pixel,color,settings.faceAlpha);
       }
     }
-    let topology:MeshTopology|undefined;
-    if(settings.diagramStyle){
-      topology=this.diagramTopologies.get(model);
-      if(!topology){topology=meshTopologyFor(model);this.diagramTopologies.set(model,topology);}
-    }
+    let creaseTopology=this.diagramTopologies.get(model);
+    if(!creaseTopology){creaseTopology=meshTopologyFor(model);this.diagramTopologies.set(model,creaseTopology);}
+    const topology=settings.diagramStyle?creaseTopology:undefined;
+    const eye=camera.center.map((value,k)=>value+camera.camDist*camera.rotation[k+6]);
     if(settings.showEdges)model.edgesVertices.forEach(([a,b],edge)=>{
-      const assignment=model.edgesAssignment[edge];
-      const code=edgeAssignmentCode(assignment);
+      const assignment=(displayAssignments??model.edgesAssignment)[edge];
+      const code=cameraEdgeAssignment(edgeAssignmentCode(assignment),creaseTopology,edge,positions,eye);
       if(!edgeAssignmentVisible(code,settings))return;
       if(topology&&topology.edgeMaterial?.[edge]!==1)return;
       const ax=screen[a*2],ay=screen[a*2+1],bx=screen[b*2],by=screen[b*2+1],dx=bx-ax,dy=by-ay,length=Math.hypot(dx,dy);
       if(!Number.isFinite(length)||length<1e-8)return;
       const half=(assignment==='B'&&boundaryWidthPx!==undefined?boundaryWidthPx:settings.creaseWidthPx??1.6)/2;
-      const color=(topology?diagramEdgeColor(code===0||diagramEdgeFolded(positions,a,b,topology.edgeOpposites![edge*2],topology.edgeOpposites![edge*2+1]),settings):edgeAssignmentColor(code,settings)).map(value=>value*255);
-      const dash=edgeAssignmentDash(code,settings);
+      const neutral=coloredEdges!==undefined&&!coloredEdges.has(edge)&&(code===1||code===2);
+      const color=(neutral?settings.borderColor:topology?diagramEdgeColor(code===0||diagramEdgeFolded(positions,a,b,topology.edgeOpposites![edge*2],topology.edgeOpposites![edge*2+1]),settings):edgeAssignmentColor(code,settings)).map(value=>value*255);
+      const dash=neutral?null:edgeAssignmentDash(code,settings);
       const period=dash?.reduce((sum,run)=>sum+run,0)??0;
       const minX=Math.max(0,Math.floor(Math.min(ax,bx)-half)),maxX=Math.min(width-1,Math.ceil(Math.max(ax,bx)+half));
       const minY=Math.max(0,Math.floor(Math.min(ay,by)-half)),maxY=Math.min(height-1,Math.ceil(Math.max(ay,by)+half));
       // Same NDC tolerance as the GPU crease pass, converted to inverse distance.
       const bias=(settings.creaseDepthBias??.000002)*camera.depthRange/(camera.camDist**2-camera.depthRange**2);
       const gradient=creasePlaneInverseDepthGradient(settings.creasePlaneNormal,camera,[points[a*3],points[a*3+1],points[a*3+2]]);
+      // A closed fold can give an interior hinge the outline style. Its ink
+      // still belongs to its incident paper, including at zero depth gap.
+      const incident=model.edgesFaces?.[edge];
+      let occludedOwners:Map<number,boolean>|undefined;
       for(let y=minY;y<=maxY;y++)for(let x=minX;x<=maxX;x++){
         const t=((x+.5-ax)*dx+(y+.5-ay)*dy)/(length*length);
         if(t<0||t>1||Math.hypot(x+.5-ax-t*dx,y+.5-ay-t*dy)>half)continue;
@@ -200,6 +235,16 @@ export class SimulationRasterizer {
         const q=inverse[a]*(1-t)+inverse[b]*t+(gradient?gradient[0]*offsetX+gradient[1]*offsetY:0),pixel=y*width+x;
         const distance=1/q;
         if(distance<camera.camDist-camera.depthRange||distance>camera.camDist+camera.depthRange)continue;
+        const visibleFace=this.owner[pixel];
+        if(compareLayers&&incident?.length&&visibleFace>=0){
+          occludedOwners??=new Map();
+          let hidden=occludedOwners.get(visibleFace);
+          if(hidden===undefined){
+            hidden=incident.every(face=>compareLayers(face,visibleFace,false)<0);
+            occludedOwners.set(visibleFace,hidden);
+          }
+          if(hidden)continue;
+        }
         if(settings.faceAlpha===1&&settings.showFaces&&q+bias<depth[pixel]){
           // A wide material stroke lies on its incident triangles. Testing all
           // of its pixels at the centreline's depth makes a sloping owner face

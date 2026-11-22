@@ -109,3 +109,52 @@ test('a deferred ordinary fold stays hidden through a wait while original and fi
   const old={ranges:[{edge:4,fromAngle:180,toAngle:180}],motion:{...motion,phases:motion.phases.map(phase=>({...phase,fromAngles:[180],toAngles:[180]}))}};
   assert.equal(simulationStepDisplayAssignments(prepared,old,positions(),camera,0)[4],'V','an old crease requires no new action to stay visible');
 });
+
+
+test('crease colours reverse on the material back and survive reversed edge endpoint order',async()=>{
+  const {cameraEdgeAssignment,meshTopologyFor}=await import('../../vendor/simulator/oristudio/packages/origami-simulator/src/webgl/meshRenderer');
+  for(const endpoints of [[0,1],[1,0]] as [number,number][]){
+    const topology=meshTopologyFor({indices:new Uint32Array([0,1,2,1,0,3]),edgesVertices:[endpoints],edgesAssignment:['V'],edgesFaces:[[0,1]]});
+    const saved=topology.edgeAssignments.slice(),points=positions(15);
+    assert.equal(cameraEdgeAssignment(2,topology,0,points,[0,0,4]),2);
+    assert.equal(cameraEdgeAssignment(2,topology,0,points,[0,0,-4]),1);
+    assert.equal(cameraEdgeAssignment(1,topology,0,points,[0,0,-4]),2);
+    assert.equal(cameraEdgeAssignment(0,topology,0,points,[0,0,-4]),0);
+    assert.equal(cameraEdgeAssignment(3,topology,0,points,[0,0,-4]),3);
+    assert.deepEqual(topology.edgeAssignments,saved);
+  }
+});
+
+test('step colour scope excludes unchanged creases and includes fold-and-unfold precreases',async()=>{
+  const {simulationStepChangedCreases}=await import('../../src/engine/simStepEdges');
+  const prepared={creaseParams:[{edge:4},{edge:5},{edge:6},{edge:7}]};
+  const animation={ranges:[
+    {edge:4,fromAngle:90,toAngle:90},
+    {edge:5,fromAngle:90,toAngle:0},
+    {edge:6,fromAngle:0,toAngle:0,viaAngle:180},
+    {edge:7,fromAngle:0,toAngle:0},
+  ]};
+  assert.deepEqual([...simulationStepChangedCreases(prepared,animation)],[5,6]);
+  assert.deepEqual(animation.ranges[0],{edge:4,fromAngle:90,toAngle:90});
+  const motion={...animation,motion:{phases:[{fromAngles:[90,90,0,0],toAngles:[90,0,180,45]}]}} as Parameters<typeof simulationStepChangedCreases>[1];
+  assert.deepEqual([...simulationStepChangedCreases(prepared,motion)],[5,6,7]);
+});
+
+test('a process frame at 85% uses the operation-after CP on the current sheet',async()=>{
+  const {diagramAnimationTargetCreases}=await import('../../src/app/diagramAnimationCreases');
+  const {simulationStepTargetColors}=await import('../../src/engine/simStepEdges');
+  const prepared={...model('F'),edgesAssignment:['B','B','B','B','F','M','F','M'] as FoldAssignment[],edgesFaces:[[0],[0],[1],[1],[0,1],[0,1],[0,1],[0,1]]};
+  const material:[number,number][]=[[0,0],[10,0],[0,10],[10,10],[5,0],[5,10]];
+  const targetCreases=diagramAnimationTargetCreases([[0,2],[2,3],[3,1],[1,0],[0,4],[0,3],[2,5],[1,2]],material,[
+    {id:'pending',a:[0,0],b:[10,0],assignment:'V',angle:180},
+    {id:'flat',a:[0,10],b:[5,10],assignment:'F',angle:0},
+    {id:'reversed',a:[10,0],b:[0,10],assignment:'V',angle:180},
+  ],1e-6);
+  const animation={targetCreases,ranges:[{edge:4,fromAngle:0,toAngle:180},{edge:5,fromAngle:-180,toAngle:0},{edge:6,fromAngle:0,viaAngle:-180,toAngle:0},{edge:7,fromAngle:-180,viaAngle:0,toAngle:180}],timings:[{edge:4,start:.9,end:1}]};
+  const pose=positions(20),before=pose.slice();
+  for(const progress of [0,.85,1,.85]){
+    assert.deepEqual(simulationStepDisplayAssignments(prepared,animation,pose,camera,progress,'target').slice(4),['V','F','V','V']);
+  }
+  assert.deepEqual([...simulationStepTargetColors(prepared,animation)],[4,7]);
+  assert.deepEqual(pose,before);
+});

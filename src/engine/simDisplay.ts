@@ -1,3 +1,4 @@
+import {simulationExportVertices} from './simExport';
 import type {PreparedOrigamiModel} from '../../vendor/simulator/oristudio/packages/origami-simulator/src/types';
 import type {RenderSettings} from '../../vendor/simulator/oristudio/packages/origami-simulator/src/webgl/meshRenderer';
 
@@ -88,9 +89,7 @@ export function strainInk(fraction:number,clip=5):string{
 
 /** Snapshot the solver's current vertices in standard FOLD x/y/z axes. */
 export function simulationFoldSnapshot(prepared:PreparedOrigamiModel,positions:Float32Array,progress:number,steps:number){
-  if(positions.length!==prepared.vertexCount*3||!Array.from(positions).every(Number.isFinite))throw new Error('三维顶点尚未准备好，无法导出。');
-  const vertices=Array.from({length:prepared.vertexCount},(_,i)=>[
-    Number(positions[3*i].toFixed(7)),Number((-positions[3*i+2]).toFixed(7)),Number(positions[3*i+1].toFixed(7))]);
+  const vertices=simulationExportVertices(prepared,positions);
   const fold=structuredClone(prepared.fold);
   fold.vertices_coords=vertices;
   // These are requested target angles, not the measured angles of this transient mesh.

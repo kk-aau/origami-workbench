@@ -14,6 +14,7 @@ function previousLayout():ToolLayoutPreferences {
   {id:'circles',name:'圆、多边形与切线',side:'right',items:RIGHT_DOCK_GROUPS.slice(1,5).flatMap(group=>group.tools)},
   {id:'marks',name:'标记与测量',side:'right',items:RIGHT_DOCK_GROUPS.slice(5).flatMap(group=>group.tools)},
  ];
+ for(const group of groups)group.items=group.items.filter(id=>id!=='makecrease');
  return {version:1,activeId:'default',templates:[
   {id:'default',name:'默认',columns:{left:0,right:4},groups,unassigned:[]},
   {id:'swapped',name:'左右对调',columns:{left:4,right:0},groups:groups.map(group=>({...group,side:group.side==='left'?'right':'left',items:[...group.items]})),unassigned:[]},
@@ -24,13 +25,17 @@ function reopen(value:ToolLayoutPreferences){return readToolLayoutPreferences({g
 function complete(value:ToolLayoutPreferences){for(const template of value.templates){const ids=[...template.groups.flatMap(group=>group.items),...template.unassigned];assert.equal(new Set(ids).size,ids.length);assert.deepEqual([...ids].sort(),[...TOOL_LAYOUT_ITEM_IDS].sort());}}
 function assertBackgroundSeparated(actual:ToolLayoutTemplate,before:ToolLayoutTemplate){
  assert.deepEqual({id:actual.id,name:actual.name,columns:actual.columns},{id:before.id,name:before.name,columns:before.columns});
+ const transform=before.groups.find(group=>group.id==='transform'&&group.items.includes('makevalley'));
+ const missing=![...before.unassigned,...before.groups.flatMap(group=>group.items)].includes('makecrease');
  assert.equal(actual.groups.length,before.groups.length);
  for(let index=0;index<before.groups.length;index++){
   const current=actual.groups[index],original=before.groups[index];
   assert.deepEqual({id:current.id,name:current.name,side:current.side},{id:original.id,name:original.name,side:original.side});
-  assert.deepEqual(current.items,original.items.filter(item=>!BACKGROUND_TOOLS.includes(item as never)));
+  const expected=original.items.filter(item=>!BACKGROUND_TOOLS.includes(item as never));
+  if(missing&&original===transform)expected.splice(expected.indexOf('makevalley')+1,0,'makecrease');
+  assert.deepEqual(current.items,expected);
  }
- assert.deepEqual(actual.unassigned.filter(item=>!BACKGROUND_TOOLS.includes(item as never)),before.unassigned.filter(item=>!BACKGROUND_TOOLS.includes(item as never)));
+ assert.deepEqual(actual.unassigned.filter(item=>!BACKGROUND_TOOLS.includes(item as never)),[...before.unassigned.filter(item=>!BACKGROUND_TOOLS.includes(item as never)),...(missing&&!transform?['makecrease']:[])]);
  assert.deepEqual(new Set(actual.unassigned.filter(item=>BACKGROUND_TOOLS.includes(item as never))),new Set(BACKGROUND_TOOLS));
  assert.equal(new Set(actual.unassigned).size,actual.unassigned.length);
 }
@@ -342,7 +347,9 @@ test('all old custom layouts separate background tools once while preserving eve
 test('the migration marker preserves future explicit background placement even when it recreates an old builtin exactly',()=>{
  const previous=previousBackgroundLayout(),migrated=reopen(previous);assert.equal(previous.backgroundPanelVersion,undefined);assert.equal(migrated.backgroundPanelVersion,1);
  let restored=migrated;for(const [index,item] of BACKGROUND_TOOLS.entries())restored=moveToolLayoutItem(restored,item,'transform',index);
- assert.deepEqual(restored.templates[0],previous.templates[0],'the user deliberately reconstructs the old default arrangement');
+ const expected=structuredClone(previous.templates[0]),items=expected.groups.find(group=>group.id==='transform')!.items;
+ items.splice(items.indexOf('makevalley')+1,0,'makecrease');
+ assert.deepEqual(restored.templates[0],expected,'the user deliberately reconstructs the old arrangement with the new crease tool');
  assert.deepEqual(reopen(restored),restored);
  let saved='';saveToolLayoutPreferences(restored,{setItem:(_key,value)=>{saved=value;}});assert.equal(JSON.parse(saved).backgroundPanelVersion,1);assert.deepEqual(readToolLayoutPreferences({getItem:()=>saved}),restored);complete(restored);
 });

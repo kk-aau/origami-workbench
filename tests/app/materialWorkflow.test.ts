@@ -54,6 +54,19 @@ test('downloaded original CP/FF pair imports only after independent material and
   }
 });
 
+test('material FOLD retains distinct CP and folded-frame credits on repeated saves',()=>{
+  const file=JSON.parse(exportDocument(create(),'fold').text);
+  Object.assign(file,{file_author:'设计者',frame_author:'CP 制图'});
+  Object.assign(file.file_frames[0],{frame_author:'折后制图',frame_description:'折后状态',private_frame_note:'来源备注'});
+  let saved=file;
+  for(let i=0;i<2;i++){
+    saved=JSON.parse(exportDocument(importFold(saved).doc,'fold').text);
+    assert.equal(saved.file_author,'设计者');assert.equal(saved.frame_author,'CP 制图');
+    assert.equal(saved.file_frames[0].frame_author,'折后制图');assert.equal(saved.file_frames[0].frame_description,'折后状态');
+    assert.equal(saved['zhezhi:workbench'].fields.zhezhi_metadata.sourceFoldFrameExtras.private_frame_note,'来源备注');
+  }
+});
+
 test('unbound edits and corrupt material metadata cannot fall back to the coordinate-welding path',()=>{
   const doc=create(),bad=structuredClone(doc);bad.segments[0].a[0]+=.2;
   assert.throws(()=>buildFold(bad));assert.throws(()=>splitEditableSegments(bad));assert.throws(()=>upgradeProject(bad));assert.throws(()=>exportDocument(bad,'json'));assert.equal(paperPath(bad),'');assert.ok(diagnose(bad).summary.errors>0);assert.notEqual(computeFlatFold(bad).geometry.status,'ready');

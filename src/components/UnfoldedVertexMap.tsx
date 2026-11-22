@@ -1,8 +1,11 @@
-import {useEffect,useRef,useState} from 'react';
+import {JunctionMarks} from './JunctionWarnings';
+import {graphJunctions} from '../core/editedJunctions';
+import {useEffect,useMemo,useRef,useState} from 'react';
 import type {FoldGraph} from '../core/types';
 import type {FoldedVertexSelection} from '../app/foldedVertexEdit';
 
 export default function UnfoldedVertexMap({source,selection,disabled,onChoose}:{source:FoldGraph;selection:FoldedVertexSelection;disabled:boolean;onChoose:(index:number)=>void}){
+  const issues=useMemo(()=>graphJunctions(source),[source]);
   const vertices=source.vertices_coords,xs=vertices.map(p=>p[0]),ys=vertices.map(p=>p[1]);
   const x=Math.min(...xs),y=Math.min(...ys),width=Math.max(1,Math.max(...xs)-x),height=Math.max(1,Math.max(...ys)-y),pad=Math.max(width,height)*.06;
   const initial={x:x-pad,y:y-pad,width:width+2*pad,height:height+2*pad};
@@ -41,7 +44,7 @@ export default function UnfoldedVertexMap({source,selection,disabled,onChoose}:{
       onClick={e=>{if(disabled||suppress.current)return;const index=nearest(e.clientX,e.clientY);if(index!==null)onChoose(index);}}>
       <g pointerEvents="none">{source.edges_vertices.map(([a,b],i)=><line key={i} x1={vertices[a][0]} y1={vertices[a][1]} x2={vertices[b][0]} y2={vertices[b][1]} stroke="#a6b6aa" strokeWidth=".7" vectorEffect="non-scaling-stroke"/>)}</g>
       {vertices.map((p,i)=><circle key={i} data-model-vertex={i} cx={p[0]} cy={p[1]} r={radius} fill={selection.selected.includes(i)?'#8052ad':selection.group.includes(i)?'#d9c9e8':'#fffefb'} stroke="#8052ad" strokeWidth=".7" vectorEffect="non-scaling-stroke" role="button" tabIndex={disabled?-1:0} aria-label={`选择模型顶点 ${i+1}`} aria-pressed={selection.selected.includes(i)} aria-disabled={disabled} onKeyDown={e=>{if(!disabled&&(e.key==='Enter'||e.key===' ')){e.preventDefault();onChoose(i);}}}/>)}
-    </svg>
+    <JunctionMarks issues={issues}/></svg>
     {hint&&!disabled&&<div role="tooltip" style={{position:'fixed',left:Math.max(8,Math.min(hint.x+14,window.innerWidth-230)),top:Math.max(8,hint.y-48),maxWidth:210,padding:'6px 9px',background:'#fffefb',border:'1px solid #8052ad',borderRadius:4,color:'#583278',fontSize:12,pointerEvents:'none',zIndex:30}}>{hint.index===null?'点选顶点；密集处可滚轮放大。':`点击切换顶点 ${hint.index+1} 的选择。`}</div>}
   </>;
 }

@@ -128,8 +128,13 @@ test('zoom-out symbols outside the chosen paper area remain visible and complete
     assert.doesNotMatch(content,/translate\(60 55\)/,'instruction symbols must not be inside the paper clip');
     assert.match(svg,/translate\(60 55\)/,'keep the instruction at its saved world position');
     const direction=allNodes(root(svg)).find(node=>node['@_data-pdf-direction-symbol']==='zoomOut');assert.ok(direction,'the external zoom-out instruction is laid out outside the paper clip');
-    const transform=String(direction['@_transform']),match=/translate\(([-+\d.eE]+) ([-+\d.eE]+)\) scale\(([-+\d.eE]+)\) translate\(([-+\d.eE]+) ([-+\d.eE]+)\)/.exec(transform);assert.ok(match);
-    const [cx,cy,scale,tx,ty]=match.slice(1).map(Number),sourceBounds=annotationBounds([outside])!;
+    const transform=String(direction['@_transform']).trim().replace(/\s+/g,' ');
+    const match=/^translate\(([-+\d.eE]+) ([-+\d.eE]+)\) scale\(([-+\d.eE]+)\) translate\(([-+\d.eE]+) ([-+\d.eE]+)\)$/.exec(transform);assert.ok(match);
+    const [cx,cy,scale,tx,ty]=match.slice(1).map(Number);
+    const glyph=allNodes(direction).find(node=>node['@_color']===outside.color);assert.ok(glyph);
+    const widthInSource=Number(glyph['@_stroke-width'])*outside.size/100;
+    assert.ok(widthInSource>0);
+    const sourceBounds=annotationBounds([{...outside,width:widthInSource}])!;
     const placed={x:cx+(sourceBounds.x+tx)*scale,y:cy+(sourceBounds.y+ty)*scale,width:sourceBounds.width*scale,height:sourceBounds.height*scale};
     assert.ok(placed.x>=x-1e-8&&placed.y>=y-1e-8&&placed.x+placed.width<=x+width+1e-8&&placed.y+placed.height<=y+height+1e-8,'include all symbol strokes inside the SVG viewport');
     const normal=diagramPDFStepSVG(plain,plain.steps[1],size),gain=fittedScale(svg,size)/fittedScale(normal,size);

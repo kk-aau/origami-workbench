@@ -1,9 +1,11 @@
+import {trianglePlaneLookup,reliablePlane,sameTrianglePlane} from './simTrianglePlane';
 import type {PreparedOrigamiModel} from '../../vendor/simulator/oristudio/packages/origami-simulator/src/types';
 import type {SimulationStepAnimation} from './simStepAnimation';
 import type {SimulationStepInitialOrder} from './simStepContactOrder';
 import {createSimulationStepTangentProjector} from './simStepCollision';
-import {compileSimulationStepRigidMechanism} from './simStepRigid';
+import {compileSimulationStepRigidMechanism,createSimulationStepPhaseMechanisms} from './simStepRigid';
 import type {SimulationStepMotionPhase} from './simStepPath';
+import {dynamicPacketContact,mergedStepContactAt} from './simStepAffineContacts';
 
 export interface SimulationStepLayerFrame {progress:number;faceOrders:[number,number,number][]}
 export interface SimulationStepLayerTimelineOptions {
@@ -218,11 +220,22 @@ export function buildSimulationStepDynamicLayerTimeline(prepared:PreparedOrigami
 export function simulationStepLayerOrderAt(prepared:PreparedOrigamiModel,animation:SimulationStepAnimation,timeline:readonly SimulationStepLayerFrame[],progress:number,positions?:Float32Array):Row[]{
   if(!Number.isFinite(progress)||!timeline.length)return [];
   const p=Math.max(0,Math.min(1,progress)),endpoint=timeline.find(frame=>Math.abs(frame.progress-p)<=1e-12);
-  if(endpoint){
-    if(!animation.motion&&positions){const known=new Set(endpoint.faceOrders.map(r=>key(r[0],r[1])));return [...endpoint.faceOrders,...retainedRigidContacts(prepared,animation.initialPositions,positions,timeline[0].faceOrders).filter(r=>!known.has(key(r[0],r[1])))];}
-    return endpoint.faceOrders;
+  if(!animation.motion){
+    const arrived=endpoint?.faceOrders??[];
+    if(!positions||endpoint===timeline[0])return arrived;
+    const merged=mergedStepContactAt(prepared,animation,positions);
+    // A permanently joined pair cannot reverse its own stacking order by
+    // arriving against another packet. Inherit only supplied seed relations.
+    const inherited=merged?timeline[0].faceOrders.filter(([a,b])=>merged(a,b)):[];
+    const previous=new Set(inherited.map(r=>key(r[0],r[1])));
+    const confirmed=inherited.length?[...inherited,...arrived.filter(r=>!previous.has(key(r[0],r[1])))]:arrived;
+    const known=confirmed.length?new Set(confirmed.map(r=>key(r[0],r[1]))):null;
+    const candidates=known?timeline[0].faceOrders.filter(r=>!known.has(key(r[0],r[1]))):timeline[0].faceOrders;
+    if(!candidates.length)return confirmed;
+    const packet=dynamicPacketContact(prepared,animation,p,positions);
+    return [...confirmed,...retainedRigidContacts(prepared,animation.initialPositions,positions,candidates,packet)];
   }
-  if(!animation.motion)return positions?retainedRigidContacts(prepared,animation.initialPositions,positions,timeline[0].faceOrders):[];
+  if(endpoint)return endpoint.faceOrders;
   const phase=animation.motion.phases.find(item=>p>item.start&&p<item.end);if(!phase)return [];
   const previous=timeline.filter(frame=>frame.progress<=phase.start+1e-12).at(-1);if(!previous)return [];
   const bodies=phaseSourceBodies(prepared,phase);return previous.faceOrders.filter(row=>sameBody(row,bodies));
@@ -231,7 +244,7 @@ export function simulationStepLayerOrderAt(prepared:PreparedOrigamiModel,animati
 /** Numerical/flexible playback has no analytic phase bodies. Retain a seed
  * contact only when every vertex of both source faces still shares one rigid
  * transform. Sliding, bending and independently moving faces fail this test. */
-function retainedRigidContacts(prepared:PreparedOrigamiModel,initial:readonly number[],current:Float32Array,rows:readonly Row[]):Row[]{
+function retainedRigidContacts(prepared:PreparedOrigamiModel,initial:readonly number[],current:Float32Array,rows:readonly Row[],packetContact?:(a:number,b:number)=>boolean|undefined):Row[]{
  if(initial.length!==current.length)return [];
  const source=prepared.triangleSourceFaces??prepared.facesVertices.map((_,i)=>i),faces=new Map<number,Set<number>>(),seeds=new Map<number,readonly number[]>();
  prepared.facesVertices.forEach((t,i)=>{const face=source[i],ids=faces.get(face)??new Set<number>();t.forEach(v=>ids.add(v));faces.set(face,ids);if(!seeds.has(face))seeds.set(face,t);});
@@ -243,10 +256,43 @@ function retainedRigidContacts(prepared:PreparedOrigamiModel,initial:readonly nu
  const checks=new Map<number,{before:NonNullable<ReturnType<typeof basis>>;after:NonNullable<ReturnType<typeof basis>>}|null>();
  const frame=(face:number)=>{if(checks.has(face))return checks.get(face)!;const ids=seeds.get(face),before=ids?basis(initial,ids):null,after=ids?basis(current,ids):null,result=before&&after?{before,after}:null;checks.set(face,result);return result;};
  return rows.filter(([a,b])=>{
+   const held=packetContact?.(a,b);if(held!==undefined)return held;
   const f=frame(a),first=faces.get(a),second=faces.get(b);if(!f||!first||!second)return false;
   const ids=[...first,...second];let scale=0;
   for(const v of ids)for(let k=0;k<3;k++)scale=Math.max(scale,Math.abs(initial[v*3+k]),Math.abs(current[v*3+k]));
   const tolerance=Math.max(2**-140,scale*2**-20)*Math.max(f.before.condition,f.after.condition);
   return ids.every(v=>{const p=sub(point(initial,v),f.before.o),q=sub(point(current,v),f.after.o);return ['x','y','z'].every(key=>Math.abs(dot(p,f.before[key as 'x'])-dot(q,f.after[key as 'x']))<=tolerance);});
  });
+}
+
+/** Only the current batch's unchanged hinges carry contacts through motion.
+ * A packet formed by the previous batch can now move as a single rigid body. */
+export function rigidStepContactLookup(prepared:PreparedOrigamiModel,animation:SimulationStepAnimation){
+  const motion=animation.motion;
+  if(!motion?.phases.length||animation.flex||animation.dynamic)return undefined;
+  const whole=compileSimulationStepRigidMechanism(prepared,animation);
+  const mechanismAt=createSimulationStepPhaseMechanisms(prepared,animation,motion,whole);
+  let lastProgress=NaN,lastPose=-1,atEndpoint=false,triangleBodies:readonly number[]=[];
+  let seed:ReturnType<typeof trianglePlaneLookup>;
+  return (a:number,b:number,progress=0)=>{
+    if(!Number.isFinite(progress))return false;
+    if(progress!==lastProgress){
+      const p=Math.max(0,Math.min(1,progress)),end=motion.phases.length;
+      const phaseIndex=p===1?end:motion.phases.findIndex(phase=>p<phase.end);
+      if(phaseIndex<0)return false;
+      atEndpoint=phaseIndex===end||p===motion.phases[phaseIndex].start;
+      if(phaseIndex!==lastPose){
+        const index=Math.min(phaseIndex,end-1),mechanism=phaseIndex===end?whole:mechanismAt(index);
+        // Playback lands on the whole mechanism's endpoint even when this
+        // phase used a carried packet in its interior.
+        const positions=phaseIndex===end?whole.evaluateAngles(motion.phases[index].toAngles).positions:mechanism.seedPositions;
+        seed=trianglePlaneLookup(Float32Array.from(positions),prepared.indices);
+        triangleBodies=mechanism.triangleBodies;lastPose=phaseIndex;
+      }
+      lastProgress=progress;
+    }
+    if(!atEndpoint&&triangleBodies[a]!==triangleBodies[b])return false;
+    const first=seed(a),second=seed(b);
+    return reliablePlane(first)&&reliablePlane(second)&&sameTrianglePlane(first,second);
+  };
 }

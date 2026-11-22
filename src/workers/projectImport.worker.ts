@@ -60,8 +60,9 @@ scope.onmessage=async event=>{
       const raw=decodeArtworkArchive(new Uint8Array(await file.arrayBuffer()));
       await publishArtwork(prepareArtworkImport(raw,message=>scope.postMessage({type:'stage',message})));return;
     }
-    let text=prepare===true&&file.name.toLowerCase().endsWith('.json')?await file.text():null;
-    let raw=text===null?null:JSON.parse(text) as {format?:unknown}|null;
+    let text=prepare===true&&file.name.toLowerCase().endsWith('.json')?(await file.text()).replace(/^\uFEFF/,''):null;
+    let raw=text===null?null:JSON.parse(text) as {format?:unknown;vertices_coords?:unknown;edges_vertices?:unknown;paper?:unknown}|null;
+    const foldJSON=!!raw&&!raw.paper&&Array.isArray(raw.vertices_coords)&&Array.isArray(raw.edges_vertices);
     if(raw?.format==='zhezhi-artwork'){
       const prepared=prepareArtworkImport(raw,message=>scope.postMessage({type:'stage',message}));
       raw=null;text=null;
@@ -69,7 +70,7 @@ scope.onmessage=async event=>{
     }
     const result=raw?.format==='zhezhi-curve-design'
       ?{doc:curveDesignDocument(parseCurveDesign(raw)),warnings:[]}
-      :text===null?await readProjectFile(file):importParsedDocument(raw,'json',file.name.replace(/\.[^.]+$/,''));
+      :text===null?await readProjectFile(file):importParsedDocument(raw,foldJSON?'fold':'json',file.name.replace(/\.[^.]+$/,''));
     scope.postMessage({type:'stage',message:'正在整理交点并检查图形'});
     if(typeof prepare==='object'){
       const appended=appendImportedSegments(prepare,result.doc,appendPlacement);
@@ -77,7 +78,7 @@ scope.onmessage=async event=>{
       const ready=appended.appended?prepareEditorCommit(prepare,appended.doc):{doc:prepare,descendants:new Map<string,string[]>()};
       scope.postMessage({type:'result',result:{kind:'append',...ready,appended:appended.appended,warnings:[...result.warnings,...appended.warnings]}});return;
     }
-    const doc=prepare?prepareProjectImport(result.doc,text!==null&&raw?.format!=='zhezhi-curve-design'):result.doc;
+    const doc=prepare?prepareProjectImport(result.doc,text!==null&&!foldJSON&&raw?.format!=='zhezhi-curve-design'):result.doc;
     if(prepare)curveDesignFromDocument(doc);
     await publishCrease(doc,result.warnings);
   }catch(error){scope.postMessage({type:'error',message:error instanceof Error?error.message:String(error)});}

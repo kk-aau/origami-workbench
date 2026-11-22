@@ -4,7 +4,7 @@ import {startDiagramProjectImport,type DiagramProjectImportReply,type DiagramPro
 import {createDiagramProject,exportDiagramProject,importDiagramProject,adoptDiagramPose,type DiagramProject} from '../../src/app/diagramProject';
 import {blankDoc} from '../../src/app/state';
 import {artworkTransferChunks,type ArtworkTransferOperation} from '../../src/app/artworkImportTransfer';
-import {createDiagramProjectSaveBlob,getDiagramProjectSaveBlob} from '../../src/app/diagramProjectTransport';
+import {createDiagramProjectSaveBlob,getDiagramProjectSaveBlob,originalDiagramFileNames} from '../../src/app/diagramProjectTransport';
 import {normalizeDiagramProjectCP} from '../../src/app/diagramCP';
 import {prepareExistingCreases} from '../../src/app/diagramProjectPreparation';
 import {computeFlatFold} from '../../src/core/flatFold';
@@ -118,7 +118,9 @@ test('actual file and stored-document Workers preserve complete normalization, m
       scope.postMessage=(reply:DiagramProjectImportReply)=>{const data=structuredClone(reply);delivered.push(data);queueMicrotask(()=>worker.onmessage?.({data}));};
       const input:DiagramProjectImportInput=mode==='file'?new File([text],'complete.diagram.json'):{storedText:JSON.stringify({format:'zhezhi-diagram-library-document',version:1,project:JSON.parse(text),thumbnail:null})};
       const task=startDiagramProjectImport(input,undefined,()=>worker as unknown as Worker),received=await task.promise;
-      assert.deepEqual(received,expected);assert.equal(worker.terminated,1);
+      assert.deepEqual(received,mode==='file'?{...expected,name:'complete'}:expected);
+      assert.equal(originalDiagramFileNames.get(received),mode==='file'?expected.name:undefined);
+      assert.equal(worker.terminated,1);
       const chunks=delivered.filter(reply=>reply.type==='diagram-chunk');assert.ok(chunks.length>2);
       assert.equal(worker.acks,chunks.length+1);assert.equal(delivered.some(reply=>(reply as {type:string}).type==='result'),false);
       assert.deepEqual(JSON.parse(await getDiagramProjectSaveBlob(received)!.text()),JSON.parse(JSON.stringify(received)));

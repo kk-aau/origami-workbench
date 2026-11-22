@@ -13,15 +13,15 @@ export interface ModelArrangement {
 }
 /** Display-only arrangement. Every tolerance is measured in model coordinates;
  * a dimensionless parameter tolerance must be divided by the edge length. */
-export function modelPlanarize(vertices:readonly Point[],edges:readonly [number,number][],epsilon:number):ModelArrangement{
+export function modelPlanarize(vertices:readonly Point[],edges:readonly [number,number][],epsilon:number,boundaryEpsilon=epsilon):ModelArrangement{
  // Normalize the input once, before intersections and coverage are computed.
  // Otherwise folded copies differing only by roundoff become thousands of
  // artificial thin slabs while their boundary graph has already welded them.
  // The accepted display tolerance applies to each world-coordinate component.
  const coordinate=()=>{
   const buckets=new Map<number,number[]>();
-  return (value:number)=>{const bucket=Math.floor(value/epsilon),roundoff=Number.EPSILON*Math.max(1,Math.abs(value))*8,radius=Math.ceil((epsilon+roundoff)/epsilon);
-   for(let offset=-radius;offset<=radius;offset++)for(const prior of buckets.get(bucket+offset)??[])if(Math.abs(value-prior)<=epsilon+roundoff)return prior;
+  return (value:number)=>{const bucket=Math.floor(value/boundaryEpsilon),roundoff=Number.EPSILON*Math.max(1,Math.abs(value))*8,radius=Math.ceil((boundaryEpsilon+roundoff)/boundaryEpsilon);
+   for(let offset=-radius;offset<=radius;offset++)for(const prior of buckets.get(bucket+offset)??[])if(Math.abs(value-prior)<=boundaryEpsilon+roundoff)return prior;
    const row=buckets.get(bucket);if(row)row.push(value);else buckets.set(bucket,[value]);return value;
   };
  };
@@ -44,12 +44,12 @@ export function modelPlanarize(vertices:readonly Point[],edges:readonly [number,
  const raw=originalSegments.map(([a,b])=>{const dx=b[0]-a[0],dy=b[1]-a[1];return {a,b,dx,dy};}),pointKeys=sourceSegmentPoints.map(points=>new Set(points.map(p=>p.join(','))));
  const rawBoxes:Bounds2[]=raw.map(({a,b})=>[Math.min(a[0],b[0]),Math.min(a[1],b[1]),Math.max(a[0],b[0]),Math.max(a[1],b[1])]),rawIndex=new BoundsIndex(rawBoxes);
  const insert=(index:number,p:Point)=>{const s=raw[index],t=Math.abs(s.dx)>=Math.abs(s.dy)?(p[0]-s.a[0])/s.dx:(p[1]-s.a[1])/s.dy,key=p.join(',');if(t>0&&t<1&&!pointKeys[index].has(key)){sourceSegmentPoints[index].push(p);pointKeys[index].add(key);}};
- for(let i=0;i<raw.length;i++)for(const j of rawIndex.query(rawBoxes[i],epsilon,i)){
+ for(let i=0;i<raw.length;i++)for(const j of rawIndex.query(rawBoxes[i],boundaryEpsilon,i)){
   const a=raw[i],b=raw[j];
   // Bound the actual vertical interpolation error, not just perpendicular
   // distance: steep parallel bands can have real height despite tiny spacing.
   // For vertical edges these inequalities require exactly the same x.
-  const onLine=(s:typeof a,p:Point)=>Math.abs((p[0]-s.a[0])*s.dy-(p[1]-s.a[1])*s.dx)<=epsilon*Math.abs(s.dx);
+  const onLine=(s:typeof a,p:Point)=>Math.abs((p[0]-s.a[0])*s.dy-(p[1]-s.a[1])*s.dx)<=boundaryEpsilon*Math.abs(s.dx);
   if(onLine(a,b.a))insert(i,b.a);if(onLine(a,b.b))insert(i,b.b);
   if(onLine(b,a.a))insert(j,a.a);if(onLine(b,a.b))insert(j,a.b);
  }

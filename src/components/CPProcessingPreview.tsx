@@ -1,3 +1,4 @@
+import {DocumentJunctionMarks} from './JunctionWarnings';
 import {useEffect,useMemo,useRef,useState} from 'react';
 import type {Doc,Point} from '../core/types';
 import type {CPPathOptimization} from '../core/cpPathOptimizer';
@@ -25,7 +26,7 @@ export default function CPProcessingPreview({doc,plan,original,numbers,groups,re
     <path className="cp-preview-hit" d={`M${l.a[0]} ${l.a[1]} L${l.b[0]} ${l.b[1]}`} fill="none" stroke="transparent" strokeWidth="14" vectorEffect="non-scaling-stroke" pointerEvents="stroke" onPointerEnter={()=>{if(!drag.current)setHover(l.key);}} onPointerLeave={()=>{if(!drag.current)setHover(null);}}/>
    </g>)}
    {numbers&&paths.map((p,i)=><g key={p.id} pointerEvents="none"><circle cx={p.points[0][0]} cy={p.points[0][1]} r={radius} fill={PROCESSING_COLORS[p.assignments[0]]}/><text x={p.points[0][0]+radius*2} y={p.points[0][1]-radius*2} fontSize={labelSize} fill="#354b40" paintOrder="stroke" stroke="#fff" strokeWidth={view.width*.006}>{i+1}</text></g>)}
-  </svg>
+  <DocumentJunctionMarks doc={doc}/></svg>
   <div className="cp-preview-navigation"><button aria-label="缩小加工预览" onClick={()=>zoom(1.25)}>−</button><button aria-label="适合加工预览" onClick={()=>{setView(base);setHover(null);}}>适合画布</button><button aria-label="放大加工预览" onClick={()=>zoom(.8)}>＋</button></div>
   <div className="cp-preview-inspector" aria-label="加工预览线段信息">{active?`${!original&&plan?.options.pathMode==='continuous'?`${polyline?'连续路径':'连续组'} ${active.stroke+1} · ${highlighted.length} ${groups||polyline?'段':'条 LINE'}`:`${mode} ${active.path+1}`} · ${[...new Set(highlighted.map(l=>PROCESSING_LABELS[l.assignment]))].join(' / ')} · 来源 ${highlighted.reduce((n,l)=>n+l.sourceIds.length,0)} 段 · ${highlighted.reduce((n,l)=>n+Math.hypot(l.b[0]-l.a[0],l.b[1]-l.a[1]),0).toLocaleString('zh-CN',{maximumFractionDigits:3})} mm`:`${mode} ${paths.length} ${groups&&!original?'组':'条'} · 滚轮缩放，拖动画布，悬停高亮${!original&&plan?.options.pathMode==='continuous'?'整条连续路径':'完整线段'}`}</div>
  </>;

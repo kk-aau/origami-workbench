@@ -3,6 +3,7 @@ import {epsilonFor} from '../core/geometry';
 import type {DiagramPose} from './diagramProject';
 import {validateDiagramAnnotations,type DiagramAnnotation,type DiagramSymbolAnnotation} from './diagramAnnotations';
 import type {DiagramPaperBinding} from './diagramPaperBindingTypes';
+import {resolveDiagramSymbolGeometry,type DiagramSymbolStyles} from './diagramSymbolStyles';
 import {symbolNativeBaseline} from './diagramAnnotationSVG';
 import {diagramIllustrationMesh,type DiagramIllustrationMesh} from './diagramIllustrationMesh';
 import {modelProjection} from './modelProjection';
@@ -39,9 +40,9 @@ export function diagramArrowBindingFaces(pose:DiagramPose|null,annotation:Diagra
 
 /** Bind only the tail to the chosen material face; the local arrow direction is
  * transported by that material triangle, including reflection. No CP changes. */
-export function bindDiagramArrow(pose:DiagramPose,annotation:DiagramSymbolAnnotation,face:number):DiagramSymbolAnnotation {
+export function bindDiagramArrow(pose:DiagramPose,annotation:DiagramSymbolAnnotation,face:number,styles?:DiagramSymbolStyles):DiagramSymbolAnnotation {
   if(!canBindDiagramArrow(annotation))throw Error('此符号没有可绑定的箭尾。');
-  const {mesh,shown,eps}=frame(pose),baseline=symbolNativeBaseline(annotation)!;
+  const {mesh,shown,eps}=frame(pose),baseline=symbolNativeBaseline(resolveDiagramSymbolGeometry(annotation,styles))!;
   for(const cell of mesh.triangles[face]??[]){
     const target=cell.map(v=>shown[v]),w=weights(baseline.start,target,eps);if(!w)continue;
     const source=cell.map(v=>mesh.graph.vertices_coords[v]),tipWeights=weights(baseline.end,target,eps,false)!;
@@ -53,21 +54,21 @@ export function bindDiagramArrow(pose:DiagramPose,annotation:DiagramSymbolAnnota
 
 /** Fit the existing glyph without discarding its original CAD properties or
  * curve controls. Rendering is idempotent: the binding is the absolute frame. */
-export function fitDiagramArrow(annotation:DiagramSymbolAnnotation,start:Point,end:Point,mirrored=!!annotation.mirrored):DiagramSymbolAnnotation {
-  let next={...annotation,mirrored},baseline=symbolNativeBaseline(next);
+export function fitDiagramArrow(annotation:DiagramSymbolAnnotation,start:Point,end:Point,mirrored=!!annotation.mirrored,styles?:DiagramSymbolStyles):DiagramSymbolAnnotation {
+  let next={...annotation,mirrored},baseline=symbolNativeBaseline(resolveDiagramSymbolGeometry(next,styles));
   if(!baseline)throw Error('此符号没有箭头基线。');
   if(mirrored===!!annotation.mirrored&&distance(baseline.start,start)<1e-9&&distance(baseline.end,end)<1e-9)return annotation;
   const from:Point=[baseline.end[0]-baseline.start[0],baseline.end[1]-baseline.start[1]],to:Point=[end[0]-start[0],end[1]-start[1]],length=Math.hypot(...from),targetLength=Math.hypot(...to);
   if(length<1e-10||targetLength<1e-10)throw Error('绑定纸面侧立或退化，箭头暂时保留原图。');
   const delta=Math.atan2(to[1],to[0])-Math.atan2(from[1],from[0]);
   next={...next,size:annotation.size*targetLength/length,rotation:((annotation.rotation+delta*180/Math.PI)%360+360)%360};
-  baseline=symbolNativeBaseline(next)!;
+  baseline=symbolNativeBaseline(resolveDiagramSymbolGeometry(next,styles))!;
   next.position=[next.position[0]+start[0]-baseline.start[0],next.position[1]+start[1]-baseline.start[1]];
   validateDiagramAnnotations([next]);return next;
 }
 
 export interface DiagramArrowBindingResult {annotation:DiagramSymbolAnnotation;issue?:string}
-export function resolveDiagramArrowBinding(pose:DiagramPose|null,annotation:DiagramSymbolAnnotation):DiagramArrowBindingResult {
+export function resolveDiagramArrowBinding(pose:DiagramPose|null,annotation:DiagramSymbolAnnotation,styles?:DiagramSymbolStyles):DiagramArrowBindingResult {
   const binding=annotation.paperBinding;if(!binding)return {annotation};
   if(!pose)return {annotation,issue:'当前没有纸面，绑定暂时停用。'};
   try{
@@ -80,14 +81,14 @@ export function resolveDiagramArrowBinding(pose:DiagramPose|null,annotation:Diag
       if(!weights(interpolate(target,w),target,eps,false))throw Error('绑定纸面侧立或退化，箭头暂时保留原图。');
       const start=interpolate(target,w),end=interpolate(target,weights(binding.tip,source,eps,false)!);
       const mirrored=binding.handedness*Math.sign(area/cross(...source as [Point,Point,Point]))<0;
-      return {annotation:fitDiagramArrow(annotation,start,end,mirrored)};
+      return {annotation:fitDiagramArrow(annotation,start,end,mirrored,styles)};
     }
     throw Error('箭尾已不在原纸面内，请重新绑定。');
   }catch(error){return {annotation,issue:error instanceof Error?error.message:String(error)};}
 }
-export function resolveDiagramPaperBindings(pose:DiagramPose|null,annotations:DiagramAnnotation[]):DiagramAnnotation[] {
+export function resolveDiagramPaperBindings(pose:DiagramPose|null,annotations:DiagramAnnotation[],styles?:DiagramSymbolStyles):DiagramAnnotation[] {
   if(!annotations.some(a=>a.kind==='symbol'&&a.paperBinding))return annotations;
-  return annotations.map(a=>a.kind==='symbol'&&a.paperBinding?resolveDiagramArrowBinding(pose,a).annotation:a);
+  return annotations.map(a=>a.kind==='symbol'&&a.paperBinding?resolveDiagramArrowBinding(pose,a,styles).annotation:a);
 }
 
 const near=(a:number,b:number)=>Math.abs(a-b)<=1e-8*Math.max(1,Math.abs(a),Math.abs(b));
@@ -97,13 +98,13 @@ function samePlacement(a:DiagramSymbolAnnotation,b:DiagramSymbolAnnotation):bool
 }
 /** Refresh the material frame only after an actual user placement/shape edit.
  * Pose changes and style-only edits must never move the attachment on paper. */
-export function editDiagramPaperBindings(pose:DiagramPose|null,previous:DiagramAnnotation[],next:DiagramAnnotation[]):DiagramAnnotation[] {
+export function editDiagramPaperBindings(pose:DiagramPose|null,previous:DiagramAnnotation[],next:DiagramAnnotation[],styles?:DiagramSymbolStyles):DiagramAnnotation[] {
   return next.map(a=>{
     if(a.kind!=='symbol'||!a.paperBinding)return a;
     const old=previous.find(p=>p.id===a.id);
-    if(old?.kind==='symbol'&&(JSON.stringify(old.paperBinding)!==JSON.stringify(a.paperBinding)||samePlacement(old,a)||samePlacement(resolveDiagramArrowBinding(pose,old).annotation,a)))return a;
+    if(old?.kind==='symbol'&&(JSON.stringify(old.paperBinding)!==JSON.stringify(a.paperBinding)||samePlacement(old,a)||samePlacement(resolveDiagramArrowBinding(pose,old,styles).annotation,a)))return a;
     if(!pose)throw Error('没有可绑定的纸面，请先解除箭头绑定。');
-    if(resolveDiagramArrowBinding(pose,a).issue)throw Error('原纸面已变化，请先解除箭头绑定或重新绑定。');
-    return bindDiagramArrow(pose,a,a.paperBinding.face);
+    if(resolveDiagramArrowBinding(pose,a,styles).issue)throw Error('原纸面已变化，请先解除箭头绑定或重新绑定。');
+    return bindDiagramArrow(pose,a,a.paperBinding.face,styles);
   });
 }

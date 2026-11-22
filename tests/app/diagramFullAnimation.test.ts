@@ -6,6 +6,8 @@ import {buildDiagramStepAnimation} from '../../src/app/diagramStepAnimation';
 import {DiagramFullAnimationSession,alignDiagramAnimationStart,diagramAnimationBoundary} from '../../src/app/diagramFullAnimation';
 import {startDiagramFullAnimation} from '../../src/app/diagramFullAnimationTask';
 import {prepareSimulationDocument} from '../../src/engine/simmodel';
+import {diagramSinkDisplay} from '../../src/app/diagramSinkDisplay';
+import {viewRotationFor} from '../../vendor/simulator/oristudio/packages/origami-simulator/src/webgl/camera';
 import type {Segment} from '../../src/core/types';
 
 const crease=(angle:number):Segment=>({id:'center-fold',a:[50,0],b:[50,100],assignment:angle===0?'F':'V',angle});
@@ -18,6 +20,31 @@ function series(angles:number[]){
   }
   return project;
 }
+
+test('the sink camera keeps the authored middle view in registered coordinates and encloses both trajectories',()=>{
+  const project=series([90,180]),session=new DiagramFullAnimationSession(project);
+  const opening=session.prepare(0,0),closing=session.prepare(1,0);
+  const clip=buildDiagramStepAnimation(project,project.steps[1].id),{prepared}=prepareSimulationDocument(clip.fold);
+  clip.camera={yaw:.4,pitch:-.3,zoom:1};
+  const boundary=diagramAnimationBoundary(opening),p=boundary.positions;
+  for(let v=0;v<p.length;v+=3){
+    const x=p[v];p[v]=-p[v+1]+3;p[v+1]=x-4;
+  }
+  const aligned=alignDiagramAnimationStart(prepared,clip,boundary);
+  const screen=(positions:number[],view:NonNullable<typeof clip.camera>)=>{
+    const matrix=viewRotationFor(view);
+    return positions.flatMap((_,i)=>i%3?[]:[0,1,2].map(row=>[0,1,2].reduce((sum,k)=>sum+matrix[3*row+k]*(positions[i+k]-positions[k]),0)));
+  };
+  const wanted=screen(clip.animation.initialPositions,clip.camera),actual=screen(aligned.animation.initialPositions,aligned.camera!);
+  assert.ok(actual.every((n,i)=>Math.abs(n-wanted[i])<2e-6));
+  const {cameraFrame}=diagramSinkDisplay(opening,closing);
+  for(const entry of [opening,closing]){
+    const positions=diagramAnimationBoundary(entry).positions;
+    for(let v=0;v<positions.length;v+=3){
+      assert.ok(Math.hypot(...cameraFrame.center.map((n,k)=>n-positions[v+k]))<=cameraFrame.radius);
+    }
+  }
+});
 
 test('partial folds continue from their actual endpoint and seeking is deterministic',()=>{
   const project=series([90,167.4,180]),saved=JSON.stringify(project),session=new DiagramFullAnimationSession(project);

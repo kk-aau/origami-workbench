@@ -1,5 +1,6 @@
 import type {Point} from '../core/types';
 import type {DiagramLineAnnotation} from './diagramAnnotations';
+import {diagramGridAxes,type DiagramSnapGrid} from './diagramGrid';
 
 const EPS=1e-8;
 const ANGLE_EPS=1e-8;
@@ -17,7 +18,12 @@ const unit=(p:Point):Point|null=>{const n=length(p);return n>EPS?mul(p,1/n):null
 export type DiagramLineSnapReference=Pick<DiagramLineAnnotation,'id'|'a'|'b'>;
 export interface DiagramLineSnapOptions {
   anchor:Point;
-  lines:readonly DiagramLineAnnotation[];
+  lines:readonly DiagramLineSnapReference[];
+  grid?:DiagramSnapGrid;
+  gridDiagonalSpacing?:number;
+  /** Displayed creases outside the target layer can supply an angular direction. */
+  angleReferences?:readonly DiagramLineSnapReference[];
+  incoming?:DiagramLineSnapReference;
   /** World distance obtained from the screen's snap tolerance and current zoom. */
   radius:number;
   enabled?:boolean;
@@ -38,12 +44,12 @@ export interface DiagramLineSnapResult {
 }
 
 interface Reference {
-  source:DiagramLineAnnotation;
+  source:DiagramLineSnapReference;
   direction:Point;
   length:number;
   angle:number;
 }
-const snapshot=(line:DiagramLineAnnotation):DiagramLineSnapReference=>({id:line.id,a:[...line.a],b:[...line.b]});
+const snapshot=(line:DiagramLineSnapReference):DiagramLineSnapReference=>({id:line.id,a:[...line.a],b:[...line.b]});
 const preferred=(a:Reference,b:Reference)=>a.length>b.length+EPS||Math.abs(a.length-b.length)<=EPS&&a.source.id<b.source.id;
 
 /** Automatic relations only. Callers retain explicit endpoint/grid/modifier priorities.
@@ -76,10 +82,10 @@ export function snapDiagramLinePoint(pointer:Point,options:DiagramLineSnapOption
       references:references.map(reference=>snapshot(reference.source)),label:kind==='perpendicular'?'垂直 · 90°':'角平分线'};
   }
 
-  for(const source of lines) {
-    if(!finite(source.a)||!finite(source.b))continue;
+  function visit(source:DiagramLineSnapReference,angleOnly:boolean) {
+    if(!finite(source.a)||!finite(source.b))return;
     const edge=sub(source.b,source.a),edgeLength=length(edge);
-    if(!Number.isFinite(edgeLength)||edgeLength<=EPS)continue;
+    if(!Number.isFinite(edgeLength)||edgeLength<=EPS)return;
     let direction=mul(edge,1/edgeLength);
     if(direction[1]<-ANGLE_EPS||Math.abs(direction[1])<=ANGLE_EPS&&direction[0]<0)direction=mul(direction,-1);
     const reference:Reference={source,direction,length:edgeLength,angle:axisAngle(Math.atan2(direction[1],direction[0]))};
@@ -88,14 +94,14 @@ export function snapDiagramLinePoint(pointer:Point,options:DiagramLineSnapOption
     if(perpendicularDistance<=coincidence&&along>=-coincidence&&along<=edgeLength+coincidence)incident.push(reference);
 
     // A perpendicular foot outside a finite reference is unrelated to that segment.
-    if(along< -coincidence||along>edgeLength+coincidence)continue;
+    if(angleOnly||along< -coincidence||along>edgeLength+coincidence)return;
     const foot=add(source.a,mul(edge,along/edgeLength));
     // Nearby means near the anchor or the pointer, not merely on a remote support line.
     const pointerAlong=dot(sub(pointer,source.a),mul(edge,1/edgeLength));
     const pointerFoot=add(source.a,mul(edge,Math.max(0,Math.min(edgeLength,pointerAlong))/edgeLength));
-    if(Math.min(perpendicularDistance,length(sub(pointer,pointerFoot)))>radius*2+EPS)continue;
+    if(Math.min(perpendicularDistance,length(sub(pointer,pointerFoot)))>radius*2+EPS)return;
     const normal:Point=[-direction[1],direction[0]],projection=dot(delta,normal);
-    if(Math.abs(projection)<=EPS||Math.abs(cross(delta,normal))>distance*angularTolerance+EPS)continue;
+    if(Math.abs(projection)<=EPS||Math.abs(cross(delta,normal))>distance*angularTolerance+EPS)return;
     const projected=add(anchor,mul(normal,projection));
     const useFoot=length(sub(foot,anchor))>EPS&&dot(sub(foot,anchor),delta)>0&&length(sub(pointer,foot))<=radius+EPS;
     const point=useFoot?foot:projected;
@@ -105,6 +111,21 @@ export function snapDiagramLinePoint(pointer:Point,options:DiagramLineSnapOption
     consider(point,'perpendicular',perpendicularDistance<=coincidence?anchor:foot,[referenceRay],[reference]);
   }
 
+  for(const source of lines)visit(source,false);
+  for(const source of options.angleReferences??[])visit(source,true);
+  if(options.incoming)visit(options.incoming,true);
+  if(options.grid){
+    const offset=sub(anchor,options.grid.origin);
+    for(const [family,{normal,step}] of diagramGridAxes(options.grid,options.gridDiagonalSpacing).entries()){
+      const size=length(normal),position=dot(offset,normal),index=Math.round(position/step);
+      if(Math.abs(position-index*step)>coincidence*size)continue;
+      const direction:Point=[-normal[1]/size,normal[0]/size];
+      const span=mul(direction,radius*4);
+      const source={id:`snap-grid:${family}:${index}`,a:sub(anchor,span),b:add(anchor,span)};
+      // An actual crease wins when the same axis is also a grid line.
+      incident.push({source,direction,length:0,angle:axisAngle(Math.atan2(direction[1],direction[0]))});
+    }
+  }
   if(incident.length<2)return best;
   incident.sort((a,b)=>a.angle-b.angle||a.source.id.localeCompare(b.source.id));
   const axes:Reference[]=[];

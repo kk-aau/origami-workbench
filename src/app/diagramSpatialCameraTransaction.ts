@@ -49,6 +49,7 @@ function legacySideOnSpans(pose:DiagramPose,line:DiagramLineAnnotation,face:numb
   const dx=line.b[0]-line.a[0],dy=line.b[1]-line.a[1],length=Math.hypot(dx,dy),at=(p:Point)=>((p[0]-line.a[0])*dx+(p[1]-line.a[1])*dy)/(length*length);
   for(const segment of sources){
     if(!['M','V','F','U'].includes(segment.assignment))continue;
+    if(line.sinkAssignment&&segment.assignment!==line.sinkAssignment)continue;
     if(line.style==='crease'&&segment.assignment!=='F'||line.style==='auxiliary'&&segment.assignment!=='U'||['valley','mountain'].includes(line.style)&&!['M','V'].includes(segment.assignment))continue;
     const intervals=mesh.triangles[face].map(t=>clipTriangle(segment,t.map(v=>mesh.graph.vertices_coords[v]),eps)).filter((v):v is [number,number]=>!!v).sort((a,b)=>a[0]-b[0]);
     const joined:[number,number][]=[];for(const [a,b] of intervals){const prior=joined.at(-1);if(prior&&a<=prior[1]+1e-9)prior[1]=Math.max(prior[1],b);else joined.push([a,b]);}
@@ -65,7 +66,7 @@ function legacySideOnSpans(pose:DiagramPose,line:DiagramLineAnnotation,face:numb
 
 function sourceSpans(pose:DiagramPose,line:DiagramLineAnnotation,sources:readonly Segment[],eps:number):Span[]{
   const saved=line.cameraSource;
-  if(saved&&saved.stateId===pose.sourceStateId&&saved.revision===pose.sourceRevision&&saved.shownStyle===line.style&&distance(saved.shownA,line.a)<=eps&&distance(saved.shownB,line.b)<=eps&&saved.spans.every(span=>line.foldFaces?.includes(span.face)&&span.face<pose.result.geometry.faces.length)){
+  if(saved&&saved.stateId===pose.sourceStateId&&saved.revision===pose.sourceRevision&&saved.shownStyle===line.style&&distance(saved.shownA,line.a)<=eps&&distance(saved.shownB,line.b)<=eps&&saved.spans.every(span=>line.foldFaces?.includes(span.face)&&span.face<pose.result.geometry.faces.length&&(!line.sinkAssignment||span.assignment===line.sinkAssignment))){
     // The displayed handle remains as metadata when its true projection is a
     // point; otherwise require the saved material and current ink to agree.
     if(saved.spans.every(span=>{const p=materialProjection(pose,span.face),a=p.project(span.a),b=p.project(span.b);return distance(a,b)<=eps||distance(a,line.a)<=eps&&distance(b,line.b)<=eps;}))return saved.spans;
@@ -74,7 +75,7 @@ function sourceSpans(pose:DiagramPose,line:DiagramLineAnnotation,sources:readonl
   for(const face of line.foldFaces??[]){
     if(face<0||face>=pose.result.geometry.faces.length)throw Error('折线依附的纸面不存在，未改变视角。');
     const p=materialProjection(pose,face);
-    if(p.inverse)result.push({face,a:p.inverse(line.a),b:p.inverse(line.b),assignment:assignment(line.style,p.det)});
+    if(p.inverse)result.push({face,a:p.inverse(line.a),b:p.inverse(line.b),assignment:line.sinkAssignment??assignment(line.style,p.det)});
     else result.push(...legacySideOnSpans(pose,line,face,sources,eps));
   }
   if(!result.length&&line.foldFaces?.length)throw Error('侧立纸面的旧折线缺少可对应的 CP 位置，未改变视角；请先更新主图折痕。');
@@ -95,7 +96,7 @@ function reprojectInk(previous:DiagramPose,next:DiagramPose,annotations:DiagramA
     return groups.map((group,index)=>{
       let id=annotation.id;if(index){let serial=0;do{id=annotation.id.slice(0,205)+`:camera:${group.spans[0].face}:${serial++}`;}while(used.has(id));used.add(id);}
       const standard=annotation.strokePattern!==undefined&&!annotation.appearanceOverrides?.includes('strokePattern')&&annotation.strokePattern===defaultDiagramStrokePattern(annotation.style);
-      return {...annotation,id,a:group.a,b:group.b,style:group.style,foldFaces:[...new Set(group.spans.map(s=>s.face))],...(standard?{strokePattern:defaultDiagramStrokePattern(group.style)}:{}),
+      return {...annotation,id,a:group.a,b:group.b,style:group.style,foldFaces:[...new Set(group.spans.map(s=>s.face))],...(annotation.sinkFold&&groups.length>1?{sinkGroup:annotation.sinkGroup??annotation.id}:{}),...(standard?{strokePattern:defaultDiagramStrokePattern(group.style)}:{}),
         cameraSource:{stateId:previous.sourceStateId,revision:previous.sourceRevision,spans:group.spans,shownA:group.a,shownB:group.b,shownStyle:group.style}};
     });
   });
@@ -121,7 +122,7 @@ export function applyDiagramSpatialCamera(project:DiagramProject,stepId:string,a
   // Old completed hinges project as existing marks, not new M/V instructions.
   // In a side-on view they can coincide exactly with a newly authored stroke.
   const sources=[...diffDiagramFoldCP(pose.sourceDoc,after.doc),...after.doc.segments.filter(s=>s.assignment==='F'),...completedSpatialCreases(pose).map(s=>({...s,assignment:'F' as const,angle:0})),...(original.foldLink?.precreases??[])];
-  const mapped=resolveDiagramPaperBindings(step.pose!,reprojectInk(pose,step.pose!,original.annotations??[],sources));
+  const mapped=resolveDiagramPaperBindings(step.pose!,reprojectInk(pose,step.pose!,original.annotations??[],sources),project.basicSettings?.symbolStyles);
   next=updateDiagramAnnotations(next,stepId,mapped);
   if(original.foldLink?.enabled){
     // Rebuild newly visible CP routes while retaining authored handle identity,

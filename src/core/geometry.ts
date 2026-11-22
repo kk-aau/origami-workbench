@@ -1,4 +1,5 @@
 import ear from 'rabbit-ear';
+import {memoDiagramOpen} from './diagramOpenMemo';
 import {buildBoundaryRegions} from './boundaryRegions';
 import {overlappingSegmentPairs} from './segmentPairs';
 import {hasMaterialTopology,inspectMaterialTopology} from './materialTopology';
@@ -141,4 +142,4 @@ export function buildFold(doc: Doc,options:BuildFoldOptions={}): BuildFoldResult
 
 /** The diagram workspace records F marks without introducing material seams.
  * Indexed cut/material sources keep their independently validated identities. */
-export function buildDiagramFold(doc:Doc):BuildFoldResult{return buildFold(doc,{flatCreases:'marks'});}
+export function buildDiagramFold(doc:Doc):BuildFoldResult{return memoDiagramOpen('fold',()=>doc,()=>buildFold(doc,{flatCreases:'marks'}));}

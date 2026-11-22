@@ -37,6 +37,16 @@ function servicePreferences():Preferences {
       catch(error){if((error as {status?:number}).status===409)return false;throw error;}
     },
     writeSync:servicePreferenceWrite,
+    readSync(key){
+      if(!managedKey(key))throw Error('不支持此偏好设置。');
+      const request=new XMLHttpRequest();
+      request.open('GET','/api/storage/preferences?key='+encodeURIComponent(key),false);
+      request.setRequestHeader('X-Zhezhi-Token',storageSessionToken());
+      request.send();
+      const result=JSON.parse(request.responseText);
+      if(request.status!==200||result.value!==null&&typeof result.value!=='string')throw Error('无法读取最新的设计文档库。');
+      return result.value;
+    },
   });
 }
 

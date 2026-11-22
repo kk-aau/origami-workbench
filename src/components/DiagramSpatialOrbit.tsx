@@ -9,12 +9,12 @@ import './DiagramSpatialOrbit.css';
 type Camera=DiagramSpatialPose['camera'];
 type Drag={id:number;x:number;y:number;left:number;top:number;width:number;height:number;camera:Camera};
 export type DiagramSpatialCameraJob={promise:Promise<{result:DiagramPose['result'];spatial:DiagramSpatialPose}>;cancel:()=>void};
-export interface DiagramSpatialOrbitProps {pose:DiagramPose;history?:readonly DiagramPose[];disabled?:boolean;drawingRotation?:number;onCommit:(camera:Camera,prepared?:DiagramSpatialCameraJob)=>Promise<boolean>;onExit:()=>void}
+export interface DiagramSpatialOrbitProps {interactive:boolean;pose:DiagramPose;history?:readonly DiagramPose[];disabled?:boolean;drawingRotation?:number;onCommit:(camera:Camera,prepared?:DiagramSpatialCameraJob)=>Promise<boolean>;onExit:()=>void}
 const emptyHistory:readonly DiagramPose[]=[];
 
 /** Orbit mode is a transient viewer. Only a completed gesture asks its parent
  * to validate and save a camera; neither a drag nor a cancelled gesture edits CP. */
-export default function DiagramSpatialOrbit({pose,history=emptyHistory,disabled=false,drawingRotation=0,onCommit,onExit}:DiagramSpatialOrbitProps){
+export default function DiagramSpatialOrbit({interactive,pose,history=emptyHistory,disabled=false,drawingRotation=0,onCommit,onExit}:DiagramSpatialOrbitProps){
   const element=useRef<HTMLDivElement>(null),drag=useRef<Drag|null>(null),keyboard=useRef<Camera|null>(null),mounted=useRef(true),pending=useRef(false);
   const [camera,setCamera]=useState<Camera>(()=>({...pose.spatial!.camera})),cameraRef=useRef(camera);
   const [moving,setMoving]=useState(false),[applying,setApplying]=useState(false),[preparing,setPreparing]=useState(true),[error,setError]=useState(''),[preview,setPreview]=useState(''),[viewport,setViewport]=useState('');
@@ -43,28 +43,34 @@ export default function DiagramSpatialOrbit({pose,history=emptyHistory,disabled=
     catch(cause){if(mounted.current){update({...props.current.pose.spatial!.camera});setError(cause instanceof Error?cause.message:'此视角未能应用，已保留原视角。');}}
     finally{pending.current=false;if(mounted.current){setApplying(false);setPreview('');}}
   };
+  const lastInputs=useRef<{pose:DiagramPose;history:readonly DiagramPose[];drawingRotation:number}|null>(null);
   useEffect(()=>{
+    const last=lastInputs.current;
+    if(work.current.session&&last?.pose===pose&&last.drawingRotation===drawingRotation&&last.history.length===history.length&&history.every((item,i)=>item===last.history[i]))return;
+    lastInputs.current={pose,history,drawingRotation};
     if(!drag.current&&!keyboard.current)update({...pose.spatial!.camera});setPreview('');clearPreviewWork();setPreparing(true);
     const state=work.current,existing=state.session,session=ensureSession();
     const ready=state.ready=existing?session.sync(pose,history,drawingRotation):session.ready;
-    ready.then(()=>{if(mounted.current&&work.current.session===session&&work.current.ready===ready){setPreparing(false);setError('');}}).catch(cause=>{if(mounted.current&&work.current.session===session&&work.current.ready===ready){setPreparing(false);setError(cause instanceof Error?cause.message:'视角预览未能准备完成。');}});
-  },[pose,history,drawingRotation]);
-  useEffect(()=>{mounted.current=true;element.current?.focus({preventScroll:true});return()=>{mounted.current=false;clearPreviewWork(true);};},[]);
-  useEffect(()=>{if(!moving&&!keyboard.current||applying||disabled||sameSpatialCamera(camera,props.current.pose.spatial!.camera))return;work.current.queued=camera;pump();},[camera,moving,applying,disabled]);
+    ready.then(()=>{if(mounted.current&&work.current.session===session&&work.current.ready===ready){setPreparing(false);setError('');}}).catch(cause=>{if(mounted.current&&work.current.session===session&&work.current.ready===ready){clearPreviewWork(true);setPreparing(false);setError(cause instanceof Error?cause.message:'视角预览未能准备完成。');}});
+  },[pose,history,drawingRotation,interactive]);
+  useEffect(()=>{mounted.current=true;return()=>{mounted.current=false;clearPreviewWork(true);};},[]);
+  useEffect(()=>{if(!interactive||!moving&&!keyboard.current||applying||disabled||sameSpatialCamera(camera,props.current.pose.spatial!.camera))return;work.current.queued=camera;pump();},[camera,moving,applying,disabled,interactive]);
   useEffect(()=>{
-    const node=element.current;if(!node)return;
+    if(!interactive){cancel();return;}
+    const node=element.current;if(!node)return;node.focus({preventScroll:true});
     const scene=node.parentElement?.querySelector<SVGSVGElement>('svg[data-diagram-model]');
     const read=()=>{if(scene)setViewport(scene.getAttribute('viewBox')??'');};read();
     const observer=new MutationObserver(read);if(scene)observer.observe(scene,{attributes:true,attributeFilter:['viewBox']});
     const wheel=(event:WheelEvent)=>event.preventDefault(),blur=()=>{if(drag.current||keyboard.current)cancel();};
     node.addEventListener('wheel',wheel,{passive:false});window.addEventListener('blur',blur);
     return()=>{observer.disconnect();node.removeEventListener('wheel',wheel);window.removeEventListener('blur',blur);};
-  },[]);
+  },[interactive]);
   const end=(event:PointerEvent<HTMLDivElement>)=>{
     if(drag.current?.id!==event.pointerId)return;const previous=drag.current;drag.current=null;setMoving(false);release(event.pointerId);
     if(Math.hypot(event.clientX-previous.x,event.clientY-previous.y)>2)void commit(cameraRef.current);
     else{clearPreviewWork();setPreview('');update({...props.current.pose.spatial!.camera});}
   };
+  if(!interactive)return null;
   // Display only completed exact overlap frames, including during a gesture.
   const previewing=(moving||applying||!!keyboard.current)&&!!preview;
   const markup=viewport?preview.replace(/viewBox="[^"]*"/,`viewBox="${viewport}"`):preview;

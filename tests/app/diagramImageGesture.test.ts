@@ -2,11 +2,23 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import type {Point} from '../../src/core/types';
 import {diagramImageCorners,type DiagramImage} from '../../src/app/diagramImages';
+import {croppedImagePlacement} from '../../src/app/diagramImageCrop';
 import {resizeDiagramImage,translateDiagramImage,type DiagramImageCorner} from '../../src/components/diagramImageGesture';
 
 const fixture=(rotation=0):DiagramImage=>({id:'photo',name:'步骤照片',dataUrl:'data:image/png;base64,',pixelWidth:800,pixelHeight:400,position:[20,30],width:100,height:50,rotation,source:'file'});
 const near=(actual:number,expected:number)=>assert.ok(Math.abs(actual-expected)<1e-7,`${actual} != ${expected}`);
 const nearPoint=(actual:Point,expected:Point)=>{near(actual[0],expected[0]);near(actual[1],expected[1]);};
+
+test('cropping a rotated image keeps its retained corners on the same material points',()=>{
+  const crop={x:160,y:50,width:360,height:120};
+  for(const rotation of [0,42,90,-130]){
+    const image=fixture(rotation),[a,b,,d]=diagramImageCorners(image);
+    const corners=diagramImageCorners({...image,...croppedImagePlacement(image,crop)});
+    for(const [i,[x,y]] of [[160,50],[520,50],[520,170],[160,170]].entries()){
+      nearPoint(corners[i],[a[0]+(b[0]-a[0])*x/800+(d[0]-a[0])*y/400,a[1]+(b[1]-a[1])*x/800+(d[1]-a[1])*y/400]);
+    }
+  }
+});
 
 test('image translation changes placement without changing embedded pixels, rotation or its source',()=>{
   const image=fixture(35),snapshot=structuredClone(image),moved=translateDiagramImage(image,[50,60],[85,15]);

@@ -219,6 +219,20 @@ export class ReferenceSolver implements SolverBackend {
     this.lastLastRelativePositions.set(this.lastRelativePositions);
   }
 
+  /** Feed a constrained numerical pose back into the Euler integrator.
+   * Fold angles and velocities keep their history across relaxation batches. */
+  projectEulerPositions(project:(positions:number[])=>void):void {
+    if(this.options.integrationType!=='euler')throw Error('纸层约束需要 Euler 积分。');
+    const pose=Array.from(this.model.positions);
+    project(pose);
+    for(let i=0;i<pose.length;i++){
+      const relative=pose[i]-this.model.originalPositions[i]!;
+      this.relativePositions[i]=relative;
+      this.lastRelativePositions[i]=relative;
+      this.model.positions[i]=pose[i];
+    }
+  }
+
   recenter(target: readonly [number, number, number]): void {
     if (target.length !== 3 || target.some(value => !Number.isFinite(value))) {
       throw new Error('模拟居中目标必须是有限的三维坐标。');
@@ -291,6 +305,49 @@ export class ReferenceSolver implements SolverBackend {
     for (let i = 0; i < numSteps; i += 1) {
       this.solveStep();
     }
+  }
+
+  /** Reduced Euler system for a recorded fold. One material stack has one
+   * position and velocity per corresponding vertex. All incident hinges,
+   * including boundary loads from outside the stack, contribute to that DOF. */
+  coincidentEulerStepper(groups:readonly (readonly number[])[]):(steps:number)=>void {
+    if(this.options.integrationType!=='euler'||this.rigidPoseDriver)throw Error('叠层合并需要数值 Euler 求解器。');
+    const {prepared,positions,originalPositions,velocities}=this.model;
+    const used=new Set(groups.flat());
+    const nodes=[...groups,...Array.from({length:prepared.vertexCount},(_,v)=>v).filter(v=>!used.has(v)).map(v=>[v])];
+    const pins=nodes.map(ids=>this.vertexConstraints.get(ids.find(v=>this.vertexConstraints.has(v))??-1));
+    const nextVelocity=new Float64Array(nodes.length*3);
+    return steps=>{
+      const dt=this.timeStep();
+      for(let iteration=0;iteration<steps;iteration++){
+        const normals=this.normalCalc(),angles=this.thetaCalc(normals),geometry=this.updateCreaseGeo();
+        nextVelocity.fill(0);
+        for(let n=0;n<nodes.length;n++){
+          if(pins[n])continue;
+          const ids=nodes[n];
+          for(const v of ids){
+            const force=this.forceForVertex(v,normals,angles,geometry);
+            for(let k=0;k<3;k++)nextVelocity[3*n+k]+=force[k];
+          }
+          // Each identical material node has unit mass in the ordinary solver.
+          for(let k=0;k<3;k++)nextVelocity[3*n+k]=this.lastVelocity[3*ids[0]+k]!+dt*nextVelocity[3*n+k]!/ids.length;
+        }
+        for(let n=0;n<nodes.length;n++){
+          const ids=nodes[n],root=3*ids[0],pin=pins[n];
+          for(let k=0;k<3;k++){
+            const speed=nextVelocity[3*n+k]!,delta=this.lastRelativePositions[root+k]!+speed*dt;
+            const absolute=pin?pin[k]!:originalPositions[root+k]!+delta;
+            for(const v of ids){
+              const i=3*v+k;
+              positions[i]=absolute;
+              this.lastVelocity[i]=velocities[i]=speed;
+              this.relativePositions[i]=this.lastRelativePositions[i]=absolute-originalPositions[i]!;
+            }
+          }
+        }
+        this.currentStep++;
+      }
+    };
   }
 
   readPositions(into: Float32Array): number {

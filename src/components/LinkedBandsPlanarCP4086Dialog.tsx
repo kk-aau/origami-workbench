@@ -1,3 +1,4 @@
+import {DocumentJunctionMarks} from './JunctionWarnings';
 import {useEffect,useMemo,useRef,useState} from 'react';
 import {TessDialog} from './TessellationEditor';
 import {LINKED_BANDS_PLANAR_CP_4086_EXAMPLE,validateLinkedBandsPlanarCP4086Recipe,prepareLinkedBandsPlanarCP4086Preview,linkedBandsPlanarCP4086SourceMatches,type LinkedBandsPlanarCP4086Recipe,type LinkedBandsPlanarCP4086Source} from '../app/linkedBandsPlanarCP4086';
@@ -24,7 +25,7 @@ function WorldPlot({doc,current}:{doc:Doc;current:boolean}){
   <g fill="#4d5e58" fontSize={font}>{ticks(xmin,xmax).map(x=><text key={'x'+x} x={x} y={ymin-font*.8} textAnchor="middle">{label(x)}</text>)}{ticks(ymin,ymax).map(y=><text key={'y'+y} x={xmin-font*.8} y={y+font*.3} textAnchor="end">{label(y)}</text>)}<text x={xmax} y={ymin-margin*.65} textAnchor="end">X / mm</text><text x={xmin-margin*.65} y={ymax} textAnchor="middle" transform={`rotate(-90 ${xmin-margin*.65} ${ymax})`}>Y / mm</text></g>
   <g>{doc.segments.map(s=><line key={s.id} x1={s.a[0]} y1={s.a[1]} x2={s.b[0]} y2={s.b[1]} stroke={s.assignment==='B'||!current?'#151a1b':'#168b9b'} strokeWidth={line*(s.assignment==='B'?1.5:1.05)}/>)}</g>
   <g stroke="#465c53" fill="#465c53" strokeWidth={line}><line x1={xmin} y1={ymax+margin*.58} x2={xmin+ruler} y2={ymax+margin*.58}/><text x={xmin+ruler/2} y={ymax+margin*.58-font*.65} textAnchor="middle" fontSize={font} stroke="none">{label(ruler)} mm</text></g>
- </svg><figcaption><button aria-label="多带视图缩小" onClick={()=>setView(v=>({...v,zoom:Math.min(20,v.zoom*1.3)}))}>−</button><button onClick={()=>setView({zoom:1,x:0,y:0})}>适合纸域</button><button aria-label="多带视图放大" onClick={()=>setView(v=>({...v,zoom:Math.max(.05,v.zoom/1.3)}))}>＋</button><span>{current?'黑 · 纸边　青 · 内部曲线弦 U（山谷、折角未指定）':'黑 · 上一次有效纸域，当前参数尚不可采用'}</span></figcaption></figure>;
+ {doc&&<DocumentJunctionMarks doc={doc} spatial/>}</svg><figcaption><button aria-label="多带视图缩小" onClick={()=>setView(v=>({...v,zoom:Math.min(20,v.zoom*1.3)}))}>−</button><button onClick={()=>setView({zoom:1,x:0,y:0})}>适合纸域</button><button aria-label="多带视图放大" onClick={()=>setView(v=>({...v,zoom:Math.max(.05,v.zoom/1.3)}))}>＋</button><span>{current?'黑 · 纸边　青 · 内部曲线弦 U（山谷、折角未指定）':'黑 · 上一次有效纸域，当前参数尚不可采用'}</span></figcaption></figure>;
 }
 export default function LinkedBandsPlanarCP4086Dialog({initial,onClose,onAdoptCP}:{initial?:LinkedBandsPlanarCP4086Recipe;onClose:()=>void;onAdoptCP?:(doc:Doc)=>boolean}){
  const [draft,setDraft]=useState<Draft>(()=>draftOf(initial??LINKED_BANDS_PLANAR_CP_4086_EXAMPLE)),[result,setResult]=useState<{key:string;source:LinkedBandsPlanarCP4086Source;doc:Doc}|null>(null),[busy,setBusy]=useState(false),[problem,setProblem]=useState(''),[code,setCode]=useState(''),[adoptError,setAdoptError]=useState('');

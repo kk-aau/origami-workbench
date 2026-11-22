@@ -8,7 +8,7 @@ export function isolateDiagramLineEdits(before:readonly DiagramAnnotation[],edit
   const used=new Set([...before,...edited].map(a=>a.id)),remaining:DiagramLineAnnotation[]=[];
   let result=edited;
   for(const original of before){
-    if(original.kind!=='line'||!Object.hasOwn(selection,original.id))continue;
+    if(original.kind!=='line'||original.sinkFold||!Object.hasOwn(selection,original.id))continue;
     const wanted=[...new Set(selection[original.id])];
     if(wanted.some(face=>!Number.isInteger(face)||face<0)||original.foldFaces&&wanted.some(face=>!original.foldFaces!.includes(face)))throw Error('所选纸层已变化，请重新选择折痕。');
     const index=result.findIndex(a=>a.id===original.id),changed=index<0?undefined:result[index];

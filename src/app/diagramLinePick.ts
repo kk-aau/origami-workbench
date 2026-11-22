@@ -6,6 +6,7 @@ import type {DiagramPose} from './diagramProject';
 import type {ModelViewState} from './modelViewState';
 import {diagramIllustrationMesh} from './diagramIllustrationMesh';
 import {diagramPresentation,isDiagramBackgroundLine,diagramFaceVisible} from './diagramDrawing';
+import type {DiagramSymbolInkOptions} from './diagramAnnotationSVG';
 import {pointHitsDiagramAnnotation,diagramAnnotationsInBox} from './diagramDrawingTools';
 import {diagramViewportAnnotations,rotateDiagramViewportPoint} from './diagramViewport';
 import {diagramTearWindowHidesFace} from './diagramTearWindowGeometry';
@@ -60,12 +61,12 @@ export function topDiagramFaceAtPoint(pose:DiagramPose,point:Point,view?:ModelVi
  * Linked lines can represent several coincident CP routes; their saved range
  * is deliberately left intact until the selected face is edited. Independent
  * objects retain their paint order above linked creases and bottom drawings. */
-export function pickTopDiagramAnnotation(annotations:readonly DiagramAnnotation[],point:Point,tolerance:number,pose:DiagramPose|null,view?:ModelViewState,linked=false,lineDefaults?:DiagramLineDefaults):DiagramAnnotationPick|null {
+export function pickTopDiagramAnnotation(annotations:readonly DiagramAnnotation[],point:Point,tolerance:number,pose:DiagramPose|null,view?:ModelViewState,linked=false,lineDefaults?:DiagramLineDefaults,options?:DiagramSymbolInkOptions):DiagramAnnotationPick|null {
   const independent:DiagramAnnotationPick[]=[],paper:DiagramAnnotationPick[]=[],boundaryPaper:DiagramAnnotationPick[]=[],background:DiagramAnnotationPick[]=[];
   let findTop:((point:Point,allowed?:readonly number[])=>number|undefined)|undefined;
   for(const original of annotations){
     const annotation=original.kind==='line'&&lineDefaults?applyDiagramLineAppearance(original,lineDefaults):original;
-    if(!pointHitsDiagramAnnotation(point,annotation,tolerance))continue;
+    if(!pointHitsDiagramAnnotation(point,annotation,tolerance,options))continue;
     if(annotation.kind==='symbol'||!pose){independent.push({annotation:original});continue;}
     if(annotation.foldFaces?.length&&!annotation.foldFaces.some(face=>diagramFaceVisible(pose,face)))continue;
     const onLine=linePoint(annotation,point);
@@ -106,8 +107,8 @@ export function diagramPickedSelection(ids:readonly string[],ranges:DiagramLineF
 
 /** The delete rectangle is an explicit object-range operation, independent of
  * any previously selected layer. Imported CP marks and locked paper survive. */
-export function diagramDeleteBoxIds(annotations:readonly DiagramAnnotation[],a:Point,b:Point,pose:DiagramPose|null,paperLocked=false,rotation=0,center:Point=[0,0]):string[] {
+export function diagramDeleteBoxIds(annotations:readonly DiagramAnnotation[],a:Point,b:Point,pose:DiagramPose|null,paperLocked=false,rotation=0,center:Point=[0,0],options?:DiagramSymbolInkOptions):string[] {
   const visible=annotations.filter(item=>!isDiagramCPExistingLine(item)&&(!paperLocked||item.kind==='symbol')&&(!pose||item.kind==='symbol'||!item.foldFaces?.length||item.foldFaces.some(face=>diagramFaceVisible(pose,face))));
   const projected=rotation?diagramViewportAnnotations(visible,center,rotation):visible;
-  return diagramAnnotationsInBox(projected,rotateDiagramViewportPoint(a,center,rotation),rotateDiagramViewportPoint(b,center,rotation));
+  return diagramAnnotationsInBox(projected,rotateDiagramViewportPoint(a,center,rotation),rotateDiagramViewportPoint(b,center,rotation),options);
 }

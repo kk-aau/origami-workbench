@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {deflateSync} from 'node:zlib';
 import {blankDoc} from '../../src/app/state';
 import {computeFlatFold} from '../../src/core/flatFold';
-import {createDiagramProject,updateDiagramImages,updateDiagramAnnotations,exportDiagramProject,importDiagramProject,duplicateDiagramStep,adoptDiagramPose} from '../../src/app/diagramProject';
+import {createDiagramProject,createDiagramProcessFigure,upsertDiagramProcessFigure,updateDiagramImages,updateDiagramAnnotations,exportDiagramProject,importDiagramProject,duplicateDiagramStep,adoptDiagramPose} from '../../src/app/diagramProject';
 import {diagramImageBounds,diagramImageCorners,diagramImageDataInfo,diagramImageSVG,validateDiagramImages,isDiagramImageAnnotationVisible,type DiagramImage} from '../../src/app/diagramImages';
 import {diagramDrawingFrame,drawingSVG} from '../../src/app/diagramDrawing';
 import {diagramPDFStepSVG,diagramPDFCoverSVG} from '../../src/app/diagramPDF';
@@ -33,6 +33,30 @@ test('embedded images and paper visibility survive save, import and step duplica
   assert.deepEqual(duplicated.steps[1].images,updated.steps[0].images);assert.equal(duplicated.steps[1].paperVisible,false);
   duplicated.steps[1].images![0].position[0]=500;assert.equal(duplicated.steps[0].images![0].position[0],10);
   const legacy=importDiagramProject(exportDiagramProject(original));assert.equal(legacy.steps[0].images,undefined);assert.equal(legacy.steps[0].paperVisible,undefined);
+});
+
+test('moving an embedded picture reads only the edited step, without preparing unrelated paper poses',()=>{
+  const base=project(),duplicated=duplicateDiagramStep(base,base.activeStepId);
+  const next=updateDiagramImages(duplicated,duplicated.activeStepId,[image()],false),other=next.steps[0];
+  let poseReads=0;
+  Object.defineProperty(other,'pose',{enumerable:true,get(){poseReads++;return null;}});
+  const result=updateDiagramImages(next,next.activeStepId,[{...next.steps[1].images![0],position:[44,55]}],false);
+  assert.equal(poseReads,0);assert.equal(result.steps[0],other);assert.equal(result.states,next.states);
+  assert.deepEqual(result.steps[1].images![0].position,[44,55]);
+});
+
+test('the chosen crop survives saving and step duplication while ordinary pictures stay unmarked',()=>{
+  const original=project(),art=image({source:'simulation',croppedToContent:true}),uncropped=image({id:'legacy'});
+  const updated=updateDiagramImages(original,original.activeStepId,[art,uncropped],false);
+  const figure=createDiagramProcessFigure(updated,updated.activeStepId,'copy');
+  const restored=importDiagramProject(exportDiagramProject(upsertDiagramProcessFigure(updated,updated.activeStepId,figure)));
+  const copy=duplicateDiagramStep(restored,restored.activeStepId);
+  for(const step of copy.steps){
+    assert.deepEqual(step.images,[art,uncropped]);
+    assert.deepEqual(step.processFigures![0].steps[0].images,[art,uncropped]);
+    assert.equal(Object.hasOwn(step.images![1],'croppedToContent'),false);
+  }
+  for(const marker of [false,null,'true',1])assert.throws(()=>validateDiagramImages([{...art,croppedToContent:marker}]),/字段/);
 });
 
 test('only bounded raster data URLs with matching actual dimensions enter an image project',()=>{

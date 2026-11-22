@@ -136,6 +136,16 @@ test('shared packed input rejects invalid widths, assignments, diagonals, paddin
   assert.throws(()=>new RegionTournament(1,[],[],{token:Symbol('forged'),matrix:new Uint32Array(1)} as never),/完整检查/);
 });
 
+test('incremental row validation checks both changed directions, including deleted entries after an earlier successful generation',()=>{
+ const first=new RegionTournament(37,[[0,36],[16,31]],[1,2]),matrix=first.packedComparisons!.slice(),team={workerId:0,workers:1,barrier(){}};
+ const read=()=>RegionTournament.fromPackedComparisons(37,matrix,team);
+ read();read();
+ const offset=2,word=matrix[offset];matrix[offset]=0;
+ assert.throws(read,/正反向/);matrix[offset]=word;read();
+ matrix[offset]=0;matrix[36*3]=0;assert.doesNotThrow(read);
+ matrix[36*3+2]=3;assert.throws(read,/非法/);
+});
+
 /** Fail the real typed-array constructor, without changing algorithm branches. */
 function withUint32AllocationFailure<T>(failure:(length:number)=>Error|undefined,run:(attempts:number[])=>T):T{
   const Native=globalThis.Uint32Array,attempts:number[]=[];
@@ -206,4 +216,40 @@ test('exhausted relation pages remain an explicit failure and cannot issue a par
     assert.throws(()=>checkCoverageTournaments(coverage(64,[[0,15]]),[[0,15]],[2]),error=>error===exhausted);
     assert.equal(attempts.filter(length=>length===256).length,1);assert.equal(attempts.filter(length=>length===128).length,0);assert.equal(attempts.filter(length=>length===1024).length,1);
   });
+});
+test('ordered stack and degree buckets choose the same witnesses across mixed additions and removals',()=>{
+ const n=15,pairs:[number,number][]=[];
+ for(let a=0;a<n;a++)for(let b=a+1;b<n;b++)pairs.push([a,b]);
+ let seed=742931;
+ const random=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed;};
+ for(let trial=0;trial<16;trial++){
+  const values=pairs.map(()=>random()%11===0?2:1);
+  const dense=new RegionTournament(n,pairs,values),buckets=new RegionTournament(n,pairs,values,undefined,{forcePaged:true});
+  for(let step=0;step<400;step++){
+   const face=random()%n,removed=dense.active.has(face)?[face]:[],added=removed.length?[]:[face];
+   dense.transition(removed,added);buckets.transition(removed,added);
+   assert.equal(dense.ordered,buckets.ordered);
+   assert.deepEqual(dense.ordered?dense.extrema():dense.triangle(),buckets.ordered?buckets.extrema():buckets.triangle());
+  }
+ }
+});
+
+test('returning faces register exactly the new simultaneous contacts in their original encounter order',()=>{
+ const groups:number[][]=[[1,3,4],[1,3],[1,6,3,4],[6,4],[1,3,6,4]];
+ let seed=814;const rand=()=>seed=(Math.imul(seed,1664525)+1013904223)>>>0;
+ for(let i=0;i<500;i++){const mask=rand();groups.push(Array.from({length:12},(_,f)=>f).filter(f=>(mask>>>f)&1));}
+ const topology=coverage(12,groups),active=new Set<number>(),known=new Set(['1,3']),expected:string[]=[];
+ topology.walk({onTransition:({removed,added})=>{
+  for(const f of removed)active.delete(f);
+  for(const f of added){
+   for(const other of active){
+    const key=[Math.min(f,other),Math.max(f,other)].join(',');
+    if(!known.has(key)){known.add(key);expected.push(key);}
+   }
+   active.add(f);
+  }
+ }});
+ const actual:string[]=[];
+ registerCoveragePairs(topology,[[1,3]],(a,b)=>actual.push([a,b].join(',')));
+ assert.deepEqual(actual,expected);
 });

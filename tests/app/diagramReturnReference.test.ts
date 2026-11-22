@@ -4,10 +4,11 @@ import {blankDoc} from '../../src/app/state';
 import {computeFlatFold} from '../../src/core/flatFold';
 import {validateDiagramAnnotations,type DiagramSymbolAnnotation} from '../../src/app/diagramAnnotations';
 import {
-  createDiagramProject,appendDiagramStep,duplicateDiagramStep,removeDiagramStep,updateDiagramAnnotations,adoptDiagramPose,
+  createDiagramProject,appendDiagramStep,duplicateDiagramStep,removeDiagramStep,updateDiagramAnnotations,adoptDiagramPose,addDiagramBranch,selectDiagramBranchStep,
   validateDiagramProject,exportDiagramProject,importDiagramProject,type DiagramProject,
 } from '../../src/app/diagramProject';
 import {getDiagramReturnTarget,syncDiagramReturnLabels} from '../../src/app/diagramReturnReference';
+import {diagramBranchNumbering,setDiagramBranchLabels} from '../../src/app/diagramBranches';
 
 function fixture(count=3){
   let sequence=0;const factory=()=>`return-${++sequence}`;
@@ -35,6 +36,32 @@ test('legacy numeric labels, CAD text and counts remain illustration-only on loa
   const next=updateDiagramAnnotations(project,step.id,[legacy]),loaded=importDiagramProject(exportDiagramProject(next));
   assert.equal(getDiagramReturnTarget(next,step.id),null);assert.equal(getDiagramReturnTarget(loaded,step.id),null);
   assert.deepEqual(annotation(loaded,2),legacy);assert.equal(syncDiagramReturnLabels(next),next);
+});
+
+test('renaming a fork refreshes return artwork on both routes, including archived paper modes and saved files',()=>{
+  const {project,factory}=fixture(3),[root,a,returnA]=project.steps;
+  let next=withCache(updateDiagramAnnotations(project,returnA.id,[symbol('a-return',a.id)]),2);
+  next=addDiagramBranch(next,root.id,factory);
+  const b=next.activeStepId;
+  next=appendDiagramStep(next,factory);
+  const returnB=next.activeStepId;
+  next=withCache(updateDiagramAnnotations(next,returnB,[symbol('b-return',b)]),2);
+  const longName='📄'.repeat(220)+'左';
+  const named=setDiagramBranchLabels(next,root.id,'custom',{[a.id]:longName,[b]:'右'});
+  const textA='2'+'📄'.repeat(99)+'…'+'📄'.repeat(98)+'左';
+  for(const file of [named,importDiagramProject(exportDiagramProject(named))]){
+    assert.equal(diagramBranchNumbering(file).stepLabels.get(a.id),'2'+longName);
+    for(const [returnId,target,text] of [[returnA.id,a.id,textA],[returnB,b,'2右']]){
+      const step=file.steps.find(s=>s.id===returnId)??file.branchSteps!.find(entry=>entry.step.id===returnId)!.step;
+      for(const items of [step.annotations!,step.paperStates!.flatAnnotations!,step.paperStates!.spatialAnnotations!]){
+        const mark=items[0] as DiagramSymbolAnnotation;
+        assert.equal(mark.text,text);assert.equal(mark.cadAttributes?.['1757'],text);
+        assert.equal(mark.returnStepId,target);
+      }
+      assert.equal(getDiagramReturnTarget(selectDiagramBranchStep(file,returnId),returnId)?.id,target);
+    }
+    assert.equal(syncDiagramReturnLabels(file),file);
+  }
 });
 
 test('binding uses a stable target identity and refreshes both labels beyond the legacy count limit',()=>{

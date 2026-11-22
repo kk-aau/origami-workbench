@@ -1,3 +1,4 @@
+import {PlotCreasePath,PlotStrokeGroup} from './PlotStrokeGroup';
 import {useEffect,useMemo,useRef,useState} from 'react';
 import {openAppDialog} from './AppDialog';
 import {CONE_FOUR_PLANE_CP_4039_EXAMPLE,coneFourPlaneCP4039Document,coneFourPlaneCP4039Preview,coneFourPlaneCP4039Query,
@@ -35,7 +36,7 @@ export function ConeFourPlaneCP4039Plot({recipe,doc,guides=false}:{recipe:ConeFo
    .flatMap(i=>[0,1,2,3].map(c=><path key={`${i}-${c}`} d={path([curves[c][i],curves[c+1][i]])} className={`c4039-guide curvature-${c%2?'negative':'positive'}`}/>))}
   {[0,4].map(c=><path key={c} d={path(curves[c])} className="c4039-boundary"/>)}
   {[0,recipe.segments].map(i=><path key={i} d={path([curves[0][i],curves[4][i]])} className="c4039-boundary"/>)}
-  {[1,2,3].map(c=><path key={c} d={path(curves[c])} className={`c4039-crease ${recipe.assignmentMode==='unassigned'?'unassigned':c===2?'valley':'mountain'}`}/>)}
+  <PlotStrokeGroup>{[1,2,3].map(c=><PlotCreasePath points={curves[c]} widthPixels={1.7} dash={recipe.assignmentMode==='unassigned'?'5 3':c===2?'2 3':'6 3'} key={c} d={path(curves[c])} className={`c4039-crease ${recipe.assignmentMode==='unassigned'?'unassigned':c===2?'valley':'mountain'}`}/>)}</PlotStrokeGroup>
   {[0,1,2,3].map(c=>{const i=Math.floor(count/2),a=curves[c][i],b=curves[c+1][i];return <text key={c} x={(a[0]+b[0])/2} y={-(a[1]+b[1])/2}
    textAnchor="middle" className="c4039-face-label">{c+1}</text>;})}
   <g className="c4039-ruler"><path d={`M ${xmin} ${axisY} H ${xmax} M ${axisX} ${-ymax} V ${-ymin}`}/>

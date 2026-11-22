@@ -1,3 +1,5 @@
+import {PlotLine,PlotStrokeGroup} from './PlotStrokeGroup';
+import {DocumentJunctionMarks} from './JunctionWarnings';
 import {useEffect,useRef,useState} from 'react';
 import {TessDialog} from './TessellationEditor';
 import type {Doc,Point} from '../core/types';
@@ -40,10 +42,10 @@ function PaperPlot({doc,kind,sourceKey}:{doc:Doc;kind:EllipseAcrossCPKind;source
   <g stroke="#dce5e7" strokeWidth={stroke*.55}>{xs.map(x=><line key={'x'+x} x1={x} y1={top} x2={x} y2={top+height}/>)}{ys.map(y=><line key={'y'+y} x1={left} y1={y} x2={left+width} y2={y}/>)}</g>
   <g fill="#516976" fontSize={font}>{xs.map(x=><text key={'x'+x} x={x} y={top+height-font*.65} textAnchor="middle">{label(x)}</text>)}{ys.map(y=><text key={'y'+y} x={left+font*.5} y={y+font*.3}>{label(y)}</text>)}<text x={left+width-font*.5} y={top+font*1.2} textAnchor="end">X → / mm · Y ↓ / mm</text></g>
   {references&&<g data-testid="ellipse-across-reference" stroke="#927ba0" strokeWidth={stroke} strokeDasharray={`${stroke*4} ${stroke*3}`}>{guideFrames.flatMap((f:any,j:number)=>kind==='ellipse'?[[meta.recipe.leftFocus,0],[meta.recipe.rightFocus,0]].map((p,i)=><line key={`${j}-${i}`} x1={f.base[0]*unit} y1={f.base[1]*unit} x2={p[0]*unit} y2={p[1]*unit}/>):['leftDirector','rightDirector'].map(k=><line key={`${j}-${k}`} x1={f.base[0]*unit} y1={f.base[1]*unit} x2={(f.base[0]+f[k][0])*unit} y2={(f.base[1]+f[k][1])*unit}/>))}</g>}
-  {doc.segments.map(s=><line key={s.id} data-edge-id={s.id} data-assignment={s.assignment} x1={s.a[0]} y1={s.a[1]} x2={s.b[0]} y2={s.b[1]} stroke={s.assignment==='B'?'#203b42':s.assignment==='M'?'#b25c45':s.assignment==='V'?'#397fac':'#5f8793'} strokeWidth={stroke*(s.assignment==='B'?1.6:1.15)} strokeDasharray={s.assignment==='V'||s.assignment==='U'?`${stroke*4} ${stroke*2}`:undefined}/>)}
+  <PlotStrokeGroup>{doc.segments.map(s=><PlotLine key={s.id} data-edge-id={s.id} data-assignment={s.assignment} x1={s.a[0]} y1={s.a[1]} x2={s.b[0]} y2={s.b[1]} stroke={s.assignment==='B'?'#203b42':s.assignment==='M'?'#b25c45':s.assignment==='V'?'#397fac':'#5f8793'} widthPixels={s.assignment==='B'?2:1.44} dash={s.assignment==='V'||s.assignment==='U'?'5 2.5':undefined}/>)}</PlotStrokeGroup>
   {focuses.map((p,i)=><g key={i} fill="#785b92"><circle cx={p[0]} cy={p[1]} r={font*.3}/><text x={p[0]+font*.45} y={p[1]-font*.6} fontSize={font}>{kind==='ellipse'?`${i===0?'左':'右'}焦点`:'源圆心'}</text></g>)}
   <g data-testid="ellipse-across-mm-scale" stroke="#405d6b" strokeWidth={stroke} fill="#405d6b"><line x1={left+font*3} y1={top+font*2.1} x2={left+font*3+step} y2={top+font*2.1}/><text x={left+font*3} y={top+font*3.2} fontSize={font} stroke="none">{label(step)} mm</text></g>
- </svg><figcaption>{kind==='ellipse'?'黑：原 cL/cR 纸边 · 蓝虚线：谷 · 红实线：山 · 紫：焦点参考':'黑：实际纸边 · 蓝虚线：未赋型 U · 紫：单源圆心'}<span>原坐标 × {label(unit)} mm；视图不改变纸面。</span></figcaption></figure>;
+ {doc&&<DocumentJunctionMarks doc={doc} spatial/>}</svg><figcaption>{kind==='ellipse'?'黑：原 cL/cR 纸边 · 蓝虚线：谷 · 红实线：山 · 紫：焦点参考':'黑：实际纸边 · 蓝虚线：未赋型 U · 紫：单源圆心'}<span>原坐标 × {label(unit)} mm；视图不改变纸面。</span></figcaption></figure>;
 }
 
 export default function EllipseAcrossFiniteCPDialog({kind,initial,onAdoptCP,onClose,projectName}:{kind:EllipseAcrossCPKind;initial?:Recipe;onAdoptCP:(doc:Doc)=>boolean;onClose:()=>void;projectName?:string}){

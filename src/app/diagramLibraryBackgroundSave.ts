@@ -1,10 +1,10 @@
 import {createDiagramLibrary,diagramLibraryThumbnail,DIAGRAM_LIBRARY_KEY,DIAGRAM_LEGACY_DRAFT_KEY,type DiagramLibraryIndex,type DiagramLibraryBackgroundRequest,type DiagramLibraryBackgroundResult} from './diagramLibrary';
-import {exportDiagramProject} from './diagramProject';
+import {exportDiagramProject,type DiagramProject} from './diagramProject';
 import type {Preferences} from './preferenceStorage';
 
 /** Runs entirely in the save worker. Reuse the ordinary complete validator,
  * immutable staged payload, index CAS and exact-byte cleanup transaction. */
-export function runDiagramLibraryBackgroundSave(request:DiagramLibraryBackgroundRequest,storage:Preferences):DiagramLibraryBackgroundResult {
+export function runDiagramLibraryBackgroundSave(request:DiagramLibraryBackgroundRequest,storage:Preferences,preparedImport?:DiagramProject):DiagramLibraryBackgroundResult {
   const warnings:string[]=[],openedHeads=request.settings.id&&request.openedHead!==undefined?new Map([[request.settings.id,request.openedHead]]):undefined;
   let committedIndex:DiagramLibraryIndex|undefined;
   const captured:Preferences={...storage,compareAndSet:(key,expected,value)=>{
@@ -12,8 +12,10 @@ export function runDiagramLibraryBackgroundSave(request:DiagramLibraryBackground
     if(accepted&&key===DIAGRAM_LIBRARY_KEY)committedIndex=JSON.parse(value) as DiagramLibraryIndex;
     return accepted;
   }};
-  const library=createDiagramLibrary(captured,{openedHeads,onWarning:warning=>warnings.push(warning)});
-  const entry='project' in request?library.save(request.project,request.settings):request.settings.id?library.promoteDraft(request.settings.id,request.promoteDraftKey):(()=>{throw Error('手动保存标记缺少绘图编号。');})();
+  const library=createDiagramLibrary(captured,{openedHeads,preparedImport,onWarning:warning=>warnings.push(warning)});
+  const entry='project' in request?library.save(request.project,request.settings):
+    request.settings.id?'patch' in request?library.saveRecovery(request.settings.id,request.patch,request.name,request.stepCount):library.promoteDraft(request.settings.id,request.promoteDraftKey):
+    (()=>{throw Error('保存记录缺少绘图编号。');})();
   if(request.legacyDraft&&'project' in request){
     try{storage.setItem(DIAGRAM_LEGACY_DRAFT_KEY,exportDiagramProject(request.project));}
     catch(error){warnings.push('绘图已保存到文档库，兼容恢复副本暂未更新：'+(error instanceof Error?error.message:String(error)));}

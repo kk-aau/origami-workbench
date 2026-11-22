@@ -1,14 +1,17 @@
-import {zlibSync} from 'fflate';
+import {encodePng} from '../../vendor/simulator/oristudio/packages/origami-simulator/src/png';
 import type {DiagramSimulationSurface} from './diagramSimulationSurface';
 import {prepareDiagramSimulationSurface,validateDiagramSimulationSurfaceView} from './diagramSimulationSurface';
 import {validateModelColors} from './modelColors';
-import {OrigamiModel} from '../../vendor/simulator/oristudio/packages/origami-simulator/src/model';
+import {OrigamiModel,simulationNormalization} from '../../vendor/simulator/oristudio/packages/origami-simulator/src/model';
 import {boundingRadius,cameraUniforms,centroid,toViewSpace,projectViewPoint,type CameraUniforms} from '../../vendor/simulator/oristudio/packages/origami-simulator/src/webgl/camera';
 import {SimulationRasterizer} from '../engine/simRaster';
 import {displaySettings} from '../engine/simDisplay';
 import {simulationPaperColorSettings} from '../engine/simColors';
 import {simulationImageFromBackgrounds} from '../engine/simImageExport';
 import type {RenderSettings} from '../../vendor/simulator/oristudio/packages/origami-simulator/src/webgl/meshRenderer';
+
+import {materialUV,decodedPaperTextures} from '../engine/simPaperTexture';
+import type {PaperPatterns} from './paperPatterns';
 
 export interface DiagramSimulationSurfaceRendering {
   markup:string;
@@ -17,25 +20,22 @@ export interface DiagramSimulationSurfaceRendering {
 export interface DiagramSimulationSurfaceRenderOptions {
   /** Raster long edge. The scene stays in original paper units at every size. */
   resolution?:number;
+  patterns?:PaperPatterns;
 }
 type Geometry=ReturnType<typeof prepareDiagramSimulationSurface>&{
   center:[number,number,number];radius:number;unitsPerModel:number;
 };
 type CachedGeometry={geometry:Geometry;source:unknown;sourceDoc:unknown;mesh:unknown;raster:SimulationRasterizer;views:Map<string,DiagramSimulationSurfaceRendering>};
+const textureIds=new WeakMap<object,number>();
+let nextTextureId=0;
 const cache=new WeakMap<object,CachedGeometry>();
 
 function entry(surface:DiagramSimulationSurface):CachedGeometry{
   const key=surface.pose.solver,known=cache.get(key);
   if(known&&known.source===surface.pose.source&&known.sourceDoc===surface.sourceDoc&&known.mesh===surface.pose.mesh)return known;
   const data=prepareDiagramSimulationSurface(surface),rest=new OrigamiModel(data.prepared).originalPositions;
-  // OrigamiModel normalizes around the material bounding-box midpoint. Recover
-  // that fixed length unit once; orbiting never refits the projected silhouette.
-  const min=[Infinity,Infinity,Infinity],max=[-Infinity,-Infinity,-Infinity];
-  for(let i=0;i<data.prepared.originalPositions.length;i++){
-    const k=i%3,v=data.prepared.originalPositions[i];min[k]=Math.min(min[k],v);max[k]=Math.max(max[k],v);
-  }
-  const materialCenter=min.map((v,k)=>(v+max[k])/2) as [number,number,number];
-  const center=centroid(rest),radius=boundingRadius(rest,center),unitsPerModel=boundingRadius(data.prepared.originalPositions,materialCenter);
+  const center=centroid(rest),radius=boundingRadius(rest,center);
+  const {scale:unitsPerModel}=simulationNormalization(data.prepared.originalPositions);
   const next={geometry:{...data,center,radius,unitsPerModel},source:surface.pose.source,sourceDoc:surface.sourceDoc,mesh:surface.pose.mesh,raster:new SimulationRasterizer(),views:new Map<string,DiagramSimulationSurfaceRendering>()};
   cache.set(key,next);return next;
 }
@@ -80,26 +80,6 @@ function display(surface:DiagramSimulationSurface,result:DiagramSimulationSurfac
 }
 export function diagramSimulationSurfaceBounds(surface:DiagramSimulationSurface):DiagramSimulationSurfaceRendering['bounds']{return rotatedBounds(surface,layout(surface).bounds);}
 
-const crcTable=Uint32Array.from({length:256},(_,value)=>{
-  let crc=value;for(let bit=0;bit<8;bit++)crc=(crc&1)?0xedb88320^(crc>>>1):crc>>>1;return crc>>>0;
-});
-function pngChunk(name:string,data:Uint8Array):Uint8Array{
-  const bytes=new Uint8Array(data.length+12),view=new DataView(bytes.buffer);view.setUint32(0,data.length);
-  for(let i=0;i<4;i++)bytes[i+4]=name.charCodeAt(i);bytes.set(data,8);
-  let crc=0xffffffff;for(let i=4;i<bytes.length-4;i++)crc=crcTable[(crc^bytes[i])&255]^(crc>>>8);
-  view.setUint32(bytes.length-4,(crc^0xffffffff)>>>0);return bytes;
-}
-function encodePng(width:number,height:number,rgba:Uint8ClampedArray):string{
-  const header=new Uint8Array(13),view=new DataView(header.buffer);view.setUint32(0,width);view.setUint32(4,height);header[8]=8;header[9]=6;
-  const stride=width*4,filtered=new Uint8Array((stride+1)*height);
-  for(let y=0;y<height;y++)filtered.set(rgba.subarray(y*stride,(y+1)*stride),y*(stride+1)+1);
-  const chunks=[new Uint8Array([137,80,78,71,13,10,26,10]),pngChunk('IHDR',header),pngChunk('IDAT',zlibSync(filtered,{level:1})),pngChunk('IEND',new Uint8Array())];
-  const bytes=new Uint8Array(chunks.reduce((size,c)=>size+c.length,0));let offset=0;
-  for(const chunk of chunks){bytes.set(chunk,offset);offset+=chunk.length;}
-  let binary='';for(let i=0;i<bytes.length;i+=32768)binary+=String.fromCharCode(...bytes.subarray(i,i+32768));
-  return 'data:image/png;base64,'+btoa(binary);
-}
-
 /** Depth-render the actual captured surface once for canvas, thumbnails and PDF.
  * Opaque pixels have one nearest material owner, so SVG triangle antialiasing
  * cannot leak a hidden back face through seams. Real crossings keep real depth;
@@ -110,7 +90,9 @@ export function renderDiagramSimulationSurface(surface:DiagramSimulationSurface,
   validateDiagramSimulationSurfaceView(surface.pose.view);validateModelColors(surface.colors);
   const state=entry(surface),{prepared,positions}=state.geometry;
   const width=surface.sourceDoc.paper.width,height=surface.sourceDoc.paper.height;
-  const key=JSON.stringify([surface.pose.view,surface.colors,width,height,resolution]),old=state.views.get(key);
+  const textures=decodedPaperTextures(options.patterns);
+  if(textures&&!textureIds.has(textures))textureIds.set(textures,++nextTextureId);
+  const key=JSON.stringify([surface.pose.view,surface.colors,width,height,resolution,textures&&textureIds.get(textures)]),old=state.views.get(key);
   if(old)return display(surface,old);
   const {logical,lineWidth,bounds}=layout(surface);
   // Grow around the simulator's fixed screen centre instead of shifting its
@@ -123,6 +105,7 @@ export function renderDiagramSimulationSurface(surface:DiagramSimulationSurface,
   // strokes otherwise look dashed even when the material crease is solid.
   const base:RenderSettings={...palette,mountainColor:palette.borderColor!,valleyColor:palette.borderColor!,borderColor:palette.borderColor!,diagramInkColor:palette.borderColor!,lightDir:[-.3,.5,1],background:[0,0,0],showFaces:true,showEdges:true,lighting:true,creaseWidthPx:Math.max(1,lineWidth*ratio)/.625,faceAlpha:1,creaseDepthBias:.000002,creaseWritesDepth:false};
   const settings=displaySettings(base,'paper','diagram');
+  if(textures)settings.paperPrint={...textures,uv:materialUV(prepared)};
   const black=state.raster.render(positions,prepared,camera,settings).slice();
   const white=state.raster.render(positions,prepared,camera,{...settings,background:[1,1,1]});
   const rgba=simulationImageFromBackgrounds(black,white),dataUrl=encodePng(pixelWidth,pixelHeight,rgba);

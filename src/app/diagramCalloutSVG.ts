@@ -1,7 +1,9 @@
 import type {Doc} from '../core/types';
 import type {CreaseDisplay} from './creaseDisplay';
 import {creasePatternSVG,DISPLAY_PIXEL_MM,type CreasePatternStrokeOptions} from './creasePatternSVG';
-import {diagramCalloutConnectors,diagramCalloutLocator,diagramCalloutTargets,validateDiagramCallouts,type DiagramCallout} from './diagramCallouts';
+import {diagramCalloutLocator,diagramCalloutTargets,validateDiagramCallouts,type DiagramCallout} from './diagramCallouts';
+import {diagramCalloutConnectorPaths,diagramCalloutPen} from './diagramCalloutSymbols';
+import type {DiagramSymbolStyles} from './diagramSymbolStyles';
 
 export type DiagramCalloutPaperMarkup=string|((callout:DiagramCallout,sourceUnits:number)=>string);
 export interface DiagramCalloutSVGOptions {
@@ -15,6 +17,7 @@ export interface DiagramCalloutSVGOptions {
   idPrefix?:string;
   stroke?:string;
   strokeWidth?:number;
+  symbolStyles?:DiagramSymbolStyles;
 }
 const escapeXML=(value:string)=>value.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&apos;'}[c]!));
 const token=(value:string)=>Array.from(value,c=>c.codePointAt(0)!.toString(16)).join('-');
@@ -46,20 +49,21 @@ export function diagramCalloutNamespaceMarkup(markup:string,prefix:string):strin
 export function diagramCalloutsSVG(callouts:readonly DiagramCallout[],options:DiagramCalloutSVGOptions):string {
   validateDiagramCallouts(callouts);
   if(!callouts.length)return '';
-  const width=options.strokeWidth??.7;
-  if(!Number.isFinite(width)||width<=0)throw new Error('局部放大图边框线宽无效。');
+  const baseWidth=options.strokeWidth??.7;
+  if(!Number.isFinite(baseWidth)||baseWidth<=0)throw new Error('局部放大图边框线宽无效。');
   const units=options.units??DISPLAY_PIXEL_MM;
   if(!Number.isFinite(units)||units<=0)throw new Error('局部放大图输出比例无效。');
-  const stroke=escapeXML(options.stroke??'#333333'),prefix=`diagram-callout-${token(options.idPrefix??'drawing')}`;
+  const prefix=`diagram-callout-${token(options.idPrefix??'drawing')}`;
   return callouts.map((callout,index)=>{
     const {source}=callout,locator=diagramCalloutLocator(callout),id=`${prefix}-${index}`,targets=diagramCalloutTargets(callout);
+    const {color,width}=diagramCalloutPen(source.kind,options.symbolStyles,options.stroke??'#333333',baseWidth,units),stroke=escapeXML(color);
     const sourceMarkup=(scale:number,stateId?:string)=>{
       const sourceUnits=units/scale;
       return source.kind==='paper'?(typeof options.paperMarkup==='function'?options.paperMarkup(callout,sourceUnits):options.paperMarkup):options.cpMarkup(stateId!,sourceUnits,callout.hideExistingCreases);
     };
     const circle=(center:readonly number[],radius:number,extra='')=>`<circle cx="${center[0]}" cy="${center[1]}" r="${radius}" ${extra}/>`;
     const outline=`fill="none" stroke="${stroke}" stroke-width="${width}"`;
-    const connectors=targets.flatMap(({circle:target})=>diagramCalloutConnectors(callout,target)).map(([a,b])=>`<path d="M ${a.join(' ')} L ${b.join(' ')}" ${outline}/>`).join('');
+    const connectors=diagramCalloutConnectorPaths(callout,options.symbolStyles,outline);
     if(!callout.comparison){
       const {target}=callout,clip=`${id}-clip`,scale=target.radius/source.radius,markup=sourceMarkup(scale,source.kind==='cp'?source.stateId:undefined),content=diagramCalloutNamespaceMarkup(markup,`${id}-source`);
       return `<g data-diagram-callout="${escapeXML(callout.id)}"><defs><clipPath id="${clip}" clipPathUnits="userSpaceOnUse">${circle(target.center,target.radius)}</clipPath></defs>${circle(locator.center,locator.radius,outline)}${connectors}${circle(target.center,target.radius,'fill="white" stroke="none"')}<g clip-path="url(#${clip})"><g transform="translate(${target.center.join(' ')}) scale(${target.radius/source.radius}) translate(${-source.center[0]} ${-source.center[1]})">${content}</g></g>${circle(target.center,target.radius,outline)}</g>`;

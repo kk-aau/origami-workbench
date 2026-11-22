@@ -32,7 +32,7 @@ test('the actual large flat worker completes both surfaces before publication an
  try{
   scope.postMessage=(data,transfer)=>{transferred+=transfer?.length??0;messages.push(structuredClone(data,{transfer:transfer??[]}));};
   await import('../../src/workers/flatFold.worker');
-  scope.onmessage!({data:{doc:source}});
+  await scope.onmessage!({data:{doc:source}});
   const reply=messages.at(-1) as FlatFoldPublication;
   // Preparation/progress can precede geometry; the first data result must
   // still be the unsolved geometry, followed by the certified final result.

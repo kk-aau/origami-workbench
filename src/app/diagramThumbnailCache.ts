@@ -1,3 +1,5 @@
+import {fitDiagramArtwork,prepareDiagramFigureFrame} from './diagramProcessFigureFrame';
+import {decodePaperTextures} from '../engine/simPaperTexture';
 import type {DiagramCPState,DiagramStep} from './diagramProject';
 import type {DiagramLineDefaults} from './diagramLineStyles';
 import type {DiagramZoomRegion} from './diagramZoomGeometry';
@@ -10,7 +12,9 @@ import {defaultModelView} from './modelViewState';
 export interface DiagramThumbnailSource {
   step:DiagramStep;
   states:readonly DiagramCPState[];
+  paperPatterns?:import('./paperPatterns').PaperPatterns;
   lineDefaults:DiagramLineDefaults;
+  symbolStyles?:import('./diagramSymbolStyles').DiagramSymbolStyles;
   adaptiveLines:boolean;
   zoom?:DiagramZoomRegion|null;
   size:Pick<DiagramPDFRect,'width'|'height'>;
@@ -29,7 +33,9 @@ interface Entry {
 const EMPTY:DiagramThumbnailSnapshot={status:'idle'};
 
 async function renderImage(source:DiagramThumbnailSource):Promise<CachedImage> {
-  const svg=diagramStepImageSVG(source.step,source.states,source.size,source.lineDefaults,source.adaptiveLines,source.zoom);
+  if(!source.zoom&&source.step.images?.length&&fitDiagramArtwork(source.step))await prepareDiagramFigureFrame(source.step.images);
+  if(source.step.simulationSurface&&source.paperPatterns)await decodePaperTextures(source.paperPatterns);
+  const svg=diagramStepImageSVG(source.step,source.states,source.size,source.lineDefaults,source.adaptiveLines,source.zoom,source.paperPatterns,false,source.symbolStyles);
   const blob=await rasterizeDiagramThumbnail(normalizeDiagramPDFStrokes(svg)),src=URL.createObjectURL(blob);
   // Commit only after the replacement itself can be decoded. A failed refresh
   // must not discard the last good image or flash an empty card.
@@ -48,6 +54,7 @@ export class DiagramThumbnailCache {
   private queued=new Map<string,()=>Promise<void>>();
   private timer:ReturnType<typeof setTimeout>|undefined;
   private running=false;
+  private paused=false;
   private bytes=0;
   constructor(private render:(source:DiagramThumbnailSource)=>Promise<CachedImage>=renderImage,private release:(url:string)=>void=url=>URL.revokeObjectURL(url),private maxBytes=32*1024*1024){}
 
@@ -79,7 +86,7 @@ export class DiagramThumbnailCache {
     for(const callout of step.callouts??[]){if(callout.source.kind==='cp')ids.add(callout.source.stateId);if(callout.comparison)ids.add(callout.comparison.stateId);}
     const cp=[...ids].map(id=>{const state=states.find(item=>item.id===id);return [id,state?.revision,this.identity(state?.doc)];});
     return JSON.stringify([this.poseArtworkKey(step.pose),this.identity(step.simulationSurface),this.identity(step.annotations),this.identity(step.images),this.identity(step.callouts),step.paperVisible!==false,
-      step.foldLink?.enabled,step.foldLink?.precreases,step.canvas?.drawingRotation??0,cp,this.identity(source.lineDefaults),source.adaptiveLines,source.zoom??null,size.width,size.height,
+      step.foldLink?.enabled,step.foldLink?.precreases,step.canvas?.drawingRotation??0,cp,this.identity(source.lineDefaults),this.identity(source.paperPatterns),this.identity(source.symbolStyles),source.adaptiveLines,source.zoom??null,size.width,size.height,
       preparation?.pending,preparation?.message]);
   }
 
@@ -110,13 +117,20 @@ export class DiagramThumbnailCache {
     });
     this.schedule();
   }
-  private schedule(){
-    if(this.running||this.timer!==undefined||!this.queued.size)return;
+  setPaused(paused:boolean):void {
+    if(this.paused===paused)return;
+    this.paused=paused;
+    if(paused){clearTimeout(this.timer);this.timer=undefined;}
+    // Let the released picture paint and leave a short gap for the next nudge.
+    else this.schedule(160);
+  }
+  private schedule(delay=0){
+    if(this.paused||this.running||this.timer!==undefined||!this.queued.size)return;
     this.timer=setTimeout(()=>{
       this.timer=undefined;const next=this.queued.entries().next().value;if(!next)return;
       this.queued.delete(next[0]);this.running=true;
       void next[1]().finally(()=>{this.running=false;this.schedule();});
-    },0);
+    },delay);
   }
   private trim(){
     if(this.bytes<=this.maxBytes)return;
@@ -134,7 +148,7 @@ export class DiagramThumbnailCache {
   }
   /** Also safe for React's effect cleanup/replay in development. */
   clear():void {
-    this.generation++;clearTimeout(this.timer);this.timer=undefined;this.queued.clear();
+    this.generation++;clearTimeout(this.timer);this.timer=undefined;this.queued.clear();this.paused=false;
     for(const entry of this.entries.values()){
       if(entry.image)this.release(entry.image.src);
       entry.version++;entry.key=undefined;entry.session=undefined;entry.image=undefined;this.publish(entry,EMPTY);

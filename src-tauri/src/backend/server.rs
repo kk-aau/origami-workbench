@@ -5,10 +5,12 @@ use std::{collections::HashMap,net::SocketAddr,path::{Component,PathBuf},sync::A
 use tokio::{net::TcpListener,sync::{oneshot,Mutex},task::JoinHandle};
 use uuid::Uuid;
 use super::document_workers::DocumentWorkers;
+use super::diagram_open_cache;
 
 #[derive(Clone,Debug)]
 pub struct ServerConfig{pub data_root:PathBuf,pub dist_dir:PathBuf,pub engine_executable:PathBuf,pub engine_args:Vec<String>,pub version:String,pub native_dialogs:bool,pub port:u16}
 pub struct AppState{
+    diagram_cache_dir:PathBuf,diagram_cache_gate:Mutex<()>,
     pub storage:Storage,pub activity:ActivityLog,pub tess:TessWorker,pub design:TessWorker,pub token:String,
     pub version:String,pub native_dialogs:bool,pub port:u16,pub dist_dir:PathBuf,
     projects:ProjectStore,artwork:ArtworkRecovery,document_gate:Mutex<()>,library_gate:Mutex<()>,document_workers:DocumentWorkers,
@@ -55,6 +57,7 @@ async fn finish_shutdown_log(activity:ActivityLog){
     }
 }
 pub async fn start(config:ServerConfig)->Result<RunningServer,Box<dyn std::error::Error+Send+Sync>>{
+    let diagram_cache_dir=config.data_root.join("cache").join("diagram-contacts");
     let storage=Storage::new(config.data_root,config.native_dialogs)?;
     let token=format!("{}{}",Uuid::new_v4().simple(),Uuid::new_v4().simple());
     let activity=ActivityLog::new(storage.clone(),config.version.clone(),vec![token.clone()]);
@@ -62,7 +65,7 @@ pub async fn start(config:ServerConfig)->Result<RunningServer,Box<dyn std::error
     let tess=TessWorker::new(config.engine_executable,config.engine_args);let design=TessWorker::design(std::env::current_exe()?);
     let document_workers=DocumentWorkers::new(tess.clone(),design.clone());
     let state=Arc::new(AppState{projects:ProjectStore::new(storage.clone()),artwork:ArtworkRecovery::new(storage.clone()),document_gate:Mutex::new(()),library_gate:Mutex::new(()),document_workers,storage,activity,
-        tess,design,token,version:config.version,native_dialogs:config.native_dialogs,port:address.port(),dist_dir:config.dist_dir});
+        diagram_cache_dir,diagram_cache_gate:Mutex::new(()),tess,design,token,version:config.version,native_dialogs:config.native_dialogs,port:address.port(),dist_dir:config.dist_dir});
     let app=Router::new().fallback(any(handle)).layer(DefaultBodyLimit::disable()).with_state(state.clone());
     let (stop,stopped)=oneshot::channel();
     let task=tokio::spawn(async move{let _=axum::serve(listener,app).with_graceful_shutdown(async{let _=stopped.await;}).await;});
@@ -109,12 +112,32 @@ async fn dispatch(state:Arc<AppState>,request:Request)->Result<Response,ApiError
     let host=request.headers().get(header::HOST).and_then(|v|v.to_str().ok()).unwrap_or("");
     if host!=format!("127.0.0.1:{}",state.port)&&host!=format!("localhost:{}",state.port){return Err(ApiError::new(403,"只允许本机访问。"))}
     if let Some(origin)=request.headers().get(header::ORIGIN){let origin=origin.to_str().unwrap_or("");if origin!=format!("http://127.0.0.1:{}",state.port)&&origin!=format!("http://localhost:{}",state.port)&&origin!="http://127.0.0.1:5173"{return Err(ApiError::new(403,"已拒绝外部网页访问本地工作台。"))}}
-    if route=="/api/health"&&method==Method::GET{return Ok(json_response(json!({"ok":true,"app":"zhezhi-workbench","version":state.version,"runtime":"rust","token":state.token,"tessAvailable":state.tess.available()})))}
+    if route=="/api/health"&&method==Method::GET{return Ok(json_response(json!({"ok":true,"app":"zhezhi-workbench","version":state.version.split("-tauri.").next(),"releaseVersion":state.version,"runtime":"rust","token":state.token,"tessAvailable":state.tess.available()})))}
     if route.starts_with("/api/"){
         let activity_route=route.starts_with("/api/activity");
         if activity_route&&token(request.headers())!=Some(state.token.as_str()){return Err(ApiError::new(403,"操作日志需要当前本机会话，请刷新页面后重试。"))}
         if method!=Method::GET&&token(request.headers())!=Some(state.token.as_str()){return Err(ApiError::new(403,"会话已更新，请刷新页面后重试。"))}
         if route.starts_with("/api/storage")&&token(request.headers())!=Some(state.token.as_str()){return Err(ApiError::new(403,"保存设置需要当前本机会话，请刷新页面后重试。"))}
+        if let Some(key)=route.strip_prefix("/api/diagram-open-cache/"){
+            if token(request.headers())!=Some(state.token.as_str()){return Err(ApiError::new(403,"读取缓存需要当前本机会话。"))}
+            if !diagram_open_cache::valid_key(key){return Err(ApiError::new(400,"缓存标识无效。"))}
+            let _guard=state.diagram_cache_gate.lock().await;
+            let dir=state.diagram_cache_dir.clone();
+            let key=key.to_owned();
+            if method==Method::GET{
+                let hit=tokio::task::spawn_blocking(move||diagram_open_cache::read(&dir,&key)).await.map_err(|_|ApiError::new(503,"读取缓存失败。"))??;
+                return Ok(match hit{
+                    Some(bytes)=>([(header::CACHE_CONTROL,"no-store"),(header::CONTENT_TYPE,"application/json")],bytes).into_response(),
+                    None=>(StatusCode::NO_CONTENT,[(header::CACHE_CONTROL,"no-store")]).into_response(),
+                });
+            }
+            if method==Method::POST{
+                let bytes=to_bytes(request.into_body(),diagram_open_cache::ENTRY_LIMIT).await.map_err(|_|ApiError::new(413,"缓存过大。"))?;
+                tokio::task::spawn_blocking(move||diagram_open_cache::write(&dir,&key,&bytes)).await.map_err(|_|ApiError::new(503,"写入缓存失败。"))??;
+                return Ok(StatusCode::NO_CONTENT.into_response());
+            }
+            return Err(ApiError::new(405,"不支持此缓存操作。"))
+        }
         let worker_owner=request.headers().get("x-zhezhi-document").map(|value|value.to_str().map(str::to_owned).map_err(|_|ApiError::new(400,"作品计算标识无效。"))).transpose()?;
         if worker_owner.as_ref().is_some_and(|owner|Uuid::parse_str(owner).map(|id|id.to_string()!=*owner).unwrap_or(true)){return Err(ApiError::new(400,"作品标识无效。"))}
         // Backpressure starts before reading/decoding the HTTP body. The disk

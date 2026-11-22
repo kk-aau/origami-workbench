@@ -9,7 +9,10 @@ import {applyDiagramFoldMatrix,type DiagramFoldMatrix} from './diagramFoldLink';
 import type {DiagramPose,DiagramProject,DiagramStep} from './diagramProject';
 import type {DiagramStepAnimationClip} from './diagramStepAnimation';
 import {defaultModelColors} from './modelColors';
+import {diagramAnimationTargetCreases} from './diagramAnimationCreases';
 import {diagramAnimationSourceSegments,diagramAnimationMaterialTimings} from './diagramAnimationTiming';
+import {diagramFlatAnimationCamera} from './diagramSimulationSurfaceCamera';
+import {diagramAnimationDisplayOrder} from './diagramAnimationDisplayOrder';
 
 type Route={segment:Segment;fromAngle:number;toAngle:number;viaAngle?:number};
 const contains=(p:Point,polygon:Point[],eps:number)=>{
@@ -90,7 +93,8 @@ export function buildDiagramPartialCreaseAnimation(input:{project:DiagramProject
   const retainedCreases=prepared.edgesVertices.flatMap(([a,b],e)=>prepared.edgesAssignment[e]==='F'&&before.segments.some(s=>s.assignment==='F'&&covers(cp[a],cp[b],s))?[e]:[]);
   const beforeState=project.states.find(state=>state.id===step.beforeId)!;
   const timings=diagramAnimationMaterialTimings(step.annotations??[],diagramAnimationSourceSegments(step.annotations??[],pose,beforeState,step.foldLink),prepared.edgesVertices,cp,ranges,eps);
-  const animation:SimulationStepAnimation={version:1,sourceSignature:simulationSourceSignature(mesh.fold),initialPositions,ranges,fixedVertices,retainedCreases,flexRequest:{version:1,bendingStiffness:mesh.bendingStiffness},...(timings?{timings}:{})};
+  const targetCreases=diagramAnimationTargetCreases(prepared.edgesVertices,cp,project.states.find(state=>state.id===step.afterId)!.doc.segments,eps);
+  const animation:SimulationStepAnimation={version:1,sourceSignature:simulationSourceSignature(mesh.fold),initialPositions,ranges,targetCreases,fixedVertices,retainedCreases,flexRequest:{version:1,bendingStiffness:mesh.bendingStiffness},...(timings?{timings}:{})};
   validateSimulationStepAnimationStructure(animation,prepared,animation.sourceSignature);
   const vertices=source.vertices_coords.map(mapPoint),graph:FoldGraph={...structuredClone(source),vertices_coords:vertices};
   delete graph.faces_matrix;delete graph.faces_matrix2;delete graph.faces_normal;
@@ -111,5 +115,6 @@ export function buildDiagramPartialCreaseAnimation(input:{project:DiagramProject
   }
   warnings.push('本步采用局部柔性压痕近似演示：短痕周围形成可展曲面，中途压至 90°后精确展开；辅助网格不写入 CP。');
   const index=project.states.findIndex(s=>s.id===step.beforeId);
-  return {fold:mesh.fold,animation,initialGeometry,finalGeometry:structuredClone(initialGeometry),colors:structuredClone(step.pose?.view?.colors??defaultModelColors()),beforeLabel:`CP${index}`,afterLabel:`CP${index+1}`,warnings};
+  const initialDisplayOrder=diagramAnimationDisplayOrder(pose,source,poly=>polygons.findIndex(parent=>poly.every(p=>contains(p,parent,eps))),mapPoint);
+  return {fold:mesh.fold,animation,initialGeometry,finalGeometry:structuredClone(initialGeometry),initialDisplayOrder,camera:diagramFlatAnimationCamera(step,pose),colors:structuredClone(step.pose?.view?.colors??defaultModelColors()),beforeLabel:`CP${index}`,afterLabel:`CP${index+1}`,warnings};
 }

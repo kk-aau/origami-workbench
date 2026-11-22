@@ -1,10 +1,12 @@
+import {encodePng} from './png.js';
+import {PrintPaintServers,projectedPrintPatches,type PrintedSide} from './paperPrintSvg.js';
 // Draws the folded mesh to SVG, as the vector counterpart of `MeshRenderer`.
 //
 // Same inputs as that renderer -- positions, the same `MeshTopology`, the same
 // `CameraUniforms`, the same `RenderSettings` -- so the output is the view the
 // user is looking at rather than a second interpretation of it. Where the GPU
-// path has a depth buffer this has a painter's sort, which is the one real
-// difference and the one documented limitation (see `depthOrder` below).
+// path has a depth buffer, ordinary vector exports use a BSP. Captured
+// contact-aware frames instead clip visible footprints per overlap region.
 //
 // Deliberately free of DOM, theme and app concerns: colours arrive already
 // resolved on `RenderSettings`, the caller having read them from CSS once. That
@@ -12,9 +14,10 @@
 // browser.
 import { projectVertices, type CameraUniforms, type ProjectedVertices } from './webgl/camera.js';
 import { buildBsp, traverseBsp, type BspItem, type Vec3 } from './bsp.js';
+import {visibleContactPieces,polygonSeamWidth} from './contactVisibility.js';
 import { findVisiblePieces, type DrawnPiece } from './hiddenPieces.js';
 import { coplanarRuns, outlineOf, sourceFaceGroups, type RunPiece } from './coplanarRuns.js';
-import { creaseFrameScale, DEFAULT_CREASE_DEPTH_BIAS, edgeAssignmentVisible, edgeAssignmentColor, edgeAssignmentDash, normalDirectionColor, diagramPaperColor, diagramEdgeColor, diagramEdgeFolded, type MeshTopology, type RenderSettings } from './webgl/meshRenderer.js';
+import { cameraEdgeAssignment, creaseFrameScale, DEFAULT_CREASE_DEPTH_BIAS, edgeAssignmentVisible, edgeAssignmentColor, edgeAssignmentDash, normalDirectionColor, diagramPaperColor, diagramEdgeColor, diagramEdgeFolded, type MeshTopology, type RenderSettings } from './webgl/meshRenderer.js';
 
 /**
  * Screen area below which a triangle is dropped.
@@ -45,6 +48,9 @@ const PADDING_RATIO = 0.02;
 const SEAM_STROKE_WIDTH = 0.5;
 
 export interface RenderMeshToSvgOptions {
+  /** Optional verified material contact, shared with the playback depth buffer.
+   * Receives original triangle indices, positive = first nearer. */
+  compareContact?:(a:number,b:number,equalDepth?:boolean)=>number;
   /**
    * Apply the perspective divide. True (the default) matches the WebGL
    * renderer; false matches the orthographic canvas-2D fallback.
@@ -70,6 +76,7 @@ export interface RenderMeshToSvgOptions {
    * comparing the two wants.
    */
   mergeCoplanar?: boolean;
+  coloredEdges?:ReadonlySet<number>;
 }
 
 /**
@@ -133,9 +140,9 @@ export function renderMeshToSvg(
   // window shows.
   const settings = creaseInkForFrame(frameSettings, camera);
   const perspective = options.perspective ?? true;
-  const projected = projectVertices(positions, camera, { perspective });
+  const projected = projectVertices(positions, camera, { perspective,precision:'double' });
   const faces = collectFaces(topology, projected);
-  const creases = settings.showEdges ? collectCreases(topology, projected,settings) : [];
+  const creases = settings.showEdges ? collectCreases(topology, projected,settings,camera,positions,options.coloredEdges) : [];
   if ((settings.showFaces ? faces.triangles.length : 0) + creases.length === 0) return null;
 
   // Cut the mesh until a correct back-to-front order exists, then read it off the
@@ -150,7 +157,7 @@ export function renderMeshToSvg(
       items.push({
         kind: 0,
         ref: index,
-        points: screenPoints(projected, [triangle.a, triangle.b, triangle.c],camera,perspective),
+        points: screenPoints(projected, [triangle.a, triangle.b, triangle.c],camera,perspective,0,!!options.compareContact),
       });
     });
   }
@@ -165,7 +172,7 @@ export function renderMeshToSvg(
     items.push({
       kind: 1,
       ref: index,
-      points: screenPoints(projected, [crease.from, crease.to],camera,perspective,(settings.creaseDepthBias??DEFAULT_CREASE_DEPTH_BIAS)*camera.depthRange),
+      points: screenPoints(projected, [crease.from, crease.to],camera,perspective,(settings.creaseDepthBias??DEFAULT_CREASE_DEPTH_BIAS)*camera.depthRange,!!options.compareContact),
     });
   });
   // Depth is a plain comparison in this space, so the view is orthographic and
@@ -180,7 +187,31 @@ export function renderMeshToSvg(
   // existing ink allowance for genuinely crossing/bent surfaces.
   const planeNormal=settings.creasePlaneNormal;
   const planarCreases=!!planeNormal&&planeNormal.every(Number.isFinite)&&Math.hypot(...planeNormal)>0;
-  const ordered = traverseBsp(buildBsp(items, { edgeInk: planarCreases?0:settings.creaseWidthPx / 2, eye }), eye);
+  const edgeFaces=new Map<string,number[]>();
+  if(options.compareContact)for(let source=0;source<topology.faceIndices.length/3;source++){
+    const [a,b,c]=Array.from(topology.faceIndices.slice(source*3,source*3+3));
+    for(const [from,to] of [[a,b],[b,c],[c,a]]){
+      const key=from<to?from+','+to:to+','+from,owners=edgeFaces.get(key)??[];owners.push(source);edgeFaces.set(key,owners);
+    }
+  }
+  const owners=(item:BspItem)=>{
+    if(item.kind===0)return [faces.triangles[item.ref]!.source];
+    const {from:a,to:b}=creases[item.ref]!;return edgeFaces.get(a<b?a+','+b:b+','+a)??[];
+  };
+  const compareItems=options.compareContact?(a:BspItem,b:BspItem,equalDepth=false)=>{
+    if(a.kind===1&&b.kind===1)return 0;
+    const left=owners(a),right=owners(b);
+    if(left.some(f=>right.includes(f)))return 0;
+    const values=left.flatMap(f=>right.map(g=>options.compareContact!(f,g,equalDepth)));
+    // An edge is visible when any adjacent material face clears the covering
+    // sheet. No relation means geometry, never an invented paint priority.
+    if(!values.length||values.includes(0))return 0;
+    if(a.kind===1)return Math.max(...values);
+    if(b.kind===1)return Math.min(...values);
+    return values[0];
+  }:undefined;
+  const contactVisibility=compareItems&&(settings.faceAlpha??1)>=1;
+  const ordered = contactVisibility?visibleContactPieces(items,{compare:compareItems,owners}):traverseBsp(buildBsp(items, { edgeInk: planarCreases?0:settings.creaseWidthPx / 2, eye }), eye);
 
   // The pieces already carry screen coordinates; nothing needs re-projecting.
   const drawnPieces = ordered.map((item) => ({
@@ -207,7 +238,14 @@ export function renderMeshToSvg(
     );
   }
   const groups = sourceFaceGroups(topology);
-  const drawn: (DrawnPiece & RunPiece & { element: string })[] = [];
+  const print=settings.colorMode==='strain'||settings.colorMode==='normals'?undefined:settings.paperPrint;
+  const paints=new PrintPaintServers('paper-print',side=>{
+    const url=print?.source?.[side];
+    if(url&&/^data:image\/(?:png|jpeg|webp);base64,[A-Za-z0-9+/]+=*$/.test(url))return url;
+    const image=print![side]!;
+    return encodePng(image.width,image.height,image.data);
+  });
+  const drawn: (DrawnPiece & RunPiece & { element:string; print?:()=>string })[] = [];
   for (const { item, screen } of drawnPieces) {
     // A piece is coplanar with the triangle it was cut from, so it takes that
     // triangle's colour and shading rather than recomputing from a sliver.
@@ -215,17 +253,20 @@ export function renderMeshToSvg(
     const fill = triangle
       ? hex(faceColor(triangle, projected, settings, options.strain ?? null))
       : '';
-    const element = triangle
-      ? facePolygon(screen, fill, settings)
+    const side:PrintedSide=triangle&&triangle.winding<0?'front':'back';
+    const textured=triangle&&print?.[side];
+    const element = triangle ? facePolygon(screen, fill, settings,!!contactVisibility)
       : creaseElement(creases[item.ref]!, screen, settings);
+    const printVisible=textured?()=>projectedPrintPatches([triangle.a,triangle.b,triangle.c],screen,projected,print.uv,side,camera.camDist,perspective,settings.faceAlpha>=1,textured)
+      .map(patch=>facePolygon(patch.points,paints.fill(patch.mapping,fill),settings,true)).join(''):undefined;
     // A dropped sub-pixel piece yields nothing rather than a blank line.
     if (element) {
       drawn.push({
-        element,
+        element,print:printVisible,
         points: screen,
         strokeWidth: triangle ? 0 : settings.creaseWidthPx,
         // A crease never merges, and neither does a face whose group is missing.
-        group: triangle ? groups[triangle.source] ?? -1 : -1,
+        group: triangle && !textured ? groups[triangle.source] ?? -1 : -1,
         fill,
       });
     }
@@ -241,7 +282,7 @@ export function renderMeshToSvg(
   // further than it is drawn, and the error should fall on the side of keeping.
   const opaque = (settings.faceAlpha ?? 1) >= 1;
   const visible =
-    options.cullHidden !== false && opaque
+    options.cullHidden !== false && opaque && !contactVisibility
       ? findVisiblePieces(drawn, { minX, minY, width, height })
       : null;
   // Merging after culling rather than before, for two reasons: culling reads
@@ -250,7 +291,10 @@ export function renderMeshToSvg(
   const survivors = drawn.filter((_, index) => !visible || visible[index]);
   const merged = new Set<number>();
   const mergedElements = new Map<number, string>();
-  for (const [start, end] of options.mergeCoplanar === false ? [] : coplanarRuns(survivors)) {
+  // Clipping creates T-junctions and near-coincident boundary fragments. The
+  // outline simplifier quantizes them for printing and can drop a real region.
+  // Retain these exact vector pieces instead of rebuilding a whole-face hull.
+  for (const [start, end] of options.mergeCoplanar === false || contactVisibility ? [] : coplanarRuns(survivors)) {
     const run = survivors.slice(start, end);
     const outline = outlineOf(run.map((piece) => piece.points));
     // Null means the run does not resolve to one simple loop, so it goes out as
@@ -262,13 +306,14 @@ export function renderMeshToSvg(
   for (let i = 0; i < survivors.length; i += 1) {
     const replacement = mergedElements.get(i);
     if (replacement) elements.push(replacement);
-    else if (!merged.has(i)) elements.push(survivors[i]!.element);
+    else if (!merged.has(i)) elements.push(survivors[i]!.print?.()??survivors[i]!.element);
   }
 
   const svg = [
     '<?xml version="1.0" encoding="UTF-8"?>',
     `<svg xmlns="http://www.w3.org/2000/svg" width="${num(width)}" height="${num(height)}" ` +
       `viewBox="${num(minX)} ${num(minY)} ${num(width)} ${num(height)}" role="img" aria-label="Folded model">`,
+    paints.defs(),
     '  <g stroke-linecap="round" stroke-linejoin="round">',
     ...elements,
     '  </g>',
@@ -293,6 +338,7 @@ interface Triangle {
 }
 
 interface Crease {
+  neutral?:boolean;
   from: number;
   to: number;
   assignment: number;
@@ -308,14 +354,15 @@ function screenPoints(
   indices: readonly number[],
   camera:CameraUniforms,
   perspective:boolean,
-  depthBias = 0
+  depthBias = 0,
+  inverseDepth=false
 ): Vec3[] {
   return indices.map((v) => [
     projected.screen[v * 2]!,
     projected.screen[v * 2 + 1]!,
     (perspective
-      ? -camera.camDist+(camera.camDist**2-camera.depthRange**2)/Math.max(camera.camDist-projected.view[v*3+2]!,.001)
-      : projected.view[v*3+2]!) + depthBias,
+      ? inverseDepth?(1/Math.max(camera.camDist-projected.view[v*3+2]!,.001)+depthBias/(camera.camDist**2-camera.depthRange**2)):-camera.camDist+(camera.camDist**2-camera.depthRange**2)/Math.max(camera.camDist-projected.view[v*3+2]!,.001)
+      : projected.view[v*3+2]!) + (perspective&&inverseDepth?0:depthBias),
   ]);
 }
 
@@ -383,16 +430,16 @@ function collectFaces(
 }
 
 /** Per-kind visibility uses the same codes and defaults as the GPU edge pass. */
-function collectCreases(topology: SvgMeshTopology, projected: ProjectedVertices,settings:RenderSettings): Crease[] {
+function collectCreases(topology: SvgMeshTopology, projected: ProjectedVertices,settings:RenderSettings,camera:CameraUniforms,positions:Float32Array,coloredEdges?:ReadonlySet<number>): Crease[] {
   const creases: Crease[] = [];
   for (let edge = 0; edge < topology.edgeAssignments.length; edge += 1) {
-    const assignment = topology.edgeAssignments[edge]!;
+    const assignment = cameraEdgeAssignment(topology.edgeAssignments[edge]!,topology,edge,positions,camera.center.map((value,k)=>value+camera.camDist*camera.rotation[k+6]));
     if (!edgeAssignmentVisible(assignment,settings)) continue;
     if(settings.diagramStyle&&(topology.edgeMaterial?.[edge]??(assignment===3?0:1))!==1)continue;
     const from = topology.edgeIndices[edge * 2]!;
     const to = topology.edgeIndices[edge * 2 + 1]!;
     if (!screenFinite(projected, from) || !screenFinite(projected, to)) continue;
-    creases.push({ from, to, assignment,...settings.diagramStyle?{diagramFolded:assignment===0||diagramEdgeFolded(projected.view,from,to,topology.edgeOpposites?.[edge*2]??-1,topology.edgeOpposites?.[edge*2+1]??-1)}:{} });
+    creases.push({ from, to, assignment,neutral:coloredEdges!==undefined&&!coloredEdges.has(edge)&&(assignment===1||assignment===2),...settings.diagramStyle?{diagramFolded:assignment===0||diagramEdgeFolded(projected.view,from,to,topology.edgeOpposites?.[edge*2]??-1,topology.edgeOpposites?.[edge*2+1]??-1)}:{} });
   }
   return creases;
 }
@@ -464,14 +511,18 @@ function artworkBounds(
 function facePolygon(
   screen: ReadonlyArray<readonly [number, number]>,
   fill: string,
-  settings: RenderSettings
+  settings: RenderSettings,
+  retainPrecision=false
 ): string {
-  const points = screen.map(([x, y]) => `${num(x)},${num(y)}`).join(' ');
+  const rounded=screen.map(([x,y])=>retainPrecision?[x,y]:[Number(num(x)),Number(num(y))]);
+  const width=polygonSeamWidth(rounded,SEAM_STROKE_WIDTH);
+  if(width===0)return '';
+  const points = rounded.map(([x, y]) => `${x},${y}`).join(' ');
   // Opaque faces close their own antialiasing seams; translucent ones must not,
   // or every shared edge doubles up and reads as a wireframe.
   const seam =
     settings.faceAlpha >= 1
-      ? ` stroke="${fill}" stroke-width="${num(SEAM_STROKE_WIDTH)}"`
+      ? ` stroke="${fill}" stroke-width="${width}"`
       : ' stroke="none"';
   return `  <polygon points="${points}" fill="${fill}"${opacityAttr('fill', settings.faceAlpha)}${seam}/>`;
 }
@@ -579,8 +630,8 @@ function creaseElement(
   screen: readonly [number, number][],
   settings: RenderSettings
 ): string {
-  const color = crease.diagramFolded===undefined?edgeAssignmentColor(crease.assignment,settings):diagramEdgeColor(crease.diagramFolded,settings);
-  const dash = edgeAssignmentDash(crease.assignment, settings);
+  const color = crease.neutral?settings.borderColor:crease.diagramFolded===undefined?edgeAssignmentColor(crease.assignment,settings):diagramEdgeColor(crease.diagramFolded,settings);
+  const dash = crease.neutral?null:edgeAssignmentDash(crease.assignment, settings);
   // `stroke-dasharray` takes the same alternating on/off runs the shader and
   // setLineDash do, in the same device pixels, so all three dash alike.
   //

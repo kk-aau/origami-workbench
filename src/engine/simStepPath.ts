@@ -1,6 +1,6 @@
 import type {PreparedOrigamiModel} from '../../vendor/simulator/oristudio/packages/origami-simulator/src/types';
 import type {SimulationStepAnimation} from './simStepAnimation';
-import {compileSimulationStepRigidMechanism} from './simStepRigid';
+import {compileSimulationStepRigidMechanism,createSimulationStepPhaseMechanisms} from './simStepRigid';
 import {simulationStepAxisGroups,simulationStepGroupCombinations} from './simStepScheduling';
 
 /** A temporary playback plan. Angles follow prepared.creaseParams, never CP
@@ -31,6 +31,7 @@ export interface SimulationStepPathEvaluator {
   /** Per material vertex, an upper bound on displacement from the interval's
    * midpoint over its entire duration, not just its two endpoints. */
   motionBound(start:number,end:number):number[];
+  sameRigidAssembly?(start:number,end:number,first:readonly number[],second:readonly number[]):boolean;
   mechanism:ReturnType<typeof compileSimulationStepRigidMechanism>;
 }
 export interface SimulationStepPathCheck {
@@ -250,24 +251,78 @@ export function validateSimulationStepMotion(prepared:PreparedOrigamiModel,anima
   }
   if(knots[0].progress!==0||knots.at(-1)!.progress!==1)throw Error('步骤动画路径采样缺少起点或终点。');
   const motion:SimulationStepMotion={version:1,method:raw.method as SimulationStepMotion['method'],phases,knots,batches,maxClosureResidual:0};
-  const evaluator=createSimulationStepPathEvaluatorUnchecked(prepared,animation,motion);
-  for(const phase of phases)for(const t of [0,.001,.03,.125,.25,.5,.75,.875,.97,.999,1]){
-    const angles=phaseAngles(phase,phase.start+(phase.end-phase.start)*t),evaluation=evaluator.mechanism.evaluateAngles(angles);
-    evaluator.mechanism.validatePose(angles,evaluation);motion.maxClosureResidual=Math.max(motion.maxClosureResidual,evaluation.maxResidual);
+  const whole=compileSimulationStepRigidMechanism(prepared,animation);
+  const phaseBody=createPlaybackBodies(prepared,animation,motion,whole);
+  for(const [index,phase] of phases.entries())for(const t of [0,.001,.03,.125,.25,.5,.75,.875,.97,.999,1]){
+    const progress=phase.start+(phase.end-phase.start)*t,angles=phaseAngles(phase,progress),evaluation=whole.evaluateAngles(angles);
+    whole.validatePose(angles,evaluation);motion.maxClosureResidual=Math.max(motion.maxClosureResidual,evaluation.maxResidual);
+    const body=phaseBody(index,progress);
+    if(body!==whole)body.validatePose(angles);
   }
   return motion;
+}
+
+function createPlaybackBodies(prepared:PreparedOrigamiModel,animation:SimulationStepAnimation,motion:SimulationStepMotion,whole:ReturnType<typeof compileSimulationStepRigidMechanism>){
+  const phases=createSimulationStepPhaseMechanisms(prepared,animation,motion,whole);
+  const carry=motion.phases.map(phase=>whole.activeCreases.some(i=>
+    Math.abs(phase.fromAngles[i])===180&&phase.fromAngles[i]===phase.toAngles[i]));
+  return (index:number,progress:number)=>{
+    const phase=motion.phases[index];
+    return carry[index]&&progress>phase.start&&progress<phase.end?phases(index):whole;
+  };
+}
+
+/** Reuse the newly folded stack as a single moving body in the next phase.
+ * Exact instruction boundaries keep their canonical endpoint coordinates. */
+export function createSimulationStepPlannedPose(prepared:PreparedOrigamiModel,animation:SimulationStepAnimation,motion:SimulationStepMotion,whole=compileSimulationStepRigidMechanism(prepared,animation)){
+  const phaseBody=createPlaybackBodies(prepared,animation,motion,whole);
+  let previousProgress=NaN,previousPose:Float32Array;
+  return (progress:number):Float32Array=>{
+    if(!Number.isFinite(progress))throw Error('步骤动画进度无效。');
+    const p=clamp(progress);
+    if(p===previousProgress)return previousPose.slice();
+    const i=motion.phases.findIndex(phase=>p<=phase.end+1e-12),phase=motion.phases[i];
+    if(!phase)throw Error('步骤动画运动路径缺少当前进度。');
+    const body=phaseBody(i,p);
+    previousPose=body.validatePose(phaseAngles(phase,p));
+    previousProgress=p;
+    return previousPose.slice();
+  };
 }
 
 function createSimulationStepPathEvaluatorUnchecked(prepared:PreparedOrigamiModel,animation:SimulationStepAnimation,motion:SimulationStepMotion):SimulationStepPathEvaluator{
   const mechanism=compileSimulationStepRigidMechanism(prepared,animation);
   const angles=(progress:number)=>simulationStepMotionAngles(motion,progress);
+  const phaseBody=createPlaybackBodies(prepared,animation,motion,mechanism);
+  let lastPhase=-1,owners:number[]=[];
+  const sameRigidAssembly=(a:number,b:number,first:readonly number[],second:readonly number[])=>{
+    const index=motion.phases.findIndex(p=>a>=p.start&&b<=p.end);
+    if(index<0)return false;
+    if(index!==lastPhase){
+      const phase=motion.phases[index],body=phaseBody(index,(phase.start+phase.end)/2);
+      const roots=body.components.map((_,i)=>{
+        let id=i;
+        while(body.components[id].parent!==null){
+          const joint=body.components[id].parentCrease!;
+          if(phase.fromAngles[joint]!==phase.toAngles[joint])break;
+          id=body.components[id].parent!;
+        }
+        return id;
+      });
+      // A shared vertex can be owned by a different tree branch. Check the
+      // transforms actually used to position every vertex of both triangles.
+      owners=body.vertexBodies.map(i=>roots[i]);lastPhase=index;
+    }
+    const id=owners[first[0]];
+    return first.every(v=>owners[v]===id)&&second.every(v=>owners[v]===id);
+  };
   const angleBounds=(start:number,end:number)=>{
     if(!Number.isFinite(start)||!Number.isFinite(end))throw Error('步骤动画区间无效。');
     const lo=clamp(Math.min(start,end)),hi=clamp(Math.max(start,end)),points=[angles(lo),angles(hi)];
     for(const p of motion.phases)if(p.end>lo&&p.end<hi)points.push([...p.toAngles]);
     return prepared.creaseParams.map((_,i)=>({min:Math.min(...points.map(p=>p[i])),max:Math.max(...points.map(p=>p[i]))}));
   };
-  return {mechanism,angles,angleBounds,evaluate(progress){const a=angles(progress);return mechanism.validatePose(a,mechanism.evaluateAngles(a));},motionBound(start,end){
+  return {mechanism,angles,angleBounds,sameRigidAssembly,evaluate:createSimulationStepPlannedPose(prepared,animation,motion,mechanism),motionBound(start,end){
     const mid=(start+end)/2,center=angles(mid),bounds=angleBounds(start,end);
     const far=bounds.map((b,i)=>center[i]+Math.max(Math.abs(center[i]-b.min),Math.abs(center[i]-b.max)));
     const bodies=mechanism.displacementBounds(center,far);
@@ -351,6 +406,45 @@ function independentJointBlocks(mechanism:SimulationStepPathEvaluator['mechanism
     }
   };
   visit(mechanism.root,-1);return blocks;
+}
+
+// Six rays on three straight material lines form two identical half-vertices.
+// For a symmetric motion their rotation product closes when the sum of
+// t_i*t_j*sin(sector_ij) over the three axis pairs vanishes (signed
+// half-angle tangents). Give the two like-signed lines equal speed and solve
+// for the third. The usual rigid pose checks still validate the whole mesh.
+function threeAxisVertexPhase(prepared:PreparedOrigamiModel,phase:SimulationStepMotionPhase):SimulationStepMotionPhase|null{
+  const moving=phase.fromAngles.flatMap((a,i)=>different(a,phase.toAngles[i])?[i]:[]);
+  if(moving.length!==6)return null;
+  const folding=isFlat(phase.fromAngles[moving[0]]);
+  if(moving.some(i=>!fullSweep(phase.fromAngles[i],phase.toAngles[i])||isFlat(phase.fromAngles[i])!==folding))return null;
+  const edges=moving.map(i=>prepared.edgesVertices[prepared.creaseParams[i].edge]);
+  const center=edges[0].find(v=>edges.every(edge=>edge.includes(v)));
+  if(center===undefined)return null;
+  const origin=prepared.fold.vertices_coords[center];
+  const rays=edges.map((edge,j)=>{
+    const end=prepared.fold.vertices_coords[edge[0]===center?edge[1]:edge[0]];
+    const x=end[0]-origin[0],z=end[2]-origin[2],length=Math.hypot(x,z),i=moving[j];
+    return {x:x/length,z:z/length,sign:Math.sign(folding?phase.toAngles[i]:phase.fromAngles[i])};
+  });
+  type Ray=typeof rays[number];
+  const sine=(a:Ray,b:Ray)=>Math.abs(a.x*b.z-a.z*b.x);
+  const axes:Ray[]=[];
+  while(rays.length){
+    const ray=rays.pop()!;
+    const opposite=rays.findIndex(b=>b.sign===ray.sign&&ray.x*b.x+ray.z*b.z<0&&sine(ray,b)<1e-8);
+    if(opposite<0)return null;
+    rays.splice(opposite,1);
+    axes.push(ray);
+  }
+  const odd=axes.find(a=>axes.filter(b=>b.sign===a.sign).length===1);
+  if(!odd)return null;
+  const [a,b]=axes.filter(ray=>ray!==odd);
+  const speed=sine(a,b)/(sine(a,odd)+sine(b,odd));
+  if(!Number.isFinite(speed)||speed<1e-5||speed>1e5)return null;
+  const coefficients=phase.fromAngles.map(()=>1);
+  for(const i of moving)if(Math.sign(folding?phase.toAngles[i]:phase.fromAngles[i])===odd.sign)coefficients[i]=speed;
+  return {...phase,kind:'tangent',coefficients};
 }
 
 function* coupledPhaseCandidates(mechanism:SimulationStepPathEvaluator['mechanism'],phase:SimulationStepMotionPhase,exhausted=()=>false):Generator<SimulationStepMotionPhase>{
@@ -554,6 +648,10 @@ export function planSimulationStepPath(prepared:PreparedOrigamiModel,animation:S
     try{for(const p of [.125,.375,.625,.875]){const angles=phaseAngles(phase,phase.start+(phase.end-phase.start)*p);mechanism.validatePose(angles,mechanism.evaluateAngles(angles));}}
     catch{linear=false;}
     if(linear)return searchCoupled(index+1,[...coupled,phase]);
+    const vertex=threeAxisVertexPhase(prepared,phase);
+    if(vertex){
+      const result=searchCoupled(index+1,[...coupled,vertex]);if(result)return result;
+    }
     for(const candidate of coupledPhaseCandidates(mechanism,phase,exhausted)){
       const result=searchCoupled(index+1,[...coupled,candidate]);if(result)return result;
     }

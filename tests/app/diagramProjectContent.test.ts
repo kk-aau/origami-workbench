@@ -3,7 +3,8 @@ import assert from 'node:assert/strict';
 import {blankDoc} from '../../src/app/state';
 import {computeFlatFold} from '../../src/core/flatFold';
 import {createDiagramProject,adoptDiagramPose,appendDiagramStep,updateDiagramPoseViewport,type DiagramProject} from '../../src/app/diagramProject';
-import {sameDiagramProjectContent,diagramProjectNeedsReplacementConfirmation} from '../../src/app/diagramProjectContent';
+import {diagramFileCaptionEdits,sameDiagramFileSnapshot,sameDiagramProjectContent,diagramProjectNeedsReplacementConfirmation} from '../../src/app/diagramProjectContent';
+import {encodePreparedDiagramFile,encodePreparedCaptionEdits,inspectPreparedDiagram} from '../../src/app/diagramPreparedFile';
 
 function fixture(){
   const doc=blankDoc('保存内容',100,100);doc.segments.push({id:'crease',a:[50,0],b:[50,100],assignment:'V',angle:180});
@@ -11,6 +12,18 @@ function fixture(){
   project=appendDiagramStep(project);project.steps[0].paperStates={active:'flat',flat:structuredClone(project.steps[0].pose!)};
   return project;
 }
+test('a caption-only update to prepared bytes produces the same archive as a full export',async()=>{
+  const base=fixture(),next=structuredClone(base);
+  next.name='双语';next.activeStepId=base.steps[0].id;next.steps[0].title='折叠\nFold';next.steps[0].description='转动';
+  assert.equal(sameDiagramFileSnapshot(base,next),false);
+  const edits=diagramFileCaptionEdits(base,next)!;assert.equal(edits.captions.length,1);
+  const source=await encodePreparedDiagramFile(base),expected=await encodePreparedDiagramFile(next);
+  const actual=await encodePreparedCaptionEdits(source.text,edits);assert.deepEqual(JSON.parse(actual!),JSON.parse(expected.text));
+  const prepared=inspectPreparedDiagram(JSON.parse(actual!))!;assert.ok(await prepared.matches(prepared.project));
+  const refolded=structuredClone(next);refolded.states[0].doc.segments[0].angle=45;
+  assert.equal(diagramFileCaptionEdits(base,refolded),undefined);
+  assert.equal(diagramFileCaptionEdits(base,updateDiagramPoseViewport(base,base.steps[0].id,{'front-solid':{rotation:0,x:10,y:20,width:30,height:40}})),undefined);
+});
 test('navigation, viewport rectangles and regenerated layer certificates do not dirty drawing content',()=>{
   const original=fixture(),stepId=original.steps[0].id;
   const moved=updateDiagramPoseViewport(original,stepId,{'front-solid':{rotation:0,x:10,y:20,width:30,height:40}});

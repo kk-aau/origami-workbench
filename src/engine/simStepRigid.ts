@@ -1,5 +1,6 @@
 import type {PreparedOrigamiModel} from '../../vendor/simulator/oristudio/packages/origami-simulator/src/types';
 import type {SimulationStepAnimation} from './simStepAnimation';
+import type {SimulationStepMotion} from './simStepPath';
 
 export type SimulationStepRigidVector=[number,number,number];
 /** Row-major rotation and translation, both applied to the immutable seed. */
@@ -58,7 +59,11 @@ const dot=(a:V,b:V)=>a[0]*b[0]+a[1]*b[1]+a[2]*b[2];
 const size=(v:V)=>Math.hypot(...v);
 const unit=(v:V)=>scale(v,1/size(v));
 const point=(p:ArrayLike<number>,i:number):V=>[p[i*3],p[i*3+1],p[i*3+2]];
-const rotate=(r:number[],p:V):V=>[dot(r.slice(0,3) as V,p),dot(r.slice(3,6) as V,p),dot(r.slice(6,9) as V,p)];
+const rotate=(r:number[],[x,y,z]:V):V=>[
+  r[0]*x+r[1]*y+r[2]*z,
+  r[3]*x+r[4]*y+r[5]*z,
+  r[6]*x+r[7]*y+r[8]*z,
+];
 const apply=(t:T,p:V)=>add(rotate(t.rotation,p),t.translation);
 const identity=():T=>({rotation:[1,0,0,0,1,0,0,0,1],translation:[0,0,0]});
 function around(parent:T,a:V,b:V,degrees:number):T {
@@ -178,7 +183,9 @@ export function compileSimulationStepRigidMechanism(prepared:PreparedOrigamiMode
   const validatePose=(angles:readonly number[]):Float32Array=>{
     validAngles(angles);
     for(let i=0;i<angles.length;i++){
-      const range=ranges.get(prepared.creaseParams[i].edge)!,direction=Math.sign(range.fromAngle||range.toAngle||range.viaAngle||0);
+      const range=ranges.get(prepared.creaseParams[i].edge)!;
+      const reverses=range.viaAngle===0&&range.fromAngle*range.toAngle<0;
+      const direction=reverses?0:Math.sign(range.fromAngle||range.toAngle||range.viaAngle||0);
       if(Math.abs(angles[i])>180+1e-8||direction&&angles[i]*direction< -1e-8)throw Error('本步铰链超出山谷折允许范围：谷折 0～180°，峰折 -180～0°。');
     }
     const evaluation=evaluateAngles(angles),result=evaluation.positions;
@@ -217,6 +224,25 @@ export function compileSimulationStepRigidMechanism(prepared:PreparedOrigamiMode
     return components.map((c,j)=>c.path.reduce((sum,i,k)=>sum+Math.min(2,Math.abs(b[i]-a[i])*Math.PI/180)*leverArms[j][k],0));
   };
   return {components,joints,triangleBodies,vertexBodies,activeCreases:prepared.creaseParams.flatMap((c,i)=>active.has(c.edge)?[i]:[]),root,seedPositions:seed,fromAngles,evaluateAngles,validatePose,displacementBounds};
+}
+
+/** Each phase starts from an immutable folded pose. Constant material hinges
+ * then join transitively, including a stack carried across several earlier
+ * folds. Opening a hinge in this phase makes it a joint again. */
+export function createSimulationStepPhaseMechanisms(prepared:PreparedOrigamiModel,animation:SimulationStepAnimation,motion:SimulationStepMotion,whole=compileSimulationStepRigidMechanism(prepared,animation)){
+  let cachedIndex=-1,cached:SimulationStepRigidMechanism;
+  return (index:number):SimulationStepRigidMechanism=>{
+    if(index===cachedIndex&&cached)return cached;
+    const phase=motion.phases[index];
+    if(!phase)throw Error('缺少当前折叠分段。');
+    // Always derive the checkpoint from the original double-precision seed.
+    // Seeking backwards or repeatedly merging must not accumulate roundoff.
+    const seed=index===0?animation.initialPositions:Array.from(whole.evaluateAngles(phase.fromAngles).positions);
+    cached=compileSimulationStepRigidMechanism(prepared,{...animation,initialPositions:seed,
+      ranges:prepared.creaseParams.map((crease,i)=>({edge:crease.edge,fromAngle:phase.fromAngles[i],toAngle:phase.toAngles[i]}))});
+    cachedIndex=index;
+    return cached;
+  };
 }
 
 /** Strict compatibility entry point: independent linearly scheduled hinges are

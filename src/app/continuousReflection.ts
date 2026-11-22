@@ -1,6 +1,6 @@
 import type { Assignment, Doc, Point, Segment } from '../core/types';
 import { defaultAngle, validateDoc } from '../core/types';
-import { cross, distance, epsilonFor, pointOnSegment, splitIntersections, sub } from '../core/geometry';
+import { cross, distance, epsilonFor, interpolate, parameter, pointOnSegment, segmentIntersection, splitIntersections, sub } from '../core/geometry';
 import { reflectionEnd } from './reflection';
 import { uncoveredCopies } from './mirror';
 import {applyDrawingFoldAngle} from './foldAngles';
@@ -33,6 +33,29 @@ const STOP: Record<ReflectionStop,string> = {
 const unit=(p:Point):Point=>{const n=Math.hypot(...p);return[p[0]/n,p[1]/n];};
 const parallel=(a:Point,b:Point)=>Math.abs(cross(a,b))<=1e-9;
 const validPoint=(p:Point)=>Array.isArray(p)&&p.length===2&&p.every(n=>Number.isFinite(n)&&Math.abs(n)<=1e6);
+
+/** Walk in tracing order, so a shared vertex belongs to the arriving leg. */
+export function continuousReflectionEndpointOnSegment(path:readonly Segment[],target:Segment,eps:number):ContinuousReflectionOptions['endpoint'] {
+  for(const [segmentIndex,leg] of path.entries()){
+    const hit=segmentIntersection(leg,target,eps);
+    if(hit){
+      if(distance(leg.a,hit.point)>eps)return {segmentIndex,point:hit.point};
+      continue;
+    }
+    // Collinear contact has no unique intersection. Use the first overlap
+    // boundary ahead of the origin, including the end of a fully covered leg.
+    const length=distance(leg.a,leg.b);
+    if(length<=eps)continue;
+    let first=pointOnSegment(leg.b,target,eps)?1:Infinity;
+    for(const end of [target.a,target.b]){
+      if(!pointOnSegment(end,leg,eps))continue;
+      const t=Math.min(1,parameter(end,leg));
+      if(t*length>eps&&t<first)first=t;
+    }
+    if(Number.isFinite(first))return {segmentIndex,point:interpolate(leg.a,leg.b,first)};
+  }
+}
+
 function nearestHit(origin:Point,direction:Point,reference:readonly Segment[],eps:number):Point|undefined {
   let nearest:Point|undefined,minDistance=Infinity;
   for(const target of reference){

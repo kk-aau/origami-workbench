@@ -34,13 +34,13 @@ export const DIAGRAM_LESSONS:LearningLesson[]=[
   {id:'chain',title:'理解操作后 CP',goal:'本步修改的操作后 CP，会成为哪里使用的 CP？',hints:['看步骤标题中的 CP0 → CP1。','相邻步骤共享一个中间 CP，后一步从它开始。'],target:'cp-after',question:{answers:['下一步的操作前 CP','始终只影响本步图片','折痕编辑区的原工程'],correct:0}},
   {id:'before',title:'辨认操作前 CP',goal:'操作前 CP 已与上一步共享，需要改它时应到哪里？',hints:['共享状态会影响相邻步骤。','使用“到上一步修改”，再更新本步结果。'],target:'cp-before',question:{answers:['直接覆盖当前主图','到上一步修改共享的操作后 CP','删除所有步骤'],correct:1}},
  ]},
- {id:'fold',title:'完成第一次对折',description:'画谷折线、选择固定纸面，生成下一步。',tasks:[
-  {id:'line',title:'沿对角线画谷折',goal:'在正方形上从左上角画到右下角，折角保持 180°。',hints:['选择“画折线”，使用谷折，在网格角点之间画线。','点击正方形左上角，再点击右下角。完成后按 Esc 结束画线。'],target:'line',check:diagonal},
-  {id:'fixed',title:'在主图选固定侧',goal:'点击主图中指针标出的圆点，固定对角线右上侧的纸面。',hints:['先选择“固定侧”，再按画布指引点击。','圆点是材料坐标 (150, 50)，要在主图中点击；点到另一侧不会通过。'],target:'fixed',check:p=>{const f=p.steps[0].foldLink?.fixed,q=f?.point;return !!q&&!f?.target&&Math.hypot(q[0]-150,q[1]-50)<=12;}},
+ {id:'fold',title:'完成第一次对折',description:'画谷折线，在操作后 CP 固定纸面，再生成下一步。',revision:2,tasks:[
+  {id:'line',title:'沿对角线画谷折',goal:'在正方形上从左上角画到右下角，折角保持 180°。',hints:['选择“线段”，使用谷线，在网格角点之间画线。','点击正方形左上角，再点击右下角。完成后按 Esc 结束画线。'],target:'line',check:diagonal},
+  {id:'fixed',title:'在操作后 CP 固定纸面',goal:'打开左右对照，在操作后 CP 选中对角线右上侧的纸面，再点击“固定纸面”。',hints:['点击“左右对照”，切换到“操作后 CP”，跟随圆点选择右上侧纸面。','选中纸面后，点击“绘图与纸层”中的“固定纸面”，再进入下一步。'],target:'cp-after',check:p=>{const s=p.steps[0],f=s.foldLink?.fixed;if(f?.target?.stateId!==s.afterId||f.target.kind!=='face')return false;const graph=buildDiagramFold(p.states.find(st=>st.id===s.afterId)!.doc).graph,face=learningFixedCPFace(p);return face>=0&&materialFaceInside(graph,face,f.point);}},
   {id:'next',title:'进入下一步',goal:'点击下一步，等待折图计算完成。',hints:['右下角的“下一步”会按操作后 CP 生成新结果。','计算期间可以等待或手动停止；有报错时修正后再计算。'],target:'next',check:p=>p.steps.length>1&&p.activeStepId!==p.steps[0].id&&!!current(p).pose&&current(p).pose!.result.layers.status==='solved'},
  ]},
  {id:'symbols',title:'写成可读的步骤',description:'添加折纸符号、标题与动作说明。',tasks:[
-  {id:'symbol',title:'放一个折纸符号',goal:'选择一个谷折箭头，放在纸面附近。',hints:['从右侧折纸符号栏选择箭头。','点击“谷折箭头”，再点击画布放置；可选中后拖动位置。'],target:'symbols',check:p=>current(p).annotations?.some(a=>a.kind==='symbol'&&a.symbol==='fold')??false},
+  {id:'symbol',title:'放一个折纸符号',goal:'选择一个谷折箭头，放在纸面附近。',hints:['展开左侧的“折纸符号”，在标题行选“折叠动作”。','点击“谷折箭头”，再点击画布放置；可选中后拖动位置。'],target:'symbols',check:p=>current(p).annotations?.some(a=>a.kind==='symbol'&&a.symbol==='fold')??false},
   {id:'title',title:'为步骤命名',goal:'输入一个你自己的步骤标题。',hints:['画布底部有“标题”。','写下动作，如“沿对角线对折”，然后离开输入框。'],target:'title',check:p=>current(p).title.trim().length>0},
   {id:'description',title:'说明怎么折',goal:'添加一句动作说明，帮助读者理解方向或对齐位置。',hints:['在标题旁的“说明”中输入文字。','例如“将左下角折向右上角，对齐边缘”，然后离开输入框。'],target:'description',check:p=>current(p).description.trim().length>=4},
  ]},

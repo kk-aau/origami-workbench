@@ -2,7 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {startDiagramThumbnailImport,type DiagramThumbnailReply,type DiagramThumbnailRequest} from '../../src/app/diagramThumbnailTask';
 import {createDiagramProject,exportDiagramProject} from '../../src/app/diagramProject';
-import {diagramLibraryThumbnail} from '../../src/app/diagramLibrary';
+import {createDiagramLibrary,diagramLibraryThumbnail} from '../../src/app/diagramLibrary';
+import {runDiagramLibraryBackgroundSave} from '../../src/app/diagramLibraryBackgroundSave';
 import {blankDoc} from '../../src/app/state';
 import {deflateSync} from 'node:zlib';
 
@@ -52,6 +53,28 @@ test('actual thumbnail Worker validates stored projects and renders the same nul
     assert.deepEqual(replies.pop(),{type:'result',thumbnail:diagramLibraryThumbnail(project)});
     handle({data:{storedText:JSON.stringify({format:'zhezhi-diagram-library-document',version:1,project:JSON.parse(exportDiagramProject(project)),thumbnail:'<svg>cached</svg>'})}});
     assert.deepEqual(replies.pop(),{type:'result',thumbnail:'<svg>cached</svg>'});
+    const disk=new Map<string,string>(),store={getItem:(k:string)=>disk.get(k)??null,setItem:(k:string,v:string)=>{disk.set(k,v);}};
+    const writer=createDiagramLibrary(store,{backgroundSave:async req=>runDiagramLibraryBackgroundSave(req,store)});
+    const entry=await writer.saveAsync(project,{kind:'saved'});
+    let workerReads=0;
+    const reader=createDiagramLibrary(store,{prepareThumbnail:async(storedText,recovery)=>{
+      ++workerReads;handle({data:{storedText,recovery}});const reply=replies.pop();
+      assert.equal(reply?.type,'result');return reply?.type==='result'?reply.thumbnail:null;
+    }});
+    const savedThumbnail=await reader.getThumbnailAsync(entry.id);
+    const keys=[];
+    for(const size of [20,30,40]){
+      const changed={...project,states:project.states.map(s=>({...s,doc:{...s.doc,segments:[...s.doc.segments,{id:'diagonal',a:[0,0] as [number,number],b:[size,size] as [number,number],assignment:'V' as const,angle:null}]}}))};
+      const draft=await writer.saveAsync(changed,{id:entry.id,kind:'draft'},{incremental:true});
+      keys.push(draft.recoveryKey);reader.read();
+      const current=diagramLibraryThumbnail(changed);
+      assert.notEqual(current,savedThumbnail);
+      assert.equal(await reader.getThumbnailAsync(entry.id),current);
+      assert.equal(await reader.getThumbnailAsync(entry.id),current);
+      assert.equal(createDiagramLibrary(store).getThumbnail(entry.id),current);
+    }
+    assert.equal(keys[0],keys[2],'revision slot reused with different CP geometry');
+    assert.equal(workerReads,3,'two card requests render a single preview for each revision');
     const imageProject=structuredClone(project),dataUrl=paddedPNG();imageProject.steps[0].paperVisible=false;imageProject.steps[0].images=[{id:'large-preview',name:'大图片',dataUrl,pixelWidth:1,pixelHeight:1,position:[0,0],width:100,height:100,rotation:0,source:'file'}];
     handle({data:{storedText:JSON.stringify({format:'zhezhi-diagram-library-document',version:1,project:JSON.parse(exportDiagramProject(imageProject)),thumbnail:null})}});
     const large=replies.pop();assert.equal(large?.type,'result');if(large?.type==='result'){assert.ok(large.thumbnail!.length>120000);assert.equal(large.thumbnail,diagramLibraryThumbnail(imageProject));assert.ok(large.thumbnail!.includes(dataUrl));}

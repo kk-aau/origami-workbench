@@ -78,10 +78,10 @@ test('reversed source face winding is preserved consistently across all simulati
 });
 
 test('3D FOLD, OBJ and STL export the complete hole mesh with no stale original-face hole incidence',()=>{
-  const g=holesMaterial(mergeHoleRing().result.doc).graph,{prepared}=prepareSimulationDocument(g),snapshot=simulationFoldSnapshot(prepared,prepared.positions,0,0);
+  const g=holesMaterial(mergeHoleRing().result.doc).graph,{prepared}=prepareSimulationDocument(g),snapshot=simulationFoldSnapshot(prepared,new OrigamiModel(prepared).originalPositions,0,0);
   assert.equal(snapshot.faces_holes,undefined);assert.equal(snapshot.faces_holeEdges,undefined);assert.equal(snapshot.faces_holeFaces,undefined);
   const round=prepareSimulationDocument(JSON.parse(JSON.stringify(snapshot)));assert.equal(round.prepared.faceCount,16);assert.deepEqual(round.prepared.positions,prepared.positions);
-  const obj=simulationObjText(prepared,prepared.positions),stl=simulationStlText(prepared,prepared.positions);
+  const obj=simulationObjText(prepared,new OrigamiModel(prepared).originalPositions),stl=simulationStlText(prepared,new OrigamiModel(prepared).originalPositions);
   const objFaces=obj.split('\n').filter(s=>s.startsWith('f ')).map(s=>s.slice(2).split(' ').map(v=>Number(v.split('//')[0])-1));assert.deepEqual(objFaces,prepared.facesVertices);
   assert.equal((stl.match(/facet normal/g)??[]).length,16);
   const stlVertices=[...stl.matchAll(/vertex ([^\n]+)/g)].map(m=>m[1].split(' ').map(Number));

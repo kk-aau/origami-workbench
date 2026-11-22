@@ -1,8 +1,7 @@
 import type {Point,Segment} from '../core/types';
 import type {SnapPoint} from './snapPoints';
 import {nearestSnapPoint} from './snapPoints';
-import type {DiagramLineAnnotation} from './diagramAnnotations';
-import {snapDiagramLinePoint,type DiagramLineSnapResult} from './diagramLineSnap';
+import {snapDiagramLinePoint,type DiagramLineSnapReference,type DiagramLineSnapResult} from './diagramLineSnap';
 import {diagramGridLineIntersections} from './diagramDrawingTools';
 import type {DiagramSnapGrid} from './diagramGrid';
 import {gridLatticeNodes} from './gridGeometry';
@@ -28,7 +27,7 @@ export interface CreaseDrawingSnapOptions {
   segments?:readonly Pick<Segment,'id'|'a'|'b'>[];
   /** Point-picking tools use exact grid crossings without sliding along a line body. */
   projectToSegments?:boolean;
-  relationLines?:readonly DiagramLineAnnotation[];
+  relationLines?:readonly DiagramLineSnapReference[];
   /** Last result from the same drawing gesture, used only for discrete targets. */
   previous?:CreaseDrawingSnapResult|null;
 }
@@ -103,8 +102,12 @@ export function snapCreaseDrawingPoint(pointer:Point,options:CreaseDrawingSnapOp
   }
   const result=(resolved:Point,kind:CreaseDrawingSnapResult['kind'],target:SnapPoint|null=null,relation:DiagramLineSnapResult|null=null):CreaseDrawingSnapResult=>({point:resolved,kind,target,relation});
   if(!options.enabled||!finite(pointer)||!Number.isFinite(radius)||radius<=0)return result(point,'none');
+  const lattice=options.grid?.visible&&options.grid.scope!=='off'?options.grid.lattice:undefined;
+  const relationAt=(candidate:Point)=>anchor&&!direction&&options.relationLines
+    ?snapDiagramLinePoint(candidate,{anchor,lines:relationLines,radius,
+      grid:options.grid?.scope==='paper'&&!options.grid.contains?.(anchor)?undefined:lattice}):null;
   const discreteResult=(candidate:Point,kind:CreaseDrawingSnapResult['kind'],target:SnapPoint|null=null)=>{
-    const relation=anchor&&!direction&&relationLines.length?snapDiagramLinePoint(candidate,{anchor,lines:relationLines,radius}):null;
+    const relation=relationAt(candidate);
     // A right-angle marker describes the exact target; it must never move it.
     const exact=relation&&distance(relation.point,candidate)<=1e-9*Math.max(1,distance(candidate,anchor!))?{...relation,point:[...candidate] as Point}:null;
     return result([...candidate],kind,target,exact);
@@ -123,7 +126,6 @@ export function snapCreaseDrawingPoint(pointer:Point,options:CreaseDrawingSnapOp
   const nearest=nearestSnapPoint(compatiblePoints,point,radius);
   const target=retained&&(!nearest||distance(nearest.point,point)>=distance(retained.point,point)*.5)?retained:nearest;
   if(target)return discreteResult(target.point,'point',target);
-  const lattice=options.grid?.visible&&options.grid.scope!=='off'?options.grid.lattice:undefined;
   if(lattice&&segments.length){
     const crossings=diagramGridLineIntersections(point,segments,lattice,previous?.kind==='grid-intersection'?releaseRadius:radius)
       .filter(candidate=>compatible(candidate)&&(options.grid!.scope!=='paper'||options.grid!.contains?.(candidate)));
@@ -136,7 +138,7 @@ export function snapCreaseDrawingPoint(pointer:Point,options:CreaseDrawingSnapOp
   }
   const grid=creaseGridSnapPoint(point,options.grid);
   if(grid&&compatible(grid)&&distance(grid,point)<=radius)return discreteResult(grid,'grid');
-  const relation=anchor&&!direction&&relationLines.length?snapDiagramLinePoint(point,{anchor,lines:relationLines,radius}):null;
+  const relation=relationAt(point);
   function finiteSegmentSnap(ray:Point|undefined=direction):Point|null {
     let best:Point|null=null,bestDistance=radius,bestId='';
     for(const segment of segments){

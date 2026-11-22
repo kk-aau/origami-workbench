@@ -1,3 +1,4 @@
+import {JunctionMarks} from './JunctionWarnings';
 import {useEffect,useId,useMemo,useRef,useState,type PointerEvent} from 'react';
 import type {DiagramSpatialDiagnostic} from '../app/diagramSpatialDiagnostic';
 import type {DiagramSpatialPose} from '../app/diagramSpatialPose';
@@ -134,6 +135,7 @@ export default function DiagramSpatialDiagnosticView({diagnostic,onClose}:Diagra
             {faceIds.map(id=><path key={id} data-diagnostic-cp-face={id} data-selected={selected===id} className={`diagram-diagnostic-paper ${related.has(id)?'is-related':'is-context'} ${selected===id?'is-selected':''} ${fadeOthers?'fade-context':''}`} d={facePath(d.verticesCP,d.faces[id],d.facesHoles?.[id])} fillRule="evenodd" vectorEffect="non-scaling-stroke" onClick={()=>setSelected(id)}><title>F{id+1}{related.has(id)?' · 涉及问题':''}</title></path>)}
             {d.region?.map((region,i)=><path key={i} className="diagram-diagnostic-region" d={ringPath(region.verticesCP)} style={{fill:`url(#${patternId})`}} vectorEffect="non-scaling-stroke"/>)}
             {d.faceIds.map(id=>{const [x,y]=average(d.faces[id].map(i=>d.verticesCP[i]));return <text key={id} x={x} y={y} className="diagram-diagnostic-face-label" fontSize={cpBox.size*.038}>F{id+1}</text>;})}
+          {d.junctions&&<JunctionMarks issues={d.junctions}/>}
           </svg>
         </div>
         <p className="diagram-diagnostic-pane-note">橙色为涉及纸面 · 深色边框为当前选择 · 斜纹为问题区域</p>

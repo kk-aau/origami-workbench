@@ -1,3 +1,5 @@
+import {PlotLine,PlotStrokeGroup} from './PlotStrokeGroup';
+import {DocumentJunctionMarks} from './JunctionWarnings';
 import {useEffect,useMemo,useRef,useState,type PointerEvent as ReactPointerEvent} from 'react';
 import {TessDialog} from './TessellationEditor';
 import {NONUNIFORM_HELIX_GENERAL_CP_3966_EXAMPLE,validateNonuniformHelixGeneralCP3966Recipe,prepareNonuniformHelixGeneralCP3966Preview,compileNonuniformHelixGamma,nonuniformHelixGeneralCP3966SourceMatches,type NonuniformHelixGeneralCP3966Recipe,type NonuniformHelixGeneralCP3966Source,type NonuniformHelixGammaDefinition} from '../app/nonuniformHelixGeneralCP3966';
@@ -25,11 +27,11 @@ function WorldPlot({source,doc,guides}:{source:NonuniformHelixGeneralCP3966Sourc
    <text x={maxX} y={minY-margin*.65} textAnchor="end">X / mm</text><text x={minX-margin*.66} y={maxY} textAnchor="middle" transform={`rotate(-90 ${minX-margin*.66} ${maxY})`}>Y / mm</text></g>
   {graph?.faces_vertices?.map((f,i)=><polygon key={i} points={f.map(v=>graph.vertices_coords[v].join(',')).join(' ')} fill={i?'#d4e8e2':'#dbe4ef'} opacity=".85"/>)}
   {guides&&<g data-testid="nonuniform-general-unit-reference" fill="none" stroke="#946881" strokeWidth={stroke} strokeDasharray={`${span*.01} ${span*.006}`}><polyline points={ref('leftDirector')}/><polyline points={ref('rightDirector')}/></g>}
-  {doc?.segments.map(s=><line key={s.id} data-source-segment={s.id} x1={s.a[0]} y1={s.a[1]} x2={s.b[0]} y2={s.b[1]} stroke={s.assignment==='B'?'#273947':'#2873ab'} strokeWidth={stroke*1.5} strokeDasharray={s.assignment==='U'?`${span*.006} ${span*.004}`:undefined}/>)}
+  <PlotStrokeGroup>{doc?.segments.map(s=><PlotLine key={s.id} data-source-segment={s.id} x1={s.a[0]} y1={s.a[1]} x2={s.b[0]} y2={s.b[1]} stroke={s.assignment==='B'?'#273947':'#2873ab'} widthPixels={1.5} dash={s.assignment==='U'?'3 2':undefined}/>)}</PlotStrokeGroup>
   <polyline points={rows.map(f=>f.base.join(',')).join(' ')} fill="none" stroke="#2873ab" strokeWidth={stroke*2}/>
   {[start,end].map((f,i)=><g key={i} fill="#2873ab"><circle cx={f.base[0]} cy={f.base[1]} r={font*.35}/><text x={f.base[0]+(f.base[0]>(minX+maxX)/2?-font*.5:font*.5)} y={f.base[1]+(f.base[1]>(minY+maxY)/2?-font*.5:font*1.2)} textAnchor={f.base[0]>(minX+maxX)/2?'end':'start'} fontSize={font}>{i?'终点':'起点'} u={label(f.u)}</text></g>)}
   <g data-testid="nonuniform-general-mm-scale" stroke="#344a5a" fill="#344a5a" strokeWidth={stroke}><line x1={rulerX} y1={rulerY} x2={rulerX+step} y2={rulerY}/><line x1={rulerX} y1={rulerY-font*.25} x2={rulerX} y2={rulerY+font*.25}/><line x1={rulerX+step} y1={rulerY-font*.25} x2={rulerX+step} y2={rulerY+font*.25}/><text x={rulerX+step/2} y={rulerY-font*.45} stroke="none" fontSize={font} textAnchor="middle">{label(step)} mm</text></g>
- </svg><figcaption><span>蓝 · 原曲线 U</span><span>纸边 B · 两个真实面</span>{guides&&<span>紫虚线 · 原单位宽参考</span>}</figcaption><p>{doc?'当前有限 CP':'原源轨迹参考，尚无可采用 CP'} · 1 原世界单位 = 1 mm；视窗不改世界点。</p></figure>;
+ {doc&&<DocumentJunctionMarks doc={doc} spatial/>}</svg><figcaption><span>蓝 · 原曲线 U</span><span>纸边 B · 两个真实面</span>{guides&&<span>紫虚线 · 原单位宽参考</span>}</figcaption><p>{doc?'当前有限 CP':'原源轨迹参考，尚无可采用 CP'} · 1 原世界单位 = 1 mm；视窗不改世界点。</p></figure>;
 }
 export function NonuniformGammaPlot({rows,definition,onPoints}:{rows:{u:number;gamma:number}[];definition:NonuniformHelixGammaDefinition;onPoints?:(p:[number,number][])=>void}){
  const svg=useRef<SVGSVGElement>(null),drag=useRef<{index:number;pointer:number;lo:number;hi:number}|null>(null),all=[...rows,...(definition.kind==='natural-cubic-points'?definition.points.map(([u,gamma])=>({u,gamma})):[])];

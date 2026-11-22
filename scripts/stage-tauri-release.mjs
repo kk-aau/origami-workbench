@@ -18,7 +18,7 @@ await mkdir(output,{recursive:true});
 try{await stat(payload);throw Error('Payload exists. Preserve prior candidates and use a fresh staging directory.');}catch(e){if(e.code!=='ENOENT')throw e;}
 await mkdir(payload);
 async function copy(source,destination,skip=()=>false){const info=await stat(source);if(info.isDirectory()){await mkdir(destination,{recursive:true});for(const e of await readdir(source,{withFileTypes:true})){if(e.isSymbolicLink())throw Error('Runtime symlink is not permitted');if(!skip(e.name))await copy(path.join(source,e.name),path.join(destination,e.name),skip);}}else{await mkdir(path.dirname(destination),{recursive:true});await copyFile(source,destination);}}
-await copy(path.join(root,'src-tauri/target/release/zhezhi-workbench-tauri.exe'),path.join(payload,'zhezhi-workbench-tauri.exe'));
+await copy(path.resolve(root,process.env.CARGO_TARGET_DIR || 'src-tauri/target','release/zhezhi-workbench-tauri.exe'),path.join(payload,'zhezhi-workbench-tauri.exe'));
 await copy(path.join(root,'dist'),path.join(payload,'resources/dist'),name=>name.endsWith('.map'));
 await copy(path.join(root,'build/tessellation/zhezhi-tess'),path.join(payload,'resources/engine'));
 await copy(legal,path.join(payload,'resources/legal'));

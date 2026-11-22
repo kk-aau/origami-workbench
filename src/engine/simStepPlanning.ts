@@ -25,6 +25,9 @@ import {refineSimulationStepForBending} from './simStepBending';
 export function planVerifiedSimulationStepAnimation(fold:FoldGraph,input:SimulationStepAnimation,onProgress?:(message:string)=>void,options:{initialGeometry?:FlatFoldResult;initialContactOrder?:SimulationStepInitialOrder;ignoreCollisions?:boolean;originalMeshOnly?:boolean}={}):SimulationStepPlanningResult{
   const unplanned={...input};delete unplanned.motion;delete unplanned.layerTimeline;delete unplanned.flex;delete unplanned.dynamic;
   const {prepared}=prepareSimulationDocument(fold),animation=validateSimulationStepAnimationStructure(unplanned,prepared,simulationSourceSignature(fold));
+  const contact=options.initialContactOrder;
+  const inheritedContact=contact?validateSimulationLayerOrder({sourceSignature:animation.sourceSignature,...contact},animation.sourceSignature,prepared.sourceFaceCount??prepared.facesVertices.length):null;
+  if(contact?.faceOrders.length&&!inheritedContact)throw Error('起态接触层序与当前材料纸面不匹配。');
   const allowIntersections=animation.collisionPolicy==='allow',warnings:string[]=[];
   const warn=(message:string)=>{if(!warnings.includes(message))warnings.push(message);};
   const collisionWarning=(status:string,reason?:string)=>warn(status==='collision'?'此步骤存在纸面穿插，已按允许穿模设置保留播放。':`此步骤未确认全程无穿模，仍可播放。${reason??''}`);
@@ -78,7 +81,7 @@ export function planVerifiedSimulationStepAnimation(fold:FoldGraph,input:Simulat
     }
     // A reversible precrease restores exactly the original material layers.
     // Intermediate curved faces use real depth, never a fabricated paint order.
-    const rows=options.initialGeometry?.layers.status==='solved'?options.initialGeometry.layers.faceOrders??[]:[];
+    const rows=inheritedContact?.faceOrders??(options.initialGeometry?.layers.status==='solved'?options.initialGeometry.layers.faceOrders??[]:[]);
     const layerTimeline:NonNullable<SimulationStepAnimation['layerTimeline']>=[{progress:0,faceOrders:rows},{progress:1,faceOrders:rows}];
     return {animation:{...animation,flex,layerTimeline},checkedIntervals,method:'local-flex',...(warnings.length?{warnings}:{})};
   }
@@ -89,15 +92,12 @@ export function planVerifiedSimulationStepAnimation(fold:FoldGraph,input:Simulat
   const heights=animation.initialPositions.filter((_,i)=>i%3===1),spatialInitial=Math.max(...heights)-Math.min(...heights)>1e-8;
   // A refined bending mesh keeps the original material-face identities. Its
   // numerical triangles must not become independently inferred flat layers.
-  const initial=spatialInitial?null:options.initialGeometry??(animation.materialMode==='bendable'?null:initialMaterialGeometry(fold,prepared,animation));
+  const initial=spatialInitial||inheritedContact?null:options.initialGeometry??(animation.materialMode==='bendable'?null:initialMaterialGeometry(fold,prepared,animation));
   const selectedInitial=initial?.layers.status==='solved'?validateSimulationLayerOrder({sourceSignature:simulationSourceSignature(fold),sourceFaceCount:initial.geometry.faces.length,faceOrders:initial.layers.faceOrders},simulationSourceSignature(fold),prepared.sourceFaceCount??initial.geometry.faces.length):null;
   // Allowing intersections only relaxes collision checks. The seed stack is
   // still needed to display stationary, coincident sheets throughout the move,
   // including imported projects whose layer analysis has not been cached.
   const solvedInitial=initial?(selectedInitial?initial:recomputeFlatLayers(initial)):null;
-  const contact=options.initialContactOrder;
-  const inheritedContact=contact?validateSimulationLayerOrder({sourceSignature:simulationSourceSignature(fold),...contact},simulationSourceSignature(fold),prepared.sourceFaceCount??prepared.facesVertices.length):null;
-  if(contact?.faceOrders.length&&!inheritedContact)throw Error('起态接触层序与当前材料纸面不匹配。');
   const initialOrder=inheritedContact??(solvedInitial?.layers.status==='solved'?{sourceFaceCount:solvedInitial.geometry.faces.length,faceOrders:solvedInitial.layers.faceOrders??[]}:null);
   if(allowIntersections&&!initialOrder&&!spatialInitial)warn('操作前的纸层顺序尚未确认，重叠区域可能显示不完整；仍可播放本步动画。');
   const dynamicResult=():SimulationStepPlanningResult=>{
@@ -127,6 +127,13 @@ export function planVerifiedSimulationStepAnimation(fold:FoldGraph,input:Simulat
     const mechanism=path.mechanism;
     const projector=createSimulationStepTangentProjector({initialPositions:mechanism.seedPositions,vertexBodies:mechanism.vertexBodies,fromAngles:mechanism.fromAngles,
       bodies:mechanism.components.map(body=>({parent:body.parent,crease:body.parentCrease,sign:body.rotationSign,...(body.parentCrease===null?{}:{axisVertices:prepared.edgesVertices[prepared.creaseParams[body.parentCrease].edge]})}))},candidate.phases);
+    // All triangle/axis queries for an interval use the same bounds on the
+    // hinge angles. The next subdivision replaces these bounds.
+    let interval:{a:number;b:number;angles:ReturnType<typeof path.angleBounds>}|undefined;
+    const projectionBounds=(a:number,b:number,axis:readonly [number,number,number],origin?:number)=>{
+      if(!interval||interval.a!==a||interval.b!==b)interval={a,b,angles:checkedGeometry(()=>path.angleBounds(a,b))};
+      return projector(a,b,axis,origin,interval.angles);
+    };
     const departure=inspectSimulationStepInitialContactOrder(prepared,path,initialOrder,{initialSide:projector.initialContactSide,...(allowIntersections?{maxPairs:20_000,maxOverlapPairs:1000}:{})});
     if(departure.status!=='clear'){
       if(!allowIntersections)return {status:departure.status,message:departure.reason};
@@ -139,7 +146,7 @@ export function planVerifiedSimulationStepAnimation(fold:FoldGraph,input:Simulat
       return {status:'inconclusive',message:'本步动画的连续安全检查超出规划时间，请拆分步骤后重试。'};
     }
     const result=certifySimulationStepPath({indices:prepared.indices,triangleBodies:mechanism.triangleBodies,triangleSourceFaces:prepared.triangleSourceFaces},
-      {evaluate:p=>checkedGeometry(()=>path.evaluate(p)),motionBound:(a,b)=>checkedGeometry(()=>path.motionBound(a,b)),projectionBounds:(a,b,axis,origin)=>projector(a,b,axis,origin,checkedGeometry(()=>path.angleBounds(a,b))),contactSeparation:projector.separates,contactTransition:projector.contactTransition},
+      {evaluate:p=>checkedGeometry(()=>path.evaluate(p)),motionBound:(a,b)=>checkedGeometry(()=>path.motionBound(a,b)),sameRigidAssembly:path.sameRigidAssembly,projectionBounds,contactSeparation:projector.separates,contactTransition:projector.contactTransition},
       {maxPairs:allowIntersections?20_000:1_000_000,maxEvaluations:2049,maxDepth:24,tolerance:1e-8,minInterval:1e-8,maxTimeMs:Math.min(allowIntersections?250:8000,remaining)});
     if(geometryFailed)throw geometryFailure;
     if(result.status==='clear')checkedIntervals=result.certifiedIntervals;
@@ -258,8 +265,14 @@ function initialMaterialGeometry(fold:FoldGraph,prepared:PreparedOrigamiModel,an
   return {geometry:{status:'ready',message:'本步操作前的材料网格。',vertices:points,faces:graph.faces_vertices!,graph},layers:{status:'unknown',message:'正在确认操作前的纸层顺序。'},warnings:[]};
 }
 
+export interface DiagramStepPlaybackOptions {
+  initialGeometry?:FlatFoldResult;
+  initialContactOrder?:SimulationStepInitialOrder;
+  initialDisplayOrder?:SimulationStepInitialOrder;
+}
+
 /** Diagram playback has no collision protection or mesh-quality fallback.
  * Contact relations below are display ownership, never movement constraints. */
-export function planDiagramStepPlayback(fold:FoldGraph,input:SimulationStepAnimation,onProgress?:(message:string)=>void,options:{initialGeometry?:FlatFoldResult;initialContactOrder?:SimulationStepInitialOrder}={}){
- return planVerifiedSimulationStepAnimation(fold,{...input,collisionPolicy:'allow',motionPolicy:'allow-dynamic'},onProgress,{...options,ignoreCollisions:true,originalMeshOnly:true});
+export function planDiagramStepPlayback(fold:FoldGraph,input:SimulationStepAnimation,onProgress?:(message:string)=>void,options:DiagramStepPlaybackOptions={}){
+ return planVerifiedSimulationStepAnimation(fold,{...input,collisionPolicy:'allow',motionPolicy:'allow-dynamic'},onProgress,{initialGeometry:options.initialGeometry,initialContactOrder:options.initialDisplayOrder??options.initialContactOrder,ignoreCollisions:true,originalMeshOnly:true});
 }

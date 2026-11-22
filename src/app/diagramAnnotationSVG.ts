@@ -1,11 +1,12 @@
 import {DIAGRAM_ANNOTATION_LIMITS,DIAGRAM_SYMBOL_PARAM_LIMITS,type DiagramAnnotation,type DiagramLineStyle,type DiagramSymbolAnnotation,type DiagramSymbolKind,type DiagramSymbolParams} from './diagramAnnotations';
 import type {ProjectedInkSpan} from './diagramProjectedInk';
 import {diagramLineDasharray} from './diagramLineStyles';
-import {adaptiveLineStroke,type AdaptiveLineOptions} from './adaptiveLineStyle';
+import {resolveLineStroke,type AdaptiveLineOptions} from './adaptiveLineStyle';
 import type {Point} from '../core/types';
 import {getSymbolParameters,SYMBOL_CATALOG} from './diagramSymbolCatalog';
-import {buildCadSymbolGeometry,moveCadSymbolPropertyGrip,type CadSymbolControl} from './diagramCadSymbolGeometry';
-import {cadPropertyDefinitions} from './diagramCadSymbols';
+import {buildCadSymbolGeometry,moveCadSymbolPropertyGrip,type CadSymbolControl,type CadSymbolPrimitive} from './diagramCadSymbolGeometry';
+import {resolveDiagramSymbolGeometry,resolveDiagramSymbolStyle,type DiagramSymbolStyles,type DiagramSymbolFill} from './diagramSymbolStyles';
+import {CAD_TURN_LABEL_SIZE,cadPropertyDefinitions} from './diagramCadSymbols';
 import {diagramSymbolTurnAngle,isDiagramRotationSymbol} from './diagramSymbolRotation';
 import {diagramTearWindowLocalOutline} from './diagramTearWindowGeometry';
 export {diagramTearWindowPath,diagramTearWindowContainsPoint,diagramTearWindowOutline,diagramTearWindowHidesFace} from './diagramTearWindowGeometry';
@@ -29,6 +30,7 @@ type HitShape={kind:'path';d:string;filled:boolean;stroke:boolean;dash?:string}|
 interface NativeEndpoints {start:Point;end:Point}
 type NativeCurve={kind:'quadratic';a:Point;c:Point;b:Point;offset?:Point}|{kind:'cubic';a:Point;c:Point;d:Point;b:Point};
 class Sketch {
+  constructor(readonly fillStyle?:DiagramSymbolFill){}
   chunks:string[]=[];points:Point[]=[];controls:Control[]=[];hitShapes:HitShape[]=[];
   cadControls:CadSymbolControl[]=[];
   cadOrigins?:{id:string;point:Point;blockHandle:number}[];
@@ -37,10 +39,19 @@ class Sketch {
     this.chunks.push(`<path d="${d}"${fill==='none'?'':` fill="${fill}"`}${stroke?'':' stroke="none"'}${dash?` stroke-dasharray="${dash}"`:''}${sourceHandle===undefined?'':` data-source-handle="${sourceHandle}"`}/>`);this.points.push(...points);
     this.hitShapes.push({kind:'path',d,filled:fill!=='none',stroke,dash});
   }
-  poly(points:Point[],closed=false,fill:'none'|'currentColor'|'white'='none',dash?:string){this.path(points.map((p,i)=>`${i?'L':'M'} ${xy(p)}`).join(' ')+(closed?' Z':''),points,fill,dash);}
+  poly(points:Point[],closed=false,fill:'none'|'currentColor'|'white'='none',dash?:string,stroke=fill!=='currentColor'){this.path(points.map((p,i)=>`${i?'L':'M'} ${xy(p)}`).join(' ')+(closed?' Z':''),points,fill,dash,stroke);}
+  area(points:Point[],closed:boolean,fill:'none'|'currentColor'|'white'){
+    if(!this.fillStyle){this.poly(points,closed,fill);return;}
+    this.poly(points,true,this.fillStyle==='solid'?'currentColor':'none',undefined,true);
+  }
   quad(a:Point,c:Point,b:Point){this.path(`M ${xy(a)} Q ${xy(c)} ${xy(b)}`,[a,c,b]);}
   cubic(a:Point,c:Point,d:Point,b:Point){this.path(`M ${xy(a)} C ${xy(c)} ${xy(d)} ${xy(b)}`,[a,c,d,b]);}
-  circle(center:Point,radius:number,filled=false){this.chunks.push(`<circle cx="${n(center[0])}" cy="${n(center[1])}" r="${n(radius)}"${filled?' fill="currentColor" stroke="none"':''}/>`);this.points.push(add(center,[-radius,-radius]),add(center,[radius,radius]));this.hitShapes.push({kind:'circle',center,radius,filled});}
+  circle(center:Point,radius:number,filled=false,strokeFilled=false){
+    const fill=filled?' fill="currentColor"':'',stroke=filled&&!strokeFilled?' stroke="none"':'';
+    this.chunks.push(`<circle cx="${n(center[0])}" cy="${n(center[1])}" r="${n(radius)}"${fill}${stroke}/>`);
+    this.points.push(add(center,[-radius,-radius]),add(center,[radius,radius]));
+    this.hitShapes.push({kind:'circle',center,radius,filled});
+  }
   rect(x:number,y:number,w:number,h:number,filled=false){this.poly([[x,y],[x+w,y],[x+w,y+h],[x,y+h]],true,filled?'currentColor':'none');}
   text(text:string,point:Point,size:number,middle=false,angle=0,anchor:'start'|'middle'|'end'=middle?'middle':'start',attributeKey?:string){
     // Use a generous advance estimate so fallback fonts and wide W/CJK glyphs
@@ -60,7 +71,7 @@ class Sketch {
 function arrowHead(s:Sketch,tip:Point,direction:Point,p:DiagramSymbolParams,filled=false,controls=true){
   const u=unit(direction),v:Point=[-u[1],u[0]],base=sub(tip,mul(u,p.headLength));
   const a=add(base,mul(v,p.headWidth/2)),b=sub(base,mul(v,p.headWidth/2));
-  s.poly([a,tip,b],filled,filled?'currentColor':'none');
+  s.area([a,tip,b],filled,filled?'currentColor':'none');
   if(controls){s.control('headLength',base,q=>dot(sub(tip,q),u));s.control('headWidth',a,q=>2*Math.abs(dot(sub(q,base),v)));}
 }
 function arc(s:Sketch,center:Point,radius:number,start:number,end:number){
@@ -87,7 +98,7 @@ function curveControl(a:DiagramSymbolAnnotation,fallback:Point):Point {
 
 function rotationLabel(s:Sketch,a:DiagramSymbolAnnotation):void{
   if(!isDiagramRotationSymbol(a.symbol))return;
-  const text=`${diagramSymbolTurnAngle(a)}°`,size=Math.min(16,56/[...text].length),label=new Sketch();
+  const text=`${diagramSymbolTurnAngle(a)}°`,size=Math.min(1,3.5/[...text].length)*(a.cadProperties?.[CAD_TURN_LABEL_SIZE]??16),label=new Sketch();
   label.text(text,[0,size*.35],size,true);
   // The arrow may rotate or reflect as a drawing object. Cancel that frame
   // only for its readable central number, retaining the object's own scale.
@@ -99,17 +110,31 @@ function rotationLabel(s:Sketch,a:DiagramSymbolAnnotation):void{
 }
 
 /** Build code-native geometry and the matching component controls in local units. */
-function symbolSketch(a:DiagramSymbolAnnotation):Sketch {
+// Original CAD heads, separate from shafts, loops and the dot on a hold arrow.
+const cadArrowheads=new Set([1670,2309,2337,2338,2577,3500,3514,3369,3647,3648,5171,2691,2755]);
+const arrowsWithSeparateHeads=new Set<DiagramSymbolKind>(['fold','foldSmall','unfold','unfoldDouble','flip','rotate','rotateCCW','swivel','swivelDouble','mountainFold','repeatSmall','hold']);
+function addCadPath(s:Sketch,kind:DiagramSymbolKind,p:Extract<CadSymbolPrimitive,{kind:'path'}>){
+  if(!s.fillStyle||arrowsWithSeparateHeads.has(kind)&&!cadArrowheads.has(p.sourceHandle)){
+    s.path(p.d,p.points,p.fill,p.dash,p.stroke,p.sourceHandle);return;
+  }
+  // The library includes a boundary path for each of these hatches. Paint it
+  // once so that both the visible interior and its hit area follow the style.
+  if(p.sourceType==='HATCH')return;
+  const d=p.d.endsWith('Z')?p.d:p.d+' Z';
+  s.path(d,p.points,s.fillStyle==='solid'?'currentColor':'none',p.dash,true,p.sourceHandle);
+}
+function symbolSketch(a:DiagramSymbolAnnotation,fillStyle?:DiagramSymbolFill,styles?:DiagramSymbolStyles):Sketch {
+  a=resolveDiagramSymbolGeometry(a,styles);
   if(a.symbol!=='tearWindow'&&(a.cadProperties!==undefined||SYMBOL_CATALOG.find(item=>item.kind===a.symbol)?.sourceOnly)){
-    const geometry=buildCadSymbolGeometry(a),s=new Sketch();
+    const geometry=buildCadSymbolGeometry(a),s=new Sketch(fillStyle);
     for(const primitive of geometry.primitives){
-      if(primitive.kind==='path')s.path(primitive.d,primitive.points,primitive.fill,primitive.dash,primitive.stroke,primitive.sourceHandle);
+      if(primitive.kind==='path')addCadPath(s,a.symbol,primitive);
       else s.text(primitive.text,primitive.point,primitive.size,primitive.anchor==='middle',primitive.angle,primitive.anchor,primitive.sourceType==='ATTDEF'?String(primitive.sourceHandle):undefined);
     }
     const origin=geometry.basePoints[0].point,end=geometry.baseline.end;
     s.nativeEndpoints={start:origin,end:Math.hypot(...sub(end,origin))>1e-9?end:geometry.baseline.start};s.cadOrigins=geometry.basePoints;s.cadControls=geometry.controls;rotationLabel(s,a);return s;
   }
-  const p=getSymbolParameters(a),s=new Sketch(),l=p.length,h=p.height,r=p.radius,g=p.gap,m=p.markSize;
+  const p=getSymbolParameters(a),s=new Sketch(fillStyle),l=p.length,h=p.height,r=p.radius,g=p.gap,m=p.markSize;
   switch(a.symbol){
     case 'tearWindow':{
       const outline=diagramTearWindowLocalOutline(r),d=outline.map((point,i)=>`${i?'L':'M'} ${xy(point)}`).join(' ')+' Z';
@@ -129,12 +154,12 @@ function symbolSketch(a:DiagramSymbolAnnotation):Sketch {
       break;
     }
     case 'paperFront':case 'paperBack':{
-      const tip:Point=[p.headLength/2,0];s.poly([[-p.headLength/2,-p.headWidth/2],tip,[-p.headLength/2,p.headWidth/2]],a.symbol==='paperBack',a.symbol==='paperBack'?'currentColor':'none');
+      const tip:Point=[p.headLength/2,0];s.area([[-p.headLength/2,-p.headWidth/2],tip,[-p.headLength/2,p.headWidth/2]],a.symbol==='paperBack',a.symbol==='paperBack'?'currentColor':'none');
       s.base=[-p.headLength/2,-p.headWidth/2];
       s.control('headLength',tip,q=>Math.abs(q[0])*2);s.control('headWidth',[-p.headLength/2,p.headWidth/2],q=>Math.abs(q[1])*2);break;
     }
     case 'referencePoint':case 'angleMarker':
-      s.circle([0,0],r,a.symbol==='angleMarker');s.control('radius',[r,0],q=>Math.hypot(...q));break;
+      s.circle([0,0],r,fillStyle?fillStyle==='solid':a.symbol==='angleMarker',!!fillStyle);s.control('radius',[r,0],q=>Math.hypot(...q));break;
     case 'equalLength':{
       s.base=[-l/2,-g/2];
       for(const y of [-g/2,g/2]){
@@ -145,7 +170,7 @@ function symbolSketch(a:DiagramSymbolAnnotation):Sketch {
     }
     case 'equalAngle':{
       s.base=p.count===1?[g/2,g/2]:[-g/2,-g/2];
-      for(let i=0;i<p.count;i++){const t=p.count===1?.5:i/(p.count-1)-.5;s.circle([t*g,t*g],m/2,true);}
+      for(let i=0;i<p.count;i++){const t=p.count===1?.5:i/(p.count-1)-.5;s.circle([t*g,t*g],m/2,fillStyle!=='outline',!!fillStyle);}
       s.control('gap',[g/2,g/2],q=>Math.abs(q[0])*2);s.control('markSize',[g/2+m/2,g/2],q=>Math.abs(q[0]-g/2)*2);break;
     }
     case 'rightAngle':
@@ -176,7 +201,7 @@ function symbolSketch(a:DiagramSymbolAnnotation):Sketch {
       const body=a.symbol==='sink'?h*.18:h/2;
       const points:Point[]=[[-l/2,-h/2],[neck,-body],[neck,-p.headWidth/2],tip,[neck,p.headWidth/2],[neck,body],[-l/2,h/2]];
       if(a.symbol==='open')points.push([-l/2+p.curve,0]);
-      s.poly(points,true,a.symbol==='sink'?'currentColor':'white');dimensions(s,p,tip,[-l/2,h/2]);
+      s.area(points,true,a.symbol==='sink'?'currentColor':'white');dimensions(s,p,tip,[-l/2,h/2]);
       s.nativeEndpoints={start:[-l/2,0],end:tip};
       s.control('headLength',[neck,0],q=>l/2-q[0]);s.control('headWidth',[neck,p.headWidth/2],q=>Math.abs(q[1])*2);
       if(a.symbol==='open')s.control('curve',[-l/2+p.curve,0],q=>q[0]+l/2);break;
@@ -199,7 +224,7 @@ function symbolSketch(a:DiagramSymbolAnnotation):Sketch {
       const u=unit(sub(tip,control)),v:Point=[-u[1],u[0]],neck=sub(tip,mul(u,p.headLength));
       const startU=unit(sub(control,start)),startV:Point=[-startU[1],startU[0]],a0=add(start,mul(startV,h/4)),b0=sub(start,mul(startV,h/4));
       const a1=add(neck,mul(v,h/4)),b1=sub(neck,mul(v,h/4)),ha=add(neck,mul(v,p.headWidth/2)),hb=sub(neck,mul(v,p.headWidth/2)),ca=add(control,mul(v,h/4)),cb=sub(control,mul(v,h/4));
-      s.path(`M ${xy(a0)} Q ${xy(ca)} ${xy(a1)} L ${xy(ha)} L ${xy(tip)} L ${xy(hb)} L ${xy(b1)} Q ${xy(cb)} ${xy(b0)} Z`,[a0,ca,a1,ha,tip,hb,b1,cb,b0],'white');
+      s.path(`M ${xy(a0)} Q ${xy(ca)} ${xy(a1)} L ${xy(ha)} L ${xy(tip)} L ${xy(hb)} L ${xy(b1)} Q ${xy(cb)} ${xy(b0)} Z`,[a0,ca,a1,ha,tip,hb,b1,cb,b0],fillStyle?(fillStyle==='solid'?'currentColor':'none'):'white',undefined,true);
       s.nativeEndpoints={start,end:tip};
       // The visible ribbon's midline ends at the neck; arrow tip is a separate
       // endpoint. Keep its grip on the actual ribbon, not on a hidden extension.
@@ -240,7 +265,7 @@ function symbolSketch(a:DiagramSymbolAnnotation):Sketch {
     }
     case 'star':{
       const points:Point[]=[];for(let i=0;i<p.count*2;i++){const angle=-Math.PI/2+i*Math.PI/p.count,rr=i%2?m:r;points.push([rr*Math.cos(angle),rr*Math.sin(angle)]);}
-      s.poly(points,true,'currentColor');s.control('radius',[0,-r],q=>Math.hypot(...q));s.control('markSize',[m*Math.sin(Math.PI/p.count),-m*Math.cos(Math.PI/p.count)],q=>Math.hypot(...q));break;
+      s.area(points,true,'currentColor');s.control('radius',[0,-r],q=>Math.hypot(...q));s.control('markSize',[m*Math.sin(Math.PI/p.count),-m*Math.cos(Math.PI/p.count)],q=>Math.hypot(...q));break;
     }
     case 'view':{
       const aa:Point=[-l/2,h/2],bb:Point=[-l/2+g,-h/2],cc:Point=[l/2,h/2];s.poly([aa,bb,cc],true);
@@ -524,22 +549,35 @@ function shapeSegmentHits(shape:HitShape,from:Point,to:Point,tolerance:number,wi
   }return false;
 }
 /** Hit real strokes/fills and label ink areas, rather than the overall envelope. */
-export function pointHitsDiagramSymbol(annotation:DiagramSymbolAnnotation,point:Point,tolerance:number):boolean {
-  return symbolIntersectsSegment(annotation,point,point,tolerance);
+export interface DiagramSymbolInkOptions {symbolStyles?:DiagramSymbolStyles;units?:number;symbolUnits?:number;symbolScale?:(kind:DiagramSymbolKind)=>number}
+export function resolveDiagramSymbolInk(a:DiagramSymbolAnnotation,options?:DiagramSymbolInkOptions){
+  const style=resolveDiagramSymbolStyle(a,options?.symbolStyles);
+  const units=options?.symbolUnits??options?.units;
+  if(style.adaptive&&units){
+    const scale=options?.symbolScale?.(a.symbol)??1;
+    const stroke=resolveLineStroke(a.size/scale,style.width,undefined,{enabled:true,units:units/scale,pen:'paper'});
+    return {...style,width:Math.min(a.size*.12,stroke.width*scale)};
+  }
+  return style;
+}
+export function pointHitsDiagramSymbol(annotation:DiagramSymbolAnnotation,point:Point,tolerance:number,options?:DiagramSymbolInkOptions):boolean {
+  return symbolIntersectsSegment(annotation,point,point,tolerance,options);
 }
 /** Swept erasing checks the same actual geometry used by the renderer. */
-export function symbolIntersectsSegment(annotation:DiagramSymbolAnnotation,from:Point,to:Point,tolerance:number):boolean {
-  const scale=positive(annotation.size/100),width=positive(annotation.width)/scale,localTolerance=Math.max(0,finite(tolerance))/scale;
+export function symbolIntersectsSegment(annotation:DiagramSymbolAnnotation,from:Point,to:Point,tolerance:number,options?:DiagramSymbolInkOptions):boolean {
+  const style=resolveDiagramSymbolInk(annotation,options);
+  const scale=positive(annotation.size/100),width=positive(style.width)/scale,localTolerance=Math.max(0,finite(tolerance))/scale;
   const a=toLocal(annotation,from),b=toLocal(annotation,to),error=Math.max(1e-7,Math.min(.25,(localTolerance+width/2)*.12));
-  return symbolSketch(annotation).hitShapes.some(shape=>shapeSegmentHits(shape,a,b,localTolerance,width,error));
+  return symbolSketch(annotation,style.fill,options?.symbolStyles).hitShapes.some(shape=>shapeSegmentHits(shape,a,b,localTolerance,width,error));
 }
 /** Rectangle selection intersects real ink/fills, including isolated filled dots. */
-export function symbolIntersectsBox(annotation:DiagramSymbolAnnotation,from:Point,to:Point,tolerance=.001):boolean {
+export function symbolIntersectsBox(annotation:DiagramSymbolAnnotation,from:Point,to:Point,tolerance=.001,options?:DiagramSymbolInkOptions):boolean {
   const x0=Math.min(finite(from[0]),finite(to[0])),x1=Math.max(from[0],to[0]),y0=Math.min(finite(from[1]),finite(to[1])),y1=Math.max(from[1],to[1]);
   const corners:Point[]=[[x0,y0],[x1,y0],[x1,y1],[x0,y1]].map(point=>toLocal(annotation,point as Point)),edges:[Point,Point][]=corners.map((point,index)=>[point,corners[(index+1)%4]]);
-  const scale=positive(annotation.size/100),width=positive(annotation.width)/scale,localTolerance=Math.max(0,finite(tolerance))/scale,error=Math.max(1e-7,Math.min(.25,(localTolerance+width/2)*.12));
+  const style=resolveDiagramSymbolInk(annotation,options);
+  const scale=positive(annotation.size/100),width=positive(style.width)/scale,localTolerance=Math.max(0,finite(tolerance))/scale,error=Math.max(1e-7,Math.min(.25,(localTolerance+width/2)*.12));
   const inBox=(point:Point)=>insidePolygon(point,corners)||edges.some(([a,b])=>segmentDistance(point,a,b)<=localTolerance);
-  for(const shape of symbolSketch(annotation).hitShapes){
+  for(const shape of symbolSketch(annotation,style.fill,options?.symbolStyles).hitShapes){
     if(edges.some(([a,b])=>shapeSegmentHits(shape,a,b,localTolerance,width,error)))return true;
     if(shape.kind==='circle'){
       if(shape.filled&&inBox(shape.center))return true;
@@ -555,38 +593,46 @@ export function symbolIntersectsBox(annotation:DiagramSymbolAnnotation,from:Poin
 }
 
 /** Internal palette markup fitted to viewBox="-50 -50 100 100" using the same paths. */
-export function diagramSymbolPreview(symbol:DiagramSymbolKind):string {
-  const sketch=symbolSketch({id:'preview',kind:'symbol',symbol,position:[0,0],size:100,rotation:0,color:'#333333',width:2.5,cadProperties:{}}),b=localBounds(sketch);
-  const fit=80/Math.max(1,b.right-b.x,b.bottom-b.y),cx=(b.x+b.right)/2,cy=(b.y+b.bottom)/2;
-  return `<g transform="translate(${n(-cx*fit)} ${n(-cy*fit)}) scale(${n(fit)})" fill="none" stroke="currentColor" stroke-width="${n(2.5/fit)}" stroke-linecap="round" stroke-linejoin="round">${sketch.markup}</g>`;
+export function diagramSymbolPreview(symbol:DiagramSymbolKind,styles?:DiagramSymbolStyles,fixedGeometryScale=false,mode?:'cad'|'legacy'):string {
+  const a:DiagramSymbolAnnotation={id:'preview',kind:'symbol',symbol,position:[0,0],size:100,rotation:0,color:'#293d35',width:.7,appearanceOverrides:[],...(mode==='legacy'?{}:{cadProperties:{}})};
+  const style=resolveDiagramSymbolStyle(a,styles),sketch=symbolSketch(a,style.fill,styles),b=localBounds(sketch);
+  const span=Math.max(1,b.right-b.x,b.bottom-b.y);
+  let fit=80/span;
+  if(fixedGeometryScale){
+    const original=localBounds(symbolSketch(a));
+    fit=Math.min(94/span,50/Math.max(1,original.right-original.x,original.bottom-original.y));
+  }
+  const cx=(b.x+b.right)/2,cy=(b.y+b.bottom)/2;
+  const pen=styles?.[symbol]?.width!==undefined,attributes=styles?.[symbol]?.color?` color="${safeColor(style.color)}"`:'';
+  return `<g transform="translate(${n(-cx*fit)} ${n(-cy*fit)}) scale(${n(fit)})"${attributes}${pen?' data-symbol-pen="true"':''} fill="none" stroke="currentColor" stroke-width="${n((pen?Math.min(10,style.width/.7*2.5):2.5)/fit)}" stroke-linecap="round" stroke-linejoin="round">${sketch.markup}</g>`;
 }
 /** Render one step annotation in world coordinates; no editor handles are emitted. */
-export function diagramAnnotationMarkup(annotation:DiagramAnnotation,lineDisplay?:AdaptiveLineOptions&{minimumWidth?:number;projectedSpan?:ProjectedInkSpan}):string {
+export function diagramAnnotationMarkup(annotation:DiagramAnnotation,lineDisplay?:AdaptiveLineOptions&DiagramSymbolInkOptions&{projectedSpan?:ProjectedInkSpan}):string {
   const stroke=safeColor(annotation.color),width=positive(annotation.width);
   if(annotation.kind==='line'){
     const shared=lineDisplay?.projectedSpan;
     const [ax,ay]=(shared?.reverse?annotation.b:annotation.a).map(finite),[bx,by]=(shared?.reverse?annotation.a:annotation.b).map(finite);
     const originalDash=diagramLineDasharray(annotation.style,width,annotation.strokePattern);
-    const penWidth=lineDisplay?.minimumWidth?Math.max(width,lineDisplay.minimumWidth):width;
-    const paint=lineDisplay?adaptiveLineStroke(Math.hypot(bx-ax,by-ay),penWidth,originalDash,{...lineDisplay,span:shared??lineDisplay.span,linecap:'round'}):{width,dash:originalDash,limited:false,dashOffset:undefined};
-    const dashOffset=shared&&!lineDisplay?.enabled&&originalDash?shared.offset:paint.dashOffset;
-    const attributes=`x1="${n(ax)}" y1="${n(ay)}" x2="${n(bx)}" y2="${n(by)}" fill="none" stroke="${stroke}" stroke-width="${n(paint.width)}" stroke-linecap="round"${paint.dash?` stroke-dasharray="${paint.dash}"`:''}${dashOffset!==undefined?` stroke-dashoffset="${n(dashOffset)}"`:''}`;
+    const length=Math.hypot(bx-ax,by-ay),span=shared??lineDisplay?.span;
+    const paint=resolveLineStroke(length,width,originalDash,{enabled:true,units:lineDisplay?.units??1,span,pen:'paper',linecap:'round'});
+    const attributes=`x1="${n(ax)}" y1="${n(ay)}" x2="${n(bx)}" y2="${n(by)}" fill="none" stroke="${stroke}" stroke-width="${n(paint.width)}" stroke-linecap="round"${paint.dash?` stroke-dasharray="${paint.dash}"`:''}${paint.pathLength!==undefined?` pathLength="${n(paint.pathLength)}" stroke-dashoffset="${n(paint.dashOffset!)}"`:''}`;
     const adjusted=paint.width!==width||paint.dash!==originalDash||paint.dashOffset!==undefined||paint.limited;
-    return lineDisplay?.enabled&&adjusted?`<line ${attributes} data-adaptive-line="true"${paint.limited?' data-line-detail-limited="true"':''}><title>${LINE_LABELS[annotation.style]}${paint.limited?' · 当前显示过小，放大查看线型':''}</title></line>`:`<line ${attributes}/>`;
+    return adjusted?`<line ${attributes} data-adaptive-line="true"${paint.limited?' data-line-detail-limited="true"':''}><title>${LINE_LABELS[annotation.style]}${paint.limited?' · 当前显示过小，放大查看线型':''}</title></line>`:`<line ${attributes}/>`;
   }
   if(annotation.kind!=='symbol')throw new Error('未知的折图对象。');
-  const [x,y]=annotation.position.map(finite),scale=positive(annotation.size/100),localWidth=positive(width/scale),rotation=finite(annotation.rotation)%360;
-  return `<g transform="translate(${n(x)} ${n(y)}) rotate(${n(rotation)}) scale(${n(annotation.mirrored?-scale:scale)} ${n(scale)})" color="${stroke}" fill="none" stroke="currentColor" stroke-width="${n(localWidth)}" stroke-linecap="round" stroke-linejoin="round">${symbolSketch(annotation).markup}</g>`;
+  const style=resolveDiagramSymbolInk(annotation,lineDisplay);
+  const [x,y]=annotation.position.map(finite),scale=positive(annotation.size/100),localWidth=positive(style.width/scale),rotation=finite(annotation.rotation)%360;
+  return `<g transform="translate(${n(x)} ${n(y)}) rotate(${n(rotation)}) scale(${n(annotation.mirrored?-scale:scale)} ${n(scale)})" color="${safeColor(style.color)}" fill="none" stroke="currentColor" stroke-width="${n(localWidth)}" stroke-linecap="round" stroke-linejoin="round">${symbolSketch(annotation,style.fill,lineDisplay?.symbolStyles).markup}</g>`;
 }
 export interface DiagramAnnotationBounds {x:number;y:number;width:number;height:number}
 /** Dynamic conservative bounds contain curves, arrow components, text and stroke. */
-export function annotationBounds(annotations:readonly DiagramAnnotation[]):DiagramAnnotationBounds|null {
+export function annotationBounds(annotations:readonly DiagramAnnotation[],options?:DiagramSymbolInkOptions):DiagramAnnotationBounds|null {
   if(!annotations.length)return null;let left=Infinity,top=Infinity,right=-Infinity,bottom=-Infinity;
   for(const annotation of annotations){
-    const half=positive(annotation.width)/2;let points:Point[];
+    const half=positive(annotation.kind==='symbol'?resolveDiagramSymbolInk(annotation,options).width:annotation.width)/2;let points:Point[];
     if(annotation.kind==='line')points=[annotation.a.map(finite) as Point,annotation.b.map(finite) as Point];
     else if(annotation.kind==='symbol'){
-      const b=localBounds(symbolSketch(annotation));points=[[b.x,b.y],[b.right,b.y],[b.right,b.bottom],[b.x,b.bottom]].map(p=>toWorld(annotation,p as Point));
+      const b=localBounds(symbolSketch(annotation,options?.symbolStyles?.[annotation.symbol]?.fill,options?.symbolStyles));points=[[b.x,b.y],[b.right,b.y],[b.right,b.bottom],[b.x,b.bottom]].map(p=>toWorld(annotation,p as Point));
     }else throw new Error('未知的折图对象。');
     for(const [x,y] of points){left=Math.min(left,x-half);right=Math.max(right,x+half);top=Math.min(top,y-half);bottom=Math.max(bottom,y+half);}
   }

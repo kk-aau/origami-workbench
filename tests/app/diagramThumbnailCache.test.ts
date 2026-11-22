@@ -70,6 +70,14 @@ test('queued edits coalesce and an obsolete running render can never replace the
   h.cache.clear();assert.deepEqual(h.released,['obsolete','latest']);
 });
 
+test('image gestures postpone queued rail rendering and resume with the latest artwork',async()=>{
+  const h=harness(),source=fixture(),id=source.step.id,changed=edit(source);
+  h.cache.request(id,source);h.cache.setPaused(true);h.cache.request(id,changed);
+  await tick();assert.equal(h.calls.length,0);
+  h.cache.setPaused(false);await new Promise(resolve=>setTimeout(resolve,180));assert.equal(h.calls.length,1);assert.equal(h.calls[0].source,changed);
+  await h.complete(0,'updated');assert.equal(h.cache.getSnapshot(id).src,'updated');h.cache.clear();
+});
+
 test('clearing a document drops queued work, retains subscriptions and rejects old asynchronous completions',async()=>{
   const h=harness(),source=fixture(),id=source.step.id;let notifications=0;
   const unsubscribe=h.cache.subscribe(id,()=>{notifications++;});
@@ -110,6 +118,7 @@ test('unrelated edits reuse images while CP, pose, style, crop and PDF panel cha
     {...source,step:{...source.step,pose:{...pose,paperDeformation:{nodes:[{face:0,cp:[25,25],point:[30,25]}]}}}},
     edit(source),
     {...source,lineDefaults:{...source.lineDefaults}},
+    {...source,symbolStyles:{fold:{color:'#009955',width:1.3}}},
     {...source,adaptiveLines:false},
     {...source,zoom:{kind:'circle',center:[40,50],radius:30}},
     {...source,size:{width:210,height:140}},

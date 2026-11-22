@@ -1,11 +1,38 @@
 import type {DiagramProject} from './diagramProject';
 import {createArtworkTransferReceiver,type ArtworkTransferOperation} from './artworkImportTransfer';
-import {registerDiagramProjectSaveBlob} from './diagramProjectTransport';
+import {originalDiagramFileNames,registerDiagramProjectSaveBlob} from './diagramProjectTransport';
+import {recordActivity} from './activityLog';
+import {diagramFileCaptionEdits,type DiagramCaptionEdits} from './diagramProjectContent';
+
+export interface DiagramOpenTiming {stage:string;durationMs:number;count?:number}
 
 export type DiagramProjectImportReply={type:'progress';message:string}|{type:'error';message:string}
-  |{type:'diagram-begin';saveBlob:Blob}|{type:'diagram-chunk';index:number;operations:ArtworkTransferOperation[]}|{type:'diagram-complete';chunks:number};
+  |{type:'diagram-begin';saveBlob:Blob}|{type:'diagram-chunk';index:number;operations:ArtworkTransferOperation[]}|{type:'diagram-complete';chunks:number;storedName?:string;timings?:DiagramOpenTiming[]};
 export type DiagramProjectImportInput=File|{storedText:string};
-export type DiagramProjectImportRequest=DiagramProjectImportInput|{type:'continue-diagram'};
+export type DiagramProjectImportRequest=DiagramProjectImportInput|{type:'continue-diagram'}|{type:'export-diagram-file';project:DiagramProject}|{type:'export-captions';source:Blob;edits:DiagramCaptionEdits};
+
+/** Use the import worker for file preparation too, so the native receipt binds
+ * both operations to the exact same compiled geometry and drawing code. */
+export async function exportDesktopDiagramFile(project:DiagramProject,reuse?:{source:Blob;base:DiagramProject}):Promise<string>{
+  const worker=new Worker(new URL('../workers/diagramProjectImport.worker.ts',import.meta.url),{type:'module'});
+  const start=performance.now();
+  try{
+    return await new Promise<string>((resolve,reject)=>{
+      worker.onerror=event=>reject(Error(event.message||'折序工程保存线程异常。'));
+      worker.onmessageerror=()=>reject(Error('折序工程保存结果传输失败。'));
+      worker.onmessage=event=>{
+        if(event.data?.type==='needs-full-export'){worker.postMessage({type:'export-diagram-file',project});return;}
+        if(event.data?.type==='diagram-file'&&typeof event.data.text==='string'){
+          recordActivity('diagram.save.stage',{stage:'工程编码',method:event.data.reused?'复用已验证的纸层与折痕':'完整准备',durationMs:Math.round(performance.now()-start)});
+          resolve(event.data.text);
+        }
+        else reject(Error(event.data?.message||'折序工程保存结果无效。'));
+      };
+      const edits=reuse&&diagramFileCaptionEdits(reuse.base,project);
+      worker.postMessage(edits?{type:'export-captions',edits,source:reuse!.source}:{type:'export-diagram-file',project});
+    });
+  }finally{worker.terminate();}
+}
 
 /** Send the immutable file handle; reading, validation and normalization all
  * run in the worker. Terminating it cancels even synchronous geometry work. */
@@ -42,7 +69,9 @@ export function startDiagramProjectImport(file:DiagramProjectImportInput,onProgr
             // Full codec, CP normalization and drawing preparation ran in the
             // owned Worker. Check the transfer envelope without repeating them.
             if(!project||project.format!=='zhezhi-diagram'||project.version!==1||typeof project.name!=='string'||!Array.isArray(project.states)||!Array.isArray(project.steps)||!project.steps.length||project.states.length!==project.steps.length+1||typeof project.activeStepId!=='string')throw Error('折序工程准备结果不完整，当前工程未替换。');
+            if(reply.storedName!==undefined)originalDiagramFileNames.set(project,reply.storedName);
             registerDiagramProjectSaveBlob(project,incoming.saveBlob);incoming=undefined;
+            for(const timing of reply.timings??[])recordActivity('diagram.open.stage',{...timing});
             done=true;worker!.terminate();resolve(project);return;
           }
           throw Error(reply?.type==='error'?reply.message:'工程加载返回了无效消息。');

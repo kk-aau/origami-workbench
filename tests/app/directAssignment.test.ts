@@ -9,9 +9,9 @@ const doc=(segments:Segment[]):Doc=>({name:'直接赋型',paper:{width:200,heigh
 const point={kind:'point' as const,point:[50,50] as Point,radius:8};
 const box={kind:'box' as const,a:[25,25] as Point,b:[75,75] as Point};
 
-test('all four modes use touching boxes independent of drag direction',()=>{
+test('assignment tools use touching boxes independent of drag direction',()=>{
   const d=doc([line('cross',[0,50],[100,50]),line('touch',[75,75],[100,100]),line('outside',[100,50],[150,50])]);
-  for(const target of ['M','V','B','A'] as const)for(const area of [box,{...box,a:box.b,b:box.a}])
+  for(const target of ['M','V','B','F','A'] as const)for(const area of [box,{...box,a:box.b,b:box.a}])
     assert.deepEqual([...directAssignmentHits(d,area,target)],['cross','touch']);
 });
 test('point ties follow document order, reversed for auxiliary, never ID order',()=>{
@@ -45,7 +45,7 @@ test('fold angles preserve magnitude, zero and null; boundary and auxiliary rese
     const v=applyDirectAssignment(d,point,'V').doc;
     assert.equal(v.segments[0].angle,angle===null?null:Math.abs(angle));
     assert.equal(applyDirectAssignment(v,point,'M').doc.segments[0].angle,angle===null?null:-Math.abs(angle));
-    for(const target of ['B','A'] as const)assert.equal(applyDirectAssignment(d,point,target).doc.segments[0].angle,0);
+    for(const target of ['B','A','F'] as const)assert.equal(applyDirectAssignment(d,point,target).doc.segments[0].angle,0);
   }
   assert.equal(applyDirectAssignment(doc([line('x',[0,50],[100,50],'A')]),point,'M').doc.segments[0].angle,-180);
 });

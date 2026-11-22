@@ -1,3 +1,4 @@
+import {PlotCreasePath,PlotStrokeGroup} from './PlotStrokeGroup';
 import {useEffect,useMemo,useRef,useState} from 'react';
 import {openAppDialog} from './AppDialog';
 import {PLANAR_RULED_CP_4040_EXAMPLE,planarRuledCP4040Document,planarRuledCP4040Preview,planarRuledCP4040Query,
@@ -29,7 +30,7 @@ export function PlanarRuledCP4040Plot({recipe,doc,guides=false}:{recipe:PlanarRu
    d={path([...curves[c],...curves[c+1].slice().reverse()])+' Z'}/>)}
   {[0,3].map(c=><path key={c} d={path(curves[c])} className="pr4040-boundary"/>)}
   {[0,recipe.segments].map(i=><path key={i} d={path([curves[0][i],curves[3][i]])} className="pr4040-boundary"/>)}
-  {[1,2].map(c=><path key={c} d={path(curves[c])} className="pr4040-crease"/>)}
+  <PlotStrokeGroup>{[1,2].map(c=><PlotCreasePath points={curves[c]} widthPixels={2} dash="5 3" key={c} d={path(curves[c])} className="pr4040-crease"/>)}</PlotStrokeGroup>
   {guides&&curves[0].filter((_,i)=>i%Math.max(1,Math.ceil(recipe.segments/8))===0).map((p,i)=><path key={i}
    d={path([p,[3,p[1]]])} className="pr4040-guide"/>)}
   {[0,1,2].map(c=><text key={c} x={(curves[c][Math.floor(count/2)][0]+curves[c+1][Math.floor(count/2)][0])/2}

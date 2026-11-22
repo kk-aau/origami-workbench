@@ -41,7 +41,10 @@
 .diagram-animation-batches button{min-width:27px;min-height:27px;padding:3px 7px;font-size:11px}
 .diagram-animation-batches button[aria-pressed=true]{background:#e6eee3;border-color:#a8bea6;color:#355f48}
 .diagram-animation-batches>span{font-size:10px;color:#83917c}
-.diagram-animation-playbar{display:flex;align-items:center;justify-content:space-between;gap:18px}
+.diagram-animation-playbar{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px 14px}
+.diagram-blender-actions{display:inline-flex;align-items:center;flex-wrap:wrap;gap:5px}
+.diagram-blender-actions .header-menu-panel{top:auto;bottom:calc(100% + 4px);min-width:130px}
+.diagram-blender-actions .header-menu-panel button{justify-content:flex-start}
 .diagram-animation-play-buttons{display:flex;align-items:center;gap:7px;flex-shrink:0}
 .diagram-animation-play-buttons svg{width:15px;height:15px;flex-shrink:0}
 .diagram-animation-play-buttons .diagram-animation-primary{min-width:93px;background:#426f59;color:#fff;border-color:#426f59}

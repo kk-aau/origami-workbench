@@ -5,6 +5,22 @@ import {startModelOverlapAnalysis,type ModelOverlapProgress} from '../../src/app
 import type {FlatFoldResult} from '../../src/core/types';
 
 const thin=(width:number):FlatFoldResult=>({geometry:{status:'ready',message:'',vertices:[[0,0],[width,0],[width,10],[0,10]],faces:[[0,1,2,3]]},layers:{status:'solved',message:'',faceOrders:[]},warnings:[]});
+test('saved exact surfaces validate auxiliary rows but publish occlusion from co-covering faces only',()=>{
+ const width=5e-9,input=thin(width);
+ input.geometry.vertices.push([2*width,0],[2*width,10]);
+ input.geometry.faces.push([0,1,2,3],[1,4,5,2]);
+ input.layers.faceOrders=[[0,1,1],[1,2,1],[2,0,1]];
+ const before=structuredClone(input),onlyPhysical=structuredClone(input);
+ onlyPhysical.layers.faceOrders=[[0,1,1]];
+ const opts={side:'front' as const,bothSides:true,shadows:false};
+ const reply=computeModelSurface({result:input,...opts});
+ assert.ok(reply.status==='complete'&&reply.exact);
+ assert.deepEqual(reply,computeModelSurface({result:onlyPhysical,...opts}));
+ assert.deepEqual(input,before);
+ input.layers.faceOrders.push([0,2,-1]);
+ const invalid=computeModelSurface({result:input,side:'front'});
+ assert.equal(invalid.status,'error');if(invalid.status==='error')assert.match(invalid.message,/重复/);
+});
 test('surface work uses a complete exact fallback for thin paper and uncertain contours',()=>{
  for(const width of [5e-9,1e-7]){
   const input=thin(width),before=structuredClone(input),progress:ModelOverlapProgress[]=[];

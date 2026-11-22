@@ -1,7 +1,8 @@
 import {useMemo,useRef,useState} from 'react';
 import {MAX_TILE_GRAPHICS_SOURCE,parseTileGraphicsSource,supportsTileGraphicsPlacement,tileGraphicsPlacement,tileGraphicsSourceToComplex,type GraphicsPalette,type GraphicsPoint,type TileGraphicsSpec} from '../app/tileGraphicsSource';
 import {TessDialog} from './TessellationEditor';
-import {TileGraphicsPrimitives,useSvgScreenUnits} from './TileGraphicsPrimitives';
+import {useSvgScreenUnits} from '../app/useSvgScreenUnits';
+import {TileGraphicsPrimitives} from './TileGraphicsPrimitives';
 import './TileGraphicsSourceEditor.css';
 
 export default function TileGraphicsSourceEditor({frame,value,palette,onApply,onClose}:{frame:GraphicsPoint[];value?:TileGraphicsSpec;palette:GraphicsPalette;onApply:(value:TileGraphicsSpec|undefined)=>void;onClose:()=>void}){

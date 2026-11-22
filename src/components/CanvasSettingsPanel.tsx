@@ -1,3 +1,4 @@
+import {JunctionWarningSwitch} from './JunctionWarnings';
 import {useEffect,useId,useRef,useState} from 'react';
 import type {CreaseDisplay} from '../app/creaseDisplay';
 import {CANVAS_LINE_STYLES,LINE_STYLES,canvasLineStyleGroup,creaseLineStroke,type CanvasLineStyle,type CreaseLineStyle} from '../app/creaseLineStyle';
@@ -38,7 +39,7 @@ function LineSample({style,adaptive,rounded}:{style:CreaseLineStyle;adaptive:boo
       const x=26+index*104,y=12;
       const segment:Segment={id:`sample-${assignment}`,a:[x,y],b:[x+68,y],assignment,angle:assignment==='M'?-180:180};
       const stroke=creaseLineStroke(segment,style,1.6,1,adaptive,rounded);
-      return <g key={assignment}><text x={x-24} y={y} dominantBaseline="central">{assignment==='M'?'山折':'谷折'}</text><line x1={x} x2={x+68} y1={y} y2={y} stroke={stroke.color} strokeWidth={stroke.width} strokeDasharray={stroke.dash} strokeDashoffset={stroke.dashOffset} strokeLinecap={rounded?'round':'butt'}/></g>;
+      return <g key={assignment}><text x={x-24} y={y} dominantBaseline="central">{assignment==='M'?'山折':'谷折'}</text><line x1={x} x2={x+68} y1={y} y2={y} stroke={stroke.color} strokeWidth={stroke.width} strokeDasharray={stroke.dash} strokeDashoffset={stroke.dashOffset} pathLength={stroke.pathLength} strokeLinecap={rounded?'round':'butt'}/></g>;
     })}
   </svg>;
 }
@@ -88,7 +89,7 @@ function GridRotationControl({value,disabled,onChange}:{value:number;disabled:bo
 }
 
 export default function CanvasSettingsPanel({paper,onPaperChange,onPaperMessage,grid,onGridChange,gridScope,onGridScopeChange,divisions,onDivisionsChange,diagonalGrid,onDiagonalGridChange,gridPattern='square',onGridPatternChange,gridRotation=0,onGridRotationChange,snap,onSnapChange,defaultDivisions,display,onDisplayChange}:CanvasSettingsPanelProps){
-  const [adaptive,setAdaptive]=useAdaptiveLineStyle(),[error,setError]=useState('');
+  const [adaptive]=useAdaptiveLineStyle(),[error,setError]=useState('');
   const panelId=useId(),gridBodyId=`${panelId}-grid`,styleBodyId=`${panelId}-style`;
   const [gridCollapsed,setGridCollapsed]=useState(false),[styleCollapsed,setStyleCollapsed]=useState(false);
   const previousScope=useRef<'paper'|'canvas'>(gridScope==='canvas'?'canvas':'paper');
@@ -114,7 +115,7 @@ export default function CanvasSettingsPanel({paper,onPaperChange,onPaperMessage,
       <DisplaySizeControl label="线宽" value={display.lineWidth} min={.5} max={20} step={.1} onChange={lineWidth=>changeDisplay({lineWidth})}/>
       <div className="canvas-point-controls"><label className="canvas-point-style"><span>点样式</span><select aria-label="点样式" value={display.pointStyle??'hollow'} onChange={event=>selectPointStyle(event.target.value as NonNullable<CreaseDisplay['pointStyle']>)}><option value="hollow">空心圆</option><option value="square">实心方块</option><option value="circle">实心圆</option></select></label><DisplaySizeControl label="点大小" value={display.pointSize} min={0} max={20} step={1} integer onChange={pointSize=>changeDisplay({pointSize})}/></div>
       <p className="canvas-settings-note">点大小按像素计，为半径或半边长；0 隐藏端点，仍可选择和吸附。</p>
-      <label className="canvas-setting-check canvas-adaptive-check" title="短折痕自动缩短虚线间距，极短线可放大查看。"><input type="checkbox" checked={adaptive} onChange={event=>{try{setAdaptive(event.target.checked);setError('');}catch(e){setError(e instanceof Error?e.message:String(e));}}}/>自适应短线样式</label>
+      <JunctionWarningSwitch/>
       {error&&<p className="canvas-settings-error" role="alert">{error}</p>}
       </div>
     </section>

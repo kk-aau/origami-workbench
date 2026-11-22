@@ -7,7 +7,7 @@ import './DiagramZoomRegionDialog.css';
 
 export interface DiagramZoomRegionDialogProps {
   svg:string;bounds:DiagramZoomBounds;initial?:DiagramZoomRegion;
-  onConfirm:(region:DiagramZoomRegion)=>void;onClose:()=>void;
+  onConfirm:(region:DiagramZoomRegion,onProgress:(message:string)=>void,signal:AbortSignal)=>Promise<void>;onClose:()=>void;
 }
 interface Gesture {
   id:number;target:SVGSVGElement;inverse:DOMMatrix;start:Point;
@@ -24,6 +24,8 @@ export default function DiagramZoomRegionDialog({svg,bounds,initial,onConfirm,on
   const [wave,setWave]=useState<Point[]|null>(()=>initial?.kind==='wave'?clonePoints(initial.points):null);
   const [side,setSide]=useState<'left'|'right'|null>(()=>initial?.kind==='wave'?initial.side:null);
   const [gestureActive,setGestureActive]=useState(false),[draftWave,setDraftWave]=useState<Point[]|null>(null),[error,setError]=useState('');
+  const [progress,setProgress]=useState(''),confirmTask=useRef<AbortController|null>(null);
+  useEffect(()=>()=>{confirmTask.current?.abort();confirmTask.current=null;},[]);
   const sourceRef=useRef<SVGSVGElement>(null),gesture=useRef<Gesture|null>(null),id='diagram-step-zoom-'+useId().replace(/[^a-zA-Z0-9_-]/g,'');
   const prepared=useMemo(()=>{try{const markup=diagramCalloutSourceMarkup(svg);return {source:diagramCalloutNamespaceMarkup(markup,id+'-source'),detail:diagramCalloutNamespaceMarkup(markup,id+'-detail'),error:''};}catch(error){return {source:'',detail:'',error:errorMessage(error)};}},[svg,id]);
   const selection=useMemo(()=>{
@@ -58,13 +60,26 @@ export default function DiagramZoomRegionDialog({svg,bounds,initial,onConfirm,on
     if(text.trim()==='')return;const value=Number(text);if(!Number.isFinite(value))return;
     setError('');setCircle(old=>field==='radius'?{...old,radius:Math.max(.001,value)}:{...old,center:field==='x'?[value,old.center[1]]:[old.center[0],value]});
   }
-  function confirm(){if(!selection.region||prepared.error||gestureActive)return;try{onConfirm(structuredClone(selection.region));}catch(error){setError(errorMessage(error));}}
+  async function confirm(){
+    if(!selection.region||prepared.error||gestureActive||confirmTask.current)return;
+    const controller=new AbortController();confirmTask.current=controller;
+    const region=structuredClone(selection.region);
+    setError('');setProgress('正在准备放大选区…');
+    try{
+      // Let the progress dialog paint before cloning a large project to Worker.
+      await new Promise<void>(resolve=>requestAnimationFrame(()=>setTimeout(resolve,0)));
+      controller.signal.throwIfAborted();
+      await onConfirm(region,message=>{if(confirmTask.current===controller)setProgress(message);},controller.signal);
+    }catch(error){if(confirmTask.current===controller)setError(errorMessage(error));}
+    finally{if(confirmTask.current===controller){confirmTask.current=null;setProgress('');}}
+  }
+  function cancelConfirm(){confirmTask.current?.abort();}
   const instruction=kind==='circle'?'在左图按住鼠标，从圆心拖到边缘；也可输入数值精调。':wave?'点击波浪线的一侧，保留该区域作为后续步骤的放大画面。':'在左图拖出一条波浪分界线，再点击要保留的一侧。';
   const combinedError=prepared.error||selection.error||error;
-  return <AppDialog title="设置下一步放大区域" onClose={onClose} size="large" className="diagram-zoom-region-dialog" bodyClassName="diagram-zoom-region-body" closeDisabled={gestureActive}
+  return <><AppDialog title="设置下一步放大区域" onClose={onClose} size="large" className="diagram-zoom-region-dialog" bodyClassName="diagram-zoom-region-body" busy={!!progress} closeDisabled={gestureActive||!!progress}
     onKeyDown={event=>{if(event.key==='Escape'&&gesture.current){event.preventDefault();event.stopPropagation();cancelGesture();}}}
     onCancel={()=>{if(gesture.current)cancelGesture();}}
-    footer={<><span>从下一步开始保持放大；放置缩小符号后，下一步恢复原样。</span><button type="button" onClick={onClose}>取消</button><button type="button" className="is-primary" disabled={!selection.region||!!prepared.error||gestureActive} onClick={confirm}>使用此选区</button></>}>
+    footer={<><span>从下一步开始保持放大；放置缩小符号后，下一步恢复原样。</span><button type="button" disabled={!!progress} onClick={onClose}>取消</button><button type="button" className="is-primary" disabled={!selection.region||!!prepared.error||gestureActive||!!progress} onClick={()=>void confirm()}>{progress?'正在应用…':'使用此选区'}</button></>}>
     <div className="diagram-zoom-region-toolbar"><div role="group" aria-label="放大区域形状"><button type="button" aria-pressed={kind==='circle'} onClick={()=>changeKind('circle')}>圆形选区</button><button type="button" aria-pressed={kind==='wave'} onClick={()=>changeKind('wave')}>波浪线分区</button></div>{kind==='wave'&&<button type="button" disabled={!wave&&!draftWave} onClick={redraw}>重画分界线</button>}</div>
     <p className="diagram-zoom-region-instruction" id={id+'-instructions'}>{instruction}</p>
     <div className="diagram-zoom-region-grid">
@@ -82,5 +97,8 @@ export default function DiagramZoomRegionDialog({svg,bounds,initial,onConfirm,on
       <section className="diagram-zoom-region-detail"><h3>下一步放大预览</h3>{selection.region?<svg data-zoom-region-preview viewBox={`${previewFrame.x} ${previewFrame.y} ${previewFrame.width} ${previewFrame.height}`} role="img" aria-label="下一步放大后的画面"><defs><clipPath id={id+'-clip'} clipPathUnits="userSpaceOnUse"><path d={selection.path}/></clipPath></defs><g clipPath={`url(#${id}-clip)`}><path d={selection.path} fill="white"/><g dangerouslySetInnerHTML={{__html:prepared.detail}}/></g><path d={selection.path} fill="none" stroke="#426d59" strokeWidth={detailUnits*1.5}/></svg>:<div className="diagram-zoom-region-empty">{wave?'点击左图的一侧区域，查看放大效果。':'画出波浪分界线后，即可选择要保留的部分。'}</div>}<p>只改变步骤展示范围，不修改折痕、纸层或三维状态。</p></section>
     </div>
     {combinedError&&<p className="diagram-zoom-region-error" role="alert">{combinedError}</p>}
-  </AppDialog>;
+  </AppDialog>{progress&&<AppDialog title="正在应用放大区域" size="small" onClose={cancelConfirm} footer={<button type="button" onClick={cancelConfirm}>取消处理</button>}>
+    <p role="status" aria-live="polite">{progress}</p>
+    <progress aria-label="放大区域处理进度" style={{width:'100%'}}/>
+  </AppDialog>}</>;
 }

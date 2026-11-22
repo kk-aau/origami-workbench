@@ -1,4 +1,5 @@
 import {mountSimulationRotationGizmo} from './simRotationGizmo';
+import {createSimulationStepStaticLock} from './simStepStaticLayers';
 import {validateSimulationView} from './simPose';
 import { OrigamiModel } from '../../vendor/simulator/oristudio/packages/origami-simulator/src/model';
 import { ReferenceSolver } from '../../vendor/simulator/oristudio/packages/origami-simulator/src/referenceSolver';
@@ -14,13 +15,14 @@ import { prepareSimulationDocument } from './simmodel';
 import type {SimulationMeshQuality} from './simFlexibleMesh';
 import {SimulationContactGuard} from './simContact';
 import {SimulationFoldLimitGuard} from './simFoldLimit';
-import {scaleSimulationImageSettings,simulationImageDimensions,simulationImageFromBackgrounds,flipSimulationImageRows} from './simImageExport';
+import {scaleSimulationImageSettings,simulationImageDimensions,simulationImageFromBackgrounds,simulationInkBounds,flipSimulationImageRows} from './simImageExport';
 import {displaySettings,simulationFoldSnapshot,DEFAULT_SIMULATION_DISPLAY_OPTIONS,mergeSimulationDisplayOptions,type SimulationDisplayOptions,type SimulationDisplayMode,type SimulationCameraPreset,type SimulationCreaseStyle} from './simDisplay';
 import {SimulationSurfaceLayers,SIMULATION_SURFACE_GAP_SCALE,SIMULATION_SURFACE_GAP_CAP,selectSimulationSurfaceBaseGap,resizeSimulationSurfaceGap,blendSimulationSurface,simulationSurfaceStrain,simulationCreasePlaneNormal,type SimulationSurfaceMesh} from './simSurfaceLayers';
 import {simulationSourceSignature,validateSimulationLayerOrder} from './simLayerOrder';
 import {SimulationLayerEndpoint} from './simLayerEndpoint';
-import {SimulationRasterizer} from './simRaster';
-import {meshTopologyFor} from '../../vendor/simulator/oristudio/packages/origami-simulator/src/webgl/meshRenderer';
+import {SimulationRasterizer,rasterLayerComparison} from './simRaster';
+import {frameArtworkFromSVG,frameArtworkSVG} from '../app/diagramFrameArtwork';
+import {edgeAssignmentCode,meshTopologyFor} from '../../vendor/simulator/oristudio/packages/origami-simulator/src/webgl/meshRenderer';
 import {renderMeshToSvg} from '../../vendor/simulator/oristudio/packages/origami-simulator/src/svgRenderer';
 import {pickSimulationVertex,simulationDragTarget,type PickedSimulationVertex} from './simInteraction';
 import {simulationSculptSupports} from './simSculpt';
@@ -28,13 +30,26 @@ import {simulationObjText,simulationStlText} from './simExport';
 import {simulationPaperColorSettings} from './simColors';
 import {DEFAULT_SIMULATION_VIEW,mountSimulationViewCube,orbitSimulationView,simulationCameraAngles} from './simViewCube';
 import {validateSimulationStepAnimation,simulationStepFoldProfile,seedSimulationStepAnimation,type SimulationStepAnimation} from './simStepAnimation';
-import {simulationStepLayerOrderAt} from './simStepLayerTimeline';
+import {rigidStepContactLookup,simulationStepLayerOrderAt} from './simStepLayerTimeline';
 import {simulationStepCameraBounds} from './simStepCamera';
-import {simulationStepDisplayAssignments} from './simStepEdges';
+import {validatedDynamicEvaluator} from './simStepDynamic';
+import {prepareSinkPhase,type PreparedSinkPhase,type PreparedSinkPair,type SinkPlaybackInput} from './simSinkPlayback';
+import {simulationStepTargetColors,simulationStepDisplayAssignments} from './simStepEdges';
 import {DEFAULT_SIMULATION_SOLVER_SETTINGS,mergeSimulationSolverSettings,simulationSolverFrameStepCap,simulationFoldProgress,type SimulationSolverSettings} from './simSettings';
 import {SimulationAngleAnalyzer,type SimulationAngleDiagnostics,type SimulationSolveState} from './simConvergence';
-import {saveDownload} from '../app/api';
+import {saveDownload,sendToBlender} from '../app/api';
 
+import {decodePaperTextures,materialUV,type PaperPixels} from './simPaperTexture';
+import {readPaperPatterns,type PaperPatterns} from '../app/paperPatterns';
+let paperPixels:PaperPixels={},printRequest=0,fine=false;
+let currentPaperPrint:PaperPatterns|undefined;
+let printing:Promise<void>=Promise.resolve();
+function renderPixelRatio(){
+  const native=Math.min(2,devicePixelRatio||1);
+  // Supersample within a bounded backing store; preserve the normal pixel
+  // ratio on very large displays and scale strokes by the actual ratio.
+  return fine&&stepAnimation?Math.max(native,Math.min(4,native*2,Math.sqrt(6_000_000/Math.max(1,innerWidth*innerHeight)))):native;
+}
 let canvas = document.querySelector<HTMLCanvasElement>('#simulation')!;
 const statusLabel = document.querySelector<HTMLDivElement>('#status')!;
 let backend: SolverBackend | null = null;
@@ -62,6 +77,8 @@ let lastContentKey='';
 let displayMode:SimulationDisplayMode='paper';
 let displayOptions:SimulationDisplayOptions={...DEFAULT_SIMULATION_DISPLAY_OPTIONS};
 let creaseStyle:SimulationCreaseStyle='assignment';
+let animationCreaseStyle:SimulationCreaseStyle='crease';
+const shownCreaseStyle=()=>stepAnimation?(animationCreaseStyle==='assignment'?'assignment':fine?'diagram':'crease'):creaseStyle;
 let surfaceLayers:SimulationSurfaceLayers|null=null;
 let surfaceMesh:SimulationSurfaceMesh|null=null;
 let surfaceTargetMesh:SimulationSurfaceMesh|null=null;
@@ -150,6 +167,13 @@ function updatePinMarkers(){
 }
 let stepAnimation:SimulationStepAnimation|null=null;
 let seekStepDynamic:((progress:number)=>void)|undefined;
+let rigidContact:((a:number,b:number)=>boolean)|undefined;
+let fixedInactiveLayers=false,staticLayerLock:ReturnType<typeof createSimulationStepStaticLock>|null=null;
+function stabilizeStepLayers(){
+  if(!fixedInactiveLayers||!stepAnimation||!prepared)return;
+  staticLayerLock??=createSimulationStepStaticLock(prepared,stepAnimation);
+  canvas.dataset.fixedInactiveVertices=String(staticLayerLock(positions,targetProgress));
+}
 const cpuRaster=new SimulationRasterizer();
 let cpuImage:ImageData|null=null;
 let updateGizmo=()=>{};
@@ -197,10 +221,10 @@ function report(status: SimulatorStatus['status'], message: string, error?: stri
   const payload: SimulatorStatus = {
     type: 'zhezhi-sim-status', status, message:displayMessage, revision, backend: backendName,
     strain: diagnostics?.maxNodalStrain ?? diagnostics?.maxEdgeStrain,
-    steps: backend?.stepCount, view:cameraPreset, creaseStyle:stepAnimation?'crease':creaseStyle, warnings, ...(error ? { error } : {}),
+    steps: backend?.stepCount, view:cameraPreset, creaseStyle:shownCreaseStyle(), warnings, ...(error ? { error } : {}),
     layerOrder:layerOrderState,layerDisplay:layerDisplayState,layerMessage:layerOrderMessage,layerCount:layerDisplayState==='inactive'?1:surfaceMesh?.layerCount??1,
     layerGapMultiplier,layerGap:layerDisplayState==='inactive'?0:surfaceMesh?.layerGap??0,...(layerGapError?{layerGapError}:{}),
-    animation:!!stepAnimation,progress:targetProgress,solverSettings:{...solverSettings},displayOptions:{...displayOptions},poseRestored,
+    animation:!!stepAnimation,progress:playbackProgress(),solverSettings:{...solverSettings},displayOptions:{...displayOptions},poseRestored,
     meshQuality,meshVertices:prepared?.vertexCount,meshTriangles:prepared?.faceCount,
     collisionEnabled,collisionMessage,
     pinnedVertices:pinnedVertices.size,canUndoPose:poseUndo.length>0,canRedoPose:poseRedo.length>0,poseEditRevision,poseView:structuredClone(view),interactionActive:grabbedVertex,
@@ -218,8 +242,9 @@ function report(status: SimulatorStatus['status'], message: string, error?: stri
   canvas.dataset.steps = String(backend?.stepCount ?? 0);
   canvas.dataset.displayMode=displayMode;
   for(const [key,value] of Object.entries(displayOptions))canvas.dataset[`display${key[0].toUpperCase()}${key.slice(1)}`]=String(value);
-  canvas.dataset.creaseStyle=stepAnimation?'crease':creaseStyle;
-  canvas.dataset.targetProgress=String(targetProgress);
+  canvas.dataset.creaseStyle=shownCreaseStyle();
+  canvas.dataset.targetProgress=String(playbackProgress());
+  canvas.dataset.sinkPhase=sinkPlayback?String(sinkPlayback.index):'';
   canvas.dataset.view=cameraPreset;
   canvas.dataset.yaw=String(view.yaw);canvas.dataset.pitch=String(view.pitch);
   for(const [key,value] of Object.entries(solverSettings))canvas.dataset[key]=String(value);
@@ -265,9 +290,10 @@ function fail(error: unknown) {
 
 function resize() {
   releaseActiveGrab();
-  const dpr = Math.min(2, devicePixelRatio || 1);
-  canvas.width = Math.max(1, Math.round(innerWidth * dpr));
-  canvas.height = Math.max(1, Math.round(innerHeight * dpr));
+  const dpr = renderPixelRatio();
+  const width=Math.max(1,Math.round(innerWidth*dpr)),height=Math.max(1,Math.round(innerHeight*dpr));
+  if(canvas.width!==width)canvas.width=width;
+  if(canvas.height!==height)canvas.height=height;
   dirty = true;
 }
 
@@ -506,9 +532,115 @@ function mountCanvas() {
   resize();
 }
 
-function load(fold: unknown, nextRevision: string | number,animation?:SimulationStepAnimation,pose?:SimulationPose,mesh:SimulationMeshQuality='original',preparedResult?:ReturnType<typeof prepareSimulationDocument>,angleLimit=false) {
+type LoadedSinkPhase=ReturnType<typeof buildSinkPhase>;
+let sinkPlayback:{phases:[LoadedSinkPhase,LoadedSinkPhase];index:0|1}|undefined;
+let pendingSink:{commands:SimulatorCommand[];worker?:Worker}|undefined;
+
+function cpuMeshFits(mesh:PreparedOrigamiModel){
+  return mesh.vertexCount<=1200&&mesh.faceCount<=2400;
+}
+function buildSinkPhase(data:PreparedSinkPhase){
+  const mesh=data.result.prepared,animation=data.animation;
+  if(!cpuMeshFits(mesh))throw Error('沉折动画超过 CPU 兼容模式容量，请缩小模型。');
+  const model=new OrigamiModel(mesh);
+  const solver=new ReferenceSolver(model,{...solverSettings,integrationType:'euler',foldPercent:0});
+  try{
+    const seek=seedSimulationStepAnimation(solver,animation,animation.dynamic?validatedDynamicEvaluator(animation.dynamic):undefined);
+    const contact=rigidStepContactLookup(mesh,animation);
+    const lock={current:null as typeof staticLayerLock};
+    return {...data,solver,seek,contact,lock,positions:model.originalPositions.slice(),analyzer:new SimulationAngleAnalyzer(mesh)};
+  }catch(error){solver.dispose();throw error;}
+}
+function disposeSink(){
+  pendingSink?.worker?.terminate();pendingSink=undefined;
+  if(sinkPlayback){
+    for(const phase of sinkPlayback.phases)if(phase.solver!==backend)phase.solver.dispose();
+    sinkPlayback=undefined;
+  }
+}
+function playbackProgress(){
+  return sinkPlayback?(sinkPlayback.index+targetProgress)/2:targetProgress;
+}
+function describeStepMotion(){
+  canvas.dataset.stepMethod=stepAnimation?.dynamic?'dynamic':stepAnimation?.flex?'local-flex':stepAnimation?.motion?.method??'';
+  canvas.dataset.stepSettleStart=stepAnimation?.dynamic?.settleStart===undefined?'':String(stepAnimation.dynamic.settleStart);
+  canvas.dataset.stepEndAngleError=stepAnimation?.dynamic?String(stepAnimation.dynamic.endAngleError):'';
+}
+function stepMotionNotice(animation:SimulationStepAnimation){
+  return animation.dynamic?'正在按三维数值求解结果演示，纸面可能存在小幅形变。':animation.flex?'正在演示局部柔性压痕，临时曲面网格不会写入 CP。':'正在按步骤原始折角演示本步折叠。';
+}
+function setPlaybackProgress(value:number){
+  const progress=simulationFoldProgress(value,!!stepAnimation);
+  targetProgress=progress;
+  if(sinkPlayback){
+    const index=progress<.5?0:1;
+    targetProgress=progress*2-index;
+    if(index!==sinkPlayback.index){
+      sinkPlayback.phases[sinkPlayback.index].lock.current=staticLayerLock;
+      sinkPlayback.index=index;
+      const phase=sinkPlayback.phases[index];
+      backend=phase.solver;prepared=phase.result.prepared;stepAnimation=phase.animation;
+      sourceFold=prepared.fold;sourceSignature=phase.signature;sourceFaceCount=prepared.sourceFaceCount??prepared.facesVertices.length;
+      positions=phase.positions;seekStepDynamic=phase.seek;staticLayerLock=phase.lock.current;
+      rigidContact=phase.contact?(a,b)=>phase.contact!(a,b,targetProgress):undefined;
+      angleAnalyzer=phase.analyzer;
+      frameSteps=undefined;maxVelocity=undefined;clock.reset();
+      lastContentKey='';
+      warnings=[...phase.result.warnings,stepMotionNotice(stepAnimation)];
+      describeStepMotion();
+    }
+  }
+  if(!backend)return;
+  if(seekStepDynamic)seekStepDynamic(targetProgress);
+  else{
+    if(stepAnimation)backend.setFoldProfile(simulationStepFoldProfile(stepAnimation,targetProgress));
+    backend.setFoldPercent(targetProgress*100);
+  }
+  dirty=true;
+}
+
+function startSinkPlayback(command:Extract<SimulatorCommand,{type:'zhezhi-sim-load'}>){
+  const inputs:[SinkPlaybackInput,SinkPlaybackInput]=[{fold:command.fold,animation:command.animation},command.sinkContinuation!];
+  const job:NonNullable<typeof pendingSink>={commands:[]};
+  pendingSink=job;
+  const stopWithError=(error:unknown)=>{
+    if(pendingSink!==job)return;
+    clearModel(command.revision);fail(error);
+  };
+  const ready=(phases:PreparedSinkPair)=>{
+    if(pendingSink!==job)return;
+    let opening:LoadedSinkPhase|undefined;
+    try{
+      opening=buildSinkPhase(phases[0]);
+      const closing=buildSinkPhase(phases[1]);
+      load(command.fold,command.revision,command.animation,undefined,'original',undefined,false,[opening,closing],command.initialProgress);
+      if(failed){opening.solver.dispose();closing.solver.dispose();return;}
+      for(const next of job.commands)void handleCommand(next);
+    }catch(error){opening?.solver.dispose();stopWithError(error);}
+  };
+  const fallback=()=>{
+    if(pendingSink!==job)return;
+    job.worker?.terminate();
+    try{ready([prepareSinkPhase(inputs[0]),prepareSinkPhase(inputs[1])]);}
+    catch(error){stopWithError(error);}
+  };
+  try{
+    const worker=new Worker(new URL('../workers/simulationPlaybackPreload.worker.ts',import.meta.url),{type:'module'});
+    job.worker=worker;
+    worker.onmessage=({data}:MessageEvent<{phases:PreparedSinkPair}|{error:string}>)=>{
+      if('error' in data)stopWithError(Error(data.error));
+      else ready(data.phases);
+    };
+    worker.onerror=fallback;worker.onmessageerror=fallback;
+    worker.postMessage(inputs);
+  }catch{fallback();}
+}
+
+function load(fold: unknown, nextRevision: string | number,animation?:SimulationStepAnimation,pose?:SimulationPose,mesh:SimulationMeshQuality='original',preparedResult?:ReturnType<typeof prepareSimulationDocument>,angleLimit=false,sinkPhases?:[LoadedSinkPhase,LoadedSinkPhase],initialProgress=0) {
   // Reject malformed saved geometry before touching a currently usable model.
   if(pose){try{pose=validateSimulationPose(pose);fold=pose.source;}catch(error){reportExportError(error);return;}}
+  disposeSink();
+  const staged=sinkPhases?.[0];
   meshQuality=animation?'original':pose?.mesh??mesh;
   collisionEnabled=animation?false:pose?pose.collision===true:collisionEnabled;
   contactGuard=null;collisionMessage='';
@@ -521,10 +653,10 @@ function load(fold: unknown, nextRevision: string | number,animation?:Simulation
   revision = nextRevision;
   failed = false;
   warnings = [];
-  stepAnimation=null;
+  stepAnimation=null;rigidContact=undefined;staticLayerLock=null;
   seekStepDynamic=undefined;
   frameSteps=undefined;maxVelocity=undefined;
-  surfaceGap=-1;layerGapError=undefined;sourceSignature=simulationSourceSignature(fold);
+  surfaceGap=-1;layerGapError=undefined;sourceSignature=staged?.signature??simulationSourceSignature(fold);
   sourceFaceCount=(fold as {faces_vertices?:unknown[]})?.faces_vertices?.length??0;
   layerOrderState='pending';layerOrderMessage='正在确认平折层序…';layerDisplayState='inactive';layerOrderKey='';grabbedVertex=false;layerEndpoint.reset();surfaceBlend=-1;surfaceTargetMesh=null;surfaceGapLayout=null;
   backend?.dispose();
@@ -533,32 +665,37 @@ function load(fold: unknown, nextRevision: string | number,animation?:Simulation
   backendName = undefined;
   report('running', '正在构建模拟网格…');
   try {
-    const result = preparedResult??prepareSimulationDocument(fold,{mesh:meshQuality});
+    const result = staged?.result??preparedResult??prepareSimulationDocument(fold,{mesh:meshQuality});
     prepared = result.prepared;
-    angleAnalyzer=new SimulationAngleAnalyzer(prepared);anglePositions=new Float32Array(prepared.vertexCount*3);angleHistory=new Float32Array(prepared.creaseParams.length);
+    angleAnalyzer=staged?.analyzer??new SimulationAngleAnalyzer(prepared);
+    // Angle diagnostics sample live solver history only in the free simulator.
+    anglePositions=new Float32Array(animation?0:prepared.vertexCount*3);
+    angleHistory=new Float32Array(animation?0:prepared.creaseParams.length);
     angleSampleTime=-Infinity;angleSampleStep=-1;angleSamplePoseRevision=-1;
     sourceFaceCount=prepared.sourceFaceCount??sourceFaceCount;
-    warnings = result.warnings;
+    warnings = [...result.warnings];
     // Profiles are not implemented by the GPU backend. Validate atomically,
     // then use the CPU solver instead of silently playing the wrong targets.
-    stepAnimation=animation===undefined?null:validateSimulationStepAnimation(animation,prepared,sourceSignature);
+    stepAnimation=animation===undefined?null:staged?.animation??validateSimulationStepAnimation(animation,prepared,sourceSignature);
     if(stepAnimation){
+      const contactAt=staged?staged.contact:rigidStepContactLookup(prepared,stepAnimation);
+      rigidContact=contactAt?(a,b)=>contactAt(a,b,targetProgress):undefined;
       targetProgress=0;grabEnabled=false;layerOrderState='unavailable';layerOrderMessage='步骤动画显示实际求解姿态，尚未确认终态层序。';
       solverSettings={...solverSettings,integrationType:'euler'};
     }
     updateGrabControls();
-    const model = new OrigamiModel(prepared);
-    positions = model.originalPositions.slice();
+    const model = staged?.solver.model??new OrigamiModel(prepared);
+    positions = staged?.positions??model.originalPositions.slice();
     center = centroid(positions);
     radius = boundingRadius(positions, center);
     cameraRadius=radius;
-    if(stepAnimation){const frame=simulationStepCameraBounds(prepared,stepAnimation);center=frame.center;cameraRadius=frame.radius;}
+    if(stepAnimation){const frame=staged?.frame??simulationStepCameraBounds(prepared,stepAnimation);center=frame.center;cameraRadius=frame.radius;}
     surfaceLayers=!stepAnimation?new SimulationSurfaceLayers(prepared,radius):null;surfaceMesh=null;surfaceStep=-1;surfaceTopology=null;surfaceSourceIndices=null;surfacePaperFrame=undefined;surfaceStrainFrame=undefined;
-    mountCanvas();
     const options = { ...solverSettings, foldPercent: targetProgress * 100 };
     // ?backend=cpu is a local deterministic fallback test, not a remote service.
     const forceCpu = !!stepAnimation||new URLSearchParams(location.search).get('backend') === 'cpu';
     if (!forceCpu) {
+      mountCanvas();
       try {
         backend = new WebglSolver(canvas, model, options);
         backendName = 'webgl2';
@@ -569,21 +706,26 @@ function load(fold: unknown, nextRevision: string | number,animation?:Simulation
       }
     }
     if (!backend) {
-      if (prepared.vertexCount > 1200 || prepared.faceCount > 2400) throw new Error('当前设备不支持所需 WebGL2 浮点运算；CPU 兼容模式最多支持 1,200 个顶点和 2,400 个三角面，请缩小模型。');
+      if (!cpuMeshFits(prepared)) throw new Error('当前设备不支持所需 WebGL2 浮点运算；CPU 兼容模式最多支持 1,200 个顶点和 2,400 个三角面，请缩小模型。');
       // A canvas that already requested WebGL cannot acquire a 2D context.
       mountCanvas();
       if (!canvas.getContext('2d')) throw new Error('浏览器无法创建绘图画布，请换用支持 Canvas 的浏览器。');
-      const referenceSolver = new ReferenceSolver(model, options);
+      const referenceSolver = staged?.solver??new ReferenceSolver(model, options);
       backend = referenceSolver;
       backendName = 'cpu';
-      if(stepAnimation){seekStepDynamic=seedSimulationStepAnimation(referenceSolver,stepAnimation);backend.readPositions(positions);warnings.push(stepAnimation.dynamic?'正在按三维数值求解结果演示，纸面可能存在小幅形变。':stepAnimation.flex?'正在演示局部柔性压痕，临时曲面网格不会写入 CP。':'正在按步骤原始折角演示本步折叠。');}
+      if(stepAnimation){
+        seekStepDynamic=staged?staged.seek:seedSimulationStepAnimation(referenceSolver,stepAnimation,stepAnimation.dynamic?validatedDynamicEvaluator(stepAnimation.dynamic):undefined);
+        if(sinkPhases)sinkPlayback={phases:sinkPhases,index:0};
+        warnings.push(stepMotionNotice(stepAnimation));
+        if(initialProgress)setPlaybackProgress(initialProgress);
+        backend.readPositions(positions);stabilizeStepLayers();
+      }
       else warnings.push('使用 CPU 兼容模式；大型模型较慢。');
     }
     foldLimitGuard=limitFoldAngles&&!stepAnimation?new SimulationFoldLimitGuard(prepared,backend):null;
     rebuildClock();
-    canvas.dataset.stepMethod=stepAnimation?.dynamic?'dynamic':stepAnimation?.flex?'local-flex':stepAnimation?.motion?.method??'';
-    canvas.dataset.stepSettleStart=stepAnimation?.dynamic?.settleStart===undefined?'':String(stepAnimation.dynamic.settleStart);
-    canvas.dataset.stepEndAngleError=stepAnimation?.dynamic?String(stepAnimation.dynamic.endAngleError):'';
+    canvas.dataset.sinkPhaseCount=sinkPhases?'2':'0';
+    describeStepMotion();
     if(pose){restorePoseEdit(pose);delete view.roll;delete view.orient;Object.assign(view,structuredClone(pose.view));cameraPreset='free';updateViewCube(view);}
     running = !stepAnimation&&!pose;
     rebuildContactGuard();
@@ -599,7 +741,7 @@ function drawCpu(output:HTMLCanvasElement=canvas,exportScale=1,background?:[numb
   if (!backend || !prepared) return;
   const context = output.getContext('2d');
   if(!context)throw new Error('浏览器无法创建模拟图像画布。');
-  backend.readPositions(positions);
+  backend.readPositions(positions);stabilizeStepLayers();
   const strain=displayMode==='strain'?new Float32Array(prepared.vertexCount):null;
   if(strain)backend.readStrain(strain);
   const camera=cameraUniforms(view,center,cameraRadius,output.width,output.height);
@@ -612,10 +754,10 @@ function drawCpu(output:HTMLCanvasElement=canvas,exportScale=1,background?:[numb
     :prepared.triangleSourceFaces??prepared.facesVertices.map((_,f)=>f);
   canvas.dataset.colorLayerRelations=String(faceOrders.length);
   const shownPositions=display.surface?.positions??positions;
-  const assignments=stepAnimation?simulationStepDisplayAssignments(prepared,stepAnimation,shownPositions,camera,targetProgress):null;
+  const assignments=stepAnimation?simulationStepDisplayAssignments(prepared,stepAnimation,shownPositions,camera,targetProgress,'target'):null;
   const displayModel=surfaceMesh&&display.surface?surfaceMesh:prepared;
-  const pixels=cpuRaster.render(shownPositions,assignments?{...displayModel,edgesAssignment:assignments}:displayModel,camera,renderSettings,display.surface?.strain??strain??undefined,
-    faceOrders.length?{triangleSourceFaces,faceOrders}:undefined,stepAnimation?settings.creaseWidthPx*Math.min(2,devicePixelRatio||1)*exportScale:undefined);
+  const pixels=cpuRaster.render(shownPositions,displayModel,camera,renderSettings,display.surface?.strain??strain??undefined,
+    faceOrders.length?{triangleSourceFaces,faceOrders,rigidContact}:undefined,stepAnimation?settings.creaseWidthPx*renderPixelRatio()*exportScale:undefined,assignments??undefined,stepAnimation&&animationCreaseStyle==='assignment'?simulationStepTargetColors(prepared,stepAnimation):undefined);
   if(assignments){
     canvas.dataset.visibleStepCreases=String(assignments.filter(a=>a==='M'||a==='V').length);
     canvas.dataset.boundaryStepCreases=String(assignments.filter((a,e)=>a==='B'&&prepared!.edgesAssignment[e]!=='B').length);
@@ -628,8 +770,11 @@ function drawCpu(output:HTMLCanvasElement=canvas,exportScale=1,background?:[numb
 /** Apply certified local layer relations only to a stable, near-flat endpoint.
  * The solver positions and mesh exports always remain unchanged. */
 function renderState(camera:ReturnType<typeof cameraUniforms>):{settings:RenderSettings;surface?:MeshPositionFrame}{
-  const output=scaleSimulationImageSettings(displaySettings(settings,displayMode,stepAnimation?'crease':creaseStyle,displayOptions),Math.min(2,devicePixelRatio||1));
-  if(stepAnimation){output.mountainColor=[...settings.borderColor];output.valleyColor=[...settings.borderColor];}
+  const output=scaleSimulationImageSettings(displaySettings(settings,displayMode,shownCreaseStyle(),displayOptions),renderPixelRatio());
+  if(shownCreaseStyle()==='assignment'){output.mountainColor=[.76,.20,.23];output.valleyColor=[.18,.38,.72];}
+  if(stepAnimation&&fine){output.background=[.98,.985,.97];output.diagramInkColor=settings.borderColor;output.showFacets=false;}
+  if(prepared&&(paperPixels.front||paperPixels.back))output.paperPrint={...paperPixels,source:currentPaperPrint,uv:materialUV(prepared)};
+  if(stepAnimation&&animationCreaseStyle!=='assignment'){output.mountainColor=[...settings.borderColor];output.valleyColor=[...settings.borderColor];}
   // A microscopic display offset resolves GPU depth ties only after a stable
   // flat contact and a complete layer certificate. It never enters the solver,
   // captures of the physical pose, or the original material triangulation.
@@ -640,7 +785,7 @@ function renderState(camera:ReturnType<typeof cameraUniforms>):{settings:RenderS
     canvas.dataset.surfaceLayers='1';canvas.dataset.layerGap='0';canvas.dataset.sourceTriangles=String(prepared?.faceCount??0);canvas.dataset.surfaceTriangles=String(prepared?.faceCount??0);canvas.dataset.surfaceVertices=String(prepared?.vertexCount??0);canvas.dataset.surfaceTopology='original';layerGapError=undefined;canvas.dataset.layerGapError='';return {settings:output};
   }
   const moved=surfaceStep!==backend.stepCount;
-  if(moved)backend.readPositions(positions);
+  if(moved)backend.readPositions(positions);stabilizeStepLayers();
   if(moved){
     // Solve the overlap arrangement once per material pose. Camera-dependent
     // spacing only resizes this layout; it never repeats planar subdivision.
@@ -696,15 +841,17 @@ function renderState(camera:ReturnType<typeof cameraUniforms>):{settings:RenderS
     const originalStrain=new Float32Array(prepared.vertexCount);backend.readStrain(originalStrain);
     surfaceStrainFrame={...surfacePaperFrame,strain:simulationSurfaceStrain(surfaceMesh,originalStrain)};
   }
+  if(output.paperPrint&&surfaceMesh)output.paperPrint.uv=materialUV(prepared,surfaceMesh);
   return {settings:output,surface:displayMode==='strain'?surfaceStrainFrame:surfacePaperFrame};
 }
 
 function clearModel(nextRevision:string|number){
+  disposeSink();
   foldLimitGuard=null;
   lowVelocityStable=false;angleAnalyzer=null;
   releaseActiveGrab();
   poseUndo.length=0;poseRedo.length=0;poseEditRevision=0;pinnedVertices.clear();sourceFold=null;poseRestored=false;contactGuard=null;contactSettledTicks=0;collisionMessage='';
-  stepAnimation=null;
+  stepAnimation=null;rigidContact=undefined;staticLayerLock=null;
   seekStepDynamic=undefined;
   frameSteps=undefined;maxVelocity=undefined;
   running=false;failed=true;revision=nextRevision;backend?.dispose();backend=null;prepared=null;backendName=undefined;
@@ -723,15 +870,19 @@ async function downloadBlob(name:string,blob:Blob){
   report(running?'running':'paused',result.status==='saved'?`文件已保存：${name}`:result.status==='cancelled'?'已取消导出。':'已发起文件下载，请确认下载结果。');
 }
 
-async function exportCurrent(kind:'fold'|'svg'|'obj'|'stl'){
+async function exportCurrent(kind:'fold'|'svg'|'obj'|'stl'|'blender'){
   if(!backend||!prepared||failed)throw new Error('请先载入有效折痕图，再导出三维结果。');
   if(kind==='svg'&&prepared.faceCount>2000)throw new Error('矢量视图导出最多支持 2,000 个三角面，请缩小模型。');
-  backend.readPositions(positions);
+  backend.readPositions(positions);stabilizeStepLayers();
   if(kind==='fold'){
     return download('折纸三维模拟-当前状态.fold','application/json',JSON.stringify(simulationFoldSnapshot(prepared,positions,targetProgress,backend.stepCount),null,2));
   }
-  if(kind==='obj'){
-    return download('折纸三维模拟-当前状态.obj','text/plain',simulationObjText(prepared,positions));
+  if(kind==='obj'||kind==='blender'){
+    const mesh=new Blob([simulationObjText(prepared,positions)],{type:'text/plain'});
+    if(kind==='obj')return downloadBlob('折纸三维模拟-当前状态.obj',mesh);
+    await sendToBlender(mesh);
+    report(running?'running':'paused','已启动 Blender，正在导入当前折态。');
+    return;
   }
   if(kind==='stl'){
     return download('折纸三维模拟-当前状态.stl','model/stl',simulationStlText(prepared,positions));
@@ -749,7 +900,7 @@ async function exportPng(scale=1){
   if(!backend||!prepared||failed)throw new Error('请先载入有效折痕图，再导出当前视图。');
   const {width,height}=simulationImageDimensions(canvas.width,canvas.height,scale);
   const output=document.createElement('canvas');output.width=width;output.height=height;
-  if(backend instanceof WebglSolver){
+  if(backend instanceof WebglSolver&&!stepAnimation){
     // WebGL readPixels starts at the bottom row, while ImageData starts at the top.
     const camera=cameraUniforms(view,center,cameraRadius,width,height),display=renderState(camera);
     display.settings=scaleSimulationImageSettings(display.settings,scale);
@@ -766,7 +917,33 @@ async function exportPng(scale=1){
   return downloadBlob('折纸三维模拟-当前视图.png',blob);
 }
 
-function captureCurrentImage(scale:1|2|4,transparent:boolean):SimulationImageCapture{
+async function captureDiagramFrame():Promise<SimulationImageCapture>{
+  if(!backend||!prepared||!stepAnimation||failed)throw Error('请先载入步骤动画。');
+  backend.readPositions(positions);stabilizeStepLayers();
+  const camera=cameraUniforms(view,center,cameraRadius,canvas.width,canvas.height);
+  const assignments=simulationStepDisplayAssignments(prepared,stepAnimation,positions,camera,targetProgress,'target');
+  const topology={...meshTopologyFor(prepared),edgeAssignments:Uint8Array.from(assignments,edgeAssignmentCode)};
+  const paint=renderState(camera).settings;
+  const faceOrders=stepAnimation.layerTimeline?simulationStepLayerOrderAt(prepared,stepAnimation,stepAnimation.layerTimeline,targetProgress,positions):[];
+  const compare=rasterLayerComparison(positions,prepared.indices,camera,faceOrders.length?{triangleSourceFaces:prepared.triangleSourceFaces??prepared.facesVertices.map((_,f)=>f),faceOrders,rigidContact}:undefined);
+  const result=renderMeshToSvg(positions,topology,camera,{...paint,lighting:false,diagramInkColor:settings.borderColor},{perspective:true,compareContact:compare?(a,b,equalDepth)=>compare(a,b,equalDepth===true):undefined,coloredEdges:animationCreaseStyle==='assignment'?simulationStepTargetColors(prepared,stepAnimation):undefined});
+  if(!result)throw Error('当前视角没有可截取的纸面。');
+  const artwork=frameArtworkFromSVG(result.svg);
+  // A small preview supports the image picker and interactive crop. Print uses the paths.
+  const ratio=Math.min(1,800/Math.max(artwork.box.width,artwork.box.height));
+  const output=document.createElement('canvas');
+  output.width=Math.max(1,Math.round(artwork.box.width*ratio));output.height=Math.max(1,Math.round(artwork.box.height*ratio));
+  const previewSVG=`<svg xmlns="http://www.w3.org/2000/svg" width="${artwork.box.width}" height="${artwork.box.height}" viewBox="0 0 ${artwork.box.width} ${artwork.box.height}">${frameArtworkSVG(artwork,0,0,artwork.box.width,artwork.box.height)}</svg>`;
+  const url=URL.createObjectURL(new Blob([previewSVG],{type:'image/svg+xml'}));
+  try{
+    const preview=new Image();preview.src=url;await preview.decode();
+    const context=output.getContext('2d');if(!context)throw Error('无法生成过程图预览。');
+    context.drawImage(preview,0,0,output.width,output.height);
+    return {dataUrl:output.toDataURL('image/png'),width:output.width,height:output.height,croppedToContent:true,artwork};
+  }finally{URL.revokeObjectURL(url);}
+}
+
+function captureCurrentImage(scale:1|2|4,transparent:boolean,trimTransparent=false):SimulationImageCapture{
   if(!backend||!prepared||failed)throw new Error('请先载入有效折痕图，再截取当前视图。');
   const {width,height}=simulationImageDimensions(canvas.width,canvas.height,scale);
   const output=document.createElement('canvas');output.width=width;output.height=height;
@@ -777,7 +954,7 @@ function captureCurrentImage(scale:1|2|4,transparent:boolean):SimulationImageCap
   const imageSettings=scaleSimulationImageSettings(display.settings,scale);
   // Two renders preserve white paper and translucent faces, unlike deleting pixels
   // that happen to share the viewport background colour. Neither render steps the solver.
-  if(backend instanceof WebglSolver){
+  if(backend instanceof WebglSolver&&!stepAnimation){
     black=flipSimulationImageRows(backend.renderToImage(camera,{...imageSettings,background:[0,0,0],backgroundAlpha:1},width,height,display.surface),width,height);
     white=flipSimulationImageRows(backend.renderToImage(camera,{...imageSettings,background:[1,1,1],backgroundAlpha:1},width,height,display.surface),width,height);
   }else{
@@ -786,10 +963,12 @@ function captureCurrentImage(scale:1|2|4,transparent:boolean):SimulationImageCap
   }
   const image=context.createImageData(width,height);
   image.data.set(simulationImageFromBackgrounds(black,white,transparent?undefined:imageSettings.background));
-  context.putImageData(image,0,0);
+  const bounds=transparent&&trimTransparent?simulationInkBounds(image.data,width,height):{x:0,y:0,width,height};
+  if(bounds.width!==width||bounds.height!==height){output.width=bounds.width;output.height=bounds.height;}
+  context.putImageData(image,-bounds.x,-bounds.y);
   const dataUrl=output.toDataURL('image/png');
   if(!dataUrl.startsWith('data:image/png;base64,'))throw new Error('浏览器无法编码 PNG 图像，请重新截取。');
-  return {dataUrl,width,height};
+  return {dataUrl,width:bounds.width,height:bounds.height,...(transparent&&trimTransparent?{croppedToContent:true}:{})};
 }
 
 function reportExportError(error:unknown){
@@ -817,10 +996,10 @@ function tick(now: number) {
         if (step.converged) {
           lowVelocityStable=!stepAnimation&&!grabbedVertex;
           running = false;
-          report('paused', stepAnimation?`本步姿态已更新 · 进度 ${Math.round(targetProgress*100)}%`:`${backendName === 'webgl2' ? 'GPU' : 'CPU 兼容'} 数值暂稳 · 应变 ${(strain * 100).toFixed(2)}% · 不代表已验证可折`);
+          report('paused', stepAnimation?`本步姿态已更新 · 进度 ${Math.round(playbackProgress()*100)}%`:`${backendName === 'webgl2' ? 'GPU' : 'CPU 兼容'} 数值暂稳 · 应变 ${(strain * 100).toFixed(2)}% · 不代表已验证可折`);
         } else if (running&&now - lastStatusTime > 900) {
           lastStatusTime = now;
-          report('running', stepAnimation?`正在折叠 · 进度 ${Math.round(targetProgress*100)}%`:`${backendName === 'webgl2' ? 'GPU' : 'CPU 兼容'} 求解中 · 目标 ${Math.round(targetProgress * 100)}% · 应变 ${(strain * 100).toFixed(2)}%`);
+          report('running', stepAnimation?`正在折叠 · 进度 ${Math.round(playbackProgress()*100)}%`:`${backendName === 'webgl2' ? 'GPU' : 'CPU 兼容'} 求解中 · 目标 ${Math.round(targetProgress * 100)}% · 应变 ${(strain * 100).toFixed(2)}%`);
         }
       }
       if (dirty||layerEndpoint.needsFrame) {
@@ -842,10 +1021,39 @@ function tick(now: number) {
   frameRequest = requestAnimationFrame(tick);
 }
 
-window.addEventListener('message', (event: MessageEvent) => {
+window.addEventListener('message',(event:MessageEvent)=>{
   if (event.origin !== location.origin || event.source !== window.parent) return;
   const message = event.data as SimulatorCommand | undefined;
   if (!message || typeof message !== 'object') return;
+  if(pendingSink){
+    if(message.type==='zhezhi-sim-load'||message.type==='zhezhi-sim-clear'){
+      pendingSink.worker?.terminate();pendingSink=undefined;
+    }else{
+      pendingSink.commands.push(message);return;
+    }
+  }
+  void handleCommand(message);
+});
+
+async function handleCommand(message:SimulatorCommand){
+  if(message.type==='zhezhi-sim-fixed-inactive-layers'){
+    if(typeof message.enabled!=='boolean')return;
+    fixedInactiveLayers=message.enabled;canvas.dataset.fixedInactiveLayers=String(message.enabled);dirty=true;return;
+  }
+  if(message.type==='zhezhi-sim-render-quality'){
+    if(message.quality!=='fine'&&message.quality!=='standard')return;
+    fine=message.quality==='fine';canvas.dataset.renderQuality=message.quality;resize();return;
+  }
+  if(message.type==='zhezhi-sim-paper-print'){
+    const patterns=readPaperPatterns(message.patterns);
+    if(patterns?.front===currentPaperPrint?.front&&patterns?.back===currentPaperPrint?.back)return;
+    const request=++printRequest;
+    currentPaperPrint=patterns;paperPixels={};dirty=true;
+    printing=patterns?decodePaperTextures(patterns).then(result=>{
+      if(request===printRequest){paperPixels=result;dirty=true;}
+    },error=>{if(request===printRequest){currentPaperPrint=undefined;reportExportError(error);}}):Promise.resolve();
+    return;
+  }
   if (message.type === 'zhezhi-sim-ping') {
     report('ready', prepared ? '本地模拟引擎已连接。' : '本地模拟引擎就绪，等待折痕图。');
     return;
@@ -853,7 +1061,10 @@ window.addEventListener('message', (event: MessageEvent) => {
   if (message.type === 'zhezhi-sim-load') {
     if (typeof message.revision !== 'string' && typeof message.revision !== 'number') return;
     if(message.mesh!==undefined&&!['original','standard','fine'].includes(message.mesh))return;
-    load(message.fold, message.revision,message.animation,message.pose,message.mesh,undefined,message.limitFoldAngles===true);
+    if(message.sinkContinuation){
+      if(message.animation&&!message.pose)startSinkPlayback(message);
+      else {clearModel(message.revision);fail(Error('沉折动画缺少撑开轨迹。'));}
+    }else load(message.fold,message.revision,message.animation,message.pose,message.mesh,undefined,message.limitFoldAngles===true,undefined,message.initialProgress);
     return;
   }
   if(message.type==='zhezhi-sim-mesh'){
@@ -862,7 +1073,7 @@ window.addEventListener('message', (event: MessageEvent) => {
       // Rebuilding is an explicit reset action. Validate before disposing the
       // old mesh, so an unsupported refinement leaves the usable pose intact.
       const result=prepareSimulationDocument(sourceFold,{mesh:message.quality});
-      if(backendName==='cpu'&&(result.prepared.vertexCount>1200||result.prepared.faceCount>2400))throw Error('此精细度超出当前 CPU 兼容模式容量，请选择较低精细度；当前姿态已保留。');
+      if(backendName==='cpu'&&!cpuMeshFits(result.prepared))throw Error('此精细度超出当前 CPU 兼容模式容量，请选择较低精细度；当前姿态已保留。');
       targetProgress=0;load(sourceFold,revision,undefined,undefined,message.quality,result,limitFoldAngles);
     }catch(error){reportExportError(error);}
     return;
@@ -897,9 +1108,10 @@ window.addEventListener('message', (event: MessageEvent) => {
     const response={type:'zhezhi-sim-image' as const,requestId:message.requestId,revision:message.revision};
     let reply:SimulationImageCaptureReply;
     try{
+      await printing;
       if(message.revision!==revision)throw new Error('模拟模型或步骤已切换，请重新截取当前画面。');
       if(![1,2,4].includes(message.scale)||typeof message.transparent!=='boolean')throw new Error('截图参数无效，请重新截取。');
-      reply={...response,image:captureCurrentImage(message.scale,message.transparent)};
+      reply={...response,image:message.vectorFrame?await captureDiagramFrame():captureCurrentImage(message.scale,message.transparent,message.trimTransparent===true)};
     }catch(error){reply={...response,error:error instanceof Error?error.message:'无法截取当前模拟图片，请重试。'};}
     window.parent.postMessage(reply,location.origin);
     return;
@@ -929,11 +1141,16 @@ window.addEventListener('message', (event: MessageEvent) => {
   }
   if(message.type==='zhezhi-sim-crease-style'){
     if(!['assignment','crease','diagram'].includes(message.style))return;
-    creaseStyle=message.style;canvas.dataset.creaseStyle=creaseStyle;dirty=true;return;
+    if(stepAnimation)animationCreaseStyle=message.style;else creaseStyle=message.style;canvas.dataset.creaseStyle=shownCreaseStyle();dirty=true;return;
   }
   if(message.type==='zhezhi-sim-camera-pose'){
     try{validateSimulationView(message.view);}catch{return;}
-    delete view.roll;delete view.orient;Object.assign(view,structuredClone(message.view));cameraPreset='free';updateViewCube(view);dirty=true;return;
+    delete view.roll;delete view.orient;Object.assign(view,structuredClone(message.view));
+    cameraPreset=message.preset==='isometric'?'isometric':'free';
+    canvas.dataset.view=cameraPreset;canvas.dataset.yaw=String(view.yaw);canvas.dataset.pitch=String(view.pitch);
+    updateViewCube(view);dirty=true;
+    if(backend&&!failed)report(running?'running':'paused',lastMessage);
+    return;
   }
   if(message.type==='zhezhi-sim-camera'){
     if(!Object.hasOwn(simulationCameraAngles,message.preset))return;
@@ -970,6 +1187,10 @@ window.addEventListener('message', (event: MessageEvent) => {
     void exportPng(message.scale??1).catch(reportExportError);
     return;
   }
+  if(message.type==='zhezhi-sim-send-blender'){
+    void exportCurrent('blender').catch(reportExportError);
+    return;
+  }
   if(message.type==='zhezhi-sim-export-fold'||message.type==='zhezhi-sim-export-svg'||message.type==='zhezhi-sim-export-obj'||message.type==='zhezhi-sim-export-stl'){
     void exportCurrent(message.type==='zhezhi-sim-export-fold'?'fold':message.type==='zhezhi-sim-export-svg'?'svg':message.type==='zhezhi-sim-export-obj'?'obj':'stl').catch(reportExportError);
     return;
@@ -978,25 +1199,19 @@ window.addEventListener('message', (event: MessageEvent) => {
     if(!backend||!prepared||failed||running)return;
     try{poseRedo.length=0;updateGrabControls();const before=backend.stepCount;const contact=(collisionEnabled||foldLimitGuard)&&!stepAnimation?advanceWithGuards(20):null;if(!contact)backend.step(20);maxVelocity=backend.maxVelocity();frameSteps=contact?.advancedSteps??backend.stepCount-before;const strain=backend.readDiagnostics().maxNodalStrain??0;
       if(!Number.isFinite(strain)||!Number.isFinite(maxVelocity)||strain>.3)throw new Error('模型应变过大或数值不稳定，已停止单步求解。请复位或重新载入。');
-      dirty=true;lowVelocityStable=false;clock.invalidate();report('paused',contact&&contact.status!=='clear'?(contact.reason??collisionMessage):stepAnimation?`本步姿态已更新 · 进度 ${Math.round(targetProgress*100)}%`:`已推进 ${frameSteps} 个数值步 · 目标 ${Math.round(targetProgress*100)}% · 应变 ${(strain*100).toFixed(2)}%`);
+      dirty=true;lowVelocityStable=false;clock.invalidate();report('paused',contact&&contact.status!=='clear'?(contact.reason??collisionMessage):stepAnimation?`本步姿态已更新 · 进度 ${Math.round(playbackProgress()*100)}%`:`已推进 ${frameSteps} 个数值步 · 目标 ${Math.round(targetProgress*100)}% · 应变 ${(strain*100).toFixed(2)}%`);
     }catch(error){fail(error);}return;
   }
   if (message.type === 'zhezhi-sim-progress' && typeof message.value === 'number' && Number.isFinite(message.value)) {
     try{
       releaseActiveGrab();
-      targetProgress = simulationFoldProgress(message.value,!!stepAnimation);
-      canvas.dataset.targetProgress=String(targetProgress);
-      if (!backend || failed) return;
+      if (!backend || failed){targetProgress=simulationFoldProgress(message.value,!!stepAnimation);return;}
       poseRedo.length=0;updateGrabControls();
-      if(seekStepDynamic)seekStepDynamic(targetProgress);
-      else{
-        if(stepAnimation)backend.setFoldProfile(simulationStepFoldProfile(stepAnimation,targetProgress));
-        backend.setFoldPercent(targetProgress * 100);
-      }
+      setPlaybackProgress(message.value);
       clock.invalidate(); running = true;
       contactSettledTicks=0;
       dirty=true;
-      report('running', stepAnimation?`正在折叠 · 进度 ${Math.round(targetProgress*100)}%`:`正在求解目标折叠 ${Math.round(targetProgress * 100)}%…`);
+      report('running', stepAnimation?`正在折叠 · 进度 ${Math.round(playbackProgress()*100)}%`:`正在求解目标折叠 ${Math.round(targetProgress * 100)}%…`);
     }catch(error){fail(error);}
     return;
   }
@@ -1005,7 +1220,8 @@ window.addEventListener('message', (event: MessageEvent) => {
       releaseActiveGrab();
       const before=!stepAnimation&&!failed?capturePoseEdit():null;
       for(const index of pinnedVertices.keys())backend.setVertexConstraint(index,null);pinnedVertices.clear();
-      if(stepAnimation&&backend instanceof ReferenceSolver)seekStepDynamic=seedSimulationStepAnimation(backend,stepAnimation);
+      if(sinkPlayback)setPlaybackProgress(0);
+      else if(stepAnimation&&backend instanceof ReferenceSolver)seekStepDynamic=seedSimulationStepAnimation(backend,stepAnimation);
       else{backend.reset(); backend.setFoldPercent(0);}
       clock.reset();
       maxVelocity=backend.maxVelocity();frameSteps=0; // Refresh the GPU's cached strain after clearing its textures.
@@ -1026,7 +1242,7 @@ window.addEventListener('message', (event: MessageEvent) => {
     poseRedo.length=0;updateGrabControls();
     clock.invalidate(); running = true; report('running', stepAnimation?'继续步骤动画。':'继续本地数值求解…');
   }
-});
+}
 window.addEventListener('resize', resize);
 window.addEventListener('blur',()=>{releaseActiveGrab();clearGrabPointer();});
 document.addEventListener('visibilitychange',()=>{if(document.hidden){releaseActiveGrab();clearGrabPointer();}});
@@ -1037,6 +1253,7 @@ window.addEventListener('keydown',event=>{if(event.key==='Shift')updateGrabShift
 });
 window.addEventListener('keyup',event=>{if(event.key==='Shift')updateGrabShift(false);});
 window.addEventListener('pagehide', () => {
+  disposeSink();
   cancelAnimationFrame(frameRequest);releaseActiveGrab();
   // visibilitychange/blur may follow pagehide. Detach before disposal so
   // their marker cleanup cannot read textures from the destroyed backend.

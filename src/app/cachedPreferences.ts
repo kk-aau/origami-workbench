@@ -3,6 +3,7 @@ import type {Preferences} from './preferenceStorage';
 export interface PreferenceTransport {
   snapshot():Promise<Record<string,string>>;
   read(key:string):Promise<string|null>;
+  readSync?(key:string):string|null;
   write(key:string,value:string,expectedValue?:string|null):Promise<boolean>;
   writeSync(key:string,value:string,expectedValue?:string|null):boolean;
 }
@@ -42,6 +43,7 @@ export function createCachedPreferences(transport:PreferenceTransport):Preferenc
   return {
     cacheOnly:true,
     getItem:cached,
+    ...(transport.readSync?{getItemFresh(key:string){const value=transport.readSync!(key);remember(key,value);return value;}}:{}),
     setItem(key,value){
       if(!preferenceRecordKey(key)&&values.has(key)&&values.get(key)===value)return;
       // Preserve the acknowledged synchronous interface for existing small

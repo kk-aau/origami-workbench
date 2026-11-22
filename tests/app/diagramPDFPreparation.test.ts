@@ -68,6 +68,16 @@ test('unvisited panels and the completion cover await real layer certificates on
   assert.ok(progress.includes(2));assert.deepEqual(prepared.states,before.states);assert.deepEqual(project,before);
 }));
 
+test('automatic preparation can time out, then the same solvable panel can be exported without that deadline',async()=>withWorker(async()=>{
+  const project=fixture(),options={...defaultDiagramPDFOptions(project),scope:'current' as const,cover:'none' as const};
+  WorkerDouble.reply=(request,worker)=>{
+    if(request.kind==='layers')setTimeout(()=>worker.finish(recomputeFlatLayers(request.result,request.options)),40);
+  };
+  await assert.rejects(prepareDiagramPDFProject(project,options,{timeoutMs:2}),/超时/);
+  const exported=await prepareDiagramPDFProject(project,options);
+  assert.equal(exported.steps[1].pose!.result.layers.status,'solved');
+}));
+
 test('an unresolved panel identifies its original step and blocks actual PDF output before runtime loading',async()=>withWorker(async()=>{
   const project=fixture(),before=structuredClone(project),options={...defaultDiagramPDFOptions(project),scope:'current' as const,cover:'none' as const};
   WorkerDouble.reply=(request,worker)=>{assert.equal(request.kind,'layers');if(request.kind==='layers')queueMicrotask(()=>worker.finish({...request.result,layers:{status:'timeout',message:'该纸面层序分析超时。'}}));};

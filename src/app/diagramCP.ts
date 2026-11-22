@@ -180,11 +180,17 @@ function sameDocumentData(left:unknown,right:unknown):boolean {
  */
 export function normalizeDiagramProjectCP(project:DiagramProject):DiagramProjectCPNormalization {
   validateDiagramProject(project);
+  return normalizeImportedDiagramCP(project);
+}
+
+/** The importer has validated this owned project, including snapshot geometry. */
+export function normalizeImportedDiagramCP(project:DiagramProject):DiagramProjectCPNormalization {
   // Adjacent drawing states often contain the exact same CP. Reuse only this
   // invocation's complete, already validated normalization; this is a bounded
   // CPU cache, never a computation/geometry limit or a persisted certificate.
   const keyBudget=8*1024*1024,cache=new Map<string,{source:Doc;result:DiagramCPNormalization}>();let keyBytes=0;
-  const prepared=project.states.map(state=>{
+  const allStates=project.branchSteps?.length?project.states.concat(project.branchSteps.map(entry=>entry.after)):project.states;
+  const prepared=allStates.map(state=>{
     // Avoid encoding an obviously oversized CP just to try the small cache.
     const encoded=state.doc.segments.length<=32768?JSON.stringify(state.doc):undefined;
     const key=encoded!==undefined&&encoded.length*2<=keyBudget?encoded:undefined;
@@ -209,7 +215,9 @@ export function normalizeDiagramProjectCP(project:DiagramProject):DiagramProject
     warnings.push(...result.warnings.map(warning=>`${state.id}：${warning}`));
   }
   if(!changedStateIds.length)return {project,changed:false,changedStateIds,stats,warnings};
-  const next={...project,states:prepared.map(({state,result})=>result.changed?{...state,doc:result.doc,revision:state.revision+1}:state)};
+  const changes=new Map(prepared.filter(({result})=>result.changed).map(({state,result})=>[state.id,{...state,doc:result.doc,revision:state.revision+1}]));
+  const next={...project,states:project.states.map(state=>changes.get(state.id)??state)};
+  if(project.branchSteps)next.branchSteps=project.branchSteps.map(entry=>changes.has(entry.after.id)?{...entry,after:changes.get(entry.after.id)!}:entry);
   validateDiagramProject(next);
   return {project:next,changed:true,changedStateIds,stats,warnings};
 }

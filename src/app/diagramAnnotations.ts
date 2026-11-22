@@ -45,6 +45,13 @@ export interface DiagramLineAnnotation {
   /** Precreasing records a physical F/0° crease without retaining the fold.
    * Missing on legacy M/V drawings means a retained fold. */
   foldAction?:'fold'|'precrease';
+  /** One drawn rim unfolds into a closed material polygon. A spatial camera
+   * can split its projected stroke into several handles of the same operation. */
+  sinkFold?:true;
+  sinkGroup?:string;
+  /** Physical CP assignment of the whole rim, chosen from the reference face
+   * when drawn and kept when that face is later viewed from the other side. */
+  sinkAssignment?:'M'|'V';
   /** Target magnitude in degrees. Legacy drawings retain the 180° default. */
   foldAngle?:number|null;
   /** Original source-paper faces affected by this linked crease, independent
@@ -66,6 +73,8 @@ export interface DiagramLineCameraSource {
 }
 export interface DiagramSymbolAnnotation {
   id:string;kind:'symbol';symbol:DiagramSymbolKind;position:Point;size:number;rotation:number;color:string;width:number;
+  /** Missing in older drawings, which stored only the resulting colour and width. */
+  appearanceOverrides?:('color'|'width')[];
   /** Components in the symbol's local coordinate system; missing values use the catalogue defaults. */
   params?:Partial<DiagramSymbolParams>;
   mirrored?:boolean;
@@ -147,7 +156,7 @@ export function validateDiagramAnnotations(value:unknown):asserts value is Diagr
     const kind=annotation&&typeof annotation==='object'?(annotation as Record<string,unknown>).kind:undefined;
     const fields=kind==='line'?['id','kind','a','b','style','color','width']:
       kind==='symbol'?['id','kind','symbol','position','size','rotation','color','width']:null;
-    if(!fields||!record(annotation,fields,kind==='symbol'?['params','mirrored','text','returnStepId','turnAngle','zoomArea','curveControl','cadProperties','cadAttributes','cutawayFaces','paperBinding']:['foldFaces','foldAction','foldAngle','strokePattern','animationTiming','appearanceOverrides','cameraSource']))throw new Error('步骤折线或符号字段不完整或版本不支持。');
+    if(!fields||!record(annotation,fields,kind==='symbol'?['params','mirrored','text','returnStepId','turnAngle','zoomArea','curveControl','cadProperties','cadAttributes','cutawayFaces','paperBinding','appearanceOverrides']:['foldFaces','foldAction','foldAngle','strokePattern','animationTiming','appearanceOverrides','cameraSource','sinkFold','sinkGroup','sinkAssignment']))throw new Error('步骤折线或符号字段不完整或版本不支持。');
     if(typeof annotation.id!=='string'||!annotation.id.trim()||annotation.id.length>256||/[\u0000-\u001f\u007f]/.test(annotation.id)||ids.has(annotation.id))throw new Error('步骤折线或符号编号无效或重复。');
     ids.add(annotation.id);
     if(typeof annotation.color!=='string'||!/^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(annotation.color))throw new Error('步骤折线或符号颜色必须为十六进制颜色。');
@@ -158,6 +167,9 @@ export function validateDiagramAnnotations(value:unknown):asserts value is Diagr
       if(Object.hasOwn(annotation,'strokePattern')&&!isDiagramStrokePattern(annotation.strokePattern))throw new Error('绘图线型必须为实线、虚线、点划线或点线。');
       if(Object.hasOwn(annotation,'appearanceOverrides')&&!isDiagramLineAppearanceFields(annotation.appearanceOverrides))throw new Error('单线外观覆盖必须为颜色、粗细或线型组成的不重复字段列表。');
       if(Object.hasOwn(annotation,'foldAction')&&(!['fold','precrease'].includes(annotation.foldAction as string)||!['valley','mountain'].includes(annotation.style as string)))throw new Error('折线用途仅支持谷折或峰折的本步折叠、预折后展开。');
+      if(Object.hasOwn(annotation,'sinkFold')&&(annotation.sinkFold!==true||annotation.foldAction==='precrease'||!['valley','mountain'].includes(annotation.style as string)))throw new Error('沉折边界须为谷线或峰线。');
+      if(Object.hasOwn(annotation,'sinkGroup')&&(!annotation.sinkFold||typeof annotation.sinkGroup!=='string'||!annotation.sinkGroup.trim()||annotation.sinkGroup.length>256))throw new Error('沉折边界的操作编号无效。');
+      if(Object.hasOwn(annotation,'sinkAssignment')&&(!annotation.sinkFold||annotation.sinkAssignment!=='M'&&annotation.sinkAssignment!=='V'))throw new Error('沉折边界须保留有效的 CP 山谷线型。');
       if(Object.hasOwn(annotation,'foldAngle')&&(annotation.foldAngle!==null&&!finite(annotation.foldAngle,0,180)||!['valley','mountain'].includes(annotation.style as string)))throw new Error('折叠角度须为 0 到 180 度，仅适用于谷折或峰折。');
       if(Object.hasOwn(annotation,'animationTiming')){
         const timing=annotation.animationTiming;
@@ -173,6 +185,7 @@ export function validateDiagramAnnotations(value:unknown):asserts value is Diagr
           new Set(annotation.foldFaces).size!==annotation.foldFaces.length||annotation.foldFaces.some(face=>typeof face!=='number'||!Number.isSafeInteger(face)||face<0)))throw new Error('联动折线的来源纸面必须为 不重复的非负安全整数。');
     } else {
       if(!isDiagramSymbolKind(annotation.symbol))throw new Error('折纸符号类型无效。');
+      if(Object.hasOwn(annotation,'appearanceOverrides')&&(!isDiagramLineAppearanceFields(annotation.appearanceOverrides)||annotation.appearanceOverrides.includes('strokePattern')))throw new Error('折纸符号的单独外观设置无效。');
       if(Object.hasOwn(annotation,'returnStepId')&&(annotation.symbol!=='return'||typeof annotation.returnStepId!=='string'||!annotation.returnStepId.trim()||annotation.returnStepId.length>256||/[\u0000-\u001f\u007f-\u009f]/.test(annotation.returnStepId)))throw new Error('返回步骤目标仅适用于返回符号，且必须为有效的步骤编号。');
       if(Object.hasOwn(annotation,'paperBinding'))validateDiagramPaperBinding(annotation.paperBinding);
       if(Object.hasOwn(annotation,'zoomArea')){

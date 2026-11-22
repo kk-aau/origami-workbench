@@ -21,6 +21,11 @@ export interface DiagramFoldLinkSettings {
   fixed?:DiagramFoldAnchor;
   /** Only the geometry owned by linked drawing operations, never arbitrary CP edges. */
   generated?:Segment[];
+  /** Material originally under the generated segments of a drawing with a
+   * sink. Can include creases authored directly on this step's after CP. */
+  generatedOriginals?:Segment[];
+  /** Revision of the after CP from which the sink ownership was recorded. */
+  generatedRevision?:number;
   /** CP-coordinate M/V intent for this step's out-and-return operations.
    * F/0° material is pressed and unfolded; an unchanged, same-direction old
    * MV hinge may open towards zero and return to its original folded angle.
@@ -35,6 +40,9 @@ export interface DiagramFoldPreviewSegment {
   existing?:boolean;
   /** This formerly folded M/V hinge is being opened to F on this step. */
   unfolding?:boolean;
+  /** Display-only duplicate of a visible crease with the same continuous
+   * material motion. Keep the material target for editing and X-ray views. */
+  redundantFold?:boolean;
   /** Display-only projected arc length. Clipping/occlusion retain the phase of
    * the complete, continuous crease on this indexed material. Never persisted. */
   strokeSpan?:{length:number;offset:number};

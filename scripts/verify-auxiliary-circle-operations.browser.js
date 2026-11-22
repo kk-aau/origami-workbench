@@ -32,7 +32,7 @@ async page=>{
  try{
   // The caller supplies an isolated page; this script never navigates or saves.
   await page.getByLabel('工程名称',{exact:true}).waitFor();await page.waitForTimeout(150);
-  for(const name of ['设置并开始使用','关闭窗口','保留当前工程']){const b=button(name);if(await b.count()&&await b.isVisible())await b.click();}
+  for(const name of ['使用默认位置开始','关闭窗口','保留当前工程']){const b=button(name);if(await b.count()&&await b.isVisible())await b.click();}
   if(await button('收起平折').count())await button('收起平折').click();
   await page.getByLabel('折痕工程文件',{exact:true}).evaluate((input,text)=>{const d=new DataTransfer();d.items.add(new File([text],'auxiliary-circle-operations.zhezhi.json',{type:'application/json'}));input.files=d.files;input.dispatchEvent(new Event('change',{bubbles:true}));},JSON.stringify(source));
   await page.waitForFunction(name=>document.querySelector('[aria-label="工程名称"]')?.value===name,source.name);

@@ -143,9 +143,21 @@ export class OrigamiModel {
   }
 }
 
-function normalizeSimulationPositions(source: Float32Array): Float32Array {
-  const normalized = source.slice();
-  if (normalized.length < 3) return normalized;
+type SimulationNormalization={center:readonly [number,number,number];scale:number};
+const transforms=new WeakMap<Float32Array,SimulationNormalization>();
+
+/** The prepared rest mesh is immutable for the lifetime of the solver. */
+export function simulationNormalization(source:Float32Array):SimulationNormalization {
+  const cached=transforms.get(source);
+  if(cached)return cached;
+  const normalization=measureNormalization(source);
+  transforms.set(source,normalization);
+  return normalization;
+}
+
+function measureNormalization(source: Float32Array):SimulationNormalization {
+  const identity = {center:[0,0,0] as [number,number,number], scale:1};
+  if (source.length < 3) return identity;
 
   let minX = Infinity;
   let minY = Infinity;
@@ -153,10 +165,10 @@ function normalizeSimulationPositions(source: Float32Array): Float32Array {
   let maxX = -Infinity;
   let maxY = -Infinity;
   let maxZ = -Infinity;
-  for (let index = 0; index < normalized.length; index += 3) {
-    const x = normalized[index] ?? 0;
-    const y = normalized[index + 1] ?? 0;
-    const z = normalized[index + 2] ?? 0;
+  for (let index = 0; index < source.length; index += 3) {
+    const x = source[index] ?? 0;
+    const y = source[index + 1] ?? 0;
+    const z = source[index + 2] ?? 0;
     minX = Math.min(minX, x);
     minY = Math.min(minY, y);
     minZ = Math.min(minZ, z);
@@ -165,25 +177,29 @@ function normalizeSimulationPositions(source: Float32Array): Float32Array {
     maxZ = Math.max(maxZ, z);
   }
 
-  if (!Number.isFinite(minX)) return normalized;
+  if (!Number.isFinite(minX)) return identity;
   const center: [number, number, number] = [
     (minX + maxX) / 2,
     (minY + maxY) / 2,
     (minZ + maxZ) / 2,
   ];
   let radius = 0;
-  for (let index = 0; index < normalized.length; index += 3) {
+  for (let index = 0; index < source.length; index += 3) {
     radius = Math.max(
       radius,
       Math.hypot(
-        (normalized[index] ?? 0) - center[0],
-        (normalized[index + 1] ?? 0) - center[1],
-        (normalized[index + 2] ?? 0) - center[2]
+        (source[index] ?? 0) - center[0],
+        (source[index + 1] ?? 0) - center[1],
+        (source[index + 2] ?? 0) - center[2]
       )
     );
   }
-  if (radius <= EPSILON) return normalized;
+  return radius <= EPSILON ? identity : {center, scale:radius};
+}
 
+function normalizeSimulationPositions(source: Float32Array): Float32Array {
+  const normalized=source.slice();
+  const {center,scale:radius}=simulationNormalization(source);
   for (let index = 0; index < normalized.length; index += 3) {
     normalized[index] = ((normalized[index] ?? 0) - center[0]) / radius;
     normalized[index + 1] = ((normalized[index + 1] ?? 0) - center[1]) / radius;

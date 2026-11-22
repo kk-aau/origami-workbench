@@ -6,7 +6,8 @@ import {blankDoc} from '../../src/app/state';
 import type {DiagramPose} from '../../src/app/diagramProject';
 import type {DiagramAnnotation,DiagramSymbolAnnotation,DiagramLineAnnotation} from '../../src/app/diagramAnnotations';
 import {diagramAnnotationMarkup,annotationBounds} from '../../src/app/diagramAnnotationSVG';
-import {diagramDrawingFrame,diagramPresentation,diagramModelMarkup,drawingSVG,diagramFoldBackgroundLines,diagramFoldPreviewAttributes,diagramFoldPreviewDrawingOrder,diagramBackgroundLinesForDrawing,isDiagramBackgroundLine} from '../../src/app/diagramDrawing';
+import {diagramDrawingFrame,diagramPresentation,diagramModelMarkup,drawingSVG,diagramFoldBackgroundLines,diagramFoldPreviewAppearanceSegments,diagramFoldPreviewAttributes,diagramFoldPreviewDrawingOrder,diagramBackgroundLinesForDrawing,isDiagramBackgroundLine} from '../../src/app/diagramDrawing';
+import {defaultDiagramLineDefaults} from '../../src/app/diagramLineStyles';
 import {defaultModelView} from '../../src/app/modelViewState';
 import {projectDiagramFoldCP} from '../../src/app/diagramFoldLink';
 import type {DiagramFoldPreviewSegment} from '../../src/app/diagramFoldLinkTypes';
@@ -14,6 +15,7 @@ import {buildFold,distance} from '../../src/core/geometry';
 import {moveFoldedVertices} from '../../src/app/foldedVertexEdit';
 import {materialCanonical} from '../../src/core/materialFaceCommon';
 import {materialDoc} from '../fixtures/materialModel';
+import {svgElements,linesAt,type SvgElementNode} from '../helpers/svgElements';
 
 function fixture(){
   const sourceDoc=blankDoc('实际折纸 CP',100,100);
@@ -49,6 +51,33 @@ test('existing-crease visibility hides old ink in exports while keeping new fold
   assert.equal(diagramFoldPreviewDrawingOrder(segments).length,4);
   assert.deepEqual(pose,original);
 });
+test('opening strokes use the action pen and only carry explicit old-handle overrides on the same material interval',()=>{
+  const palette=defaultDiagramLineDefaults();
+  palette.valley={color:'#0011ff',width:.3,strokePattern:'dashed'};
+  palette.mountain={color:'#ff0000',width:1.4,strokePattern:'dash-dot'};
+  const opening:DiagramFoldPreviewSegment={face:4,a:[0,0],b:[100,0],assignment:'F',existing:true,unfolding:true,style:'valley',visibility:'visible'};
+  const old:DiagramLineAnnotation={id:'cp-existing:open',kind:'line',a:[25,0],b:[75,0],style:'mountain',foldFaces:[4],
+    color:palette.mountain.color,width:.9,strokePattern:'dotted',appearanceOverrides:['width','strokePattern']};
+  const unrelated:DiagramLineAnnotation[]=[
+    {...old,id:'cp-existing:neighbor',a:[5,0],foldFaces:[3],appearanceOverrides:['color']},
+    {...old,id:'cp-existing:plain',b:[90,0],style:'crease',appearanceOverrides:['color']},
+    {...old,id:'cp-existing:unbound',a:[5,0],style:'valley',foldFaces:undefined,appearanceOverrides:['color']},
+  ];
+  const annotations=[old,...unrelated];
+  const parts=diagramFoldPreviewAppearanceSegments([opening],annotations);
+  assert.deepEqual(parts.map(p=>[p.a[0],p.b[0]]),[[0,25],[25,75],[75,100]]);
+  assert.deepEqual(parts.map(p=>diagramFoldPreviewAttributes(p,annotations,'#000000',palette)),[
+    {...palette.valley,opacity:1},{color:palette.valley.color,width:.9,strokePattern:'dotted',opacity:1,appearanceOverrides:['width','strokePattern']},{...palette.valley,opacity:1},
+  ]);
+  const whitePaperCrease={...old,style:'valley' as const,color:'#8d9b92',width:.45,strokePattern:'solid' as const,appearanceOverrides:undefined};
+  assert.deepEqual(diagramFoldPreviewAttributes(parts[1],[whitePaperCrease],'#000000',palette),{...palette.valley,opacity:1});
+  assert.equal(diagramFoldPreviewAttributes(parts[1],[{...old,appearanceOverrides:['color'],color:'#65391a'}],'#000000',palette).color,'#65391a');
+  const reversed={...opening,style:'mountain' as const};
+  assert.deepEqual(diagramFoldPreviewAttributes(reversed,[],'#000000',palette),{...palette.mountain,opacity:1});
+  const svg=drawingSVG(null,annotations,'','',[opening],[],true,palette);
+  const strokes=svgElements(svg).filter(node=>node.tag==='line');
+  assert.deepEqual(strokes.map(s=>s.attrs.stroke),[palette.valley.color,palette.valley.color,palette.valley.color]);
+});
 function viewBox(svg:string):number[]{
   const raw=svg.match(/viewBox="([^"]+)"/)?.[1];assert.ok(raw);
   const values=raw.split(/\s+/).map(Number);assert.equal(values.length,4);
@@ -60,6 +89,32 @@ function contains(frame:{x:number;y:number;width:number;height:number},point:Poi
   assert.ok(point[1]>=frame.y&&point[1]<=frame.y+frame.height,`y=${point[1]} is outside ${JSON.stringify(frame)}`);
 }
 
+function assertSymbolArtwork(nodes:SvgElementNode[],symbol:DiagramSymbolAnnotation){
+  // Compare the positioned component and its primitives at the export's actual pen scale.
+  const root=nodes[0].attrs,[,,width,height]=root.viewBox.split(/\s+/).map(Number);
+  const units=Math.max(width/Number(root.width),height/Number(root.height));
+  const [reference,...primitives]=svgElements(diagramAnnotationMarkup(symbol,{units,enabled:true}));
+  const groups=nodes.filter(node=>node.tag==='g'&&node.attrs.transform===reference.attrs.transform);
+  assert.equal(groups.length,1,`one positioned ${symbol.symbol} symbol`);
+  const group=groups[0];
+  for(const key of ['color','stroke','fill','stroke-width'])assert.equal(group.attrs[key],reference.attrs[key]);
+  const geometry=({tag,attrs,text}:SvgElementNode)=>({tag,attrs,text});
+  assert.ok(primitives.length>0);
+  assert.deepEqual(nodes.filter(node=>node.parent===group).map(geometry),primitives.map(geometry));
+  return group;
+}
+
+function assertFixtureArtwork(nodes:SvgElementNode[],annotations:DiagramAnnotation[]){
+  const [line,symbol]=annotations;
+  assert.ok(line.kind==='line'&&symbol.kind==='symbol');
+  const ink=linesAt(nodes,line.a,line.b);
+  assert.equal(ink.length,1);
+  assert.equal(ink[0].attrs.stroke,line.color);
+  assert.ok(Number(ink[0].attrs['stroke-width'])>0);
+  assert.ok(ink[0].attrs['stroke-dasharray'],'valley fold must be dashed');
+  return {ink:ink[0],symbol:assertSymbolArtwork(nodes,symbol)};
+}
+
 test('real CP flat geometry exports its paper faces and the same editable line and symbol artwork',()=>{
   const {pose,annotations}=fixture(),before=structuredClone({pose,annotations});
   const svg=drawingSVG(pose,annotations,'谷折示意','把右侧纸角折向中线');
@@ -67,8 +122,9 @@ test('real CP flat geometry exports its paper faces and the same editable line a
   assert.ok(svg.endsWith('</svg>'));viewBox(svg);
   assert.equal(svg.match(/fill-rule="evenodd"/g)?.length,pose.result.geometry.faces.length);
   assert.match(svg,/<path d="M [^>]+ Z" fill="#[0-9a-fA-F]+"/);
-  for(const annotation of annotations)assert.ok(svg.includes(diagramAnnotationMarkup(annotation)));
-  assert.ok(svg.indexOf('fill-rule="evenodd"')<svg.indexOf('<line '));
+  const nodes=svgElements(svg),{ink}=assertFixtureArtwork(nodes,annotations);
+  const faces=nodes.filter(node=>node.attrs['fill-rule']==='evenodd');
+  assert.ok(faces.every(face=>nodes.indexOf(face)<nodes.indexOf(ink)));
   assert.match(svg,/>谷折示意<\/text>/);assert.match(svg,/>把右侧纸角折向中线<\/text>/);
   assert.deepEqual({pose,annotations},before);
 });
@@ -76,8 +132,10 @@ test('real CP flat geometry exports its paper faces and the same editable line a
 test('visible paper boundaries cover instruction ink while symbols remain on top',()=>{
   const {pose,annotations}=fixture(),line=annotations[0],symbol=annotations[1];
   const svg=drawingSVG(pose,[symbol,line],'','',undefined,[],true,undefined,[],undefined,{enabled:false});
-  const ink=svg.indexOf(diagramAnnotationMarkup(line)),boundary=svg.indexOf('data-diagram-top-boundary="true"'),mark=svg.indexOf(diagramAnnotationMarkup(symbol));
-  assert.ok(ink>=0&&ink<boundary&&boundary<mark);
+  const nodes=svgElements(svg),art=assertFixtureArtwork(nodes,annotations);
+  const boundaries=nodes.filter(node=>node.attrs['data-diagram-top-boundary']==='true');
+  assert.ok(boundaries.length>0);
+  assert.ok(boundaries.every(edge=>nodes.indexOf(art.ink)<nodes.indexOf(edge)&&nodes.indexOf(edge)<nodes.indexOf(art.symbol)));
 });
 
 test('drawing frame and export encompass a rotated model, a distant crease and a distant rotated symbol',()=>{
@@ -107,8 +165,10 @@ test('exports contain no special intersection marks or editing handles, while a 
   assert.doesNotMatch(plain,/<circle\b|vertex|handle|data-annotation-id|tabindex=/);
   const zoom:DiagramSymbolAnnotation={id:'reference',kind:'symbol',symbol:'referencePoint',position:[75,20],size:35,rotation:0,color:'#444444',width:1};
   const magnifier=drawingSVG(pose,[...annotations,zoom],'','');
-  assert.equal(magnifier.match(/<circle\b/g)?.length,1);
-  assert.ok(magnifier.includes(diagramAnnotationMarkup(zoom)));
+  const nodes=svgElements(magnifier),reference=assertSymbolArtwork(nodes,zoom),circles=nodes.filter(node=>node.tag==='circle');
+  assert.equal(circles.length,1);
+  assert.equal(circles[0].parent,reference);
+  assert.ok(Number(circles[0].attrs.r)>0);
   assert.doesNotMatch(magnifier,/vertex|handle|data-annotation-id|tabindex=/);
 });
 
@@ -116,7 +176,7 @@ test('annotations can be exported without any folded pose, including a completel
   const {annotations}=fixture(),svg=drawingSVG(null,annotations,'自由绘图','先画步骤所需折线');
   assert.ok(svg.endsWith('</svg>'));viewBox(svg);
   assert.doesNotMatch(svg,/fill-rule="evenodd"/);
-  for(const annotation of annotations)assert.ok(svg.includes(diagramAnnotationMarkup(annotation)));
+  assertFixtureArtwork(svgElements(svg),annotations);
   const [x,y,width,height]=viewBox(svg),bounds=annotationBounds(annotations)!;
   contains({x,y,width,height},[bounds.x,bounds.y]);contains({x,y,width,height},[bounds.x+bounds.width,bounds.y+bounds.height]);
   const empty=drawingSVG(null,[],'','');viewBox(empty);
@@ -127,11 +187,30 @@ test('annotations can be exported without any folded pose, including a completel
 test('original CAD components and independent source labels share the main paper export without editing grip graphics',()=>{
  const {pose,annotations}=fixture(),source:DiagramSymbolAnnotation={id:'cad',kind:'symbol',symbol:'fold',position:[20,30],size:35,rotation:23,color:'#222222',width:.5,cadProperties:{'距离1':40}},division:DiagramSymbolAnnotation={...source,id:'division',symbol:'equalDivision',position:[-80,40],cadProperties:{'距离1':14},cadAttributes:{'13648':'A & B','13650':'2'}};
  const svg=drawingSVG(pose,[...annotations,source,division],'原插件折图','');
- assert.ok(svg.includes(diagramAnnotationMarkup(source)));assert.ok(svg.includes(diagramAnnotationMarkup(division)));assert.match(svg,/data-source-handle="1644"/);assert.match(svg,/A &amp; B/);
+ const nodes=svgElements(svg),fold=assertSymbolArtwork(nodes,source),divider=assertSymbolArtwork(nodes,division);
+ assert.ok(nodes.some(node=>node.parent===fold&&node.tag==='path'&&node.attrs['data-source-handle']==='1644'));
+ const labels=nodes.filter(node=>node.parent===divider&&node.tag==='text');
+ assert.deepEqual(labels.map(node=>[node.attrs['data-cad-attribute'],node.text]),[['13648','A & B'],['13650','2']]);
  assert.equal(svg.match(/fill-rule="evenodd"/g)?.length,pose.result.geometry.faces.length);assert.doesNotMatch(svg,/data-(?:grip|editor-handle|annotation-id)|tabindex=/);viewBox(svg);
 });
 
-test('legacy linked SVG with adaptation disabled preserves visible and occluded source artwork',()=>{
+// Compare the rendered geometry and paint. Opposite paper layers can project
+// onto the same endpoints; their opacity distinguishes their drawing roles.
+function assertInk(nodes:SvgElementNode[],segment:{a:Point;b:Point},color:string,dashRatios:number[],opacity?:number){
+  const matches=linesAt(nodes,segment.a,segment.b).filter(node=>
+    node.attrs.stroke===color&&(opacity===undefined||Number(node.parent?.attrs.opacity)===opacity));
+  assert.equal(matches.length,1,`expected one ${color} stroke from ${segment.a} to ${segment.b}`);
+  const attrs=matches[0].attrs,width=Number(attrs['stroke-width']);
+  assert.ok(width>0);
+  const dash=attrs['stroke-dasharray']?.trim().split(/[ ,]+/).map(Number)??[];
+  assert.equal(dash.length,dashRatios.length);
+  for(let i=0;i<dash.length;i++){
+    assert.ok(dash[i]>0&&Math.abs(dash[i]/dash[0]-dashRatios[i]/dashRatios[0])<1e-8);
+  }
+  return width;
+}
+
+test('legacy linked SVG keeps source pens and adapts projected ink with a saved disabled flag',()=>{
   const {pose,annotations}=fixture();
   pose.view={...defaultModelView(),colors:{front:'#fff0d8',back:'#a9c5b0',line:'#314b3c'}};
   const source:DiagramAnnotation={id:'source-fold',kind:'line',a:[0,40],b:[100,40],style:'mountain',color:'#551122',width:2};
@@ -145,66 +224,81 @@ test('legacy linked SVG with adaptation disabled preserves visible and occluded 
     {face:0,a:[15,60],b:[30,60],assignment:'U',visibility:'visible'},
   ];
   const before=structuredClone({pose,drawing,preview}),svg=drawingSVG(pose,drawing,'本步折线','',preview,[],true,undefined,[],undefined,{enabled:false});
-  for(const annotation of drawing.filter(annotation=>annotation.kind==='symbol'||annotation.kind==='line'&&!['valley','mountain'].includes(annotation.style)))assert.ok(svg.includes(diagramAnnotationMarkup(annotation)));
-  assert.ok(!svg.includes(diagramAnnotationMarkup(source)));assert.ok(!svg.includes(diagramAnnotationMarkup(annotations[0])));
-  const expected=(index:number,style:'valley'|'mountain'|'crease'|'auxiliary',color:string,width:number)=>diagramAnnotationMarkup({id:'expected',kind:'line',a:preview[index].a,b:preview[index].b,style,color,width});
-  assert.ok(svg.includes(`<g opacity="1">${expected(0,'valley','#314b3c',.7)}</g>`),'unmatched valley uses defaults rather than a coincident mountain source');
-  assert.ok(svg.includes(`<g opacity="0.24">${expected(1,'mountain','#551122',2)}</g>`),'matched mountain preserves source style while actual occlusion fades it');
-  assert.ok(svg.includes(`<g opacity="0.5">${expected(2,'crease','#809389',.7)}</g>`));
-  assert.ok(svg.includes(`<g opacity="1">${expected(3,'auxiliary','#314b3c',.7)}</g>`));
+  const nodes=svgElements(svg);
+  assertSymbolArtwork(nodes,annotations[1] as DiagramSymbolAnnotation);
+  const sourceFold=annotations[0] as DiagramLineAnnotation;
+  assert.equal(linesAt(nodes,source.a,source.b).length,0);
+  assert.equal(linesAt(nodes,sourceFold.a,sourceFold.b).length,0);
+  const valleyWidth=assertInk(nodes,preview[0],'#314b3c',[7,4],1);
+  const scale=valleyWidth/.7;
+  assert.ok(scale>0&&scale<1,'the authored pen adapts to the view');
+  const widths=[
+    [assertInk(nodes,preview[1],'#551122',[9,3,1,3],.24),2],
+    [assertInk(nodes,preview[2],'#809389',[],.5),.7],
+    [assertInk(nodes,preview[3],'#314b3c',[1,4],1),.7],
+    [assertInk(nodes,auxiliary,auxiliary.color,[1,4]),auxiliary.width],
+    [assertInk(nodes,crease,crease.color,[]),crease.width],
+  ];
+  for(const [shown,authored] of widths)assert.ok(Math.abs(shown-scale*authored)<1e-8);
   assert.doesNotMatch(svg,/data-diagram-fold-fixed|data-diagram-fold-selected|data-symbol-native-grip|tabindex=/);
   assert.deepEqual({pose,drawing,preview},before);viewBox(svg);
 });
 
 test('an omitted linked preview retains old drawings while an explicitly empty preview removes only fold lines',()=>{
   const {pose,annotations}=fixture(),plain=drawingSVG(pose,annotations,'',''),empty=drawingSVG(pose,annotations,'','',[]);
-  assert.ok(plain.includes(diagramAnnotationMarkup(annotations[0])));
-  assert.ok(!empty.includes(diagramAnnotationMarkup(annotations[0])));
-  assert.ok(empty.includes(diagramAnnotationMarkup(annotations[1])));
+  const fold=annotations[0] as DiagramLineAnnotation,symbol=annotations[1] as DiagramSymbolAnnotation;
+  const plainNodes=svgElements(plain),emptyNodes=svgElements(empty);
+  assertInk(plainNodes,fold,fold.color,[7,4]);assertSymbolArtwork(plainNodes,symbol);
+  assert.equal(linesAt(emptyNodes,fold.a,fold.b).length,0);assertSymbolArtwork(emptyNodes,symbol);
   assert.equal(plain,drawingSVG(pose,annotations,'','',undefined));viewBox(empty);
 });
 
 test('an explicitly unassigned fold mark remains visible in SVG when its CP layer range is empty',()=>{
   const {pose,annotations}=fixture(),unassigned={...annotations[0],foldFaces:[]} as DiagramLineAnnotation;
   const svg=drawingSVG(pose,[unassigned,annotations[1]],'','',[]);
-  assert.ok(svg.includes(diagramAnnotationMarkup(unassigned)));
-  assert.ok(svg.includes(diagramAnnotationMarkup(annotations[1])));
+  const nodes=svgElements(svg);
+  assertInk(nodes,unassigned,unassigned.color,[7,4]);
+  assertSymbolArtwork(nodes,annotations[1] as DiagramSymbolAnnotation);
 });
 
-test('legacy CP-derived routes with adaptation disabled keep rotated back-side source artwork and frame',()=>{
+test('legacy CP-derived routes keep their projected geometry, back-side ink and frame after rotation',()=>{
   const {pose,annotations}=fixture();pose.view={...defaultModelView(),side:'back',rotation:37};
   const before=pose.sourceDoc,after=structuredClone(before);
   after.segments.push({id:'second-fold',a:[0,50],b:[100,50],assignment:'V',angle:180});
   const {preview}=projectDiagramFoldCP(pose,before,after);
   assert.ok(preview.length>0);assert.ok(preview.some(segment=>Math.abs(segment.a[1]-segment.b[1])>1));
   const svg=drawingSVG(pose,annotations,'CP 自动映射','',preview,[],true,undefined,[],undefined,{enabled:false}),[x,y,width,height]=viewBox(svg);
-  const styles={M:'mountain',V:'valley',F:'crease',U:'auxiliary'} as const;
+  const nodes=svgElements(svg),patterns={M:[9,3,1,3],V:[7,4],F:[],U:[1,4]};
+  assert.deepEqual(preview.map(s=>[s.assignment,s.visibility]).sort(),[['M','hidden'],['V','visible']]);
   for(const segment of preview){
     contains({x,y,width,height},segment.a);contains({x,y,width,height},segment.b);
-    const markup=diagramAnnotationMarkup({id:'check',kind:'line',a:segment.a,b:segment.b,style:styles[segment.assignment],color:segment.visibility==='unknown'?'#809389':'#41634e',width:.7});
-    assert.ok(svg.includes(markup),`missing CP projection ${JSON.stringify(segment)}`);
+    assertInk(nodes,segment,'#41634e',patterns[segment.assignment],segment.visibility==='hidden'?.24:1);
   }
-  assert.ok(!svg.includes(diagramAnnotationMarkup(annotations[0])));
-  assert.ok(svg.includes(diagramAnnotationMarkup(annotations[1])));
+  const source=annotations[0] as DiagramLineAnnotation;
+  assert.equal(linesAt(nodes,source.a,source.b).length,0);
+  assertSymbolArtwork(nodes,annotations[1] as DiagramSymbolAnnotation);
 });
 
 test('precrease instructions retain valley and mountain styles while inherited F routes export once as subdued existing creases',()=>{
   const {pose}=fixture();
   const current:DiagramLineAnnotation={id:'current-precrease',kind:'line',a:[0,20],b:[50,20],style:'valley',foldAction:'precrease',color:'#112233',width:1};
+  const mountain:DiagramLineAnnotation={...current,id:'mountain-precrease',a:[0,30],b:[50,30],style:'mountain'};
   const existing:DiagramLineAnnotation={...current,id:'cp-existing:old',a:[0,40],b:[50,40],style:'crease',foldAction:undefined,width:.45};delete existing.foldAction;
   const linkedFlat:DiagramLineAnnotation={...existing,id:'cp-link:flat'};
   const preview:DiagramFoldPreviewSegment[]=[
     {face:0,a:current.a,b:current.b,assignment:'F',style:'valley',visibility:'visible',existing:false},
+    {face:0,a:mountain.a,b:mountain.b,assignment:'F',style:'mountain',visibility:'visible',existing:false},
     {face:0,a:existing.a,b:existing.b,assignment:'F',style:'crease',visibility:'visible',existing:true},
     {face:1,a:[0,60],b:[50,60],assignment:'F',style:'crease',visibility:'hidden',existing:true},
   ];
-  const svg=drawingSVG(pose,[current,existing,linkedFlat],'预折后展开','',preview);
-  const marks=(svg.match(/<line\b[^>]*\/>/g)??[]).filter(mark=>!mark.includes('data-diagram-top-boundary'));assert.equal(marks.length,2,'old buried crease is omitted; CP handles do not duplicate projected paint');
-  const currentMarkup=diagramAnnotationMarkup(current);
-  const oldMarkup=diagramAnnotationMarkup(existing);
-  assert.ok(svg.includes(`<g opacity="1">${currentMarkup}</g>`));assert.ok(svg.includes(`<g opacity="0.55">${oldMarkup}</g>`));
-  assert.doesNotMatch(svg,/<g opacity="0.16"><line [^>]+stroke="#8d9b92"/);
-  assert.equal(marks.filter(mark=>mark===currentMarkup).length,1);assert.equal(marks.filter(mark=>mark===oldMarkup).length,1);
+  const svg=drawingSVG(pose,[current,mountain,existing,linkedFlat],'预折后展开','',preview);
+  const nodes=svgElements(svg),marks=nodes.filter(n=>n.tag==='line'&&!n.attrs['data-diagram-top-boundary']);
+  assert.equal(marks.length,3,'only the two new precreases and the visible old crease are painted');
+  const valleyWidth=assertInk(marks,current,current.color,[7,4],1);
+  assert.equal(assertInk(marks,mountain,mountain.color,[9,3,1,3],1),valleyWidth);
+  const oldWidth=assertInk(marks,existing,existing.color,[],.55);
+  assert.ok(Math.abs(oldWidth/valleyWidth-existing.width/current.width)<1e-8);
+  assert.equal(linesAt(marks,preview[3].a,preview[3].b).length,0);
 });
 
 test('F face subdivisions have no solid model outline when the projected crease preview paints them',()=>{
@@ -239,19 +333,31 @@ test('linked folds keep paper-exterior portions on the background and export the
   assert.equal(new Set(background.map(a=>a.id)).size,2);
   const preview:DiagramFoldPreviewSegment[]=[{face:0,a:[0,50],b:[100,50],assignment:'F',style:'mountain',visibility:'visible',existing:false}];
   const svg=drawingSVG(pose,[line],'','',preview);
-  for(const part of background)assert.ok(svg.indexOf(diagramAnnotationMarkup(part))<svg.indexOf('fill-rule="evenodd"'));
-  assert.equal((svg.match(/<line\b[^>]*>/g)??[]).filter(mark=>!mark.includes('data-diagram-top-boundary')).length,3,'paper and background are separate, without painting the full instruction twice');
+  const nodes=svgElements(svg),paper=nodes.findIndex(node=>node.tag==='path'&&node.attrs['fill-rule']==='evenodd');
+  assert.ok(paper>=0);
+  for(const fragment of background){
+    const painted=linesAt(nodes,fragment.a,fragment.b);
+    assert.equal(painted.length,1);
+    assert.equal(painted[0].attrs.stroke,fragment.color);
+    assert.ok(nodes.indexOf(painted[0])<paper,'each exterior fragment is painted beneath the paper');
+  }
+  const onPaper=linesAt(nodes,preview[0].a,preview[0].b);
+  assert.equal(onPaper.length,1);
+  assert.ok(nodes.indexOf(onPaper[0])>paper);
+  assert.equal(nodes.filter(mark=>mark.tag==='line'&&!mark.attrs['data-diagram-top-boundary']).length,3,'paper and background are separate, without painting the full instruction twice');
   const [x,y,width,height]=viewBox(svg);contains({x,y,width,height},line.a);contains({x,y,width,height},line.b);
   assert.deepEqual({pose,line},before);
 });
 
 test('entirely exterior linked lines survive an empty CP projection while CP routes and dormant marks are not duplicated',()=>{
   const {pose}=fixture(),line:DiagramLineAnnotation={id:'outside',kind:'line',a:[-100,-50],b:[-70,-50],style:'valley',color:'#abc123',width:2};
-  const dormant={...line,id:'background-saved',foldFaces:[]},cp={...line,id:'cp-link:authoritative'};
+  const dormant={...line,id:'background-saved',color:'#451a81',foldFaces:[]},cp={...line,id:'cp-link:authoritative',color:'#308265'};
   assert.equal(diagramFoldBackgroundLines(pose,[line,dormant,cp]).length,1);
   const svg=drawingSVG(pose,[line,dormant,cp],'','',[],[],true,undefined,[],undefined,{enabled:false});
-  assert.equal((svg.match(/<line\b[^>]*>/g)??[]).filter(mark=>!mark.includes('data-diagram-top-boundary')).length,2);
-  assert.ok(svg.includes(diagramAnnotationMarkup(line)));
+  const nodes=svgElements(svg),painted=linesAt(nodes,line.a,line.b);
+  assert.deepEqual(painted.map(mark=>mark.attrs.stroke),[line.color,dormant.color]);
+  assert.equal(nodes.filter(mark=>mark.tag==='line'&&!mark.attrs['data-diagram-top-boundary']).length,2);
+  assert.ok(painted.every(mark=>mark.attrs['stroke-dasharray']),'both authored valley strokes retain their dash style');
   assert.deepEqual(diagramFoldBackgroundLines(null,[line])[0],line,'a drawing with no pose is fully on the background');
 });
 
@@ -274,12 +380,25 @@ test('visible and hidden coincident paper creases preserve each layer color and 
   const active={...base,id:'activated',style:'valley' as const},folded={...visible,assignment:'V' as const,style:'valley' as const,existing:false};
   assert.deepEqual(diagramFoldPreviewAttributes(folded,[base,active],'#333333'),{color:'#a1253e',width:1.5,opacity:1});
   const {pose}=fixture(),svg=drawingSVG(pose,[base,lower,background],'','',[visible,hidden]);
-  assert.match(svg,/<g opacity="0\.55"><line [^>]+stroke="#a1253e"[^>]+stroke-width="1\.5"/);
-  assert.doesNotMatch(svg,/<g opacity="0\.16"><line [^>]+stroke="#1967b2"/,'buried old creases must not paint over solid paper');
+  function assertLayerStrokes(markup:string,layers:{line:DiagramLineAnnotation;opacity:number}[]){
+    const strokes=linesAt(svgElements(markup),visible.a,visible.b);
+    assert.deepEqual(strokes.map(stroke=>stroke.attrs.stroke),layers.map(layer=>layer.line.color));
+    const [, ,width,height]=viewBox(markup),units=Math.max(width/1200,height/900);
+    assert.ok(units<.4,'the fixture is enlarged enough for the adaptive maximum to apply');
+    strokes.forEach((stroke,i)=>{
+      // At this scale the common paper pen displays 2.5 pixels per authored width unit.
+      const expectedPixels=layers[i].line.width*2.5;
+      assert.ok(Math.abs(Number(stroke.attrs['stroke-width'])/units-expectedPixels)<1e-7);
+      let opacity=1;
+      for(let node:SvgElementNode|undefined=stroke;node;node=node.parent)opacity*=Number(node.attrs.opacity??1);
+      assert.equal(opacity,layers[i].opacity);
+    });
+  }
+  assertLayerStrokes(svg,[{line:base,opacity:.55}]);
   assert.deepEqual(diagramFoldPreviewDrawingOrder([visible,hidden]),[visible]);
   assert.deepEqual(diagramFoldPreviewDrawingOrder([visible,hidden],{xray:true}),[hidden,visible]);
   const transparent=drawingSVG({...pose,view:{...defaultModelView(),xray:true}},[base,lower],'','',[visible,hidden]);
-  assert.match(transparent,/<g opacity="0\.16"><line [^>]+stroke="#1967b2"/);
+  assertLayerStrokes(transparent,[{line:lower,opacity:.16},{line:base,opacity:.55}]);
   assert.deepEqual(diagramFoldPreviewDrawingOrder([visible,hidden],{cutaway:true}),[hidden,visible]);
   assert.equal(diagramFoldPreviewDrawingOrder([{...hidden,unfolding:true}]).length,1,'an explicit unfolding instruction keeps its intended ink');
 });
@@ -292,7 +411,12 @@ test('saved background fragments remain beneath paper after CP refresh, with or 
   assert.deepEqual(diagramBackgroundLinesForDrawing(pose,[stored],false),[stored]);
   assert.equal(diagramBackgroundLinesForDrawing(pose,[stored,source],true).length,2);
   for(const preview of [undefined,[]]){
-    const svg=drawingSVG(pose,[stored],'','',preview),markup=diagramAnnotationMarkup(stored);
-    assert.equal(svg.split(markup).length-1,1);assert.ok(svg.indexOf(markup)<svg.indexOf('fill-rule="evenodd"'));
+    const nodes=svgElements(drawingSVG(pose,[stored],'','',preview));
+    const fragments=linesAt(nodes,stored.a,stored.b);
+    assert.equal(fragments.length,1);
+    assert.equal(fragments[0].attrs.stroke,stored.color);
+    assert.ok(fragments[0].attrs['stroke-dasharray']);
+    const paper=nodes.findIndex(node=>node.tag==='path'&&node.attrs['fill-rule']==='evenodd');
+    assert.ok(nodes.indexOf(fragments[0])<paper,'stored background fragment must be painted before the first paper face');
   }
 });

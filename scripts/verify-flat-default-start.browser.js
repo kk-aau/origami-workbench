@@ -2,7 +2,7 @@ async page=>{
  const checks=[],errors=[],check=(ok,label)=>{if(!ok)throw Error(label);checks.push(label);},button=name=>page.getByRole('button',{name,exact:true});
  const onError=error=>errors.push(error.message);page.on('pageerror',onError);
  await page.setViewportSize({width:1540,height:1000});
- for(const name of ['设置并开始使用','知道了','关闭窗口','保留当前工程'])if(await button(name).isVisible().catch(()=>false))await button(name).click();
+ for(const name of ['使用默认位置开始','知道了','关闭窗口','保留当前工程'])if(await button(name).isVisible().catch(()=>false))await button(name).click();
  await button('折痕编辑').click();
  await page.evaluate(()=>{
   window.__defaultRootConfirm=window.confirm;window.confirm=()=>true;

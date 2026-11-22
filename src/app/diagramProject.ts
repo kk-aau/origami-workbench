@@ -1,7 +1,9 @@
 import {followDiagramDepthAnnotations} from './diagramPaperFollow';
 import {repairDiagramPaperStatesInPlace} from './diagramPaperPose';
 import {validateDoc,type Doc,type FlatFoldResult,type Point} from '../core/types';
-import {exportModelSnapshot,importModelSnapshot} from '../core/modelSnapshot';
+import {exportModelSnapshot,importModelSnapshot,checkedSnapshotModel} from '../core/modelSnapshot';
+import type {RestoreContactSolution} from './diagramSpatialPose';
+import {DiagramPortableContacts} from './diagramPortableContacts';
 import {modelProjectionCenter} from './modelProjection';
 import {copyModelView,validateModelView,type ModelViewState} from './modelViewState';
 import {validateDiagramAnnotations,type DiagramAnnotation} from './diagramAnnotations';
@@ -11,16 +13,21 @@ import {validateDiagramCallouts,type DiagramCallout} from './diagramCallouts';
 import {cleanDiagramAnimationTimings} from './diagramAnimationTiming';
 import {SYMBOL_CATALOG} from './diagramSymbolCatalog';
 import {diagramSymbolTurnDegrees} from './diagramSymbolRotation';
+import {diagramStepZoom,diagramZoomPaperBounds,validateDiagramZoomArea,type DiagramZoomArea} from './diagramStepZoom';
 import type {DiagramFoldLinkSettings} from './diagramFoldLinkTypes';
 import {DEFAULT_GRID_DIVISIONS,GRID_MIN,GRID_MAX} from './gridControls';
 import {validateDiagramAnglePreset} from './diagramAnglePreset';
 import {validateDiagramPaperDeformation,type DiagramPaperDeformation} from './diagramPaperDeformation';
-import {validateDiagramSpatialPose,restoreDiagramSpatialLayers,cloneDiagramPoseWithSpatialProof,type DiagramSpatialPose} from './diagramSpatialPose';
+import {validateDiagramSpatialPose,restoreDiagramSpatialLayers,cloneDiagramPoseWithSpatialProof,diagramSpatialContactOrders,type DiagramSpatialPose} from './diagramSpatialPose';
 import {assertDiagramReturnTargetRemovable,syncDiagramReturnAnnotationCaches,syncDiagramReturnLabels,validateDiagramReturnReferences} from './diagramReturnReference';
 import {validateDiagramSimulationSurface,validateDiagramSimulationSurfaceView,type DiagramSimulationSurface} from './diagramSimulationSurface';
 import {validateSimulationPose,type SimulationPose} from '../engine/simPose';
 import {defaultModelColors,validateModelColors,type ModelColors} from './modelColors';
 import {validateDiagramBasicSettings,type DiagramBasicSettings} from './diagramBasicSettings';
+import {validateDiagramExportSettings,type DiagramExportSettings} from './diagramExportSettings';
+import {diagramBranchTree,projectDiagramBranch,repairDiagramBranchLabels,validateDiagramBranchLabels,type DiagramBranchEntry,type DiagramBranchLabels} from './diagramBranches';
+export {diagramBranchTree,diagramBranchStepCount,diagramBranchFoldPreference,type DiagramBranchTreeNode,type DiagramBranchEntry} from './diagramBranches';
+export type {DiagramExportSettings} from './diagramExportSettings';
 export type {DiagramSimulationSurface} from './diagramSimulationSurface';
 export type {DiagramAnnotation,DiagramLineAnnotation,DiagramSymbolAnnotation,DiagramLineStyle,DiagramStrokePattern,DiagramSymbolKind,DiagramSymbolParams} from './diagramAnnotations';
 export type {DiagramImage} from './diagramImages';
@@ -72,6 +79,10 @@ export interface DiagramPaperStates {
 }
 export interface DiagramStep {
   id:string;title:string;description:string;beforeId:string;afterId:string;pose:DiagramPose|null;
+  /** Supplementary drawings have their own CP pair, outside the main folding sequence. */
+  processFigures?:DiagramProject[];
+  /** The inherited close-up retained when a drawing is detached from its sequence. */
+  figureCrop?:DiagramZoomArea;
   /** Actual captured flexible material; exclusive with rigid pose/paperStates. */
   simulationSurface?:DiagramSimulationSurface;
   /** The first committed symbol may name an untitled step exactly once. This
@@ -104,7 +115,11 @@ export interface DiagramProject {
   format:'zhezhi-diagram';version:1;name:string;
   /** Ordered boundary states: N steps always reference N + 1 CP states. */
   states:DiagramCPState[];steps:DiagramStep[];activeStepId:string;
+  branchSteps?:DiagramBranchEntry[];
+  branchOrder?:string[];
+  branchLabels?:Record<string,DiagramBranchLabels>;
   basicSettings?:DiagramBasicSettings;
+  exportSettings?:DiagramExportSettings;
 }
 export type DiagramIdFactory=()=>string;
 const newId:DiagramIdFactory=()=>crypto.randomUUID();
@@ -133,8 +148,13 @@ function requireStep(project:DiagramProject,id:string):DiagramStep {
  * are shared read-only data: subsequent edits must use the update functions,
  * rather than mutate their Doc, pose or step. New external inputs are detached. */
 function copyStepForEdit(project:DiagramProject,id:string,deep=false):{next:DiagramProject;step:DiagramStep} {
-  const original=requireStep(project,id),step=deep?structuredClone(original):{...original};
+  const original=requireStep(project,id),step=deep?cloneStepDrawing(original):{...original};
   return {next:{...project,steps:project.steps.map(item=>item===original?step:item)},step};
+}
+/** Editing the main illustration never edits a supplementary drawing. */
+function cloneStepDrawing(step:DiagramStep):DiagramStep {
+  const {processFigures,...drawing}=step;
+  return {...structuredClone(drawing),...(processFigures?{processFigures}:{})};
 }
 function generateId(existing:Set<string>,factory:DiagramIdFactory):string {
   const id=factory();identifier(id,'新对象编号');
@@ -142,7 +162,7 @@ function generateId(existing:Set<string>,factory:DiagramIdFactory):string {
   existing.add(id);return id;
 }
 function projectIds(project:DiagramProject):Set<string> {
-  return new Set([...project.states.map(state=>state.id),...project.steps.map(step=>step.id)]);
+  return new Set([...project.states.map(state=>state.id),...project.steps.map(step=>step.id),...(project.branchSteps??[]).flatMap(entry=>[entry.step.id,entry.after.id])]);
 }
 
 function validateDisplayOrder(value:unknown,count:number):asserts value is number[] {
@@ -195,9 +215,10 @@ export function validateDiagramCanvas(value:unknown):asserts value is DiagramCan
 /** Persist only bounded, independently validated fold-link state. Face IDs are
  * local to a pose; a new step inherits the mode, never these indexed choices. */
 export function validateDiagramFoldLink(value:unknown):asserts value is DiagramFoldLinkSettings {
-  const settings=record(value,['enabled','layers','selectedFaces'],['fixed','generated','precreases','drawingVersion'],'折图与 CP 联动');
+  const settings=record(value,['enabled','layers','selectedFaces'],['fixed','generated','generatedOriginals','generatedRevision','precreases','drawingVersion'],'折图与 CP 联动');
   if(typeof settings.enabled!=='boolean'||!['all','top','selected'].includes(settings.layers as string))throw new Error('折图与 CP 联动开关或纸层范围无效。');
   if(Object.hasOwn(settings,'drawingVersion')&&settings.drawingVersion!==1)throw new Error('折线绑定版本无效。');
+  if(Object.hasOwn(settings,'generatedRevision')&&!natural(settings.generatedRevision))throw new Error('联动折痕来源修订号无效。');
   if(!Array.isArray(settings.selectedFaces)||
       new Set(settings.selectedFaces).size!==settings.selectedFaces.length||settings.selectedFaces.some(face=>!natural(face)))throw new Error('联动纸面索引必须为 不重复的非负安全整数。');
   if(Object.hasOwn(settings,'fixed')) {
@@ -220,14 +241,15 @@ export function validateDiagramFoldLink(value:unknown):asserts value is DiagramF
       if(!Array.isArray(target.point)||target.point.length!==2||target.point.some(n=>typeof n!=='number'||!Number.isFinite(n)||Math.abs(n)>1_000_000))throw new Error('联动固定选择坐标无效或超出范围。');
     }
   }
-  if(Object.hasOwn(settings,'generated')) {
-    if(!Array.isArray(settings.generated))throw new Error('联动新增折痕必须为数组。');
-    for(const raw of settings.generated) {
+  for(const field of ['generated','generatedOriginals'] as const)if(Object.hasOwn(settings,field)) {
+    const segments=settings[field];
+    if(!Array.isArray(segments))throw new Error('联动折痕必须为数组。');
+    for(const raw of segments) {
       const segment=record(raw,['id','a','b','assignment','angle'],['displayColor'],'联动新增折痕');
       if(!['M','V','U','F'].includes(segment.assignment as string))throw new Error('联动新增折痕仅支持山折、谷折、未指派或展开折线。');
       if(segment.assignment==='F'&&segment.angle!==0)throw new Error('预折后展开的折痕角度必须为 0 度。');
     }
-    validateDoc({name:'generated',paper:{width:1,height:1},segments:settings.generated});
+    validateDoc({name:field,paper:{width:1,height:1},segments});
   }
   if(Object.hasOwn(settings,'precreases')) {
     if(!Array.isArray(settings.precreases))throw new Error('预折意图必须为数组。');
@@ -253,7 +275,7 @@ function checkedResult(source:Doc,value:unknown):FlatFoldResult {
   if(result.layers.faceOrder!==undefined)validateDisplayOrder(result.layers.faceOrder,result.geometry.faces.length);
   // The existing model format validates finite coordinates, starting face,
   // colour constraints and exact face/edge numbering without requiring isometry.
-  exportModelSnapshot(source,result);
+  checkedSnapshotModel(source,result);
   return result;
 }
 
@@ -393,21 +415,42 @@ export function resyncDiagramStepViews(project:DiagramProject,reference:DiagramP
   validateProject(project,false);const next={...project,steps:[...project.steps]};syncStepViewsInPlace(next,reference);return syncDiagramReturnLabels(next);
 }
 
-function validateProject(value:unknown,checkGeometry:boolean):asserts value is DiagramProject {
-  const project=record(value,['format','version','name','states','steps','activeStepId'],['basicSettings'],'折序工程');
+function validateProject(value:unknown,checkGeometry:boolean,figure=false):asserts value is DiagramProject {
+  const project=record(value,['format','version','name','states','steps','activeStepId'],['basicSettings','exportSettings','spatialContactSolutions','branchSteps','branchOrder','branchLabels'],'折序工程');
   if(project.basicSettings!==undefined)validateDiagramBasicSettings(project.basicSettings);
+  if(checkGeometry&&project.exportSettings!==undefined)validateDiagramExportSettings(project.exportSettings);
   if(project.format!=='zhezhi-diagram'||project.version!==1)throw new Error('不支持的折序工程格式或版本。');
   if(typeof project.name!=='string'||!Array.isArray(project.states)||!Array.isArray(project.steps)||
       !project.steps.length||project.states.length!==project.steps.length+1)throw new Error('折序工程必须为 N 个步骤对应 N＋1 个 CP 状态。');
   identifier(project.activeStepId,'当前步骤编号');
+  if(figure&&project.steps.length!==1)throw Error('每张过程图只能包含一个步骤。');
+  if(project.branchSteps!==undefined&&(!Array.isArray(project.branchSteps)||figure))throw Error('步骤分支列表无效。');
+  if(project.branchOrder!==undefined&&(!Array.isArray(project.branchOrder)||project.branchOrder.some(id=>typeof id!=='string')||new Set(project.branchOrder).size!==project.branchOrder.length))throw Error('步骤分支顺序无效。');
+  const branches=(project.branchSteps??[]) as DiagramBranchEntry[];
+  for(const entry of branches){record(entry,['parentId','step','after'],[],'步骤分支');identifier(entry.parentId,'分支父步骤编号');}
   const ids=new Set<string>(),states=new Map<string,DiagramCPState>();
-  for(const raw of project.states) {
+  const allStates=branches.length?[...project.states,...branches.map(entry=>entry.after)]:project.states;
+  for(let i=0;i<allStates.length;i++) {
+    const raw=allStates[i];
     const state=record(raw,['id','doc','revision'],[],'CP 状态');identifier(state.id,'CP 状态编号');
     if(ids.has(state.id)||!natural(state.revision))throw new Error('CP 状态编号重复或修订号无效。');
-    validateDoc(state.doc);ids.add(state.id);states.set(state.id,state as unknown as DiagramCPState);
+    if(checkGeometry||i<project.states.length)validateDoc(state.doc);
+    ids.add(state.id);states.set(state.id,state as unknown as DiagramCPState);
   }
-  for(let index=0;index<project.steps.length;index++) {
-    const step=record(project.steps[index],['id','title','description','beforeId','afterId','pose'],['annotations','images','callouts','paperVisible','canvas','foldLink','paperStates','firstSymbolPlaced','viewMode','pendingView','orientationLocked','simulationSurface'],'折序步骤');identifier(step.id,'步骤编号');
+  // Ordinary edits touch one route. Opening or saving validates every stored drawing.
+  const drawings=checkGeometry&&branches.length?[...project.steps,...branches.map(entry=>entry.step)]:project.steps;
+  for(let index=0;index<drawings.length;index++) {
+    const step=record(drawings[index],['id','title','description','beforeId','afterId','pose'],['annotations','images','callouts','paperVisible','canvas','foldLink','paperStates','firstSymbolPlaced','viewMode','pendingView','orientationLocked','simulationSurface','processFigures','figureCrop'],'折序步骤');identifier(step.id,'步骤编号');
+    if(Object.hasOwn(step,'figureCrop'))validateDiagramZoomArea(step.figureCrop);
+    if(Object.hasOwn(step,'processFigures')){
+      if(figure||!Array.isArray(step.processFigures))throw Error('过程图须为单层图列表，不能嵌套。');
+      const figureIds=new Set<string>();
+      for(const drawing of step.processFigures){
+        validateProject(drawing,checkGeometry,true);
+        if(figureIds.has(drawing.activeStepId))throw Error('同一步骤中的过程图编号重复。');
+        figureIds.add(drawing.activeStepId);
+      }
+    }
     if(ids.has(step.id)||typeof step.title!=='string'||typeof step.description!=='string')throw new Error('步骤编号重复或说明格式无效。');
     if(Object.hasOwn(step,'firstSymbolPlaced')&&typeof step.firstSymbolPlaced!=='boolean')throw new Error('步骤首次符号记录必须为布尔值。');
     if(Object.hasOwn(step,'viewMode')&&step.viewMode!=='auto'&&step.viewMode!=='manual')throw new Error('步骤视角继承模式无效。');
@@ -417,7 +460,7 @@ function validateProject(value:unknown,checkGeometry:boolean):asserts value is D
       if(!['auto','manual'].includes(step.viewMode as string)||step.pose!==null||pending.side!=='front'&&pending.side!=='back'||typeof pending.rotation!=='number'||!Number.isFinite(pending.rotation)||pending.rotation<0||pending.rotation>=360)throw new Error('待生成步骤视角无效。');
     }
     ids.add(step.id);
-    if(step.beforeId!==project.states[index].id||step.afterId!==project.states[index+1].id)throw new Error('步骤前后 CP 不连续，或引用了未知的 CP 状态。');
+    if(index<project.steps.length&&(step.beforeId!==project.states[index].id||step.afterId!==project.states[index+1].id))throw new Error('步骤前后 CP 不连续，或引用了未知的 CP 状态。');
     if(Object.hasOwn(step,'annotations'))validateDiagramAnnotations(step.annotations);
     if(Object.hasOwn(step,'images'))validateDiagramImages(step.images);
     if(Object.hasOwn(step,'callouts'))validateDiagramCallouts(step.callouts,[step.beforeId as string,step.afterId as string]);
@@ -450,7 +493,16 @@ function validateProject(value:unknown,checkGeometry:boolean):asserts value is D
     }
   }
   if(!project.steps.some(step=>step.id===project.activeStepId))throw new Error('当前步骤不在折序工程中。');
+  if(checkGeometry&&project.branchLabels!==undefined)validateDiagramBranchLabels(project as unknown as DiagramProject);
   validateDiagramReturnReferences(project as unknown as DiagramProject);
+  if(branches.length){
+    const tree=project as unknown as DiagramProject;
+    diagramBranchTree(tree);
+    if(checkGeometry)for(const {step} of branches){
+      const variants=[step.annotations,step.paperStates?.flatAnnotations,step.paperStates?.spatialAnnotations];
+      if(variants.some(list=>list?.some(a=>a.kind==='symbol'&&a.returnStepId)))validateDiagramReturnReferences(projectDiagramBranch(tree,step.id,false));
+    }
+  }
 }
 
 export function validateDiagramProject(value:unknown):asserts value is DiagramProject {
@@ -467,9 +519,13 @@ export function createDiagramProject(doc:Doc,idFactory:DiagramIdFactory=newId):D
 
 /** Append a step whose before state is exactly the former last after state. */
 export function appendDiagramStep(project:DiagramProject,idFactory:DiagramIdFactory=newId,options:{inheritSurface?:boolean}={}):DiagramProject {
+  validateProject(project,false);
+  return appendToDiagramRoute(project,idFactory,options);
+}
+function appendToDiagramRoute(project:DiagramProject,idFactory:DiagramIdFactory,options:{inheritSurface?:boolean}={}):DiagramProject {
   const previousSurface=options.inheritSurface===false?undefined:project.steps.at(-1)?.simulationSurface;
   if(previousSurface&&!same(previousSurface.sourceDoc,project.states.at(-1)?.doc))throw Error('模拟曲面之后的 CP 已变化，请在三维模拟中将新的当前姿态应用到下一步；不能按刚性折角自动替换曲面。');
-  validateProject(project,false);const ids=projectIds(project),stateId=generateId(ids,idFactory),stepId=generateId(ids,idFactory);
+  const ids=projectIds(project),stateId=generateId(ids,idFactory),stepId=generateId(ids,idFactory);
   const next={...project,states:[...project.states],steps:[...project.steps]};
   const before=next.states.at(-1)!;
   const previousStep=next.steps.at(-1)!,previous=previousStep.foldLink;
@@ -480,6 +536,216 @@ export function appendDiagramStep(project:DiagramProject,idFactory:DiagramIdFact
     ...(previous?{foldLink:{enabled:previous.enabled,layers:previous.layers,selectedFaces:[]}}:{})});
   if(previousSurface)inheritSimulationSurfaceView(previousStep,next.steps.at(-1)!,before);
   next.activeStepId=stepId;syncStepViewsInPlace(next,project);return syncDiagramReturnLabels(next);
+}
+
+/** Start the new continuation at the selected step's *after* state. */
+export function addDiagramBranch(project:DiagramProject,parentStepId:string,idFactory:DiagramIdFactory=newId):DiagramProject {
+  function continuation(base:DiagramProject){
+    const parent=base.steps.at(-1)!,next=appendToDiagramRoute(base,idFactory);
+    if(next.branchOrder)next.branchOrder=[...next.branchOrder,next.activeStepId];
+    const boundary=base.states.at(-1)!;
+    if(parent.pose&&same(parent.pose.sourceDoc,boundary.doc))return inheritDiagramCurrentPose(next,parentStepId,next.activeStepId);
+    if(next.steps.at(-1)!.simulationSurface)return next;
+    // The sibling's arrows, camera, hidden faces and authored drawing order stay on that arm.
+    const following=source.steps[source.steps.findIndex(step=>step.id===parentStepId)+1],pose=following?.pose;
+    if(pose&&pose.sourceStateId===boundary.id&&pose.sourceRevision===boundary.revision&&
+       !pose.spatial&&!pose.paperDeformation&&!pose.hiddenFaces?.length&&
+       (!following.paperStates||following.paperStates.active==='flat')&&pose.result.geometry.status==='ready'&&
+       (pose.result.layers.status==='solved'||pose.result.layers.status==='unknown')&&
+       !pose.result.geometry.modified&&same(pose.sourceDoc,boundary.doc)){
+      const added=next.steps.at(-1)!;
+      added.pose={sourceStateId:boundary.id,sourceRevision:boundary.revision,sourceDoc:boundary.doc,
+        result:pose.result,view:getDiagramStepInitialView(next,added.id),
+        ...(pose.layerSolutionIndex!==undefined?{layerSolutionIndex:pose.layerSolutionIndex}:{}),
+        ...(pose.result.layers.faceOrder?{displayOrder:[...pose.result.layers.faceOrder]}:{})};
+      delete added.pendingView;
+    }
+    return next;
+  }
+  let source=selectDiagramBranchStep(project,parentStepId);
+  // At a leaf, create both choices in the same edit so the split is immediately visible.
+  if(source.steps.at(-1)!.id===parentStepId)source=continuation(source);
+  return continuation(projectDiagramBranch(source,parentStepId,false));
+}
+
+export function selectDiagramBranchStep(project:DiagramProject,stepId:string):DiagramProject {
+  if(project.steps.some(step=>step.id===stepId))return selectDiagramStep(project,stepId);
+  const next=projectDiagramBranch(project,stepId,true);
+  syncStepViewsInPlace(next);
+  return syncDiagramReturnLabels(next);
+}
+
+/** A shared fork has a different successor on each route. Resolve both the
+ * route and the anchor before changing a CP boundary. */
+export function insertDiagramStepOnBranch(project:DiagramProject,
+  target:{leafId:string;anchorId:string;position:'before'|'after'},idFactory:DiagramIdFactory=newId):DiagramProject {
+  const route=project.branchSteps?.length?projectDiagramBranch(project,target.leafId,true):project;
+  if(route.steps.at(-1)?.id!==target.leafId)throw Error('请选择一条完整分支。');
+  const index=route.steps.findIndex(step=>step.id===target.anchorId);
+  if(index<0)throw Error('所选步骤不属于这条分支，请重新选择。');
+  const following=route.steps[target.position==='before'?index:index+1];
+  return following?insertDiagramStepBefore(route,following.id,idFactory):appendDiagramStep(route,idFactory);
+}
+
+/** Only the preceding operation changes boundary identity. Keep its historical
+ * revision numbers: the replacement is an exact copy of the same CP state. */
+function replaceStepStateId(step:DiagramStep,oldId:string,newId:string):void {
+  if(step.beforeId===oldId)step.beforeId=newId;
+  if(step.afterId===oldId)step.afterId=newId;
+  for(const pose of [step.pose,step.paperStates?.flat,step.paperStates?.spatial,step.paperStates?.pulled,step.simulationSurface]){
+    if(pose?.sourceStateId===oldId)pose.sourceStateId=newId;
+  }
+  for(const callout of step.callouts??[]){
+    if(callout.source.kind==='cp'&&callout.source.stateId===oldId)callout.source.stateId=newId;
+    if(callout.comparison?.stateId===oldId)callout.comparison.stateId=newId;
+  }
+  const fixed=step.foldLink?.fixed?.target;
+  if(fixed?.stateId===oldId)fixed.stateId=newId;
+  for(const list of [step.annotations,step.paperStates?.flatAnnotations,step.paperStates?.spatialAnnotations]){
+    for(const item of list??[])if(item.kind==='line'&&item.cameraSource?.stateId===oldId)item.cameraSource.stateId=newId;
+  }
+}
+
+/** Split a boundary without changing any existing following drawing or CP.
+ * Editing the inserted after CP subsequently revises the original next input. */
+export function insertDiagramStepBefore(project:DiagramProject,stepId:string,idFactory:DiagramIdFactory=newId):DiagramProject {
+  validateProject(project,false);
+  const target=requireStep(project,stepId),index=project.steps.indexOf(target),boundary=project.states[index];
+  const ids=projectIds(project),start={...boundary,id:generateId(ids,idFactory),doc:structuredClone(boundary.doc)};
+  const canvas=defaultDiagramCanvas(start.doc.paper.width);
+  if(target.canvas?.drawingRotation)canvas.drawingRotation=target.canvas.drawingRotation;
+  const inserted:DiagramStep={id:generateId(ids,idFactory),title:'',description:'',beforeId:start.id,afterId:boundary.id,
+    pose:null,annotations:[],canvas,viewMode:index?'auto':'manual',
+    ...(target.orientationLocked?{orientationLocked:true}:{}),
+    ...(target.foldLink?{foldLink:{enabled:target.foldLink.enabled,layers:target.foldLink.layers==='selected'?'top':target.foldLink.layers,selectedFaces:[]}}:{})};
+  const next={...project,steps:[...project.steps],states:[...project.states],activeStepId:inserted.id};
+  const previous=project.steps[index-1];
+  const fork=previous&&project.branchSteps?.some(entry=>entry.parentId===previous.id);
+  if(fork){
+    // The common output remains the input of every other arm at this fork.
+    inserted.beforeId=boundary.id;inserted.afterId=start.id;
+    const changed=cloneStepDrawing(target);
+    replaceStepStateId(changed,boundary.id,start.id);
+    next.steps[index]=changed;
+    if(next.branchOrder)next.branchOrder=next.branchOrder.flatMap(id=>id===target.id?[inserted.id,id]:[id]);
+  }else if(previous){
+    const changed=cloneStepDrawing(previous);
+    replaceStepStateId(changed,boundary.id,start.id);
+    next.steps[index-1]=changed;
+  }
+  next.states.splice(fork?index+1:index,0,start);next.steps.splice(index,0,inserted);
+  if(fork)repairDiagramBranchLabels(next,{from:target.id,to:inserted.id});
+  const input=next.states[index];
+  if(!index&&!target.viewMode)next.steps[1]={...target,viewMode:'manual'};
+  if(target.pose?.sourceStateId===boundary.id&&target.pose.sourceRevision===boundary.revision){
+    inserted.pose={...cloneDiagramPoseWithSpatialProof(target.pose),sourceStateId:input.id};
+    if(target.paperStates){
+      inserted.paperStates={active:target.paperStates.active};
+      for(const mode of ['flat','spatial','pulled'] as const){
+        const pose=target.paperStates[mode];
+        if(pose)inserted.paperStates[mode]={...cloneDiagramPoseWithSpatialProof(pose),sourceStateId:input.id};
+      }
+    }
+    inserted.viewMode=target.viewMode??'manual';
+  }else if(target.simulationSurface?.sourceStateId===boundary.id&&target.simulationSurface.sourceRevision===boundary.revision){
+    inserted.simulationSurface={...structuredClone(target.simulationSurface),sourceStateId:input.id};
+  }else if(previous?.simulationSurface&&same(previous.simulationSurface.sourceDoc,start.doc)){
+    inheritSimulationSurfaceView(previous,inserted,input);
+  }else if(previous?.pose&&same(previous.pose.sourceDoc,start.doc)){
+    Object.assign(inserted,inheritDiagramCurrentPose(next,previous.id,inserted.id).steps[index]);
+    inserted.viewMode='auto';
+  }
+  syncStepViewsInPlace(next,project);
+  return syncDiagramReturnLabels(next);
+}
+
+/** Create a detached drawing editor with its own two boundary states. A saved
+ * pose can predate either boundary or even come from elsewhere in the chain. */
+export function createDiagramProcessFigure(project:DiagramProject,stepId:string,mode:'copy'|'image',idFactory:DiagramIdFactory=newId):DiagramProject {
+  validateProject(project,false);
+  const original=requireStep(project,stepId),before=requireState(project,original.beforeId),after=requireState(project,original.afterId);
+  const used=projectIds(project);
+  for(const drawing of original.processFigures??[])used.add(drawing.activeStepId);
+  const figure=createDiagramProject(before.doc,()=>generateId(used,idFactory));
+  figure.name='过程图';
+  if(project.basicSettings)figure.basicSettings=structuredClone(project.basicSettings);
+  const [localBefore,localAfter]=figure.states;
+  if(mode==='image'){
+    figure.steps[0].paperVisible=false;
+    return figure;
+  }
+  localBefore.revision=before.revision;
+  localAfter.doc=structuredClone(after.doc);localAfter.revision=after.revision;
+  const {processFigures:_,...artwork}=original;
+  const drawing=structuredClone(artwork);
+  drawing.id=figure.activeStepId;drawing.title='';drawing.description='';drawing.viewMode='manual';
+  const crop=diagramStepZoom(project,original.id);
+  if(crop)drawing.figureCrop={region:crop.region,basis:diagramZoomPaperBounds(original.pose,original.images,original.paperVisible!==false,before.doc.paper,original.simulationSurface)};
+  const history=project.steps.slice(0,project.steps.indexOf(original)).flatMap(step=>{
+    const pose=step.paperStates?.spatial??step.paperStates?.flat??step.pose;return pose?[pose]:[];
+  });
+  function detachPose(pose:DiagramPose){
+    const copy=cloneDiagramPoseWithSpatialProof(pose);
+    // The child project has no earlier steps. Persist the verified material
+    // contact choices as ordinary solver inputs so reopening can certify them.
+    if(copy.spatial){
+      const contacts=diagramSpatialContactOrders(pose,history);
+      if(contacts.length)copy.spatial.layerContacts=contacts;
+    }
+    return copy;
+  }
+  if(original.pose)drawing.pose=detachPose(original.pose);
+  for(const variant of ['flat','spatial','pulled'] as const){
+    const pose=original.paperStates?.[variant];
+    if(drawing.paperStates&&pose)drawing.paperStates[variant]=variant===drawing.paperStates.active&&drawing.pose?structuredClone(drawing.pose):detachPose(pose);
+  }
+  if(!drawing.pose&&!drawing.pendingView){
+    const {side,rotation}=getDiagramStepInitialView(project,original.id);
+    drawing.pendingView={side,rotation};
+  }
+  const source=drawing.pose??drawing.simulationSurface;
+  if(source&&source.sourceStateId!==before.id&&source.sourceStateId!==after.id){
+    const externalId=source.sourceStateId,revision=source.sourceRevision;
+    const local=same(source.sourceDoc,after.doc)&&!same(source.sourceDoc,before.doc)?localAfter:localBefore;
+    const current=source.sourceRevision===requireState(project,externalId).revision&&same(source.sourceDoc,local.doc);
+    if(!current&&local.revision===0)local.revision=1;
+    const mappedRevision=current?local.revision:0;
+    replaceStepStateId(drawing,externalId,local.id);
+    for(const pose of [drawing.pose,drawing.simulationSurface,drawing.paperStates?.flat,drawing.paperStates?.spatial,drawing.paperStates?.pulled]){
+      if(pose)pose.sourceRevision=mappedRevision;
+    }
+    for(const list of [drawing.annotations,drawing.paperStates?.flatAnnotations,drawing.paperStates?.spatialAnnotations]){
+      for(const item of list??[])if(item.kind==='line'&&item.cameraSource?.stateId===local.id){
+        if(item.cameraSource.revision===revision)item.cameraSource.revision=mappedRevision;else delete item.cameraSource;
+      }
+    }
+  }
+  replaceStepStateId(drawing,before.id,localBefore.id);replaceStepStateId(drawing,after.id,localAfter.id);
+  for(const list of [drawing.annotations,drawing.paperStates?.flatAnnotations,drawing.paperStates?.spatialAnnotations]){
+    for(const item of list??[]){
+      if(item.kind==='symbol')delete item.returnStepId;
+      if(item.kind==='line'&&item.cameraSource&&![localBefore.id,localAfter.id].includes(item.cameraSource.stateId))delete item.cameraSource;
+    }
+  }
+  if(drawing.foldLink?.fixed?.target&&![localBefore.id,localAfter.id].includes(drawing.foldLink.fixed.target.stateId))delete drawing.foldLink.fixed.target;
+  figure.steps=[drawing];return figure;
+}
+
+export function upsertDiagramProcessFigure(project:DiagramProject,stepId:string,figure:DiagramProject):DiagramProject {
+  validateProject(project,false);validateProject(figure,true,true);
+  const {next,step}=copyStepForEdit(project,stepId),drawings=[...(step.processFigures??[])];
+  const index=drawings.findIndex(item=>item.activeStepId===figure.activeStepId);
+  drawings.splice(index===-1?drawings.length:index,index===-1?0:1,structuredClone(figure));
+  step.processFigures=drawings;return next;
+}
+
+export function removeDiagramProcessFigure(project:DiagramProject,stepId:string,figureId:string):DiagramProject {
+  validateProject(project,false);
+  const {next,step}=copyStepForEdit(project,stepId);
+  if(!step.processFigures?.some(item=>item.activeStepId===figureId))throw Error('指定的过程图不存在。');
+  step.processFigures=step.processFigures.filter(item=>item.activeStepId!==figureId);
+  if(!step.processFigures.length)delete step.processFigures;
+  return next;
 }
 
 /** A symbol-only next step starts with the current drawn paper, including its
@@ -560,11 +826,14 @@ export function duplicateDiagramStep(project:DiagramProject,stepId:string,idFact
   next.states.splice(index+2,0,{id:stateId,doc:structuredClone(after.doc),revision:0});
   next.steps.splice(index+1,0,{...structuredClone(source),id:copyId,title:isDefaultStepTitle(source.title)?'':source.title,beforeId:source.afterId,afterId:stateId});
   const duplicate=next.steps[index+1];duplicate.viewMode='manual';delete duplicate.pendingView;
+  const oldFollowing=project.steps[index+1];
+  if(next.branchOrder&&oldFollowing)next.branchOrder=next.branchOrder.flatMap(id=>id===oldFollowing.id?[copyId,id]:[id]);
   for(const callout of duplicate.callouts??[])if(callout.source.kind==='cp'){
     callout.source.stateId=callout.source.stateId===source.beforeId?duplicate.beforeId:duplicate.afterId;
     if(callout.comparison)callout.comparison.stateId=callout.comparison.stateId===source.beforeId?duplicate.beforeId:duplicate.afterId;
   }
   if(next.steps[index+2]){next.steps[index+2]=structuredClone(next.steps[index+2]);rebindStepBefore(next.steps[index+2],stateId);}
+  if(oldFollowing)repairDiagramBranchLabels(next,{from:oldFollowing.id,to:copyId});
   next.activeStepId=copyId;syncStepViewsInPlace(next,project);return syncDiagramReturnLabels(next);
 }
 
@@ -579,26 +848,30 @@ export function removeDiagramStep(project:DiagramProject,stepId:string):DiagramP
   assertDiagramReturnTargetRemovable(project,stepId);
   const next={...project,states:[...project.states],steps:[...project.steps]},index=next.steps.findIndex(step=>step.id===stepId);
   const removed=next.steps[index],removedStateId=removed.afterId;
+  if(project.branchSteps?.length){
+    assertDiagramReturnTargetRemovable({...project,steps:project.branchSteps.map(entry=>entry.step)},stepId);
+    if(index===0&&project.branchSteps.some(entry=>entry.parentId===stepId))throw Error('起始步骤连接多条路线，请先删除多余的分支步骤。');
+    next.branchOrder=project.branchOrder?.filter(id=>id!==stepId);
+  }
   next.steps.splice(index,1);next.states.splice(index+1,1);
   if(next.steps[index]){next.steps[index]=structuredClone(next.steps[index]);rebindStepBefore(next.steps[index],removed.beforeId);}
   if(next.activeStepId===stepId)next.activeStepId=next.steps[Math.min(index,next.steps.length-1)].id;
-  for(let i=0;i<next.steps.length;i++) {
-    let step=next.steps[i];
-    if(step.simulationSurface?.sourceStateId!==removedStateId&&step.pose?.sourceStateId!==removedStateId&&step.foldLink?.fixed?.target?.stateId!==removedStateId)continue;
-    step=next.steps[i]=structuredClone(step);
+  function repairSource(original:DiagramStep,available:DiagramCPState[]):DiagramStep {
+    if(original.simulationSurface?.sourceStateId!==removedStateId&&original.pose?.sourceStateId!==removedStateId&&original.foldLink?.fixed?.target?.stateId!==removedStateId)return original;
+    const step=cloneStepDrawing(original);
     if(step.simulationSurface?.sourceStateId===removedStateId){
-      const surface=step.simulationSurface,source=next.states.find(state=>state.id===removed.beforeId&&same(state.doc,surface.sourceDoc))??next.states.find(state=>same(state.doc,surface.sourceDoc));
+      const surface=step.simulationSurface,source=available.find(state=>state.id===removed.beforeId&&same(state.doc,surface.sourceDoc))??available.find(state=>same(state.doc,surface.sourceDoc));
       if(source){surface.sourceStateId=source.id;surface.sourceRevision=source.revision;}
       else delete step.simulationSurface;
     }
     if(step.pose?.sourceStateId===removedStateId) {
-      const source=next.states.find(state=>state.id===removed.beforeId&&same(state.doc,step.pose!.sourceDoc))??
-        next.states.find(state=>same(state.doc,step.pose!.sourceDoc));
+      const source=available.find(state=>state.id===removed.beforeId&&same(state.doc,step.pose!.sourceDoc))??
+        available.find(state=>same(state.doc,step.pose!.sourceDoc));
       if(source) {
         step.pose.sourceStateId=source.id;step.pose.sourceRevision=source.revision;
         if(step.paperStates)for(const pose of [step.paperStates.flat,step.paperStates.spatial,step.paperStates.pulled].filter((pose):pose is DiagramPose=>!!pose)){pose.sourceStateId=source.id;pose.sourceRevision=source.revision;}
       }else {
-        if(step.annotations)step.annotations=resolveDiagramPaperBindings(step.pose,step.annotations);
+        if(step.annotations)step.annotations=resolveDiagramPaperBindings(step.pose,step.annotations,project.basicSettings?.symbolStyles);
         step.pose=null;
         clearCutawayFaces(step.annotations);
         delete step.paperStates;
@@ -608,18 +881,36 @@ export function removeDiagramStep(project:DiagramProject,stepId:string):DiagramP
       }
     }
     if(step.foldLink?.fixed?.target?.stateId===removedStateId)delete step.foldLink.fixed.target;
+    return step;
   }
+  next.steps=next.steps.map(step=>repairSource(step,next.states));
+  if(next.branchSteps?.length){
+    const allStates=[...next.states,...next.branchSteps.map(entry=>entry.after)];
+    next.branchSteps=next.branchSteps.map(entry=>{
+      let {parentId,step}=entry;
+      if(parentId===stepId){parentId=next.steps[index-1].id;step=cloneStepDrawing(step);rebindStepBefore(step,removed.beforeId);}
+      step=repairSource(step,allStates);
+      return step===entry.step?entry:{...entry,parentId,step};
+    });
+    if(next.branchSteps.some(entry=>entry.parentId===next.steps.at(-1)!.id)){
+      const selected=next.activeStepId;
+      Object.assign(next,projectDiagramBranch(next,next.steps.at(-1)!.id,true),{activeStepId:selected});
+    }
+    if(!next.branchSteps?.length){delete next.branchSteps;delete next.branchOrder;}
+  }
+  const following=project.steps[index+1];
+  repairDiagramBranchLabels(next,following?{from:stepId,to:following.id}:undefined);
   syncStepViewsInPlace(next,project);validateProject(next,false);return syncDiagramReturnLabels(next);
 }
 
 /** Navigation retains the immutable CP/illustration snapshots without copying them. */
 export function selectDiagramStep(project:DiagramProject,stepId:string):DiagramProject {
-  validateProject(project,false);requireStep(project,stepId);
+  requireStep(project,stepId);
   return project.activeStepId===stepId?project:{...project,activeStepId:stepId};
 }
 
 export function updateDiagramStep(project:DiagramProject,stepId:string,patch:{title?:string;description?:string}):DiagramProject {
-  validateProject(project,false);requireStep(project,stepId);
+  requireStep(project,stepId);
   record(patch,[],['title','description'],'步骤修改');
   if(patch.title!==undefined&&typeof patch.title!=='string'||patch.description!==undefined&&typeof patch.description!=='string')throw new Error('步骤标题与说明必须为文本。');
   const {next,step}=copyStepForEdit(project,stepId);
@@ -654,7 +945,7 @@ function applyDiagramAnnotations(project:DiagramProject,stepId:string,annotation
   annotations=cleanDiagramAnimationTimings(annotations);
   const original=requireStep(project,stepId);validateDiagramAnnotations(annotations);
   validateCutawayFaces(annotations,original.pose);
-  annotations=editDiagramPaperBindings(original.pose,original.annotations??[],annotations);
+  annotations=editDiagramPaperBindings(original.pose,original.annotations??[],annotations,project.basicSettings?.symbolStyles);
   const {next,step}=copyStepForEdit(project,stepId),hadSymbol=original.annotations?.some(annotation=>annotation.kind==='symbol')??false;
   const first=annotations.find(annotation=>annotation.kind==='symbol');
   if(!original.firstSymbolPlaced&&(hadSymbol||first)){
@@ -686,14 +977,15 @@ export function updateDiagramCanvas(project:DiagramProject,stepId:string,canvas:
   const {next,step}=copyStepForEdit(project,stepId);step.canvas=structuredClone(canvas);return next;
 }
 
-/** Validate and enforce the existing project size before history/autosave commit,
- * so an oversized insertion leaves the original document completely intact. */
+/** An image edit changes only this step's raster overlays and paper visibility.
+ * The CP and pose banks remain the same validated, immutable history branches. */
 export function updateDiagramImages(project:DiagramProject,stepId:string,images:DiagramImage[],paperVisible?:boolean):DiagramProject {
-  validateProject(project,false);requireStep(project,stepId);validateDiagramImages(images);
+  validateDiagramImages(images);
   if(paperVisible!==undefined&&typeof paperVisible!=='boolean')throw new Error('步骤纸面显示设置必须为布尔值。');
-  const {next,step}=copyStepForEdit(project,stepId);step.images=structuredClone(images);
+  const {next,step}=copyStepForEdit(project,stepId);
+  step.images=images.map(image=>({...image,position:[...image.position]}));
   if(paperVisible!==undefined)step.paperVisible=paperVisible;
-  exportDiagramProject(next);return next;
+  return next;
 }
 
 /** A CP inset follows the semantic before boundary when the chain changes. */
@@ -749,9 +1041,9 @@ export function applyDiagramSimulationSurface(project:DiagramProject,stepId:stri
   const targetId=following?.id??staged.activeStepId,{next,step}=copyStepForEdit(staged,targetId);
   // Preserve authored overlay placements while removing old material anchors.
   // CP-generated crease artwork belongs to the replaced geometry only.
-  step.annotations=structuredClone(resolveDiagramPaperBindings(step.pose,step.annotations??[])).filter(annotation=>!annotation.id.startsWith('cp-existing:')).map(annotation=>{
+  step.annotations=structuredClone(resolveDiagramPaperBindings(step.pose,step.annotations??[],project.basicSettings?.symbolStyles)).filter(annotation=>!annotation.id.startsWith('cp-existing:')).map(annotation=>{
     if(annotation.kind==='symbol'){delete annotation.paperBinding;if(annotation.cutawayFaces)annotation.cutawayFaces=[];}
-    if(annotation.kind==='line'){delete annotation.cameraSource;delete annotation.foldFaces;}
+    if(annotation.kind==='line'){delete annotation.cameraSource;delete annotation.foldFaces;delete annotation.sinkFold;delete annotation.sinkGroup;delete annotation.sinkAssignment;}
     return annotation;
   });
   step.pose=null;delete step.paperStates;delete step.pendingView;
@@ -784,7 +1076,7 @@ export function adoptDiagramPose(project:DiagramProject,stepId:string,stateId:st
   validateProject(project,false);const previous=requireStep(project,stepId).pose,source=requireState(project,stateId);
   checkedResult(source.doc,result);const copiedView=copyModelView(view??(requireStep(project,stepId).orientationLocked?getDiagramStepInitialView(project,stepId):undefined)),{next}=copyStepForEdit(project,stepId);
   let step=requireStep(next,stepId);delete step.paperStates;delete step.simulationSurface;
-  if(step.annotations)step.annotations=structuredClone(resolveDiagramPaperBindings(step.pose,step.annotations));
+  if(step.annotations)step.annotations=structuredClone(resolveDiagramPaperBindings(step.pose,step.annotations,project.basicSettings?.symbolStyles));
   // A coincident face count does not establish a mapping to a newly adopted
   // source. Retain the window artwork, but require its layer choice again.
   if(!previous||previous.sourceStateId!==source.id||previous.sourceRevision!==source.revision||
@@ -810,7 +1102,7 @@ export function updateDiagramPoseResult(project:DiagramProject,stepId:string,res
   if(!pose)throw new Error('请先为当前步骤采用一个平折模型。');
   checkedResult(pose.sourceDoc,result);const {next}=copyStepForEdit(project,stepId,true);
   const step=requireStep(next,stepId),target=step.pose!;
-  if(step.annotations)step.annotations=resolveDiagramPaperBindings(step.pose,step.annotations);
+  if(step.annotations)step.annotations=resolveDiagramPaperBindings(step.pose,step.annotations,project.basicSettings?.symbolStyles);
   if(!samePaperFaceTopology(pose.result,result)){
     clearCutawayFaces(step.annotations);delete step.paperStates;delete target.layerSolutionIndex;
   }
@@ -908,43 +1200,110 @@ export function updateDiagramPoseDisplayOrder(project:DiagramProject,stepId:stri
 }
 
 /** Keep the user's candidate preference when clearing untrusted solver caches. */
-function preparePoseSnapshot(pose:DiagramPose,previous?:DiagramPose):void {
-  if(pose.spatial){restoreDiagramSpatialLayers(pose,previous);return;}
+function preparePoseSnapshot(pose:DiagramPose,previous?:DiagramPose,contacts?:RestoreContactSolution,portable?:DiagramPortableContacts):void {
+  if(pose.spatial){restoreDiagramSpatialLayers(pose,previous,contacts,portable?.forPose(pose,previous));return;}
   if(pose.layerSolutionIndex===undefined&&pose.result.layers.status==='solved'&&natural(pose.result.layers.solutionIndex))pose.layerSolutionIndex=pose.result.layers.solutionIndex;
   const edgeOn=pose.result.geometry.graph?.zhezhi_spatialEdgeOnFaces;
   pose.result=importModelSnapshot(exportModelSnapshot(pose.sourceDoc,pose.result)).result;
   if(edgeOn)pose.result.geometry.graph!.zhezhi_spatialEdgeOnFaces=structuredClone(edgeOn);
 }
 
+function prepareStepSnapshots(step:DiagramStep,basis?:DiagramPose,contacts?:RestoreContactSolution,portable?:DiagramPortableContacts):void {
+  if(step.pose){
+    repairDiagramPaperStatesInPlace(step);preparePoseSnapshot(step.pose,basis,contacts,portable);
+    if(step.paperStates){
+      for(const mode of ['flat','spatial','pulled'] as const){
+        const pose=step.paperStates[mode];
+        if(pose&&mode!==step.paperStates.active)preparePoseSnapshot(pose,basis,contacts,portable);
+      }
+      syncPaperState(step);
+    }
+  }
+  for(const figure of step.processFigures??[])prepareStepSnapshots(figure.steps[0],undefined,contacts,portable);
+}
+
+const snapshotBasis=(step:DiagramStep,previous?:DiagramPose)=>step.paperStates?.spatial??step.paperStates?.flat??step.pose??previous;
+
+/** Walk each parked arm from its actual parent, carrying that arm's spatial basis. */
+function prepareBranchSnapshots(project:DiagramProject,bases:Map<string,DiagramPose|undefined>,detach:boolean,contacts?:RestoreContactSolution,portable?:DiagramPortableContacts):DiagramBranchEntry[]{
+  const branches=project.branchSteps!;
+  const children=new Map<string,number[]>();
+  branches.forEach((entry,i)=>{
+    const list=children.get(entry.parentId);
+    if(list)list.push(i);else children.set(entry.parentId,[i]);
+  });
+  const output=detach?[...branches]:branches,parents=project.steps.map(step=>step.id);
+  for(let i=0;i<parents.length;i++){
+    const parent=parents[i],basis=bases.get(parent);
+    for(const index of children.get(parent)??[]){
+      const entry=branches[index],step=detach?structuredClone(entry.step):entry.step;
+      prepareStepSnapshots(step,basis,contacts,portable);
+      if(detach)output[index]={...entry,step};
+      bases.set(step.id,snapshotBasis(step,basis));parents.push(step.id);
+    }
+  }
+  return output;
+}
+
 /** Persist geometry snapshots, views and illustration order without old solver certificates. */
-export function exportDiagramProject(project:DiagramProject):string {
-  validateDiagramProject(project);const next=syncDiagramReturnLabels(project);
+function serializeDiagramSteps(project:DiagramProject,write:(step:DiagramStep)=>void){
+  validateDiagramProject(project);let next=syncDiagramReturnLabels(project);
   // Prepare one detached step at a time. Saving still produces the same full
   // portable project, without allocating a second complete geometry bank.
-  const steps:string[]=[];let previous:DiagramStep|undefined;
+  const portable=new DiagramPortableContacts(true),bases=next.branchSteps?.length?new Map<string,DiagramPose|undefined>():undefined;let basis:DiagramPose|undefined;
   for(const original of next.steps){
-    const step=structuredClone(original),basis=previous?.paperStates?.spatial??previous?.paperStates?.flat??previous?.pose??undefined;
-    if(step.pose){
-      repairDiagramPaperStatesInPlace(step);preparePoseSnapshot(step.pose,basis);
-      if(step.paperStates){for(const pose of [step.paperStates.flat,step.paperStates.spatial,step.paperStates.pulled].filter((pose):pose is DiagramPose=>!!pose))preparePoseSnapshot(pose,basis);syncPaperState(step);}
-    }
-    steps.push(JSON.stringify(step));previous=step;
+    const step=structuredClone(original);
+    prepareStepSnapshots(step,basis,undefined,portable);
+    write(step);
+    basis=snapshotBasis(step,basis);bases?.set(step.id,basis);
   }
-  return '{'+Object.entries(next).map(([key,value])=>JSON.stringify(key)+':'+(key==='steps'?'['+steps.join(',')+']':JSON.stringify(value))).join(',')+'}';
+  if(bases)next={...next,branchSteps:prepareBranchSnapshots(next,bases,true,undefined,portable)};
+  return {next,archive:portable.archive()};
+}
+
+/** The file worker owns the detached computed steps and can prepare the canvas
+ * directly without another serialize/parse/restore of every paper pose. */
+export function prepareDiagramFileSteps(project:DiagramProject){
+  const steps:DiagramStep[]=[];
+  const {next,archive}=serializeDiagramSteps(project,step=>steps.push(step));
+  return {project:{...next,steps},archive};
+}
+
+export function exportDiagramProject(project:DiagramProject):string {
+  const steps:string[]=[];
+  const {next,archive}=serializeDiagramSteps(project,step=>steps.push(JSON.stringify(step)));
+  const fields=Object.entries(next).filter(([key,value])=>key!=='spatialContactSolutions'&&value!==undefined).map(([key,value])=>JSON.stringify(key)+':'+(key==='steps'?'['+steps.join(',')+']':JSON.stringify(value)));
+  if(archive)fields.push('"spatialContactSolutions":'+JSON.stringify(archive));
+  return '{'+fields.join(',')+'}';
 }
 
 /** Fully prepare all CPs and snapshots before returning a replacement project. */
 export function importDiagramProject(text:string):DiagramProject {
   let value:unknown;
   try{value=JSON.parse(text);}catch{throw new Error('折序工程不是有效 JSON。');}
+  return prepareParsedDiagramProject(value);
+}
+
+/** Takes ownership of a freshly decoded project, including a library envelope's project. */
+export function prepareParsedDiagramProject(value:unknown,contacts?:RestoreContactSolution,onStage?:(stage:string,count?:number)=>void):DiagramProject {
+  let portable:DiagramPortableContacts|undefined;
+  if(value&&typeof value==='object'&&'spatialContactSolutions' in value){
+    const {spatialContactSolutions,...project}=value;
+    portable=new DiagramPortableContacts(false,spatialContactSolutions);
+    value=project;
+  }
   validateDiagramProject(value);
+  onStage?.('validate');
   // JSON.parse already creates a private object graph. Normalizing that graph
   // avoids a second full copy of large multi-step projects at import time.
   const next=syncDiagramReturnLabels(value);
-  for(const [i,step] of next.steps.entries())if(step.pose) {
-    repairDiagramPaperStatesInPlace(step);
-    preparePoseSnapshot(step.pose,next.steps[i-1]?.paperStates?.spatial??next.steps[i-1]?.paperStates?.flat??next.steps[i-1]?.pose??undefined);
-    if(step.paperStates){for(const pose of [step.paperStates.flat,step.paperStates.spatial,step.paperStates.pulled].filter((pose):pose is DiagramPose=>!!pose))preparePoseSnapshot(pose,next.steps[i-1]?.paperStates?.spatial??next.steps[i-1]?.paperStates?.flat??next.steps[i-1]?.pose??undefined);syncPaperState(step);}
+  const bases=next.branchSteps?.length?new Map<string,DiagramPose|undefined>():undefined;
+  let basis:DiagramPose|undefined;
+  for(const step of next.steps){
+    prepareStepSnapshots(step,basis,contacts,portable);
+    basis=snapshotBasis(step,basis);bases?.set(step.id,basis);
   }
+  if(bases)prepareBranchSnapshots(next,bases,false,contacts,portable);
+  onStage?.('restore',portable?.verified.groups);
   return next;
 }

@@ -1,4 +1,5 @@
-import {diagramSimulationSurfaceViewFromCamera} from './diagramSimulationSurfaceCamera';
+import {diagramFlatAnimationCamera,diagramSimulationSurfaceViewFromCamera} from './diagramSimulationSurfaceCamera';
+import {diagramAnimationDisplayOrder} from './diagramAnimationDisplayOrder';
 import {buildDiagramFold,buildFold,distance,epsilonFor,pointOnSegment,polygonArea,splitIntersections} from '../core/geometry';
 import {hasMaterialTopology} from '../core/materialTopology';
 import {applyRigidFoldTransform,solveRigidFoldGeometry,type RigidFoldTransform3D} from '../core/rigidFoldGeometry';
@@ -8,6 +9,7 @@ import {simulationSourceSignature} from '../engine/simLayerOrder';
 import {validateSimulationStepAnimationStructure,type SimulationStepAnimation} from '../engine/simStepAnimation';
 import {adjacentSimulationStepFoldedEdges,switchSimulationStepPrecreaseEdges} from '../engine/simStepRefold';
 import {buildDiagramPoseFold} from './diagramFoldGeometry';
+import {diagramAnimationTargetCreases} from './diagramAnimationCreases';
 import {diagramAnimationSourceSegments,diagramAnimationMaterialTimings} from './diagramAnimationTiming';
 import {inferDiagramPrecreaseActions} from './diagramInferredPrecrease';
 import {mapDiagramFoldLines} from './diagramFoldLink';
@@ -112,10 +114,9 @@ export function buildDiagramSpatialStepAnimation(project:DiagramProject,stepId:s
     }
     const semantics=(segments:Segment[])=>{const values=[...new Set(segments.map(angle))];if(values.length>1)throw Error('CP 中存在重叠赋型冲突，请先处理后生成动画。');return values[0]??0;};
     const fromAngle=sourceAngle(segment,semantics(from)),toAngle=semantics(to);
-    if(fromAngle*toAngle<0)throw Error('同一折痕从山折直接反转为谷折的动作暂不支持，请拆成展开和再折两步。');
     const pending=[...new Set(precreases.filter(s=>covers(segment,s,eps)).map(angle))];
     if(pending.length>1)throw Error('同一预折痕具有不同的折叠角度或方向，请明确属性。');
-    const viaAngle=fromAngle===0&&toAngle===0?pending[0]:Math.abs(fromAngle-toAngle)<1e-5&&fromAngle!==0&&pending.some(a=>Math.abs(a-fromAngle)<1e-5)?0:undefined;
+    const viaAngle=fromAngle*toAngle<0?0:fromAngle===0&&toAngle===0?pending[0]:Math.abs(fromAngle-toAngle)<1e-5&&fromAngle!==0&&pending.some(a=>Math.abs(a-fromAngle)<1e-5)?0:undefined;
     return {segment:{...segment,id:`animation-edge-${index}`,assignment:toAngle<0?'M':toAngle>0?'V':'F',angle:toAngle},fromAngle,toAngle,...(viaAngle!==undefined?{viaAngle}:{})};
   });
   const moving=(r:{fromAngle:number;toAngle:number;viaAngle?:number})=>Math.abs(r.fromAngle-r.toAngle)>1e-5||r.viaAngle!==undefined&&Math.abs(r.viaAngle-r.fromAngle)>1e-5;
@@ -128,13 +129,14 @@ export function buildDiagramSpatialStepAnimation(project:DiagramProject,stepId:s
   if(bendable)warnings.push('本步使用原始网格允许纸面弯曲；固定所选纸面，姿态由数值求解生成。');
   if(prepared.vertexCount>1200||prepared.faceCount>2400)throw Error('步骤动画预览暂限 1,200 个顶点和 2,400 个三角片，请简化本步折痕。');
   const cp=prepared.fold.vertices_coords.map((p):Point=>[p[0],-p[2]]);
-  const shown=cp.map(point=>{
+  const mapPoint=(point:Point)=>{
     const owners=polygons.flatMap((polygon,f)=>containing(point,polygon,eps)?[f]:[]);
     if(!owners.length)throw Error('新增网格顶点超出操作前纸张，无法保持材料对应。');
     const mapped=owners.map(f=>applyRigidFoldTransform(transforms[f],point));
     if(mapped.some(p=>distance3(p,mapped[0])>eps*20))throw Error('操作前纸面不连续，无法为新增折痕建立一致起态。');
     return mapped[0];
-  });
+  };
+  const shown=cp.map(mapPoint);
   const min=[Infinity,Infinity,Infinity],max=[-Infinity,-Infinity,-Infinity];
   for(let v=0;v<prepared.vertexCount;v++)for(let k=0;k<3;k++){min[k]=Math.min(min[k],prepared.originalPositions[v*3+k]);max[k]=Math.max(max[k],prepared.originalPositions[v*3+k]);}
   const center=min.map((n,k)=>(n+max[k])/2);let radius=0;
@@ -204,28 +206,46 @@ export function buildDiagramSpatialStepAnimation(project:DiagramProject,stepId:s
   const retainedCreases=prepared.edgesVertices.flatMap(([a,b],e)=>prepared.edgesAssignment[e]!=='B'&&before.doc.segments.some(s=>s.assignment==='F'&&covers({a:cp[a],b:cp[b]},s,eps))?[e]:[]);
   if(!pose&&step.annotations?.some(a=>a.kind==='line'&&a.animationTiming))throw Error('请先计算操作前姿态，再为折线设置动画时序。');
   const timings=pose?diagramAnimationMaterialTimings(step.annotations??[],diagramAnimationSourceSegments(step.annotations??[],pose,before,step.foldLink),prepared.edgesVertices,cp,ranges,eps):undefined;
-  const animation:SimulationStepAnimation={version:1,sourceSignature,initialPositions,ranges,fixedVertices,bendingFixedVertices:fixedSeedVertices,retainedCreases,...(timings?{timings}:{}),...(bendable?{materialMode:'bendable' as const,motionPolicy:'allow-dynamic' as const}:{})};
+  const targetCreases=diagramAnimationTargetCreases(prepared.edgesVertices,cp,after.doc.segments,eps);
+  const animation:SimulationStepAnimation={version:1,sourceSignature,initialPositions,ranges,targetCreases,fixedVertices,bendingFixedVertices:fixedSeedVertices,retainedCreases,...(timings?{timings}:{}),...(bendable?{materialMode:'bendable' as const,motionPolicy:'allow-dynamic' as const}:{})};
   validateSimulationStepAnimationStructure(animation,prepared,sourceSignature);
   const index=project.states.findIndex(s=>s.id===before.id);
   const rows:NonNullable<FlatFoldResult['layers']['faceOrders']>=[];
+  const history:DiagramPose[]=[];
   if(pose?.spatial){
+    let next=step;
+    for(let i=project.steps.indexOf(step)-1;i>=0;i--){
+      const prior=project.steps[i],snapshot=prior.paperStates?.spatial??prior.paperStates?.flat??prior.pose;
+      const state=project.states.find(s=>s.id===prior.beforeId);
+      if(prior.afterId!==next.beforeId||!snapshot||!state||snapshot.sourceStateId!==state.id||snapshot.sourceRevision!==state.revision||!same(snapshot.sourceDoc,state.doc))break;
+      history.push(snapshot);
+      if(!snapshot.spatial)break;
+      next=prior;
+    }
+    history.reverse();
+  }
+  const seedOrders=pose?.spatial?diagramSpatialContactOrders(pose,history):pose?.result.layers.status==='solved'?pose.result.layers.faceOrders:[];
+  if(seedOrders?.length){
     const parents=unionPolygons.map(poly=>polygons.findIndex(parent=>poly.every(p=>containing(p,parent,eps))));
-    const sourceGraph=buildDiagramFold(pose.sourceDoc).graph;
-    for(const [a,b,sign] of diagramSpatialContactOrders(pose)){
-      const winding=Math.sign(polygonArea(sourceGraph.faces_vertices![b].map(v=>sourceGraph.vertices_coords[v])));
-      for(let first=0;first<parents.length;first++)if(parents[first]===a)for(let second=0;second<parents.length;second++)if(parents[second]===b){
-        const child=Math.sign(polygonArea(materialFold.faces_vertices![second].map(v=>materialFold.vertices_coords[v])));
-        if(winding&&child)rows.push([first,second,sign*winding*child]);
+    const children=polygons.map((_,parent)=>parents.flatMap((p,i)=>p===parent?[i]:[]));
+    const windings=polygons.map(poly=>Math.sign(polygonArea(poly)));
+    const childWindings=unionPolygons.map(poly=>Math.sign(polygonArea(poly)));
+    // Relative normal signs use material windings: parent and daughter are
+    // transformed together, including when the folded panel is reflected.
+    for(const [a,b,sign] of seedOrders){
+      for(const first of children[a])for(const second of children[b]){
+        rows.push([first,second,sign*windings[b]*childWindings[second]]);
       }
     }
   }
   // Convert the authored world projection into the simulator basis (x,z,-y).
-  let camera:import('../engine/simPose').SimulationPose['view']|undefined;
+  let camera=diagramFlatAnimationCamera(step,pose);
   if(pose?.spatial){
     const source=pose.spatial.camera,o=projectDiagramSpatialPoint([0,0,0],source),axes=([[1,0,0],[0,0,1],[0,-1,0]] as [number,number,number][]).map(p=>projectDiagramSpatialPoint(p,source).map((v,k)=>v-o[k]));
     const a=((step.canvas?.drawingRotation??0)+(pose.view?.rotation??0))*Math.PI/180,c=Math.cos(a),s=Math.sin(a),flip=pose.view?.side==='back'?-1:1;
     const r=Array.from({length:9},(_,k)=>{const row=Math.floor(k/3),p=axes[k%3];return row===0?c*flip*p[0]-s*p[1]:row===1?s*flip*p[0]+c*p[1]:flip*p[2];});
     camera=diagramSimulationSurfaceViewFromCamera({yaw:0,pitch:0,zoom:1},{yaw:0,elevation:0,rotation:r});
   }
-  return {fold,animation,...(camera?{camera}:{}),...(rows.length?{initialContactOrder:{sourceFaceCount:materialFold.faces_vertices!.length,faceOrders:rows}}:{}),colors:structuredClone(step.pose?.view?.colors??defaultModelColors()),beforeLabel:`CP${index}`,afterLabel:`CP${index+1}`,...(warnings.length?{warnings}:{})};
+  const initialDisplayOrder=diagramAnimationDisplayOrder(pose,materialFold,poly=>polygons.findIndex(parent=>poly.every(p=>containing(p,parent,eps))),p=>{const [x,y]=mapPoint(p);return [x,y];});
+  return {fold,animation,camera,initialDisplayOrder,...(rows.length?{initialContactOrder:{sourceFaceCount:materialFold.faces_vertices!.length,faceOrders:rows}}:{}),colors:structuredClone(step.pose?.view?.colors??defaultModelColors()),beforeLabel:`CP${index}`,afterLabel:`CP${index+1}`,...(warnings.length?{warnings}:{})};
 }

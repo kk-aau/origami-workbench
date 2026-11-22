@@ -1,6 +1,7 @@
 import type {FlatFoldResult} from './types';
 import type {ConvexLayerCandidate,ConvexLayerCandidateOptions} from './convexLayerCandidate';
-import {checkCoverageTournaments,regionComparisonsFromFaceOrders,registerCoveragePairs} from './regionTournament';
+import {contactComparisonRows,regionComparisonsFromFaceOrders,coveragePairMembership,nonContactRows} from './regionTournament';
+import {checkRegionCoverage} from './regionCoverageChecker';
 import {reportFlatComputationProgress,reportExactTopologyProgress,reportLayerRegionProgress} from './flatComputationProgress';
 import {buildExactModelTopology,walkExactCoverage} from '../app/modelExactTopology';
 import {modelExactFaceNormals} from '../app/modelExactFaceNormals';
@@ -28,12 +29,15 @@ export function diagnoseFlatLayerCoverage(result:FlatFoldResult,complete:(option
   const coverage={faceCount:topology.faceCount,cellCount:topology.cellCount,walk:(visitor:Parameters<typeof walkExactCoverage>[1])=>walkExactCoverage(topology,visitor)};
   stage='已有层序关系检查';
   const {pairs,values}=regionComparisonsFromFaceOrders(previous.faceOrders??[],normals);
-  missingPairs=registerCoveragePairs(coverage,pairs,()=>{},reportLayerRegionProgress).added;
+  const touches=coveragePairMembership(coverage,undefined,reportLayerRegionProgress);
+  const excluded=nonContactRows(pairs,touches);
+  missingPairs=touches.count-(pairs.length-excluded.length);
   if(!missingPairs){
-   const checked=checkCoverageTournaments(coverage,pairs,values,reportLayerRegionProgress);
+   const contact=contactComparisonRows(pairs,excluded);
+   const checked=checkRegionCoverage(coverage,contact.pairs,contact.values(values),reportLayerRegionProgress);
    if(!checked.complete||!checked.certificate||checked.triangles.length)return fail('conflict','已有上下关系在实际重叠区域内形成循环，不能靠补关系解决。');
    result.layers.selfDiagnosis={status:'verified',missingPairs:0,stage:'完整区域认证'};
-   rememberFlatExactProof(result,{topology,certificate:checked.certificate});
+   rememberFlatExactProof(result,{topology,certificate:checked.certificate,nonContactRows:excluded});
    return result;
   }
   stage='遗漏关系补全';
@@ -46,7 +50,9 @@ export function diagnoseFlatLayerCoverage(result:FlatFoldResult,complete:(option
   const completed=regionComparisonsFromFaceOrders(candidate.orders,normals);
   const byPair=new Map(completed.pairs.map(([a,b],i)=>[`${a}:${b}`,completed.values[i]]));
   if(pairs.some(([a,b],i)=>byPair.get(`${a}:${b}`)!==values[i]))return fail('error','补全结果改变或丢失了已有关系。');
-  const checked=checkCoverageTournaments(coverage,completed.pairs,completed.values,reportLayerRegionProgress);
+  const completedExcluded=nonContactRows(completed.pairs,touches);
+  const contact=contactComparisonRows(completed.pairs,completedExcluded);
+  const checked=checkRegionCoverage(coverage,contact.pairs,contact.values(completed.values),reportLayerRegionProgress);
   if(!checked.complete||!checked.certificate||checked.triangles.length)return fail('conflict','补全后仍有区域层序循环。');
   if(previous.constraints?.length){
    const top=candidate.faceOrder?.at(-1);
@@ -58,7 +64,7 @@ export function diagnoseFlatLayerCoverage(result:FlatFoldResult,complete:(option
   result.layers={...retained,faceOrders:candidate.orders,...(candidate.faceOrder?{faceOrder:candidate.faceOrder}:{}),
    message:`${previous.message} 自检已补全 ${missingPairs} 组遗漏关系，保留已有上下关系并通过全部精确区域复核；补全后的方案总数尚未枚举。`,
    selfDiagnosis:{status:'completed',missingPairs,stage:'完整区域认证'}};
-  rememberFlatExactProof(result,{topology,certificate:checked.certificate});
+  rememberFlatExactProof(result,{topology,certificate:checked.certificate,nonContactRows:completedExcluded});
   return result;
  }catch(error){return fail('error',error instanceof Error?error.message:String(error));}
 }

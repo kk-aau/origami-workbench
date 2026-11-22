@@ -1,4 +1,4 @@
-export type Tool = 'mark'|'erasemark'|'regioncheck'|'customcolor'|'voronoi'|'text'|'operationframe'|'advancetype'|'backgroundposition'|'restrictedline'|'restrictedcircle'|'mergecrossvertex'|'regionalswap'|'makemountain'|'makevalley'|'makeedge'|'makeaux'|'measurel1'|'measurel2'|'measurea1'|'measurea2'|'measurea3'|'alternatecollinear'|'alternatecross'|'drawdivide'|'drawratio'|'erase'|'eraseedge'|'eraseaux'|'eraseoverlap'|'erasecross'|'replacetype'|'deletetype'|'unselect'|'select'|'line'|'pan'|'measure'|'parallel'|'perpendicular'|'bisect'|'extend'|'lengthen'|'trim'|'divide'|'ratio'|'midperp'|'addvertex'|'mergevertex'|'polygon'|'circle'|'circleradius'|'circle3'|'circleedit'|'circleseparate'|'circleconcentric'|'circleequal'|'circlepair'|'tangentpoint'|'tangentcircles'|'circledifference'|'circleinvert'|'lineinvert'|'mirrorline'|'mirrorselection'|'reflection'|'reflectionlines'|'transverse'|'continuous'|'rabbitear'|'fishbone'|'cycletype'|'axiom5'|'axiom7'|'bisectlines'|'offsetparallel'|'angledrag'|'angledirection'|'angleconverge'|'angleproject'|'localflat'|'foldableinput'|'foldabledraw'|'moveselection'|'copyselection'|'movefour'|'copyfour'|'rotatecopyselection'|'selectpolygon'|'unselectpolygon'|'selectlasso'|'unselectlasso'|'selectcross'|'unselectcross';
+export type Tool = 'mark'|'erasemark'|'regioncheck'|'customcolor'|'voronoi'|'text'|'operationframe'|'advancetype'|'backgroundposition'|'restrictedline'|'restrictedcircle'|'mergecrossvertex'|'regionalswap'|'makemountain'|'makevalley'|'makecrease'|'makeedge'|'makeaux'|'measurel1'|'measurel2'|'measurea1'|'measurea2'|'measurea3'|'alternatecollinear'|'alternatecross'|'drawdivide'|'drawratio'|'erase'|'eraseedge'|'eraseaux'|'eraseoverlap'|'erasecross'|'replacetype'|'deletetype'|'unselect'|'select'|'line'|'pan'|'measure'|'parallel'|'perpendicular'|'bisect'|'extend'|'lengthen'|'trim'|'divide'|'ratio'|'midperp'|'addvertex'|'mergevertex'|'polygon'|'circle'|'circleradius'|'circle3'|'circleedit'|'circleseparate'|'circleconcentric'|'circleequal'|'circlepair'|'tangentpoint'|'tangentcircles'|'circledifference'|'circleinvert'|'lineinvert'|'mirrorline'|'mirrorselection'|'reflection'|'reflectionlines'|'transverse'|'continuous'|'rabbitear'|'fishbone'|'cycletype'|'axiom5'|'axiom7'|'bisectlines'|'offsetparallel'|'angledrag'|'angledirection'|'angleconverge'|'angleproject'|'localflat'|'foldableinput'|'foldabledraw'|'moveselection'|'copyselection'|'movefour'|'copyfour'|'rotatecopyselection'|'selectpolygon'|'unselectpolygon'|'selectlasso'|'unselectlasso'|'selectcross'|'unselectcross';
 
 interface Guide {
   name: string;
@@ -52,7 +52,7 @@ const TOOL_PURPOSES: Partial<Record<Tool, string>> = {
   reflection: '按三点定义镜面和方向，构造一条反射后的有限折痕。',
   reflectionlines: '利用两条支撑线的交点和镜面关系构造反射折痕。',
   transverse: '对横截轴上的 T 形端点执行反射，生成另一侧的对应折痕。',
-  continuous: '沿折痕生成连续折射路径，可指定终点并选择是否山谷交替。',
+  continuous: '预览整条折射路径，点已有线段可在首次相交处截止，也可直接点路径指定终点。',
   rabbitear: '在三角形中构造兔耳内心相关折痕，作为局部折纸构造参考。',
   fishbone: '沿基线按网格间距生成交替山谷的鱼骨折痕组。',
   axiom5: '应用折纸公理 5：寻找一条折线，使一个点映到目标线并经过指定点；可能存在多个解。',
@@ -97,6 +97,7 @@ export const TOOL_GUIDES: Record<Tool, Guide> = {
   regionalswap:{name:'区域山谷互换',usage:'使用绘线、折射、复制或镜像等生成线段的工具时，点击可开启／关闭生成时山谷互换，保留当前工具和构造点。其他工具下，已有选区时立即互换所选山谷；无选区时点击山谷线或拖出接触框后松开互换。辅助、边界和其他线型不变，保留折角幅值，不改变新绘制预设。',steps:['点击山谷线或拖框互换，右击／Esc取消；绘线时再次选此工具可叠加生成互换'],reference:true},
   makemountain:{name:'改为山折',usage:'点击线段或左键拖框，松开将紫色命中线改为山折。框选接触即命中，不限方向；保留已有山谷折角幅值，不改变绘制预设。',steps:['点击线段或拖出接触框，松开改为山折；右击／Esc取消'],reference:true},
   makevalley:{name:'改为谷折',usage:'点击线段或左键拖框，松开将紫色命中线改为谷折。框选接触即命中，不限方向；保留已有山谷折角幅值，不改变绘制预设。',steps:['点击线段或拖出接触框，松开改为谷折；右击／Esc取消'],reference:true},
+  makecrease:{name:'改为已有折痕',usage:'单击线段或拖框，将命中的线段标记为已有折痕，折角归零。',steps:['点击线段或拖框，松开转换；右击或 Esc 取消']},
   makeedge:{name:'改为边界',usage:'点击线段或左键拖框，松开将紫色命中线改为边界。框选接触即命中，不限方向；折角归零，不改变绘制预设。',steps:['点击线段或拖出接触框，松开改为边界；右击／Esc取消'],reference:true},
   makeaux:{name:'改为辅助线',usage:'点击山、谷、边界线或左键拖框，松开改为辅助线。接触框选不限方向；点击不穿透不合格的最近线，等距优先后添加线。保持真实小段，遵守边界保护。',steps:['点击山／谷／边界线或拖出接触框，松开转辅助；右击／Esc取消'],reference:true},
   measurel1:{name:'长度 L1',usage:'依次点击两个已有端点／交点、圆心或显示的网格点，第二次松开存入 L1。数值为格单位，另列毫米；只测量，不生成线段。',steps:['点击测量起点（已有点／圆心／显示网格点）','点击测量终点，松开存入 L1；拖动不改变按下点'],reference:true},
@@ -139,7 +140,7 @@ export const TOOL_GUIDES: Record<Tool, Guide> = {
   cycletype:{name:'循环山谷边',usage:'在线段上松开左键，按“边界 → 山折 → 谷折 → 边界”循环；仅修改当前小段，可撤销，不改变新绘制线型。辅助、未指派和平面边不参与。',steps:['点击要切换的小段：边界 → 山折 → 谷折 → 边界；开启边界保护时纸边不可修改'],reference:true},
   fishbone:{name:'鱼骨构造',usage:'可两次点击，也可按住左键拖画基线，松开确定第二点；两点确定基线方向和范围，再确认紫色结果。按网格间距生成垂直线，两侧到首条实际折线或纸边；山谷逐取点交替，基线不写入。',steps:['点击基线起点，或按住左键拖画','点击基线终点，计算等距鱼骨线','核对跳过点及无截止方向，点击“确认鱼骨构造”或紫色线'],reference:true},
   rabbitear:{name:'兔耳构造',usage:'依次点选三个三角形顶点，再确认紫色结果；连接各顶点到内心，三条线均采用当前线型，不绘制三角形外框。',steps:['点击三角形第一顶点','点击不同的第二顶点','点击不共线的第三顶点','点击“确认兔耳构造”或紫色结果线'],reference:true},
-  continuous:{name:'连续折射',usage:'点击起点和方向点，或拖画方向基线。可点击“选择终点”，再点紫色路径上的交点或任意位置；也可保留自动截止。勾选“山谷交替”时逐段互换山谷，取消时全部沿用当前新绘制线型。遇到交叉顶点时，唯一局部角度候选自动续接；多个候选可点紫色方向或编号继续。核对后确认；方向点不是终点。',steps:['点击起点，或按住左键拖画方向','点击方向点，计算候选路径','可选择终点并设置山谷交替，然后确认紫色路径'],reference:true},
+  continuous:{name:'连续折射',usage:'依次点击起点和方向点，或从起点拖出方向，默认预览整条路径。点击已有线段，折射会在首次到达该线段的位置截止。也可直接点预览路径上的位置作为终点。遇到多个续接方向时，点方向线或编号继续，或点“选择终点”提前结束。“自动截止”可恢复整条路径。勾选“山谷交替”会逐段互换山谷，取消后各段沿用当前线型。核对后点“确认连续折射”。',steps:['点击起点，或按住左键拖出方向','点击方向点，预览折射路径','可点截止线段或路径终点，再点“确认连续折射”'],reference:true},
   transverse:{name:'横截反射',usage:'可两次点击，也可按住左键拖画基线，松开确定第二点；两点定义横截轴 → 确认紫色结果。仅反射端点落在横截轴内部的 T 形原线，到前方第一条非辅助线或纸边；保留原线型和折角，横截轴不写入。',steps:['点击轴第一点，或按住左键拖画','点击横截轴第二点，使原线端点落在轴内部','点击“确认横截反射”或紫色结果线，整组生成'],reference:true},
   reflectionlines:{name:'两线反射线',usage:'原线 → 镜面轴 → 截止线。以两线支撑直线交点为起点，反射指向原线较远端点的方向；等距时取坐标较小端点。最后点击截止线，采用新绘制线型。',steps:['点击被反射的原线段','点击镜面轴线段或纸边（不能平行）','点击紫色反射方向上的截止线段或纸边'],reference:true},
   reflection:{name:'三点反射线',usage:'被反射点 A → 起点 V → 轴上点 B → 截止线。以 V–B 为镜面轴，反射 V→A 方向，从第二点画到所选实际线段；采用新绘制线型。',steps:['点击被反射的方向点 A','点击反射线起点 V（也是轴上一点）','点击镜面轴另一点 B','点击紫色反射方向上的截止线段或纸边'],reference:true},

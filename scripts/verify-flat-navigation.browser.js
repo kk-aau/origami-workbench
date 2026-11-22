@@ -4,7 +4,7 @@ async page=>{
  const onError=error=>errors.push(error.message);page.on('pageerror',onError);
  await page.setViewportSize({width:1540,height:1000});
  await page.getByLabel('工程名称',{exact:true}).waitFor();
- for(const name of ['设置并开始使用','关闭窗口','保留当前工程'])if(await button(name).isVisible().catch(()=>false))await button(name).click();
+ for(const name of ['使用默认位置开始','关闭窗口','保留当前工程'])if(await button(name).isVisible().catch(()=>false))await button(name).click();
  await page.evaluate(()=>{window.__flatNavigationConfirm=window.confirm;window.confirm=()=>true;});
  // Run against a Vite development server. Fixtures are made with production
  // serializers, then enter through the actual file input and Compute button.

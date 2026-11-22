@@ -1,8 +1,19 @@
 import {multiplyMat3,transposeMat3,viewRotationFor,type Mat3} from '../../vendor/simulator/oristudio/packages/origami-simulator/src/webgl/camera';
 import {validateSimulationView,type SimulationPose} from '../engine/simPose';
 import type {DiagramSpatialPose} from './diagramSpatialPose';
+import {DEFAULT_SIMULATION_VIEW} from '../engine/simViewCube';
+import type {DiagramPose,DiagramStep} from './diagramProject';
 
 type View=SimulationPose['view'];
+/** Keep the familiar oblique preview while looking at the same material side
+ * as the drawing. The back camera mirrors paper X and reverses depth together. */
+export function diagramFlatAnimationCamera(step:DiagramStep,pose:DiagramPose|undefined):View|undefined {
+  const view=step.pose?.view??pose?.view;
+  const degrees=((view?.rotation??0)+(step.canvas?.drawingRotation??0))%360;
+  if(view?.side!=='back'&&!degrees)return;
+  return {...DEFAULT_SIMULATION_VIEW,...(degrees?{roll:degrees*Math.PI/180}:{}),
+    ...(view?.side==='back'?{orient:[-1,0,0,0,-1,0,0,0,1] as const}:{})};
+}
 /** The simulator's view matrix has determinant -1 and screen Y points down.
  * Flipping its second row gives the proper screen rotation used by the shared
  * world-axis gizmo. The material positions remain entirely untouched. */

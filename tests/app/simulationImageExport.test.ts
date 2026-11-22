@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {simulationImageDimensions,scaleSimulationImageSettings,simulationImageFromBackgrounds,flipSimulationImageRows} from '../../src/engine/simImageExport';
+import {simulationImageDimensions,scaleSimulationImageSettings,simulationImageFromBackgrounds,simulationInkBounds,flipSimulationImageRows} from '../../src/engine/simImageExport';
 import type {RenderSettings} from '../../vendor/simulator/oristudio/packages/origami-simulator/src/webgl/meshRenderer';
 
 test('high-resolution screenshots keep the same apparent stroke and dash spacing without changing screen settings',()=>{
@@ -23,6 +23,16 @@ test('transparent capture keeps white paper and its ink while removing only unco
   assert.deepEqual(Array.from(simulationImageFromBackgrounds(black,white)),[0,0,0,0,255,255,255,255,30,70,45,255]);
   assert.deepEqual(Array.from(simulationImageFromBackgrounds(black,white,[1,.8,.6]).slice(0,4)),[255,204,153,255]);
   assert.deepEqual(Array.from(black),[0,0,0,255,255,255,255,255,30,70,45,255],'capture leaves source render buffers intact');
+});
+
+test('step capture includes translucent edges and white paper without the empty viewport margins',()=>{
+  const pixels=new Uint8ClampedArray(90*30*4);
+  pixels.set([255,255,255,255],(8*90+36)*4);
+  pixels.set([30,40,20,1],(21*90+46)*4);
+  assert.deepEqual(simulationInkBounds(pixels,90,30),{x:36,y:8,width:11,height:14});
+  pixels.set([30,40,20,255],(29*90+89)*4);
+  assert.deepEqual(simulationInkBounds(pixels,90,30),{x:36,y:8,width:54,height:22});
+  assert.throws(()=>simulationInkBounds(new Uint8ClampedArray(16),2,2),/没有可截取/);
 });
 
 test('dual-background capture recovers translucency and rejects empty or malformed frames',()=>{

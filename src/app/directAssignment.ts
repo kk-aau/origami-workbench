@@ -2,9 +2,9 @@ import {validateDoc,type Doc,type Point} from '../core/types';
 import {assign,distanceToSegment} from './state';
 import {typeFilterHits,type TypeFilterArea} from './typeFilter';
 
-export type DirectAssignment='M'|'V'|'B'|'A';
+export type DirectAssignment='M'|'V'|'B'|'A'|'F';
 function checkTarget(target:DirectAssignment){
-  if(!['M','V','B','A'].includes(target))throw new Error('直接赋型只能选择山折、谷折、边界或辅助线。');
+  if(!['M','V','B','A','F'].includes(target))throw new Error('直接赋型只能选择山折、谷折、已有折痕、边界或辅助线。');
 }
 function checkPoint(point:Point){
   if(!Array.isArray(point)||point.length!==2||point.some(n=>!Number.isFinite(n)||Math.abs(n)>1e6))throw new Error('赋型位置坐标须在 ±1000000 mm 内。');

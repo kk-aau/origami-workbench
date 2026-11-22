@@ -1,8 +1,10 @@
 import {WEB_APP} from './webRuntime';
 import {documentScopeHeaders} from './documentRequestScope';
-let sessionToken='';
+import {VERSION} from './state';
+let currentVersion=VERSION,sessionToken='';
+export function runtimeVersion(){return currentVersion;}
 export function storageSessionToken(){return sessionToken;}
-export async function connect(){if(WEB_APP){const result=await (await import('./browserApi')).browserRequest('health','GET');sessionToken=result.token;return result;}try{const r=await fetch('/api/health',{signal:AbortSignal.timeout(5000)});if(!r.ok)throw new Error();const j=await r.json();sessionToken=j.token;return j;}catch{throw new Error('本地服务未连接，请从启动入口打开工作台。');}}
+export async function connect(){if(WEB_APP){const result=await (await import('./browserApi')).browserRequest('health','GET');sessionToken=result.token;return result;}try{const r=await fetch('/api/health',{signal:AbortSignal.timeout(5000)});if(!r.ok)throw new Error();const j=await r.json();sessionToken=j.token;currentVersion=typeof j.releaseVersion==='string'?j.releaseVersion:typeof j.version==='string'?j.version:VERSION;return j;}catch{throw new Error('本地服务未连接，请从启动入口打开工作台。');}}
 async function request<T=any>(url:string,method:'GET'|'POST'|'DELETE',value?:unknown,signal?:AbortSignal,serialized?:string,rawText:boolean|'blob'=false):Promise<T>{
   if(WEB_APP){const result=await (await import('./browserApi')).browserRequest(url,method,serialized===undefined?value:JSON.parse(serialized),signal);return (rawText==='blob'?new Blob([JSON.stringify(result)],{type:'application/json'}):rawText?JSON.stringify(result):result) as T;}
   let res:Response;
@@ -37,8 +39,7 @@ export async function apiWhenIdle<T=any>(url:string,value:unknown,signal?:AbortS
 }
 export type ExportSaveResult=import('../desktop').DesktopExportResult|{status:'browser'};
 /** Native exports resolve only after the chosen file is safely written. */
-export async function saveDownload(blob:Blob,name:string,options?:import('../desktop').DesktopExportOptions):Promise<ExportSaveResult> {
-  if(options?.signal?.aborted)return {status:'cancelled'};
+function exportWindow(){
   type ExportWindow=Window&{Blob?:typeof Blob;__TAURI_INTERNALS__?:unknown;__TAURI__?:unknown};
   let runtime=window as ExportWindow;
   // The simulator runs in a same-origin iframe. File ownership stays with the
@@ -48,6 +49,37 @@ export async function saveDownload(blob:Blob,name:string,options?:import('../des
     // bridge intentionally lives only on the main window. Prefer that bridge.
     try{const parent=window.parent as ExportWindow;if(parent&&parent!==window&&parent.location.origin===window.location.origin&&(parent.desktop||parent.__TAURI_INTERNALS__||parent.__TAURI__))runtime=parent;}catch{/* A cross-origin parent is not an application file bridge. */}
   }
+  return runtime;
+}
+export async function sendToBlender(blob:Blob){
+  const runtime=exportWindow();
+  if(!runtime.desktop?.sendToBlender)throw new Error('请使用支持 Blender 联动的桌面版折纸工坊。');
+  return runtime.desktop.sendToBlender(runtime===window?blob:new (runtime.Blob??Blob)([blob],{type:blob.type}));
+}
+/** A library copy can have the same step IDs as its source. Include the record
+ * identity so renames and editing revisions still reach the original scene. */
+export async function blenderStepKey(documentId:string,stepId:string):Promise<string>{
+  const input=new TextEncoder().encode(JSON.stringify([documentId,stepId]));
+  const digest=await crypto.subtle.digest('SHA-256',input);
+  return Array.from(new Uint8Array(digest),byte=>byte.toString(16).padStart(2,'0')).join('');
+}
+export async function sendAnimationToBlender(blob:Blob,options:import('../desktop').DesktopBlenderAnimationOptions){
+  const runtime=exportWindow();
+  if(!runtime.desktop?.sendAnimationToBlender)throw new Error('请使用支持动画导出的桌面版。');
+  return runtime.desktop.sendAnimationToBlender(blob,options);
+}
+export async function saveNamedDiagram(name:string,encode:(filename?:string)=>Promise<Blob>):Promise<ExportSaveResult> {
+  const runtime=exportWindow();
+  if(runtime.desktop?.saveNamedDiagram)return runtime.desktop.saveNamedDiagram(name,async filename=>{
+    const blob=await encode(filename);
+    return runtime===window?blob:new (runtime.Blob??Blob)([blob],{type:blob.type});
+  });
+  if(runtime.desktop?.isDesktop||runtime.__TAURI_INTERNALS__||runtime.__TAURI__)throw Error('桌面工程另存为接口未就绪，请重新打开应用。');
+  return saveDownload(await encode(),name,{projectFile:true});
+}
+export async function saveDownload(blob:Blob,name:string,options?:import('../desktop').DesktopExportOptions):Promise<ExportSaveResult> {
+  if(options?.signal?.aborted)return {status:'cancelled'};
+  const runtime=exportWindow();
   if(typeof runtime.desktop?.saveExport==='function'){
     // Blob constructors differ between realms. Wrap the immutable Blob in the
     // owning window without converting the full file into a byte array or JSON.
