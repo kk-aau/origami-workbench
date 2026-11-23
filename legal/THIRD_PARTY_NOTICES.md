@@ -4,6 +4,8 @@
 
 本目录的 Tauri 发行版不分发 Electron 或 Node 运行时；下文 Electron 段落保留为原版历史说明。新宿主使用锁定的 Tauri、Wry、Tao、Axum、Tokio 等 Rust 依赖，复用系统 Microsoft Edge WebView2 Runtime。完整 Rust crate 源码、原始许可及包元数据随对应源码交付，实际清单见生成的 `TAURI-THIRD-PARTY-NOTICES.txt` 和 `licenses/RUST-PACKAGES.json`。NSIS 与所用插件仅用于安装/解压外壳，其许可和来源也随包保留；不改变各上游许可。
 
+多作品窗口使用本地修补的 tauri-runtime-wry 2.12.3（MIT OR Apache-2.0），源码和上游归属保留在 `vendor/tauri-runtime-wry/`。修补窗口迁移期间的锁等待，不升级上游版本或修改折纸计算算法。来源、原始文件哈希和修改说明见该目录的 `UPSTREAM.md`；原始 MIT、Apache-2.0 许可与修改源码继续纳入同版本交付。
+
 ## 折序矢量 PDF 导出追加（2026-10-28）
 
 本机 Rust 服务使用 svg2pdf 0.13.0（MIT OR Apache-2.0，https://github.com/typst/svg2pdf）将整页 SVG 转为矢量 PDF；roxmltree 0.20.0（MIT OR Apache-2.0）用于校验自包含页面。usvg/resvg、fontdb、subsetter 及其传递依赖按 `src-tauri/Cargo.lock` 锁定，并纳入现有 Rust 许可与对应源码收集流程。转换保留路径、裁剪、蒙版与文字，仅原有图片及 SVG 滤镜内容按需要保留像素。字体从本机读取，导出文件嵌入用到的字体子集；应用不分发或在线下载字体文件。
