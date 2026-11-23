@@ -273,14 +273,22 @@ function RenameDiagramDialog({name,onRename,onClose}:{name:string;onRename:(name
   }}><h2>重命名绘图</h2><label>绘图名称<textarea rows={2} ref={input} aria-label="绘图名称" value={value} maxLength={160} onChange={event=>{setValue(event.target.value);setError('');}}/></label>{error&&<p role="alert">{error}</p>}<div><button type="button" onClick={onClose}>取消</button><button className="diagram-primary" type="submit" disabled={!value.trim()}>保存名称</button></div></form></div>;
 }
 
-function DiagramFileOpeningDialog({state,onCancel}:{state:{name:string;stage:string;cancellable:boolean};onCancel:()=>void}){
+interface DiagramFileOpenState {name:string;stage:string;cancellable:boolean;preview?:{stepId:string;svg:string}}
+function DiagramFileOpeningDialog({state,onCancel}:{state:DiagramFileOpenState;onCancel:()=>void}){
   const dialog=useRef<HTMLElement>(null);
+  const [zoom,setZoom]=useState(1);
+  const previewURL=useMemo(()=>state.preview?URL.createObjectURL(new Blob([state.preview.svg],{type:'image/svg+xml'})):undefined,[state.preview]);
+  useEffect(()=>()=>{if(previewURL)URL.revokeObjectURL(previewURL);},[previewURL]);
   useEffect(()=>{const previous=document.activeElement as HTMLElement|null;dialog.current?.focus({preventScroll:true});return()=>{if(previous?.isConnected)previous.focus({preventScroll:true});};},[]);
   return <div className="diagram-modal-backdrop"><section ref={dialog} tabIndex={-1} className="diagram-confirm-modal ui-dialog" role="dialog" aria-modal="true" aria-label="正在打开折序工程" onKeyDown={event=>{
     event.stopPropagation();
     if(event.key==='Escape'){event.preventDefault();if(state.cancellable)onCancel();}
-    if(event.key==='Tab'){event.preventDefault();(dialog.current?.querySelector<HTMLButtonElement>('button:not(:disabled)')??dialog.current)?.focus();}
-  }}><h2>打开「{state.name}」</h2><p role="status" aria-live="polite">{state.stage}</p><div><button disabled={!state.cancellable} onClick={onCancel}>取消打开</button></div></section></div>;
+    if(event.key==='Tab'){const controls=[...dialog.current!.querySelectorAll<HTMLButtonElement>('button:not(:disabled)')],first=controls[0],last=controls.at(-1);if(event.shiftKey&&(document.activeElement===first||document.activeElement===dialog.current)){event.preventDefault();last?.focus();}else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first?.focus();}}
+  }}><h2>打开「{state.name}」</h2><p role="status" aria-live="polite">{state.stage}</p>{previewURL&&<>
+    <div className="diagram-opening-preview" aria-label="当前步骤纸面预览"><img src={previewURL} alt="已恢复的当前步骤纸面" style={{width:`${zoom*100}%`,maxWidth:'none'}}/></div>
+    <p className="note">当前纸面已恢复，可先缩放查看。其余步骤准备完成后进入编辑。</p>
+    <div><button aria-label="缩小加载预览" disabled={zoom<=.5} onClick={()=>setZoom(value=>Math.max(.5,value-.25))}>−</button><button onClick={()=>setZoom(1)}>适应窗口</button><button aria-label="放大加载预览" disabled={zoom>=3} onClick={()=>setZoom(value=>Math.min(3,value+.25))}>＋</button></div>
+  </>}<div><button disabled={!state.cancellable} onClick={onCancel}>取消打开</button></div></section></div>;
 }
 
 function ReplaceProjectDialog({name,onCancel,onSave,onOpen}:{name:string;onCancel:()=>void;onSave:()=>void;onOpen:()=>void}) {
@@ -399,7 +407,7 @@ const DiagramWorkspace=forwardRef<DiagramWorkspaceHandle,DiagramWorkspaceProps>(
   const [cpWidth,setCPWidth]=useState(280),[overview,setOverview]=useState(false),[showSymbolBaseline,setShowSymbolBaseline]=useState(false);
   const [editorCPTarget,setEditorCPTarget]=useState<{owner:DiagramProject;stateId:string;label:string}|null>(null);
   const [editCP,setEditCP]=useState<string|null>(null),[confirmReplace,setConfirmReplace]=useState<DiagramProject|File|null>(null);
-  const [fileOpening,setFileOpening]=useState<{name:string;stage:string;cancellable:boolean}|null>(null);
+  const [fileOpening,setFileOpening]=useState<DiagramFileOpenState|null>(null);
   const fileImportTask=useRef<ReturnType<typeof startDiagramProjectImport>|null>(null);
   const libraryReadRequest=useRef<{cancelled:boolean;task?:ReturnType<typeof startDiagramProjectImport>}|null>(null);
   const replacementLog=useRef<{action:'diagram.open'|'diagram.new';fileName?:string;bytes?:number}>({action:'diagram.open'});
@@ -1185,7 +1193,7 @@ const DiagramWorkspace=forwardRef<DiagramWorkspaceHandle,DiagramWorkspaceProps>(
       try{
         const next=await library.loadAsync(id,text=>{
           if(request.cancelled)throw Error('已取消打开。');
-          const task=startDiagramProjectImport({storedText:text},stage=>{if(mounted.current&&!request.cancelled)setFileOpening({name,stage,cancellable:true});});
+          const task=startDiagramProjectImport({storedText:text},stage=>{if(mounted.current&&!request.cancelled)setFileOpening(old=>({...old,name,stage,cancellable:true}));},undefined,preview=>{if(mounted.current&&!request.cancelled)setFileOpening(old=>old?{...old,preview}:old);});
           request.task=task;return task.promise;
         });
         if(!mounted.current||request.cancelled)return;
@@ -1309,7 +1317,7 @@ const DiagramWorkspace=forwardRef<DiagramWorkspaceHandle,DiagramWorkspaceProps>(
     recordActivity('diagram.open.start',{stage:'read',fileName:file.name,bytes:file.size});
     let pending:ReturnType<typeof startDiagramProjectImport>|null=null;
     try{
-      pending=startDiagramProjectImport(file,stage=>{if(mounted.current&&fileImportTask.current===pending)setFileOpening({name:file.name,stage,cancellable:true});});
+      pending=startDiagramProjectImport(file,stage=>{if(mounted.current&&fileImportTask.current===pending)setFileOpening(old=>({...old,name:file.name,stage,cancellable:true}));},undefined,preview=>{if(mounted.current&&fileImportTask.current===pending)setFileOpening(old=>old?{...old,preview}:old);});
       fileImportTask.current=pending;
       const next=await pending.promise;
       if(!mounted.current||generation!==fileGeneration.current||fileImportTask.current!==pending)return;

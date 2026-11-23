@@ -77,6 +77,9 @@ export interface RenderMeshToSvgOptions {
    */
   mergeCoplanar?: boolean;
   coloredEdges?:ReadonlySet<number>;
+  /** Authored expanded marks with a current zero-angle target. Their identity
+   * survives numerical panel curvature; boundary/silhouette roles still win. */
+  flatCreases?:ReadonlySet<number>;
 }
 
 /**
@@ -142,7 +145,7 @@ export function renderMeshToSvg(
   const perspective = options.perspective ?? true;
   const projected = projectVertices(positions, camera, { perspective,precision:'double' });
   const faces = collectFaces(topology, projected);
-  const creases = settings.showEdges ? collectCreases(topology, projected,settings,camera,positions,options.coloredEdges) : [];
+  const creases = settings.showEdges ? collectCreases(topology, projected,settings,camera,positions,options.coloredEdges,options.flatCreases) : [];
   if ((settings.showFaces ? faces.triangles.length : 0) + creases.length === 0) return null;
 
   // Cut the mesh until a correct back-to-front order exists, then read it off the
@@ -338,6 +341,7 @@ interface Triangle {
 }
 
 interface Crease {
+  lineStyle:'boundary'|'crease'|'mountain'|'valley';
   neutral?:boolean;
   from: number;
   to: number;
@@ -430,7 +434,7 @@ function collectFaces(
 }
 
 /** Per-kind visibility uses the same codes and defaults as the GPU edge pass. */
-function collectCreases(topology: SvgMeshTopology, projected: ProjectedVertices,settings:RenderSettings,camera:CameraUniforms,positions:Float32Array,coloredEdges?:ReadonlySet<number>): Crease[] {
+function collectCreases(topology: SvgMeshTopology, projected: ProjectedVertices,settings:RenderSettings,camera:CameraUniforms,positions:Float32Array,coloredEdges?:ReadonlySet<number>,flatCreases?:ReadonlySet<number>): Crease[] {
   const creases: Crease[] = [];
   for (let edge = 0; edge < topology.edgeAssignments.length; edge += 1) {
     const assignment = cameraEdgeAssignment(topology.edgeAssignments[edge]!,topology,edge,positions,camera.center.map((value,k)=>value+camera.camDist*camera.rotation[k+6]));
@@ -439,7 +443,12 @@ function collectCreases(topology: SvgMeshTopology, projected: ProjectedVertices,
     const from = topology.edgeIndices[edge * 2]!;
     const to = topology.edgeIndices[edge * 2 + 1]!;
     if (!screenFinite(projected, from) || !screenFinite(projected, to)) continue;
-    creases.push({ from, to, assignment,neutral:coloredEdges!==undefined&&!coloredEdges.has(edge)&&(assignment===1||assignment===2),...settings.diagramStyle?{diagramFolded:assignment===0||diagramEdgeFolded(projected.view,from,to,topology.edgeOpposites?.[edge*2]??-1,topology.edgeOpposites?.[edge*2+1]??-1)}:{} });
+    const neutral=coloredEdges!==undefined&&!coloredEdges.has(edge)&&(assignment===1||assignment===2);
+    const folded=assignment===0||diagramEdgeFolded(projected.view,from,to,topology.edgeOpposites?.[edge*2]??-1,topology.edgeOpposites?.[edge*2+1]??-1);
+    // Keep source semantics through visibility clipping and capture. A black
+    // unfolded old hinge is not a paper boundary; colour cannot tell them apart.
+    const lineStyle=assignment===0?'boundary':flatCreases?.has(edge)?'crease':!settings.diagramStyle&&!neutral&&assignment===1?'mountain':!settings.diagramStyle&&!neutral&&assignment===2?'valley':folded?'boundary':'crease';
+    creases.push({ from, to, assignment,neutral,lineStyle,...settings.diagramStyle?{diagramFolded:folded}:{} });
   }
   return creases;
 }
@@ -654,7 +663,7 @@ function creaseElement(
   return (
     `  <line x1="${num(from[0])}" y1="${num(from[1])}" ` +
     `x2="${num(to[0])}" y2="${num(to[1])}" ` +
-    `stroke="${hex(color)}" stroke-width="${num(settings.creaseWidthPx)}"${dashAttr}/>`
+    `stroke="${hex(color)}" stroke-width="${num(settings.creaseWidthPx)}" data-diagram-line-style="${crease.lineStyle}"${dashAttr}/>`
   );
 }
 

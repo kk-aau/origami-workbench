@@ -9,16 +9,25 @@ import {normalizeDiagramProjectCP} from '../../src/app/diagramCP';
 import {prepareExistingCreases} from '../../src/app/diagramProjectPreparation';
 import {computeFlatFold} from '../../src/core/flatFold';
 
-function harness(){
+function harness(onPreview?:(preview:{stepId:string;svg:string})=>void){
   let terminated=0,sent:unknown;const posted:unknown[]=[];
   const worker={onmessage:null as ((event:{data:DiagramProjectImportReply})=>void)|null,onerror:null as ((event:{message:string})=>void)|null,onmessageerror:null as (()=>void)|null,
     postMessage(value:unknown){sent=value;posted.push(value);},terminate(){terminated++;}};
   const file=new File(['not parsed on the main thread'],'large.diagram.json'),progress:string[]=[];
   // Confirm that starting the task never reads the file on this thread.
   file.text=()=>{throw Error('main-thread read');};
-  const task=startDiagramProjectImport(file,message=>progress.push(message),()=>worker as unknown as Worker);
+  const task=startDiagramProjectImport(file,message=>progress.push(message),()=>worker as unknown as Worker,onPreview);
   return {file,worker,task,progress,posted,get sent(){return sent;},get terminated(){return terminated;}};
 }
+test('early preview remains display-only and queued previews are ignored after cancellation',async()=>{
+  const previews:unknown[]=[],h=harness(preview=>previews.push(preview));let published=false;
+  h.task.promise.then(()=>{published=true;},()=>{});
+  const preview={type:'preview' as const,stepId:'current',svg:'<svg xmlns="http://www.w3.org/2000/svg"/>'};
+  h.worker.onmessage!({data:preview});await Promise.resolve();
+  assert.equal(previews.length,1);assert.equal(published,false);assert.equal(h.terminated,0);
+  h.task.cancel();h.worker.onmessage!({data:preview});
+  await assert.rejects(h.task.promise,{name:'AbortError'});assert.equal(previews.length,1);assert.equal(published,false);
+});
 function deliver(h:ReturnType<typeof harness>,project:DiagramProject){
   h.worker.onmessage!({data:{type:'diagram-begin',saveBlob:createDiagramProjectSaveBlob(project)}});let index=0;
   for(const operations of artworkTransferChunks(project))h.worker.onmessage!({data:{type:'diagram-chunk',index:index++,operations:structuredClone(operations)}});

@@ -1,6 +1,7 @@
 import { defineConfig, type Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
 import { resolve } from 'node:path';
+import {diagramOpenVersion} from './scripts/diagram-open-version.mjs';
 
 // Vite 8.3 decides which worker assets to emit from the UI module graph.
 // Keep both nested dispatchers in that graph when their callers only run in a worker.
@@ -15,7 +16,7 @@ export const spatialWorkerEntries: Plugin = {
 
 export default defineConfig(({mode})=>({
   base:mode==='web'?'/origami-workbench/':'/',
-  define:{'import.meta.env.VITE_WEB_APP':JSON.stringify(mode==='web'?'true':'false')},
+  define:{'import.meta.env.VITE_WEB_APP':JSON.stringify(mode==='web'?'true':'false'),'import.meta.env.VITE_DIAGRAM_OPEN_VERSION':JSON.stringify(diagramOpenVersion().version)},
   plugins: [react(), spatialWorkerEntries],
   server: { host: '127.0.0.1', port: 5173, strictPort: true, watch:{ignored:['**/.toolchain/**','**/.runtime/**','**/output/**','**/build/**','**/release/**','**/src-tauri/target/**']}, proxy: { '/api': 'http://127.0.0.1:8787' } },
   build: { outDir:mode==='web'?'build/web':'dist',target: 'es2022', sourcemap:mode!=='web', rolldownOptions: { input: { main: resolve('index.html'), simulator: resolve('simulator/index.html') } } },

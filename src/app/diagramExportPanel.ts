@@ -1,6 +1,6 @@
 import {diagramPDFTransitionDirection,type DiagramPDFDirection} from './diagramPDFDirection';
 import type {DiagramProject} from './diagramProject';
-import type {DiagramLineDefaults} from './diagramLineStyles';
+import {diagramProcessFigureLineDefaults,type DiagramLineDefaults} from './diagramLineStyles';
 import {diagramPDFStepArtwork} from './diagramPDF';
 import {diagramArtworkScale,diagramScaleChange,type DiagramScaleChange} from './diagramExportScale';
 import {DIAGRAM_EXPORT_VIEW_SYMBOL_SIZE,diagramExportScaleLayout,diagramExportScaleMarkerSVG,hasDiagramExportScaleSymbol} from './diagramExportScaleMarker';
@@ -92,7 +92,7 @@ export function diagramExportPanelArtwork(project:DiagramProject,panel:DiagramEx
     const draw=()=>{
       const region=isFigure?diagramProcessFigureZoom(route,route.steps[source.stepIndex],owner):
         mainZooms?.has(step.id)?mainZooms.get(step.id)?.region:diagramStepZoom(owner,step.id)?.region;
-      return diagramPDFStepArtwork(step,owner.states,rect,isFigure?style?.lineDefaults??palette:palette,style?.adaptiveLines??adaptiveLines,region,style?.paperPatterns,isFigure,project.basicSettings?.symbolStyles??style?.symbolStyles,undefined,source.readingDirection,readArtwork?.creases);
+      return diagramPDFStepArtwork(step,owner.states,rect,isFigure?diagramProcessFigureLineDefaults(palette,style?.lineDefaults):palette,style?.adaptiveLines??adaptiveLines,region,style?.paperPatterns,isFigure,project.basicSettings?.symbolStyles??style?.symbolStyles,undefined,source.readingDirection,readArtwork?.creases);
     };
     return readArtwork&&!mainZooms?readArtwork.svg(step,['step',source.branchStepId,source.stepIndex,source.figureIndex,rect.width,rect.height,source.readingDirection],draw):draw();
   };

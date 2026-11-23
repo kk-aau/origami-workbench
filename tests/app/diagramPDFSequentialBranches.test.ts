@@ -61,7 +61,7 @@ test('only alternate branch starts show their source page and exported number in
   const source=find('4'),target=find('10');
   assert.equal(source.page,2);assert.equal(target.page,3);
   assert.equal(source.c.branchReadingNotes,undefined);
-  assert.equal(source.c.displayNumber,'5');assert.equal(target.c.displayNumber,'8');
+  assert.equal(source.c.displayNumber,'5');assert.equal(target.c.displayNumber,'6');
   assert.deepEqual(target.c.branchReadingNotes,['续第 2 页 · 第 5 步']);
   assert.equal(cells.filter(({c})=>c.branchReadingStart).length,2);
   assert.ok(cells.every(({c})=>!!c.branchReadingNotes===!!c.branchReadingStart));
@@ -71,7 +71,7 @@ test('only alternate branch starts show their source page and exported number in
   for(const render of [diagramPDFPageSVG,diagramPDFPreviewBodySVG]){
     const svg=render(project,options,plan,target.page-1,defaultDiagramLineDefaults(),true);
     assert.match(svg,/续第 2 页/);assert.ok(!svg.includes('data-pdf-ribbon='));
-    assert.match(svg,/>8\.<\/text>/);
+    assert.match(svg,/>6\.<\/text>/);
     assert.equal((svg.match(/data-pdf-branch-separator="true"/g)??[]).length,2);
     assert.ok(!svg.includes('data-pdf-branch-continuation='),'ribbon edge labels do not duplicate the reading notes');
   }
@@ -110,7 +110,7 @@ test('selected shorter route prints first, all other routes retain length order 
   const options={...defaultDiagramPDFOptions(project),cover:'none' as const,readingOrder:'rows' as const,layout:'3x3' as const,sequentialMainStepId:'9'};
   const cells=planDiagramPDF(project,options).pages.flatMap(p=>p.cells);
   assert.deepEqual(cells.map(c=>c.branchStepId),['0','7','8','9','1','2','3','4','5','6','10']);
-  assert.deepEqual(cells.map(diagramPDFCaptionNumber),Array.from({length:11},(_,i)=>String(i+1)));
+  assert.deepEqual(cells.map(diagramPDFCaptionNumber),['1','2','3','4','2','3','4','5','6','7','6']);
   assert.deepEqual(cells.filter(c=>c.branchReadingStart).map(c=>c.branchStepId),['1','10']);
   assert.ok(cells.filter(c=>c.branchReadingStart).every(c=>c.entrySlot?.[1]===0));
   assert.deepEqual(project,before,'export ordering and labels must not change editor data');
@@ -131,12 +131,17 @@ test('endpoint choices include trailing figures, keep host numbering and persist
   const options={...defaultDiagramPDFOptions(project),...saved.pdf,cover:'none' as const,readingOrder:'rows' as const,layout:'3x3' as const};
   const cells=planDiagramPDF(project,options).pages.flatMap(p=>p.cells);
   assert.deepEqual(cells.slice(0,5).map(diagramPDFCaptionNumber),['1','2','3','4','4-1']);
-  assert.equal(cells[5].displayNumber,'5');
+  assert.equal(cells[5].displayNumber,'2');
   for(const mode of ['rows','snake'] as const){
     const numbered=planDiagramPDF(project,{...options,readingOrder:mode}).pages.flatMap(p=>p.cells);
     const host=numbered.find(c=>c.branchStepId==='9'&&c.figureIndex===undefined)!;
     assert.equal(numbered.find(c=>c.figureIndex===0)!.displayNumber,host.displayNumber+'-1');
     assert.ok(numbered.every(c=>/^\d+(?:-\d+)?$/.test(diagramPDFCaptionNumber(c))));
+    for(const cell of numbered.filter(c=>c.figureIndex===undefined)){
+      const parent=parents[Number(cell.branchStepId)];if(parent===null)continue;
+      const previous=numbered.find(c=>c.branchStepId===String(parent)&&c.figureIndex===undefined)!;
+      assert.equal(Number(cell.displayNumber),Number(previous.displayNumber)+1,'every branch follows its own parent even across pages');
+    }
   }
 });
 

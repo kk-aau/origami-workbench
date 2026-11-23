@@ -1,7 +1,10 @@
-import {prepareParsedDiagramProject,type DiagramProject} from '../app/diagramProject';
+import {prepareParsedDiagramProject,prepareParsedDiagramProjectProgressively,type DiagramProject} from '../app/diagramProject';
 import {openDiagramContactCache} from '../app/diagramOpenContacts';
 import {normalizeImportedDiagramCP} from '../app/diagramCP';
-import {withDiagramOpenMemo} from '../core/diagramOpenMemo';
+import {withDiagramOpenMemo,withDiagramOpenMemoAsync} from '../core/diagramOpenMemo';
+import {openDiagramPoseRestoreCache} from '../app/diagramPoseRestoreCache';
+import {drawingSVG} from '../app/diagramDrawing';
+import {defaultDiagramLineDefaults} from '../app/diagramLineStyles';
 import {encodePreparedCaptionEdits,encodePreparedDiagramFile,inspectPreparedDiagram} from '../app/diagramPreparedFile';
 import {prepareExistingCreases} from '../app/diagramProjectPreparation';
 import type {DiagramProjectImportReply,DiagramProjectImportRequest,DiagramOpenTiming} from '../app/diagramProjectImportTask';
@@ -86,9 +89,24 @@ self.onmessage=async(event:MessageEvent<DiagramProjectImportRequest>)=>{
     }
     const reused=!!project;
     if(cache?.saved&&!project)decoded=decode();
-    project??=withDiagramOpenMemo(()=>prepareParsedDiagramProject(decoded,cache?compute=>{
-      const contacts=compute();cache.collect(contacts);return contacts;
-    }:undefined,stage));
+    const poseCache=!project?await openDiagramPoseRestoreCache():undefined;
+    if(!project)project=await withDiagramOpenMemoAsync(()=>prepareParsedDiagramProjectProgressively(decoded,{
+      contacts:cache?compute=>{const contacts=compute();cache.collect(contacts);return contacts;}:undefined,
+      restore:poseCache?.restore,onStage:stage,
+      onProgress:(completed,total)=>{if(completed===1||completed===total||completed%5===0)reply({type:'progress',message:`正在恢复步骤（${completed} / ${total}）…`});},
+      onCurrentStep:(project,step)=>{
+        try{
+          // Show only the verified paper model. Authored folding overlays and
+          // editing remain behind the complete CP/drawing preparation barrier.
+          const svg=drawingSVG(step.pose,[],step.title,'',undefined,step.images??[],step.paperVisible!==false,project.basicSettings?.lineDefaults??defaultDiagramLineDefaults(),[],undefined,undefined,undefined,step.canvas?.drawingRotation??0,step.simulationSurface,project.basicSettings?.paperPatterns);
+          if(svg.length<=2*1024*1024)reply({type:'preview',stepId:step.id,svg});
+        }catch{/* Optional early view must not abort complete import. */}
+        mark('优先恢复当前步骤');
+      },
+    }));
+    await poseCache?.flush();
+    mark('完成姿态缓存写入');
+    if(poseCache){const s=poseCache.stats;timings.push({stage:'姿态缓存命中',durationMs:Math.round(s.readMs),count:s.hits,detail:true},{stage:'姿态实际计算',durationMs:Math.round(s.computeMs),count:s.misses,detail:true},{stage:'并行写入姿态缓存（任务累计）',durationMs:Math.round(s.writeMs),detail:true});}
     reply({type:'progress',message:'正在整理折痕和步骤…'});
     const normalized=normalizeImportedDiagramCP(project).project;mark('整理 CP');
     // A changed CP, a repaired snapshot or different geometry invalidates an
@@ -100,7 +118,7 @@ self.onmessage=async(event:MessageEvent<DiagramProjectImportRequest>)=>{
     // Compare the verified output to the actual file body as well. A forged
     // digest alone must never promote edited geometry to a verified receipt.
     if(originalMatches&&file&&cache&&!failed.size&&await file.matches(next))await cache.markPrepared();
-    else if(!reused)await cache?.write();
+    else if(!reused&&!poseCache?.stats.hits)await cache?.write();
     mark('更新本机缓存');
     reply({type:'progress',message:'正在准备工程显示数据…'});
     await publish(next,mark,timings,fileName);

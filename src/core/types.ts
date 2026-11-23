@@ -125,6 +125,9 @@ export interface FlatFoldResult {
     graph?: FoldGraph;
     /** Root used for this computation, not the currently inspected face. */
     startingFace?: number;
+    /** Diagram contact precision derived from the source paper, not the folded
+     * bounding box. Snapshot import recomputes it from the validated CP. */
+    sourceEpsilon?:number;
     /** Manual result deformation; never imply this still preserves source crease lengths. */
     modified?: boolean;
   };

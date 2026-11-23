@@ -1,10 +1,20 @@
 import type {FoldAssignment,PreparedOrigamiModel} from '../../vendor/simulator/oristudio/packages/origami-simulator/src/types';
 import type {CameraUniforms} from '../../vendor/simulator/oristudio/packages/origami-simulator/src/webgl/camera';
-import type {SimulationStepAnimation} from './simStepAnimation';
+import {simulationStepFoldProfile,type SimulationStepAnimation} from './simStepAnimation';
 
 type EdgeModel=Pick<PreparedOrigamiModel,'edgesAssignment'|'edgesFaces'|'facesVertices'|'triangleSourceFaces'>&{creaseParams?:readonly {edge:number}[]};
 type EdgeCamera=Pick<CameraUniforms,'center'|'rotation'|'camDist'>;
 const ANGLE_EPSILON=1e-8;
+
+/** Captures need the authored F identity, which display assignments encode as V
+ * merely to make it visible. A numerical sheet may curve across a zero-angle
+ * mark; this does not turn that mark into a folded contour. Moving hinges keep
+ * the geometry-based role, and the renderer gives actual silhouettes priority. */
+export function simulationStepFlatCreases(animation:SimulationStepAnimation,progress:number):ReadonlySet<number> {
+  return new Set(simulationStepFoldProfile(animation,progress).ranges
+    .filter(range=>animation.targetCreases?.[range.edge]==='F'&&Math.abs(range.fromAngle)<=ANGLE_EPSILON)
+    .map(range=>range.edge));
+}
 
 /** Render-only edge roles. F suppresses a stroke; B keeps the paper-outline
  * style. The caller uses the neutral crease style for remaining M/V strokes,

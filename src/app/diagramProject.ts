@@ -1307,3 +1307,41 @@ export function prepareParsedDiagramProject(value:unknown,contacts?:RestoreConta
   onStage?.('restore',portable?.verified.groups);
   return next;
 }
+
+/** Same complete restoration, with a checkpoint after the active step's ancestry.
+ * The checkpoint is display-only; no partial project is published or saved. */
+export async function prepareParsedDiagramProjectProgressively(value:unknown,options:{
+  contacts?:RestoreContactSolution;
+  restore?:(pose:DiagramPose,previous:DiagramPose|undefined,compute:()=>void)=>Promise<void>;
+  onStage?:(stage:string,count?:number)=>void;
+  onCurrentStep?:(project:DiagramProject,step:DiagramStep)=>void;
+  onProgress?:(completed:number,total:number)=>void;
+}={}):Promise<DiagramProject>{
+  let portable:DiagramPortableContacts|undefined;
+  if(value&&typeof value==='object'&&'spatialContactSolutions' in value){
+    const {spatialContactSolutions,...project}=value;portable=new DiagramPortableContacts(false,spatialContactSolutions);value=project;
+  }
+  validateDiagramProject(value);options.onStage?.('validate');
+  const next=syncDiagramReturnLabels(value),bases=new Map<string,DiagramPose|undefined>();
+  const restore=async(pose:DiagramPose,basis?:DiagramPose)=>{
+    const compute=()=>preparePoseSnapshot(pose,basis,options.contacts,portable);
+    if(options.restore)await options.restore(pose,basis,compute);else compute();
+  };
+  const prepare=async(step:DiagramStep,basis?:DiagramPose):Promise<void>=>{
+    if(step.pose){
+      repairDiagramPaperStatesInPlace(step);await restore(step.pose,basis);
+      if(step.paperStates){for(const mode of ['flat','spatial','pulled'] as const){const pose=step.paperStates[mode];if(pose&&mode!==step.paperStates.active)await restore(pose,basis);}syncPaperState(step);}
+    }
+    for(const figure of step.processFigures??[])await prepare(figure.steps[0]);
+  };
+  let basis:DiagramPose|undefined,completed=0;const total=next.steps.length+(next.branchSteps?.length??0);
+  const done=(step:DiagramStep)=>{options.onProgress?.(++completed,total);if(step.id===next.activeStepId)options.onCurrentStep?.(next,step);};
+  // Main-chain order already places the active step and all of its ancestors
+  // before every parked branch, while preserving solver preference order.
+  for(const step of next.steps){await prepare(step,basis);basis=snapshotBasis(step,basis);bases.set(step.id,basis);done(step);}
+  const children=new Map<string,DiagramBranchEntry[]>();
+  for(const entry of next.branchSteps??[]){const list=children.get(entry.parentId)??[];list.push(entry);children.set(entry.parentId,list);}
+  const parents=next.steps.map(step=>step.id);
+  for(let index=0;index<parents.length;index++)for(const entry of children.get(parents[index])??[]){const previous=bases.get(entry.parentId);await prepare(entry.step,previous);bases.set(entry.step.id,snapshotBasis(entry.step,previous));parents.push(entry.step.id);done(entry.step);}
+  options.onStage?.('restore',portable?.verified.groups);return next;
+}

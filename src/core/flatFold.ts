@@ -76,8 +76,10 @@ function recoverDiagramLayerCandidate(result:FlatFoldResult,eps:number,requested
   // overlap requirement must instead have real positive-area coverage before
   // the exact solver is allowed to recover a pair omitted by the coarse tree.
   if(required.length){const touches=coveragePairMembership(options.coverage);if(required.some(({above,below})=>!touches(above,below)))return null;}
-  let candidate=solveConcaveLayerCandidate(result.geometry.graph!,eps,{...options,fixedOrders:orders([...required,...preferences])});
-  if(!candidate&&preferences.length)candidate=solveConcaveLayerCandidate(result.geometry.graph!,eps,{...options,fixedOrders:orders(required)});
+  const contactGraph=flatCreaseLayerRegions(result.geometry.graph!,eps)??result.geometry.graph!;
+  let candidate=solveConcaveLayerCandidate(contactGraph,eps,{...options,fixedOrders:orders([...required,...preferences])});
+  const droppedPreferences=!candidate&&preferences.length>0;
+  if(droppedPreferences)candidate=solveConcaveLayerCandidate(contactGraph,eps,{...options,fixedOrders:orders(required)});
   if(!candidate)return null;
   if(!candidate.coverageCertificate)throw Error('原纸面层序复核缺少完整区域认证。');
   validateLayerOrders(candidate.orders,normals.length);
@@ -87,6 +89,7 @@ function recoverDiagramLayerCandidate(result:FlatFoldResult,eps:number,requested
     return result;
   }
   result.layers={status:'solved',message:'已复核全部原纸面的接触约束与区域遮挡，确认存在合法层序；尚未枚举候选总数。',faceOrders:candidate.orders,constraints,...(candidate.faceOrder?{faceOrder:candidate.faceOrder}:{})};
+  if(droppedPreferences)result.warnings.push('[纸层继承] 本步合法层序不能同时保留全部旧纸层偏好，已保留用户指定关系并采用通过完整认证的新方案。');
   if(publicGeometry)result.geometry=publicGeometry;
   rememberFlatExactProof(result,{topology,certificate:candidate.coverageCertificate,nonContactRows:candidate.nonContactRows});
   return result;
@@ -284,7 +287,7 @@ export function computeFlatGeometry(graph:FoldGraph,eps:number,options:Pick<Flat
     }
     if (vertices.filter(Boolean).length !== graph.vertices_coords.length) return emptyFoldResult('invalid', '存在不属于任何纸面的孤立顶点。');
     const foldedGraph: FoldGraph = { ...flatGraph, vertices_coords: vertices, frame_classes: ['foldedForm'], frame_attributes: ['2D'] };
-    return { geometry: { status: 'ready', message: '平折几何已生成。它不等于层序解，也不证明存在可行的连续折叠路径。', vertices, faces, graph: foldedGraph, startingFace }, layers: { status: 'unknown', message: '正在独立求解层序。' }, warnings: [] };
+    return { geometry: { status: 'ready', message: '平折几何已生成。它不等于层序解，也不证明存在可行的连续折叠路径。', vertices, faces, graph: foldedGraph, startingFace,...(graph.zhezhi_flatCreases==='marks'?{sourceEpsilon:eps}:{}) }, layers: { status: 'unknown', message: '正在独立求解层序。' }, warnings: [] };
   } catch(e) {return emptyFoldResult('error',`平折几何计算失败：${e instanceof Error?e.message:String(e)}`);}
 }
 
@@ -353,8 +356,7 @@ function recomputeFlatLayersInternal(input: FlatFoldResult, options:Pick<FlatFol
       graph.edges_assignment.length!==graph.edges_vertices.length||graph.edges_foldAngle.length!==graph.edges_vertices.length||
       graph.edges_assignment.some(a=>!['B','M','V','F','U'].includes(a)))throw new Error('模型面或边的拓扑无效。');
     if(JSON.stringify(graph.faces_vertices)!==JSON.stringify(faces)||JSON.stringify(graph.vertices_coords)!==JSON.stringify(vertices))throw new Error('模型显示坐标与计算图不一致。');
-    const {minX,minY,maxX,maxY}=pointBounds(vertices);
-    const eps=Math.max(1e-6,Math.max(maxX-minX,maxY-minY)*1e-8);
+    const eps=flatLayerEpsilon(result);
     if(graph.edges_vertices.some(([a,b])=>distance(vertices[a],vertices[b])<=eps))throw new Error('模型含零长边，请调整顶点后再分析。');
     const finiteRegions=flatCreaseLayerRegions(graph,eps);
     if(finiteRegions){
@@ -406,13 +408,33 @@ export function recomputeFlatLayers(input:FlatFoldResult,options:Pick<FlatFoldOp
   return finishFlatLayers(result,required,undefined,options);
 }
 
-function finishFlatLayers(result:FlatFoldResult,required:FlatLayerPreference[],epsilon?:number,options:FlatFoldOptions={},recoverRoundoff=true):FlatFoldResult{
-  if(epsilon===undefined){
-    const {minX,minY,maxX,maxY}=pointBounds(result.geometry.vertices);
-    epsilon=Math.max(1e-6,Math.max(maxX-minX,maxY-minY)*1e-8);
+function flatLayerEpsilon(result:FlatFoldResult):number {
+  const source=result.geometry.sourceEpsilon;
+  if(source!==undefined){
+    if(result.geometry.graph?.zhezhi_flatCreases!=='marks'||!Number.isFinite(source)||source<1e-6)throw Error('折序模型的源纸张精度无效。');
+    return source;
   }
+  const {minX,minY,maxX,maxY}=pointBounds(result.geometry.vertices);
+  return Math.max(1e-6,Math.max(maxX-minX,maxY-minY)*1e-8);
+}
+function finishFlatLayers(result:FlatFoldResult,required:FlatLayerPreference[],epsilon?:number,options:FlatFoldOptions={},recoverRoundoff=true):FlatFoldResult{
+  epsilon??=flatLayerEpsilon(result);
   const checked=certifyRelativeLayerConstraints(result,required);
   const final=withConflictExplanation(certifyRelativeLayerConstraints(selfDiagnoseLayers(checked,epsilon),required));
+  // The tolerance tree's first candidate is not a published/user-authored
+  // relation set. If it cannot extend to exact coverage, use the same
+  // original-face recovery already used when that tree rejects at its root.
+  // Keep hard user relations, visible-face restrictions and explicit later
+  // candidate/adjustment requests; never relabel a recovered answer as #0.
+  const failedCompletion=final.layers.selfDiagnosis?.status==='conflict'&&final.layers.selfDiagnosis.stage==='遗漏关系补全';
+  const failedRoot=final.layers.status==='no-solution'&&!final.layers.conflicts?.some(c=>c.kind==='maekawa'||c.kind==='relative-order'||c.kind==='visible-face');
+  if((failedCompletion||failedRoot)&&(options.solutionIndex===undefined||options.solutionIndex===0)){
+    const recovered=recoverDiagramLayerCandidate(final,epsilon,options.solutionIndex,options.constraints??final.layers.constraints??[],options.layerAdjustment,options.layerPreferences??[],undefined,required);
+    if(recovered?.layers.status==='solved'){
+      recovered.layers.message=(failedCompletion?'原首个候选未通过完整覆盖校验，已重新求解。':'原容差层序模型未通过，已使用原纸面重新求解。')+recovered.layers.message;
+      return withConflictExplanation(certifyRelativeLayerConstraints(selfDiagnoseLayers(recovered,epsilon),required));
+    }
+  }
   if(recoverRoundoff&&final.layers.status==='no-solution'&&final.layers.conflicts?.some(c=>c.scope==='root')){
     const stable=flatRoundoffRecovery(final,epsilon);
     if(stable){

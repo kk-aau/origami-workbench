@@ -92,3 +92,6 @@
 .diagram-editor-cp-choices small{display:block;opacity:.72}
 
 .diagram-rename-dialog textarea{box-sizing:border-box;min-width:0;width:100%;min-height:54px;resize:vertical;font:inherit;padding:6px 8px}
+
+.diagram-opening-preview{height:min(42vh,360px);overflow:auto;background:var(--diagram-sheet);border:1px solid var(--diagram-line);border-radius:4px}.diagram-opening-preview img{display:block;min-height:160px;object-fit:contain}
+

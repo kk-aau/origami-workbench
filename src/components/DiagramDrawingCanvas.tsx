@@ -810,7 +810,7 @@ export default function DiagramDrawingCanvas({onQuickSelect,paperPatterns,symbol
       {paperVisible&&!vertexDraft&&cpHighlightMarkup(cpSelectedHighlight,'selected')}
       {paperVisible&&!vertexDraft&&cpHighlightMarkup(cpHighlight,'hovered')}
       {paperVisible&&paintedFoldPreview.length>0&&<DiagramFoldPreviewLayer boundary={boundaryOverlay} segments={styledFoldPreview} units={units} adaptiveLines={adaptiveLines} clips={localFoldClips} tearWindows={tearWindows} showCursorHint={showCursorHint}/>}
-      <DiagramImageLayer images={images} selectedId={selectedImageId} interactive={active&&!disabled&&tool==='select'} units={units} commandToken={commandToken} inBounds={inZoom} onSelect={id=>imageCallbacks.current.onSelectImage?.(id)} onStart={()=>{clearGesture();pinView();callbacks.current.onSelectedIds([],{});callbacks.current.onSelect({group:[],selected:[]});}} onChange={onImagesChange} onGestureChange={moving=>{setImageGestureMoving(moving);onImageGestureChange?.(moving);}}/>
+      <DiagramImageLayer images={images} lineDefaults={lineDefaults} selectedId={selectedImageId} interactive={active&&!disabled&&tool==='select'} units={units} commandToken={commandToken} inBounds={inZoom} onSelect={id=>imageCallbacks.current.onSelectImage?.(id)} onStart={()=>{clearGesture();pinView();callbacks.current.onSelectedIds([],{});callbacks.current.onSelect({group:[],selected:[]});}} onChange={onImagesChange} onGestureChange={moving=>{setImageGestureMoving(moving);onImageGestureChange?.(moving);}}/>
       </g>
       {renderedItems.filter((_,index)=>visibleItems[index].kind==='line')}
       {boundaryOverlay?.markup&&<g data-diagram-visible-boundaries="true" clipPath={paperClip} pointerEvents="none" dangerouslySetInnerHTML={{__html:boundaryOverlay.markup}}/>}

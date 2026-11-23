@@ -22,6 +22,21 @@ export function diagramBoundaryStrokeWidth(palette:DiagramLineDefaults|undefined
   const boundary=palette?.boundary;
   return boundary?.globalFields?.includes('width')?legacyWidth*(boundary.width/.7):legacyWidth;
 }
+/** Process figures retain their saved defaults, but explicitly authored host
+ * category fields apply to the whole exported tutorial. Per-line exceptions
+ * are still resolved by applyDiagramLineAppearance. */
+export function diagramProcessFigureLineDefaults(host:DiagramLineDefaults,figure?:DiagramLineDefaults):DiagramLineDefaults {
+  if(!figure)return host;
+  const result={...figure};
+  for(const style of DIAGRAM_LINE_STYLES){
+    const fields=host[style].globalFields??[];
+    if(!fields.length)continue;
+    const entry={...figure[style],globalFields:[...new Set([...(figure[style].globalFields??[]),...fields])]};
+    for(const field of fields)Object.assign(entry,{[field]:host[style][field]});
+    result[style]=entry;
+  }
+  return result;
+}
 export function diagramLineAppearance(line:Pick<DiagramLineAnnotation,'style'|'color'|'width'|'strokePattern'>):DiagramLineAppearance {
   return {color:line.color,width:line.width,strokePattern:line.strokePattern??defaultDiagramStrokePattern(line.style)};
 }

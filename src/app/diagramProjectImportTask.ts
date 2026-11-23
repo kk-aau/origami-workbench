@@ -4,9 +4,11 @@ import {originalDiagramFileNames,registerDiagramProjectSaveBlob} from './diagram
 import {recordActivity} from './activityLog';
 import {diagramFileCaptionEdits,type DiagramCaptionEdits} from './diagramProjectContent';
 
-export interface DiagramOpenTiming {stage:string;durationMs:number;count?:number}
+export interface DiagramOpenTiming {stage:string;durationMs:number;count?:number;detail?:boolean}
+export interface DiagramOpenPreview {stepId:string;svg:string}
 
 export type DiagramProjectImportReply={type:'progress';message:string}|{type:'error';message:string}
+  |({type:'preview'}&DiagramOpenPreview)
   |{type:'diagram-begin';saveBlob:Blob}|{type:'diagram-chunk';index:number;operations:ArtworkTransferOperation[]}|{type:'diagram-complete';chunks:number;storedName?:string;timings?:DiagramOpenTiming[]};
 export type DiagramProjectImportInput=File|{storedText:string};
 export type DiagramProjectImportRequest=DiagramProjectImportInput|{type:'continue-diagram'}|{type:'export-diagram-file';project:DiagramProject}|{type:'export-captions';source:Blob;edits:DiagramCaptionEdits};
@@ -36,7 +38,7 @@ export async function exportDesktopDiagramFile(project:DiagramProject,reuse?:{so
 
 /** Send the immutable file handle; reading, validation and normalization all
  * run in the worker. Terminating it cancels even synchronous geometry work. */
-export function startDiagramProjectImport(file:DiagramProjectImportInput,onProgress:(message:string)=>void=()=>{},factory:()=>Worker=()=>new Worker(new URL('../workers/diagramProjectImport.worker.ts',import.meta.url),{type:'module'})){
+export function startDiagramProjectImport(file:DiagramProjectImportInput,onProgress:(message:string)=>void=()=>{},factory:()=>Worker=()=>new Worker(new URL('../workers/diagramProjectImport.worker.ts',import.meta.url),{type:'module'}),onPreview?:(preview:DiagramOpenPreview)=>void){
   let worker:Worker|undefined,done=false,rejectTask!:(error:Error)=>void;
   let incoming:{receiver:ReturnType<typeof createArtworkTransferReceiver>;chunks:number;saveBlob:Blob;lastProgress:number}|undefined;
   const promise=new Promise<DiagramProject>((resolve,reject)=>{
@@ -48,6 +50,10 @@ export function startDiagramProjectImport(file:DiagramProjectImportInput,onProgr
         if(done)return;
         try{
           const reply=event.data;
+          if(reply?.type==='preview'){
+            if(typeof reply.stepId!=='string'||typeof reply.svg!=='string'||reply.svg.length>2*1024*1024||!reply.svg.startsWith('<svg'))throw Error('折序预览数据无效。');
+            onPreview?.({stepId:reply.stepId,svg:reply.svg});return;
+          }
           if(reply?.type==='progress'){onProgress(reply.message);return;}
           if(reply?.type==='diagram-begin'){
             if(incoming||!(reply.saveBlob instanceof Blob)||reply.saveBlob.type!=='application/json'||!reply.saveBlob.size)throw Error('折序工程分批准备数据无效，当前工程未替换。');

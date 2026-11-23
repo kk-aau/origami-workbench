@@ -3,15 +3,20 @@ import {diagramPaperColorPixel} from './diagramPaperColorPixel';
 import {PrintPaintServers,type PrintMapping,type PrintSources} from '../../vendor/simulator/oristudio/packages/origami-simulator/src/paperPrintSvg';
 import type {PixelRect} from '../core/rasterBounds';
 import {polygonSeamWidth} from '../../vendor/simulator/oristudio/packages/origami-simulator/src/contactVisibility';
+import {diagramBoundaryStrokeWidth,diagramLineDasharray,type DiagramLineDefaults} from './diagramLineStyles';
+
+const frameLineStyles=['boundary','crease','mountain','valley'] as const;
+type FrameLineStyle=typeof frameLineStyles[number];
+export type DiagramFramePaint=number|DiagramLineDefaults;
 
 /** Painter-ordered visible paper and ink, expressed in the captured camera's coordinates. */
 export interface DiagramFrameArtwork {
   box:PixelRect;
-  pieces:{kind:'face'|'line';color:string;points:number[];print?:PrintMapping}[];
+  pieces:{kind:'face'|'line';color:string;points:number[];print?:PrintMapping;lineStyle?:FrameLineStyle}[];
   prints?:PrintSources;
 }
 
-const inkCache=new WeakMap<DiagramFrameArtwork,string>();
+const inkCache=new WeakMap<DiagramFrameArtwork,Map<string,string>>();
 let frameId=0;
 
 export function validateFrameArtwork(value:unknown):asserts value is DiagramFrameArtwork {
@@ -24,6 +29,7 @@ export function validateFrameArtwork(value:unknown):asserts value is DiagramFram
     for(const source of Object.values(frame.prints))diagramImageDataInfo(source);
   }
   for(const piece of frame.pieces){
+    if(piece?.lineStyle!==undefined&&(piece.kind!=='line'||!frameLineStyles.includes(piece.lineStyle)))throw Error('过程图线条类别无效。');
     const print=piece?.print;
     if(print&&(piece.kind!=='face'||!['front','back'].includes(print.side)||!frame.prints?.[print.side]||
         !Array.isArray(print.matrix)||print.matrix.length!==6||!print.matrix.every(Number.isFinite)))throw Error('过程图印花投影无效。');
@@ -53,20 +59,34 @@ export function frameArtworkFromSVG(svg:string):DiagramFrameArtwork {
     const points=face?(element.getAttribute('points')??'').trim().split(/[\s,]+/).map(Number):
       ['x1','y1','x2','y2'].map(key=>Number(element.getAttribute(key)));
     const fill=element.getAttribute(face?'fill':'stroke')??'',mapped=face?mappings.get(fill):undefined;
-    pieces.push({kind:face?'face':'line',color:mapped?.base??fill,points,...(mapped?{print:mapped.print}:{})});
+    const style=element.getAttribute('data-diagram-line-style');
+    if(style!==null&&(face||!frameLineStyles.includes(style as FrameLineStyle)))throw Error('过程图线条类别无效。');
+    pieces.push({kind:face?'face':'line',color:mapped?.base??fill,points,...(mapped?{print:mapped.print}:{}),...(style?{lineStyle:style as FrameLineStyle}:{})});
   }
   const frame={box:{x,y,width,height},pieces,...(Object.keys(prints).length?{prints}:{})};validateFrameArtwork(frame);return frame;
 }
 
-export function frameInkSVG(frame:DiagramFrameArtwork):string {
+export function frameInkSVG(frame:DiagramFrameArtwork,paintStyle:DiagramFramePaint=1.35):string {
   validateFrameArtwork(frame);
-  const cached=inkCache.get(frame);if(cached!==undefined)return cached;
+  const key=JSON.stringify(paintStyle),cached=inkCache.get(frame)?.get(key);if(cached!==undefined)return cached;
+  const palette=typeof paintStyle==='number'?undefined:paintStyle;
+  const legacyWidth=typeof paintStyle==='number'?paintStyle:diagramBoundaryStrokeWidth(palette,1.35);
   const paint=new PrintPaintServers('frame-print-'+ ++frameId,side=>frame.prints![side]!);
   const solid={front:diagramPaperColorPixel(frame.prints?.front),back:diagramPaperColorPixel(frame.prints?.back)};
   const parts:string[]=[];
   for(let index=0;index<frame.pieces.length;){
     const piece=frame.pieces[index++],{kind,color,points}=piece;
-    if(kind==='line'){parts.push(`<line x1="${points[0]}" y1="${points[1]}" x2="${points[2]}" y2="${points[3]}" stroke="${color}" stroke-width="1.35" vector-effect="non-scaling-stroke"/>`);continue;}
+    if(kind==='line'){
+      const style=piece.lineStyle,appearance=style&&palette?.[style],fields=appearance?.globalFields??[];
+      // Legacy frames lost their category. Never guess from black ink and erase
+      // true silhouettes; re-capturing records the missing semantic information.
+      let width=style?style==='crease'?.45:1.35:legacyWidth,stroke=style==='crease'?'#8d9b92':color;
+      if(style&&typeof paintStyle==='number')width*=paintStyle/1.35;
+      if(appearance&&fields.includes('width'))width*=appearance.width/(style==='crease'?.35:.7);
+      if(appearance&&fields.includes('color'))stroke=appearance.color;
+      const dash=style&&appearance&&fields.includes('strokePattern')?diagramLineDasharray(style,width,appearance.strokePattern):undefined;
+      parts.push(`<line x1="${points[0]}" y1="${points[1]}" x2="${points[2]}" y2="${points[3]}" stroke="${stroke}" stroke-width="${width}"${dash?` stroke-dasharray="${dash}" stroke-linecap="butt"`:''} vector-effect="non-scaling-stroke"/>`);continue;
+    }
     if(piece.print){
       const fill=solid[piece.print.side]??paint.fill(piece.print,color),ring=Array.from({length:points.length/2},(_,i)=>[points[2*i],points[2*i+1]]);
       const seam=polygonSeamWidth(ring,.35);
@@ -87,10 +107,11 @@ export function frameInkSVG(frame:DiagramFrameArtwork):string {
     parts.push(`<path data-diagram-frame-faces="${valid.length}" d="${paths.join(' ')}" fill="${color}" stroke="none" fill-rule="nonzero"/>`);
   }
   const pieces=paint.defs()+parts.join('');
-  inkCache.set(frame,pieces);return pieces;
+  const entries=inkCache.get(frame)??new Map<string,string>();
+  if(entries.size>=8)entries.clear();entries.set(key,pieces);inkCache.set(frame,entries);return pieces;
 }
 
-export function frameArtworkSVG(frame:DiagramFrameArtwork,x:number,y:number,width:number,height:number):string {
-  const ink=frameInkSVG(frame),box=frame.box;
+export function frameArtworkSVG(frame:DiagramFrameArtwork,x:number,y:number,width:number,height:number,paintStyle:DiagramFramePaint=1.35):string {
+  const ink=frameInkSVG(frame,paintStyle),box=frame.box;
   return `<svg x="${x}" y="${y}" width="${width}" height="${height}" viewBox="${box.x} ${box.y} ${box.width} ${box.height}" preserveAspectRatio="none" overflow="hidden" stroke-linejoin="round" stroke-linecap="round">${ink}</svg>`;
 }

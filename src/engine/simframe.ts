@@ -34,7 +34,7 @@ import {rigidStepContactLookup,simulationStepLayerOrderAt} from './simStepLayerT
 import {simulationStepCameraBounds} from './simStepCamera';
 import {validatedDynamicEvaluator} from './simStepDynamic';
 import {prepareSinkPhase,type PreparedSinkPhase,type PreparedSinkPair,type SinkPlaybackInput} from './simSinkPlayback';
-import {simulationStepTargetColors,simulationStepDisplayAssignments} from './simStepEdges';
+import {simulationStepTargetColors,simulationStepDisplayAssignments,simulationStepFlatCreases} from './simStepEdges';
 import {DEFAULT_SIMULATION_SOLVER_SETTINGS,mergeSimulationSolverSettings,simulationSolverFrameStepCap,simulationFoldProgress,type SimulationSolverSettings} from './simSettings';
 import {SimulationAngleAnalyzer,type SimulationAngleDiagnostics,type SimulationSolveState} from './simConvergence';
 import {saveDownload,sendToBlender} from '../app/api';
@@ -926,7 +926,7 @@ async function captureDiagramFrame():Promise<SimulationImageCapture>{
   const paint=renderState(camera).settings;
   const faceOrders=stepAnimation.layerTimeline?simulationStepLayerOrderAt(prepared,stepAnimation,stepAnimation.layerTimeline,targetProgress,positions):[];
   const compare=rasterLayerComparison(positions,prepared.indices,camera,faceOrders.length?{triangleSourceFaces:prepared.triangleSourceFaces??prepared.facesVertices.map((_,f)=>f),faceOrders,rigidContact}:undefined);
-  const result=renderMeshToSvg(positions,topology,camera,{...paint,lighting:false,diagramInkColor:settings.borderColor},{perspective:true,compareContact:compare?(a,b,equalDepth)=>compare(a,b,equalDepth===true):undefined,coloredEdges:animationCreaseStyle==='assignment'?simulationStepTargetColors(prepared,stepAnimation):undefined});
+  const result=renderMeshToSvg(positions,topology,camera,{...paint,lighting:false,diagramInkColor:settings.borderColor},{perspective:true,compareContact:compare?(a,b,equalDepth)=>compare(a,b,equalDepth===true):undefined,coloredEdges:animationCreaseStyle==='assignment'?simulationStepTargetColors(prepared,stepAnimation):undefined,flatCreases:simulationStepFlatCreases(stepAnimation,targetProgress)});
   if(!result)throw Error('当前视角没有可截取的纸面。');
   const artwork=frameArtworkFromSVG(result.svg);
   // A small preview supports the image picker and interactive crop. Print uses the paths.

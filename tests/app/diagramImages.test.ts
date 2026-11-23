@@ -9,6 +9,8 @@ import {diagramDrawingFrame,drawingSVG} from '../../src/app/diagramDrawing';
 import {diagramPDFStepSVG,diagramPDFCoverSVG} from '../../src/app/diagramPDF';
 import {createDiagramLibrary,diagramLibraryThumbnail} from '../../src/app/diagramLibrary';
 import type {DiagramAnnotation} from '../../src/app/diagramAnnotations';
+import {diagramExportPanelArtwork} from '../../src/app/diagramExportPanel';
+import {changeGlobalDiagramLineStyle,defaultDiagramLineDefaults} from '../../src/app/diagramLineStyles';
 
 function crc32(bytes:Buffer){let crc=0xffffffff;for(const byte of bytes){crc^=byte;for(let i=0;i<8;i++)crc=crc>>>1^((crc&1)?0xedb88320:0);}return (crc^0xffffffff)>>>0;}
 function chunk(kind:string,bytes:Buffer){const result=Buffer.alloc(bytes.length+12);result.writeUInt32BE(bytes.length);result.write(kind,4,'ascii');bytes.copy(result,8);result.writeUInt32BE(crc32(result.subarray(4,-4)),result.length-4);return result;}
@@ -18,6 +20,19 @@ function png(padding=0){
   return `data:image/png;base64,${Buffer.concat([Buffer.from([137,80,78,71,13,10,26,10]),chunk('IHDR',header),chunk('IDAT',deflateSync(Buffer.from([0,255,0,0,255]))),...(padding?[chunk('tEXt',Buffer.concat([Buffer.from('note\0'),Buffer.alloc(padding,32)]))]:[]),chunk('IEND',Buffer.alloc(0))]).toString('base64')}`;
 }
 const pixel=png();
+test('saved captured process figure preserves crease categories and inherits host crease style in PDF output',()=>{
+  const host=project(),figure=project();figure.steps[0].paperVisible=false;
+  figure.steps[0].images=[image({source:'simulation',artwork:{box:{x:0,y:0,width:100,height:100},pieces:[
+    {kind:'line',color:'#000000',points:[0,0,100,0],lineStyle:'boundary'},
+    {kind:'line',color:'#000000',points:[0,50,100,50],lineStyle:'crease'},
+  ]}})];
+  host.steps[0].processFigures=[figure];const reopened=importDiagramProject(exportDiagramProject(host));
+  assert.deepEqual(reopened.steps[0].processFigures![0].steps[0].images,figure.steps[0].images);
+  const palette=changeGlobalDiagramLineStyle(defaultDiagramLineDefaults(),'crease',{color:'#123456',width:.7});
+  const svg=diagramExportPanelArtwork(reopened,{stepIndex:0,figureIndex:0,size:{width:200,height:200}},{x:0,y:0,width:200,height:200},palette,true).svg;
+  assert.match(svg,/stroke="#123456" stroke-width="0.9"/);assert.match(svg,/stroke="#000000" stroke-width="1.35"/);
+  assert.deepEqual(reopened.states,host.states);
+});
 const webp='UklGRkQAAABXRUJQVlA4IDgAAAAQAwCdASoRAAsAPm0skkWkIqGYBABABsSgB2APwAAVOoAA/tDK//+YJX5Bu1D//5Z8/hs6MAAAAA==';
 const jpeg='/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/2wBDAQkJCQwLDBgNDRgyIRwhMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjL/wAARCAALABEDASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oADAMBAAIRAxEAPwCtRRRXyh9YFFFFAH//2Q==';
 function image(patch:Partial<DiagramImage>={}):DiagramImage{return {id:'image',name:'成品 & <展示>',dataUrl:pixel,pixelWidth:1,pixelHeight:1,position:[10,20],width:80,height:40,rotation:0,source:'file',...patch};}

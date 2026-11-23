@@ -361,7 +361,7 @@ export default function DiagramPDFExport({editorDoc,project,onClose,onMessage,li
               <label>阅读顺序<select aria-label="PDF 阅读顺序" value={options.readingOrder??'rows'} onChange={e=>{const readingOrder=e.target.value as DiagramPDFOptions['readingOrder'];patchOptions({readingOrder,...(readingOrder==='snake'?{ribbon:{...(options.ribbon??defaultDiagramPDFRibbon()),enabled:true}}:{})});}}><option value="rows">顺序阅读</option><option value="snake">蛇形彩带</option></select></label>
               {options.readingOrder!=='snake'&&options.scope==='all'&&mainRouteChoices.length>0&&<>
                 <label>阅读主线<select aria-label="顺序阅读主线" value={mainRouteChoices.some(route=>route.stepId===options.sequentialMainStepId)?options.sequentialMainStepId:''} onChange={e=>update('sequentialMainStepId',e.target.value||undefined)}><option value="">自动选择最长链路</option>{mainRouteChoices.map(route=><option key={route.stepId} value={route.stepId}>{route.label}</option>)}</select></label>
-                <small style={{gridColumn:'1 / -1'}}>先完整排列所选主线，其余分支按链路长度依次另起一行。步骤连续编号；仅其他分支的起点标明接续来源。</small>
+                <small style={{gridColumn:'1 / -1'}}>先完整排列所选主线，其余分支按链路长度依次另起一行。各分支沿前一步递增编号，隐藏分支字母；仅其他分支的起点标明接续来源。</small>
               </>}
               {(options.readingOrder==='snake'||options.scope!=='all'||!project.branchSteps?.length)&&<div className="diagram-export-alignment">
                 <span>全篇步骤走向</span>

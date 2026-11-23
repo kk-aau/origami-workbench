@@ -13,7 +13,8 @@ export async function openDiagramContactCache(raw:string,stored:boolean){
   try{
     const encoder=new TextEncoder();
     const digest=async(input:Uint8Array<ArrayBuffer>)=>Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',input)),n=>n.toString(16).padStart(2,'0')).join('');
-    const key=await digest(encoder.encode(JSON.stringify([workerPath,stored,await digest(encoder.encode(raw))])));
+    const version=import.meta.env.VITE_DIAGRAM_OPEN_VERSION||workerPath;
+    const key=await digest(encoder.encode(JSON.stringify([version,stored,await digest(encoder.encode(raw))])));
     const health=await fetch('/api/health',{signal:AbortSignal.timeout(3000)});
     if(!health.ok)return;
     const {token}=await health.json();

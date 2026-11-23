@@ -7,6 +7,12 @@ export function withDiagramOpenMemo<T>(run:()=>T):T {
   active={tables:new Map(),bytes:0};
   try{return run();}finally{active=undefined;}
 }
+/** Only the importer Worker owns this asynchronous scope; it rejects a second job. */
+export async function withDiagramOpenMemoAsync<T>(run:()=>Promise<T>):Promise<T>{
+  if(active)throw new Error('折序恢复任务尚未结束。');
+  active={tables:new Map(),bytes:0};
+  try{return await run();}finally{active=undefined;}
+}
 
 export function memoDiagramOpen<T>(table:string,input:()=>unknown,compute:()=>T):T {
   if(!active)return compute();

@@ -4,14 +4,16 @@ import {frameInkSVG,type DiagramFrameArtwork} from '../app/diagramFrameArtwork';
 import {diagramImageCorners,type DiagramImage} from '../app/diagramImages';
 import {resizeDiagramImage,translateDiagramImage,type DiagramImageCorner} from './diagramImageGesture';
 import './DiagramImageLayer.css';
+import type {DiagramLineDefaults} from '../app/diagramLineStyles';
 
 type ImageDrag={pointer:number;element:SVGGElement;image:DiagramImage;source:DiagramImage[];inverse:DOMMatrix;start:Point;client:Point;corner?:DiagramImageCorner;moved:boolean;draft:DiagramImage};
 
-const VectorInk=memo(function VectorInk({frame}:{frame:DiagramFrameArtwork}){
-  return <g dangerouslySetInnerHTML={{__html:frameInkSVG(frame)}}/>;
+const VectorInk=memo(function VectorInk({frame,lineDefaults}:{frame:DiagramFrameArtwork;lineDefaults?:DiagramLineDefaults}){
+  return <g dangerouslySetInnerHTML={{__html:frameInkSVG(frame,lineDefaults)}}/>;
 });
 
-export default function DiagramImageLayer({images,selectedId,interactive,units,commandToken,inBounds,onSelect,onStart,onChange,onGestureChange}:{
+export default function DiagramImageLayer({images,lineDefaults,selectedId,interactive,units,commandToken,inBounds,onSelect,onStart,onChange,onGestureChange}:{
+  lineDefaults?:DiagramLineDefaults;
   images:DiagramImage[];selectedId?:string;interactive:boolean;units:number;commandToken:number;
   inBounds:(point:Point)=>boolean;onSelect:(id:string|null)=>void;onStart:()=>void;
   onChange?:(images:DiagramImage[])=>void;onGestureChange:(moving:boolean)=>void;
@@ -73,7 +75,7 @@ export default function DiagramImageLayer({images,selectedId,interactive,units,c
         <title>{image.name} · 拖动移动，四角等比缩放</title>
         {image.artwork?<g transform={`rotate(${image.rotation} ${image.position[0]+image.width/2} ${image.position[1]+image.height/2})`} ><svg x={image.position[0]} y={image.position[1]} width={image.width} height={image.height}
           viewBox={`${image.artwork.box.x} ${image.artwork.box.y} ${image.artwork.box.width} ${image.artwork.box.height}`}
-          preserveAspectRatio="none" overflow="hidden" strokeLinejoin="round" strokeLinecap="round"><VectorInk frame={image.artwork}/></svg></g>:<image href={image.dataUrl} x={image.position[0]} y={image.position[1]} width={image.width} height={image.height} preserveAspectRatio="none" transform={image.rotation?`rotate(${image.rotation} ${image.position[0]+image.width/2} ${image.position[1]+image.height/2})`:undefined}/>}
+          preserveAspectRatio="none" overflow="hidden" strokeLinejoin="round" strokeLinecap="round"><VectorInk frame={image.artwork} lineDefaults={lineDefaults}/></svg></g>:<image href={image.dataUrl} x={image.position[0]} y={image.position[1]} width={image.width} height={image.height} preserveAspectRatio="none" transform={image.rotation?`rotate(${image.rotation} ${image.position[0]+image.width/2} ${image.position[1]+image.height/2})`:undefined}/>}
         {selected&&<g data-diagram-image-selection={image.id}>
           <polygon points={corners.map(corner=>corner.join(',')).join(' ')} fill="none" stroke="#426f59" strokeWidth={units*1.25} strokeDasharray={`${units*5} ${units*3}`} pointerEvents="none"/>
           {corners.map((corner,index)=><g key={index} data-diagram-image-corner={index} className={index%2?'diagram-image-resize-ne':'diagram-image-resize-nw'} aria-label={`图片${['左上','右上','右下','左下'][index]}角等比缩放`} onPointerDown={event=>begin(event,image,index as DiagramImageCorner)}>

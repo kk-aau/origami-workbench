@@ -1,5 +1,5 @@
 {
-  "candidate": "tauri.94",
+  "candidate": "tauri.97",
   "platform": "windows",
   "arch": "x64",
   "webview": "system-webview2",

@@ -1,5 +1,5 @@
 import {validateRelativeLayerConstraints} from './relativeLayerConstraints';
-import {buildFold} from './geometry';
+import {buildFold,epsilonFor} from './geometry';
 import {validateDoc,type Doc,type FlatFoldResult,type FoldGraph,type Point,type FoldingConstraint,type FlatLayerPreference} from './types';
 import {hasMaterialTopology,inspectMaterialTopology} from './materialTopology';
 
@@ -56,6 +56,7 @@ export function exportModelSnapshot(source:Doc,result:FlatFoldResult):string{
 /** Validate the same portable model fields without encoding a temporary file. */
 export function checkedSnapshotModel(source:Doc,result:FlatFoldResult){
   const model=result.geometry,flatCreases=model.graph?.zhezhi_flatCreases==='marks'?'marks':undefined;
+  if(model.sourceEpsilon!==undefined&&(!flatCreases||model.sourceEpsilon!==epsilonFor(source)))throw Error('模型的源纸张精度与原始 CP 不一致。');
   const {graph,material}=sourceGraph(source,flatCreases);
   if(model.status!=='ready'||!model.graph)throw new Error('请先生成有效的模型几何。');
   // Fresh planar solutions use ±180°, while imported snapshots retain source target angles.
@@ -84,6 +85,6 @@ export function importModelSnapshot(text:string):LoadedModelSnapshot{
   const relativeConstraints=(model.relativeConstraints===undefined?[]:model.relativeConstraints) as FlatLayerPreference[];validateRelativeLayerConstraints(relativeConstraints,graph.faces_vertices!.length);
   const folded=structuredClone(graph);folded.vertices_coords=vertices.map(p=>[...p]);
   // Treat every imported model as a manually supplied result, not a proven CP folding.
-  const result:FlatFoldResult={geometry:{status:'ready',message:'已载入模型快照；顶点为保存的结果坐标，不证明原折痕可折。',vertices,faces:structuredClone(graph.faces_vertices!),graph:folded,startingFace,modified:true},layers:{status:'unknown',message:'快照不信任旧层序，请重新分析当前模型。',...(modelConstraints.length?{constraints:modelConstraints}:{}),...(relativeConstraints.length?{relativeConstraints:structuredClone(relativeConstraints)}:{})},warnings:[...warnings,'载入的模型仅保存结果几何；不证明等距折叠、连续折叠路径或实际可折性。']};
+  const result:FlatFoldResult={geometry:{status:'ready',message:'已载入模型快照；顶点为保存的结果坐标，不证明原折痕可折。',vertices,faces:structuredClone(graph.faces_vertices!),graph:folded,startingFace,modified:true,...(value.version===4?{sourceEpsilon:epsilonFor(value.source as Doc)}:{})},layers:{status:'unknown',message:'快照不信任旧层序，请重新分析当前模型。',...(modelConstraints.length?{constraints:modelConstraints}:{}),...(relativeConstraints.length?{relativeConstraints:structuredClone(relativeConstraints)}:{})},warnings:[...warnings,'载入的模型仅保存结果几何；不证明等距折叠、连续折叠路径或实际可折性。']};
   return {source:structuredClone(value.source as Doc),graph,result};
 }

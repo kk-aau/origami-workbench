@@ -535,13 +535,9 @@ export function planDiagramPDF(project:DiagramProject,options:DiagramPDFOptions)
   const branchReadingStarts=new Set<string>();
   function numberBranchPanels(){
     if(!tree||!treePages)return;
-    const numbers=new Map<string,string>();let number=0;
-    for(const page of treePages)for(const cell of page.cells){
-      const ref=tree.refs.get(cell.id)!;
-      if(ref.figureIndex===undefined)numbers.set(ref.branchStepId!,String(++number));
-    }
     for(const ref of tree.refs.values()){
-      const base=numbers.get(ref.branchStepId!)!;
+      // Number the folding chain, independently of pagination or other branches.
+      const base=String(ref.stepIndex+1);
       ref.displayNumber=ref.figureIndex===undefined?base:`${base}-${ref.figureIndex+1}`;
     }
   }

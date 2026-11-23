@@ -1,7 +1,7 @@
 import {diagramImageDataInfo} from './diagramRasterData';
 export {diagramImageDataInfo,diagramRasterDataInfo,DIAGRAM_IMAGE_MAX_BYTES,DIAGRAM_IMAGE_MAX_SIDE,DIAGRAM_IMAGE_MAX_PIXELS,type DiagramImageMime} from './diagramRasterData';
 import type {PixelRect} from '../core/rasterBounds';
-import {frameArtworkSVG,validateFrameArtwork,type DiagramFrameArtwork} from './diagramFrameArtwork';
+import {frameArtworkSVG,validateFrameArtwork,type DiagramFrameArtwork,type DiagramFramePaint} from './diagramFrameArtwork';
 import type {Point} from '../core/types';
 import {isDiagramCPLine,type DiagramAnnotation} from './diagramAnnotations';
 
@@ -52,11 +52,11 @@ export function diagramImageBounds(image:DiagramImage) {
   return {minX:Math.min(...xs),minY:Math.min(...ys),maxX:Math.max(...xs),maxY:Math.max(...ys)};
 }
 const escapeXML=(text:string)=>text.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&apos;'}[c]!));
-export function diagramImageSVG(images:readonly DiagramImage[],regionFor?:(image:DiagramImage)=>PixelRect|null|undefined):string {
+export function diagramImageSVG(images:readonly DiagramImage[],regionFor?:(image:DiagramImage)=>PixelRect|null|undefined,lineWidth:DiagramFramePaint=1.35):string {
   validateDiagramImages(images);
   return images.map(image=>{
     const [x,y]=image.position,rotate=`rotate(${image.rotation} ${x+image.width/2} ${y+image.height/2})`;
-    if(image.artwork)return `<g transform="${rotate}">${frameArtworkSVG(image.artwork,x,y,image.width,image.height)}</g>`;
+    if(image.artwork)return `<g transform="${rotate}">${frameArtworkSVG(image.artwork,x,y,image.width,image.height,lineWidth)}</g>`;
     const artwork=`<image href="${image.dataUrl}" x="${x}" y="${y}" width="${image.width}" height="${image.height}" preserveAspectRatio="none"`;
     const content=`<title>${escapeXML(image.name)}</title></image>`,region=regionFor?.(image);
     if(region===null)return '';

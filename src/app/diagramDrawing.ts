@@ -316,7 +316,7 @@ export function drawingSVG(pose:DiagramPose|null,annotations:DiagramAnnotation[]
   if(!Number.isFinite(outputWidth)||!Number.isFinite(outputHeight)||outputWidth<=0||outputHeight<=0)throw new Error('折图输出像素尺寸无效。');
   const renderStyle={symbolStyles:lineDisplay?.symbolStyles,enabled:lineDisplay?.enabled??readAdaptiveLineStyle(),units:lineDisplay?.units??Math.max(svgFrame.width/outputWidth,svgFrame.height/outputHeight)};
   const definitions=cutaway.definitions||localClips?`<defs>${cutaway.definitions}${localClips?.definitions??''}</defs>`:'';
-  const paperArtwork=(surface&&paperVisible?renderDiagramSimulationSurface(surface,{patterns}).markup:'')+(pose?diagramModelMarkup(pose,undefined,preview!==undefined,annotations,lineDefaults,patterns):'')+diagramImageSVG(images,lineDisplay?.fitArtwork&&!zoom?processFigureImageRegion:undefined);
+  const paperArtwork=(surface&&paperVisible?renderDiagramSimulationSurface(surface,{patterns}).markup:'')+(pose?diagramModelMarkup(pose,undefined,preview!==undefined,annotations,lineDefaults,patterns):'')+diagramImageSVG(images,lineDisplay?.fitArtwork&&!zoom?processFigureImageRegion:undefined,lineDefaults);
   const boundaryOverlay=pose&&!cutaway.definitions&&(linked.length||shownIndependent.some(annotation=>annotation.kind==='line'))?diagramBoundaryOverlay(pose,diagramPoseView(pose),lineDefaults,preview!==undefined):null;
   const boundaryOffsets=diagramBoundaryFoldOffsets(boundaryOverlay,orderedPreview.map((part,index)=>({...part,strokePattern:linked[index].strokePattern})));
   const artworkFor=(units:number,includeSymbols=true)=>{
